@@ -2,6 +2,6 @@
 
 ## Commands
 
-`npm install`
-`npm install firebase`
-`npm install -g firebase tools`
+### `npm install`
+### `npm install firebase`
+### `npm install -g firebase tools`
