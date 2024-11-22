@@ -1,15 +1,16 @@
 import React from "react";
-import OrderAndPaper from "./components/Section1";
-import LPSection from "./components/Section2LP";
-import FSSection from "./components/Section2FS";
-import EMBSection from "./components/Section3EMB";
-import OrderForm from "./test";
-
+import OrderAndPaper from "./components/Billing_form/Section1";
+import LPSection from "./components/Billing_form/Section2LP";
+import FSSection from "./components/Billing_form/Section2FS";
+import EMBSection from "./components/Billing_form/Section3EMB";
+import PaperManagement from "./components/Paper_management/paper";
+import DieManagement from "./components/Die_management/die";
+import AddBillFlow from "./components/Billing_form/BillFlow";
 function App() {
   return (
     <div>
       <h1>Welcome to the Application</h1>
-        <OrderForm/>
+        <AddBillFlow/>
     </div>
   );
 }
