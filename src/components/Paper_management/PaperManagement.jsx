@@ -1,5 +1,5 @@
 import React from "react";
-import AddPaperForm from "./addPaper";
+import AddPaperForm from "./AddPaperForm";
 import DisplayPaper from "./displayPaper";
 
 function PaperManagement() {
