@@ -3,7 +3,7 @@ import { Routes, Route } from "react-router-dom";
 import BillingForm from "./components/Billing_form/BillingForm";
 import PaperManagement from "./components/Paper_management/PaperManagement";
 import MaterialManagement from "./components/Material_management/MaterialManagement";
-import DieManagement from "./components/Die_management/die";
+import DieManagement from "./components/Die_management/DieManagement";
 import EstimatesDB from "./components/Estimates/Estimate";
 import StandardRatesDB from "./components/Standard_rates/StandardRates";
 import Header from "./components/Header/header";
