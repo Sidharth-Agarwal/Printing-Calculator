@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from "react";
-import AddMaterial from "./AddMaterial";
-import MaterialsTable from "./MaterialsTable";
-import { db } from "../firebaseConfig";
-import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import AddMaterial from "./AddMaterial"
+import MaterialsTable from "./MaterialTable";
+// import { db } from "../firebaseConfig";
+// import { collection, addDoc, getDocs, deleteDoc, doc, updateDoc } from "firebase/firestore";
 
 const MaterialManagement = () => {
   const [materials, setMaterials] = useState([]);
