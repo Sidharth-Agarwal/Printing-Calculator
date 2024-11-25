@@ -2,11 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore"; // Import Firestore
 import { getAuth } from "firebase/auth"; // Import Authentication
-// TODO: Add SDKs for Firebase products that you want to use
-// https://firebase.google.com/docs/web/setup#available-libraries
 
-// Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
 const firebaseConfig = {
   apiKey: "AIzaSyDtTTQE9MCLWWYrOMXRlzuI2xYrhmurUrM",
   authDomain: "printing-calculator-001.firebaseapp.com",

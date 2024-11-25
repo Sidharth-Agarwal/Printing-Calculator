@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
-// import { collection, getDocs } from "firebase/firestore";
-// import { db } from "../../firebaseConfig";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
 
 const OrderAndPaper = ({ onNext }) => {
   const [data, setData] = useState({
