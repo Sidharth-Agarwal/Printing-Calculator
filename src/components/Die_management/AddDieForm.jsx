@@ -116,7 +116,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
         {/* Add all form fields */}
         {[
           { label: "Job Type", name: "jobType", type: "select", options: jobTypeOptions },
-          { label: "Type", name: "type", type: "text", placeholder: "Enter type" },
+          { label: "Type", name: "type", type: "text", placeholder: "Enter the type of the die" },
           { label: "Product Size L (in)", name: "productSizeL", type: "number", placeholder: "Enter length of the product" },
           { label: "Product Size B (in)", name: "productSizeB", type: "number", placeholder: "Enter breadth of the product" },
           { label: "Die Size L (in)", name: "dieSizeL", type: "number", placeholder: "Enter length of the die" },

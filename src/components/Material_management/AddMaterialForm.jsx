@@ -94,13 +94,13 @@ const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, setSelectedMate
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {[
-          { label: "Material Type", name: "materialType", placeholder: "Enter material type", type: "text" },
-          { label: "Material Name", name: "materialName", placeholder: "Enter material name", type: "text" },
-          { label: "Rate (INR)", name: "rate", placeholder: "Enter rate", type: "number" },
-          { label: "Quantity", name: "quantity", placeholder: "Enter quantity", type: "number" },
-          { label: "Size (L in cm)", name: "sizeL", placeholder: "Enter length", type: "number" },
-          { label: "Size (B in cm)", name: "sizeB", placeholder: "Enter breadth", type: "number" },
-          { label: "Courier Cost (INR)", name: "courier", placeholder: "Enter courier cost", type: "number" },
+          { label: "Material Type", name: "materialType", placeholder: "Enter the type of the material", type: "text" },
+          { label: "Material Name", name: "materialName", placeholder: "Enter the name of the material", type: "text" },
+          { label: "Rate (INR)", name: "rate", placeholder: "Enter the rate of the material", type: "number" },
+          { label: "Quantity", name: "quantity", placeholder: "Enter the quantity", type: "number" },
+          { label: "Size (L in cm)", name: "sizeL", placeholder: "Enter the length", type: "number" },
+          { label: "Size (B in cm)", name: "sizeB", placeholder: "Enter the breadth", type: "number" },
+          { label: "Courier Cost (INR)", name: "courier", placeholder: "Enter the cost of the courier", type: "number" },
           { label: "Mark Up", name: "markUp", placeholder: "Enter mark up value", type: "number" },
           { label: "Area (calculated)", name: "area", placeholder: "", type: "text", readOnly: true, value: calculateFields().area },
           { label: "Landed Cost (calculated)", name: "landedCost", placeholder: "", type: "text", readOnly: true, value: calculateFields().landedCost },
@@ -108,7 +108,7 @@ const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, setSelectedMate
           { label: "Final Cost/Unit (calculated)", name: "finalCostPerUnit", placeholder: "", type: "text", readOnly: true, value: calculateFields().finalCostPerUnit },
         ].map((field, idx) => (
           <div key={idx}>
-            <label className="block text-lg font-medium text-gray-700">{field.label}</label>
+            <label className="block text-xl font-medium text-gray-700">{field.label}</label>
             <input
               type={field.type}
               name={field.name}
