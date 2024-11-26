@@ -126,60 +126,6 @@ const OrderAndPaper = ({ onNext }) => {
             </option>
           ))}
         </select>
-        <select
-          name="dieSelection"
-          value={data.dieSelection}
-          onChange={handleChange}
-          className="border rounded-md p-2"
-          required
-        >
-          <option value="">Select Die</option>
-          {dieOptions.map((die, index) => (
-            <option key={index} value={die.dieName}>
-              {die.dieName}
-            </option>
-          ))}
-        </select>
-        <select
-          name="dieNo"
-          value={data.dieNo}
-          onChange={handleChange}
-          className="border rounded-md p-2"
-          required
-        >
-          <option value="">Select Die No.</option>
-          {dieOptions.map((die, index) => (
-            <option key={index} value={die.dieNo}>
-              {die.dieNo}
-            </option>
-          ))}
-        </select>
-        <div className="flex space-x-4">
-          <input
-            type="number"
-            name="length"
-            placeholder="Die Size (L)"
-            value={data.dieSize.length}
-            onChange={handleNestedChange}
-            className="border rounded-md p-2 w-full"
-          />
-          <input
-            type="number"
-            name="breadth"
-            placeholder="Die Size (B)"
-            value={data.dieSize.breadth}
-            onChange={handleNestedChange}
-            className="border rounded-md p-2 w-full"
-          />
-        </div>
-        <input
-          type="text"
-          name="image"
-          placeholder="Image URL"
-          value={data.image}
-          onChange={handleChange}
-          className="border rounded-md p-2"
-        />
       </div>
       <button
         type="submit"

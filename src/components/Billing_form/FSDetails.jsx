@@ -6,9 +6,7 @@ const FSDetails = ({ onNext, onPrevious }) => {
     fsType: "",
     blockSizeType: "",
     blockDimensions: { length: "", breadth: "" },
-    blockType: "",
-    foilTypes: ["", "", ""],
-    fsMR: "",
+    foilDetails: [], // Holds block type and MR for each foil
   });
 
   const handleChange = (e) => {
@@ -28,10 +26,22 @@ const FSDetails = ({ onNext, onPrevious }) => {
     }));
   };
 
-  const handleFoilChange = (index, value) => {
-    const newFoilTypes = [...data.foilTypes];
-    newFoilTypes[index] = value;
-    setData((prev) => ({ ...prev, foilTypes: newFoilTypes }));
+  const handleFoilDetailsChange = (index, field, value) => {
+    const updatedDetails = [...data.foilDetails];
+    updatedDetails[index] = {
+      ...updatedDetails[index],
+      [field]: value,
+    };
+    setData((prev) => ({ ...prev, foilDetails: updatedDetails }));
+  };
+
+  const generateFoilDetails = () => {
+    const details = Array.from({ length: 3 }, (_, index) => ({
+      foilType: data.foilDetails[index]?.foilType || "",
+      blockType: data.foilDetails[index]?.blockType || "",
+      mrType: data.foilDetails[index]?.mrType || "",
+    }));
+    setData((prev) => ({ ...prev, foilDetails: details }));
   };
 
   const handleSubmit = (e) => {
@@ -104,66 +114,74 @@ const FSDetails = ({ onNext, onPrevious }) => {
             </div>
           )}
           <div>
-            <label>Block Type:</label>
-            <select
-              name="blockType"
-              value={data.blockType}
-              onChange={handleChange}
-              className="border rounded-md p-2 w-full"
-            >
-              <option value="">Select Block Type</option>
-              {[
-                "Magnesium Block 3MM",
-                "Magnesium Block 4MM",
-                "Magnesium Block 5MM",
-                "Male Block",
-                "Female Block",
-              ].map((block, index) => (
-                <option key={index} value={block}>
-                  {block}
-                </option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label>Foil Types:</label>
-            {data.foilTypes.map((foil, index) => (
-              <div key={index} className="mb-2">
-                <select
-                  value={foil}
-                  onChange={(e) => handleFoilChange(index, e.target.value)}
-                  className="border rounded-md p-2 w-full"
-                >
-                  <option value="">Select Foil Type {index + 1}</option>
-                  {[
-                    "Rosegold MTS 355",
-                    "Gold MTS 220",
-                    "White 911",
-                    "Blk MTS 362",
-                    "Silver ALUFIN PMAL METALITE",
-                    "MTS 432 PINK",
-                  ].map((foilOption, idx) => (
-                    <option key={idx} value={foilOption}>
-                      {foilOption}
-                    </option>
-                  ))}
-                </select>
+            <h3 className="text-lg font-semibold mt-4 mb-2">Foil Details</h3>
+            {Array.from({ length: 3 }, (_, index) => (
+              <div key={index} className="mb-4 p-4 border rounded-md bg-gray-50">
+                <h4 className="text-md font-bold mb-2">Foil {index + 1}</h4>
+                <div>
+                  <label>Foil Type:</label>
+                  <select
+                    value={data.foilDetails[index]?.foilType || ""}
+                    onChange={(e) =>
+                      handleFoilDetailsChange(index, "foilType", e.target.value)
+                    }
+                    className="border rounded-md p-2 w-full"
+                  >
+                    <option value="">Select Foil Type</option>
+                    {[
+                      "Rosegold MTS 355",
+                      "Gold MTS 220",
+                      "White 911",
+                      "Blk MTS 362",
+                      "Silver ALUFIN PMAL METALITE",
+                      "MTS 432 PINK",
+                    ].map((foilOption, idx) => (
+                      <option key={idx} value={foilOption}>
+                        {foilOption}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label>Block Type:</label>
+                  <select
+                    value={data.foilDetails[index]?.blockType || ""}
+                    onChange={(e) =>
+                      handleFoilDetailsChange(index, "blockType", e.target.value)
+                    }
+                    className="border rounded-md p-2 w-full"
+                  >
+                    <option value="">Select Block Type</option>
+                    {[
+                      "Magnesium Block 3MM",
+                      "Magnesium Block 4MM",
+                      "Magnesium Block 5MM",
+                      "Male Block",
+                      "Female Block",
+                    ].map((block, idx) => (
+                      <option key={idx} value={block}>
+                        {block}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label>MR Type:</label>
+                  <select
+                    value={data.foilDetails[index]?.mrType || ""}
+                    onChange={(e) =>
+                      handleFoilDetailsChange(index, "mrType", e.target.value)
+                    }
+                    className="border rounded-md p-2 w-full"
+                  >
+                    <option value="">Select MR Type</option>
+                    <option value="Simple">Simple</option>
+                    <option value="Complex">Complex</option>
+                    <option value="Super Complex">Super Complex</option>
+                  </select>
+                </div>
               </div>
             ))}
-          </div>
-          <div>
-            <label>FS MR:</label>
-            <select
-              name="fsMR"
-              value={data.fsMR}
-              onChange={handleChange}
-              className="border rounded-md p-2 w-full"
-            >
-              <option value="">Select MR Type</option>
-              <option value="Simple">Simple</option>
-              <option value="Complex">Complex</option>
-              <option value="Super Complex">Super Complex</option>
-            </select>
           </div>
         </>
       )}
