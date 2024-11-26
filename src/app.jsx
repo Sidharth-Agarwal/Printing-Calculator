@@ -16,6 +16,7 @@ function App() {
       <Header />
       <main className="container mx-auto mt-6">
         <Routes>
+          <Route path="/" element={<BillingForm />} />
           <Route path="/new-bill" element={<BillingForm />} />
           <Route path="/material-stock/paper-db" element={<PaperManagement />} />
           <Route path="/material-stock/material-db" element={<MaterialManagement />} />
