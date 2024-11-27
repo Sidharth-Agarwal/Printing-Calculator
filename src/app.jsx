@@ -6,7 +6,7 @@ import MaterialManagement from "./components/Material_management/MaterialManagem
 import DieManagement from "./components/Die_management/DieManagement";
 import EstimatesDB from "./components/Estimates/Estimate";
 import StandardRatesDB from "./components/Standard_rates/StandardRates";
-import Header from "./components/Header/header";
+import Header from "./components/Header/Header";
 import Transactions from "./components/Transactions/Transactions";
 import './styles/tailwind.css';
 

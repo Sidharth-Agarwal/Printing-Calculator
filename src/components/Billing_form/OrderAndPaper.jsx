@@ -865,7 +865,7 @@ const OrderAndPaper = ({ onNext }) => {
               id="clientName"
               type="text"
               name="clientName"
-              placeholder="Client Name"
+              placeholder="Enter the client name"
               value={data.clientName}
               onChange={handleChange}
               className="border rounded-md p-2 w-full"
@@ -932,7 +932,7 @@ const OrderAndPaper = ({ onNext }) => {
               id="quantity"
               type="number"
               name="quantity"
-              placeholder="Quantity"
+              placeholder="Enter the required quantity"
               value={data.quantity}
               onChange={handleChange}
               className="border rounded-md p-2 w-full"
