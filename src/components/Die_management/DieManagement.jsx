@@ -9,7 +9,6 @@ const DieManagement = () => {
   const [dies, setDies] = useState([]);
   const [editingDie, setEditingDie] = useState(null);
 
-  // Real-time listener for dies
   useEffect(() => {
     const diesCollection = collection(db, "dies");
     const unsubscribe = onSnapshot(diesCollection, (snapshot) => {
@@ -23,7 +22,6 @@ const DieManagement = () => {
     return () => unsubscribe();
   }, []);
 
-  // Add die to Firestore
   const addDie = async (newDie) => {
     try {
       let imageUrl = "";
@@ -38,10 +36,10 @@ const DieManagement = () => {
       alert("Die added successfully!");
     } catch (error) {
       console.error("Error adding die:", error);
+      alert("Error adding die.");
     }
   };
 
-  // Update die in Firestore
   const updateDie = async (id, updatedData) => {
     try {
       let imageUrl = updatedData.imageUrl;
@@ -61,7 +59,6 @@ const DieManagement = () => {
     }
   };
 
-  // Delete die from Firestore
   const deleteDie = async (id) => {
     try {
       await deleteDoc(doc(db, "dies", id));

@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from "react";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage }) => {
   const [formData, setFormData] = useState({
@@ -23,31 +22,34 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
 
   const jobTypeOptions = ["Card", "Biz Card", "Magnet", "Envelope"];
 
-  // Populate form when editingDie changes
   useEffect(() => {
     if (editingDie) {
       setFormData(editingDie);
     } else {
-      setFormData({
-        jobType: "",
-        type: "",
-        productSizeL: "",
-        productSizeB: "",
-        dieSizeL: "",
-        dieSizeB: "",
-        paperSizeL: "",
-        paperSizeB: "",
-        frags: "",
-        plateSizeL: "",
-        plateSizeB: "",
-        clsdPrintSizeL: "",
-        clsdPrintSizeB: "",
-        dieCode: "",
-        imageUrl: "",
-      });
-      setImage(null);
+      resetForm();
     }
   }, [editingDie]);
+
+  const resetForm = () => {
+    setFormData({
+      jobType: "",
+      type: "",
+      productSizeL: "",
+      productSizeB: "",
+      dieSizeL: "",
+      dieSizeB: "",
+      paperSizeL: "",
+      paperSizeB: "",
+      frags: "",
+      plateSizeL: "",
+      plateSizeB: "",
+      clsdPrintSizeL: "",
+      clsdPrintSizeB: "",
+      dieCode: "",
+      imageUrl: "",
+    });
+    setImage(null);
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -66,14 +68,15 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    let imageUrl = "";
+    let imageUrl = formData.imageUrl;
 
     try {
-      // Upload image to Firebase Storage if provided
       if (image) {
+        console.log("Image selected for upload:", image);
         const imageRef = ref(storage, `dieImages/${image.name}`);
         const snapshot = await uploadBytes(imageRef, image);
         imageUrl = await getDownloadURL(snapshot.ref);
+        console.log("Image uploaded and URL obtained:", imageUrl);
       }
 
       if (editingDie) {
@@ -82,25 +85,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
         onAddDie({ ...formData, imageUrl });
       }
 
-      // Reset form and clear editing state
-      setFormData({
-        jobType: "",
-        type: "",
-        productSizeL: "",
-        productSizeB: "",
-        dieSizeL: "",
-        dieSizeB: "",
-        paperSizeL: "",
-        paperSizeB: "",
-        frags: "",
-        plateSizeL: "",
-        plateSizeB: "",
-        clsdPrintSizeL: "",
-        clsdPrintSizeB: "",
-        dieCode: "",
-        imageUrl: "",
-      });
-      setImage(null);
+      resetForm();
       setEditingDie(null);
       alert("Die successfully submitted!");
     } catch (error) {
@@ -113,7 +98,6 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
       <h2 className="text-2xl font-bold mb-6">{editingDie ? "Edit Die" : "Add Die"}</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Add all form fields */}
         {[
           { label: "Job Type", name: "jobType", type: "select", options: jobTypeOptions },
           { label: "Type", name: "type", type: "text", placeholder: "Enter the type of the die" },
@@ -160,7 +144,6 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
             )}
           </div>
         ))}
-        {/* Image Upload */}
         <div>
           <label className="block text-xl font-medium text-gray-700">Image:</label>
           <input type="file" accept="image/*" onChange={handleImageChange} className="mt-1 block w-full" />
