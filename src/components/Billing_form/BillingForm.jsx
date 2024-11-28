@@ -4,9 +4,10 @@ import LPDetails from "./LPDetails";
 import FSDetails from "./FSDetails";
 import EMBDetails from "./EMBDetails";
 import DigiDetails from "./DigiDetails";
+import Sandwich from "./Sandwich";
 import DieCutting from "./DieCutting";
 import Pasting from "./Pasting";
-import {db} from "../../firebaseConfig"
+import { db } from "../../firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
 
 const BillingForm = () => {
@@ -40,8 +41,9 @@ const BillingForm = () => {
     <FSDetails onNext={handleNext} onPrevious={handlePrevious} key="step3" />,
     <EMBDetails onNext={handleNext} onPrevious={handlePrevious} key="step4" />,
     <DigiDetails onNext={handleNext} onPrevious={handlePrevious} key="step5" />,
-    <DieCutting onNext={handleNext} onPrevious={handlePrevious} key="step6" />,
-    <Pasting onPrevious={handlePrevious} key="step7" />,
+    <Sandwich onNext={handleNext} onPrevious={handlePrevious} key="step6" />, // Sandwich step added
+    <DieCutting onNext={handleNext} onPrevious={handlePrevious} key="step7" />,
+    <Pasting onPrevious={handlePrevious} key="step8" />,
   ];
 
   return (
@@ -49,7 +51,9 @@ const BillingForm = () => {
       <div className="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
         <h1 className="text-2xl font-bold text-gray-700 mb-4">Billing Form</h1>
         <div className="text-gray-600 mb-6">
-          <p>Step {step} of {steps.length}</p>
+          <p>
+            Step {step} of {steps.length}
+          </p>
           <div className="h-2 bg-gray-300 rounded-full mt-2">
             <div
               className="h-2 bg-blue-500 rounded-full"

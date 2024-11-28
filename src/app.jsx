@@ -8,6 +8,8 @@ import EstimatesDB from "./components/Estimates/Estimate";
 import StandardRatesDB from "./components/Standard_rates/StandardRates";
 import Header from "./components/Header/Header";
 import Transactions from "./components/Transactions/Transactions";
+import Sandwich from "./components/Billing_form/Sandwich";
+import LPDetails from "./components/Billing_form/LPDetails";
 import './styles/tailwind.css';
 
 function App() {
@@ -16,7 +18,7 @@ function App() {
       <Header />
       <main className="container mx-auto mt-6">
         <Routes>
-          <Route path="/" element={<BillingForm />} />
+          <Route path="/" element={<Sandwich />} />
           <Route path="/new-bill" element={<BillingForm />} />
           <Route path="/material-stock/paper-db" element={<PaperManagement />} />
           <Route path="/material-stock/material-db" element={<MaterialManagement />} />
