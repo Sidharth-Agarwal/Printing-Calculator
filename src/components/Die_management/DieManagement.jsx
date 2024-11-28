@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
 import { db, storage } from "../../firebaseConfig";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import AddDieForm from "./AddDieForm";
 import DisplayDieTable from "./DisplayDieTable";
 
@@ -24,15 +23,8 @@ const DieManagement = () => {
 
   const addDie = async (newDie) => {
     try {
-      let imageUrl = "";
-      if (newDie.image) {
-        const imageRef = ref(storage, `dieImages/${newDie.image.name}`);
-        const snapshot = await uploadBytes(imageRef, newDie.image);
-        imageUrl = await getDownloadURL(snapshot.ref);
-      }
-
       const diesCollection = collection(db, "dies");
-      await addDoc(diesCollection, { ...newDie, imageUrl, timestamp: new Date() });
+      await addDoc(diesCollection, { ...newDie, timestamp: new Date() });
       alert("Die added successfully!");
     } catch (error) {
       console.error("Error adding die:", error);
@@ -42,16 +34,8 @@ const DieManagement = () => {
 
   const updateDie = async (id, updatedData) => {
     try {
-      let imageUrl = updatedData.imageUrl;
-
-      if (updatedData.image) {
-        const imageRef = ref(storage, `dieImages/${updatedData.image.name}`);
-        const snapshot = await uploadBytes(imageRef, updatedData.image);
-        imageUrl = await getDownloadURL(snapshot.ref);
-      }
-
       const dieDoc = doc(db, "dies", id);
-      await updateDoc(dieDoc, { ...updatedData, imageUrl });
+      await updateDoc(dieDoc, updatedData);
       alert("Die updated successfully!");
       setEditingDie(null);
     } catch (error) {
@@ -76,6 +60,7 @@ const DieManagement = () => {
         onUpdateDie={updateDie}
         editingDie={editingDie}
         setEditingDie={setEditingDie}
+        storage={storage}
       />
       <DisplayDieTable
         dies={dies}

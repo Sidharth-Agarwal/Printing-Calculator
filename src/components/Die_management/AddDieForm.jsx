@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 
 const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage }) => {
   const [formData, setFormData] = useState({
@@ -18,13 +19,14 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
     dieCode: "",
     imageUrl: "",
   });
-  const [image, setImage] = useState(null);
 
+  const [image, setImage] = useState(null);
   const jobTypeOptions = ["Card", "Biz Card", "Magnet", "Envelope"];
 
   useEffect(() => {
     if (editingDie) {
       setFormData(editingDie);
+      setImage(null); // Reset the selected image when editing
     } else {
       resetForm();
     }
@@ -65,14 +67,18 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
     }
   };
 
+  const handleRemoveImage = () => {
+    setImage(null); // Clear the selected image
+    setFormData((prev) => ({ ...prev, imageUrl: "" })); // Remove the image URL from form data
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     let imageUrl = formData.imageUrl;
 
     try {
-      if (image) {
-        console.log("Image selected for upload:", image);
+      if (image && storage) {
         const imageRef = ref(storage, `dieImages/${image.name}`);
         const snapshot = await uploadBytes(imageRef, image);
         imageUrl = await getDownloadURL(snapshot.ref);
@@ -80,9 +86,9 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
       }
 
       if (editingDie) {
-        onUpdateDie(editingDie.id, { ...formData, imageUrl });
+        await onUpdateDie(editingDie.id, { ...formData, imageUrl });
       } else {
-        onAddDie({ ...formData, imageUrl });
+        await onAddDie({ ...formData, imageUrl });
       }
 
       resetForm();
@@ -105,8 +111,8 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
           { label: "Product Size B (in)", name: "productSizeB", type: "number", placeholder: "Enter breadth of the product" },
           { label: "Die Size L (in)", name: "dieSizeL", type: "number", placeholder: "Enter length of the die" },
           { label: "Die Size B (in)", name: "dieSizeB", type: "number", placeholder: "Enter breadth of the die" },
-          { label: "Paper Size L (in)", name: "paperSizeL", type: "number", placeholder: "Enter length of the product" },
-          { label: "Paper Size B (in)", name: "paperSizeB", type: "number", placeholder: "Enter breadth of the product" },
+          { label: "Paper Size L (in)", name: "paperSizeL", type: "number", placeholder: "Enter length of the paper" },
+          { label: "Paper Size B (in)", name: "paperSizeB", type: "number", placeholder: "Enter breadth of the paper" },
           { label: "Frags", name: "frags", type: "number", placeholder: "Enter number of frags" },
           { label: "Plate Size L (in)", name: "plateSizeL", type: "number", placeholder: "Enter length of the plate" },
           { label: "Plate Size B (in)", name: "plateSizeB", type: "number", placeholder: "Enter breadth of the plate" },
@@ -147,6 +153,22 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
         <div>
           <label className="block text-xl font-medium text-gray-700">Image:</label>
           <input type="file" accept="image/*" onChange={handleImageChange} className="mt-1 block w-full" />
+          {image || formData.imageUrl ? (
+            <div className="mt-2 flex items-center space-x-4">
+              <img
+                src={image ? URL.createObjectURL(image) : formData.imageUrl}
+                alt="Selected"
+                className="w-16 h-16 object-cover border"
+              />
+              <button
+                type="button"
+                onClick={handleRemoveImage}
+                className="bg-red-500 text-white px-4 py-2 rounded-md hover:bg-red-600"
+              >
+                Remove Image
+              </button>
+            </div>
+          ) : null}
         </div>
       </div>
       <button type="submit" className="mt-6 px-4 py-2 bg-blue-600 text-white rounded">
