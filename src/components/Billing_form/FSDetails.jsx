@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const FSDetails = ({ onNext, onPrevious }) => {
   const [data, setData] = useState({
@@ -8,6 +8,21 @@ const FSDetails = ({ onNext, onPrevious }) => {
     blockDimensions: { length: "", breadth: "" },
     foilDetails: [], // Holds block type and MR for each foil
   });
+
+  // Effect to reset foil details whenever fsType changes
+  useEffect(() => {
+    if (data.fsType) {
+      const numberOfFoilOptions = data.fsType === "FS1" ? 1 : data.fsType === "FS2" ? 2 : 3;
+      setData((prev) => ({
+        ...prev,
+        foilDetails: Array.from({ length: numberOfFoilOptions }, (_, index) => ({
+          foilType: "",
+          blockType: "",
+          mrType: "",
+        })),
+      }));
+    }
+  }, [data.fsType]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -33,15 +48,6 @@ const FSDetails = ({ onNext, onPrevious }) => {
       [field]: value,
     };
     setData((prev) => ({ ...prev, foilDetails: updatedDetails }));
-  };
-
-  const generateFoilDetails = () => {
-    const details = Array.from({ length: 3 }, (_, index) => ({
-      foilType: data.foilDetails[index]?.foilType || "",
-      blockType: data.foilDetails[index]?.blockType || "",
-      mrType: data.foilDetails[index]?.mrType || "",
-    }));
-    setData((prev) => ({ ...prev, foilDetails: details }));
   };
 
   const handleSubmit = (e) => {
@@ -73,7 +79,7 @@ const FSDetails = ({ onNext, onPrevious }) => {
               className="border rounded-md p-2 w-full"
             >
               <option value="">Select FS Type</option>
-              {["FS1", "FS2", "FS3", "FS4"].map((type, index) => (
+              {["FS1", "FS2", "FS3"].map((type, index) => (
                 <option key={index} value={type}>
                   {type}
                 </option>
@@ -115,7 +121,7 @@ const FSDetails = ({ onNext, onPrevious }) => {
           )}
           <div>
             <h3 className="text-lg font-semibold mt-4 mb-2">Foil Details</h3>
-            {Array.from({ length: 3 }, (_, index) => (
+            {data.foilDetails.map((_, index) => (
               <div key={index} className="mb-4 p-4 border rounded-md bg-gray-50">
                 <h4 className="text-md font-bold mb-2">Foil {index + 1}</h4>
                 <div>
