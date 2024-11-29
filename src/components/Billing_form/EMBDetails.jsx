@@ -120,21 +120,6 @@ const EMBDetails = ({ onNext, onPrevious }) => {
           </div>
         </>
       )}
-      <div className="flex justify-between">
-        <button
-          type="button"
-          onClick={onPrevious}
-          className="bg-gray-500 text-white px-4 py-2 rounded-md"
-        >
-          Previous
-        </button>
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded-md"
-        >
-          Next
-        </button>
-      </div>
     </form>
   );
 };
