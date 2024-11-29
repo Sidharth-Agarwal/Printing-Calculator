@@ -9,7 +9,6 @@ import StandardRatesDB from "./components/Standard_rates/StandardRates";
 import Header from "./components/Header/Header";
 import Transactions from "./components/Transactions/Transactions";
 import Sandwich from "./components/Billing_form/Sandwich";
-import LPDetails from "./components/Billing_form/LPDetails";
 import './styles/tailwind.css';
 
 function App() {
