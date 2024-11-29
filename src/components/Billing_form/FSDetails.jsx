@@ -191,6 +191,22 @@ const FSDetails = ({ onNext, onPrevious }) => {
           </div>
         </>
       )}
+
+      <div className="flex justify-between mt-4">
+        <button
+          type="button"
+          onClick={onPrevious}
+          className="px-4 py-2 bg-gray-300 text-black rounded-md"
+        >
+          Previous
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+        >
+          Next
+        </button>
+      </div>
     </form>
   );
 };
