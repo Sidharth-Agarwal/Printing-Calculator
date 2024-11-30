@@ -1,0 +1,12 @@
+specVersion: "v1beta"
+serviceId: "famous-letterpress"
+location: "asia-south1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "fdcdb"
+      cloudSql:
+        instanceId: "famous-letterpress-fdc"
+      # schemaValidation: "COMPATIBLE"
+connectorDirs: ["./connector"]

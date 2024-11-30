@@ -4,13 +4,14 @@ import { getFirestore } from "firebase/firestore"; // Import Firestore
 import { getAuth } from "firebase/auth"; // Import Authentication
 import { getStorage } from "firebase/storage";
 
+// Your web app's Firebase configuration
 const firebaseConfig = {
-  apiKey: "AIzaSyDtTTQE9MCLWWYrOMXRlzuI2xYrhmurUrM",
-  authDomain: "printing-calculator-001.firebaseapp.com",
-  projectId: "printing-calculator-001",
-  storageBucket: "printing-calculator-001.firebasestorage.app",
-  messagingSenderId: "152418448351",
-  appId: "1:152418448351:web:8466e0395ae29e393f8a6a"
+  apiKey: "AIzaSyBZ-ejPIrPBS23wJVFupsqFPxSHKci5CnE",
+  authDomain: "famous-letterpress.firebaseapp.com",
+  projectId: "famous-letterpress",
+  storageBucket: "famous-letterpress.firebasestorage.app",
+  messagingSenderId: "737262161611",
+  appId: "1:737262161611:web:9c8aba77848fc0b338954e"
 };
 
 // Initialize Firebase
