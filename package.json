@@ -4,8 +4,10 @@
   "description": "",
   "main": "app.js",
   "scripts": {
+    "install:legacy": "npm install --legacy-peer-deps",
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "parcel index.html"
+    "start": "parcel index.html",
+    "build": "parcel build index.html"
   },
   "keywords": [],
   "author": "",
