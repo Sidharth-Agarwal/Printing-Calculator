@@ -41,7 +41,7 @@ const BillingForm = () => {
     <FSDetails onNext={handleNext} onPrevious={handlePrevious} key="step3" />,
     <EMBDetails onNext={handleNext} onPrevious={handlePrevious} key="step4" />,
     <DigiDetails onNext={handleNext} onPrevious={handlePrevious} key="step5" />,
-    <Sandwich onNext={handleNext} onPrevious={handlePrevious} key="step6" />, // Sandwich step added
+    <Sandwich onNext={handleNext} onPrevious={handlePrevious} key="step6" />,
     <DieCutting onNext={handleNext} onPrevious={handlePrevious} key="step7" />,
     <Pasting onPrevious={handlePrevious} key="step8" />,
   ];
