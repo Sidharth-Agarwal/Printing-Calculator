@@ -8,8 +8,8 @@ import EstimatesDB from "./components/Estimates/Estimate";
 import StandardRatesDB from "./components/Standard_rates/StandardRates";
 import Header from "./components/Header";
 import Transactions from "./components/Transactions/Transactions";
-import Sandwich from "./components/Billing_form/Sandwich";
 import Login from "./components/Login/login";
+import Pasting from "./components/Billing_form/Pasting";
 import './styles/tailwind.css';
 
 function App() {
