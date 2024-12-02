@@ -23,6 +23,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                 "CLSD L",
                 "CLSD B",
                 "Die Code",
+                "Price (INR)", // Add price to table header
                 "Image",
                 "Actions",
               ].map((header, idx) => (
@@ -49,6 +50,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                 <td className="px-4 py-2">{die.clsdPrintSizeL}</td>
                 <td className="px-4 py-2">{die.clsdPrintSizeB}</td>
                 <td className="px-4 py-2">{die.dieCode}</td>
+                <td className="px-4 py-2">{die.price}</td> {/* Add price to table row */}
                 <td className="px-4 py-2">
                   {die.imageUrl ? (
                     <img src={die.imageUrl} alt="Die" className="w-12 h-12 object-cover" />

@@ -17,6 +17,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
     clsdPrintSizeL: "",
     clsdPrintSizeB: "",
     dieCode: "",
+    price: "", // Add price field
     imageUrl: "",
   });
 
@@ -48,6 +49,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
       clsdPrintSizeL: "",
       clsdPrintSizeB: "",
       dieCode: "",
+      price: "", // Reset price field
       imageUrl: "",
     });
     setImage(null);
@@ -82,7 +84,6 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
         const imageRef = ref(storage, `dieImages/${image.name}`);
         const snapshot = await uploadBytes(imageRef, image);
         imageUrl = await getDownloadURL(snapshot.ref);
-        console.log("Image uploaded and URL obtained:", imageUrl);
       }
 
       if (editingDie) {
@@ -119,6 +120,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
           { label: "CLSD Print Size L (in)", name: "clsdPrintSizeL", type: "number", placeholder: "Enter length of CLSD print" },
           { label: "CLSD Print Size B (in)", name: "clsdPrintSizeB", type: "number", placeholder: "Enter breadth of CLSD print" },
           { label: "Die Code", name: "dieCode", type: "text", placeholder: "Enter die code" },
+          { label: "Price (INR)", name: "price", type: "number", placeholder: "Enter price of the die" }, // New field
         ].map((field, idx) => (
           <div key={idx}>
             <label className="block text-xl font-medium text-gray-700">{field.label}:</label>
