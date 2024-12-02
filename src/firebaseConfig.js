@@ -2,7 +2,7 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore"; // Import Firestore
 import { getAuth } from "firebase/auth"; // Import Authentication
-import { getStorage } from "firebase/storage";
+import { getStorage } from "firebase/storage"; // Import Storage
 
 // Your web app's Firebase configuration
 const firebaseConfig = {
@@ -11,15 +11,16 @@ const firebaseConfig = {
   projectId: "famous-letterpress",
   storageBucket: "famous-letterpress.firebasestorage.app",
   messagingSenderId: "737262161611",
-  appId: "1:737262161611:web:9c8aba77848fc0b338954e"
+  appId: "1:737262161611:web:9c8aba77848fc0b338954e",
 };
 
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore and Auth
+// Initialize Firestore, Authentication, and Storage
 const db = getFirestore(app);
-const auth = getAuth(app);
-const storage = getStorage(app)
+const auth = getAuth(app); // Authentication instance
+const storage = getStorage(app);
 
-export { db, storage };
+// Export Firebase services
+export { db, auth, storage };
