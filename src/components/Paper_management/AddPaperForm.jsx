@@ -6,6 +6,7 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
     company: "",
     gsm: "",
     pricePerSheet: "",
+    price: "", // Add price field
     length: "",
     breadth: "",
     freightPerKg: "",
@@ -27,6 +28,7 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
         company: "",
         gsm: "",
         pricePerSheet: "",
+        price: "", // Reset price field
         length: "",
         breadth: "",
         freightPerKg: "",
@@ -62,6 +64,7 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
       company: "",
       gsm: "",
       pricePerSheet: "",
+      price: "", // Reset price field
       length: "",
       breadth: "",
       freightPerKg: "",
@@ -84,6 +87,7 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
           { label: "Paper Name", placeholder: "Enter the name of the paper", name: "paperName", type: "text" },
           { label: "Company", placeholder: "Enter the name of the company", name: "company", type: "text" },
           { label: "GSM", placeholder: "Enter the GSM information", name: "gsm", type: "number" },
+          { label: "Price (INR)", placeholder: "Enter the price of the paper", name: "price", type: "number" }, // Add price field
           { label: "Price/Sheet (INR)", placeholder: "Enter the Price/Sheet", name: "pricePerSheet", type: "number" },
           { label: "Length (CM)", placeholder: "Enter the length of the paper", name: "length", type: "number" },
           { label: "Breadth (CM)", placeholder: "Enter the breadth of the paper", name: "breadth", type: "number" },

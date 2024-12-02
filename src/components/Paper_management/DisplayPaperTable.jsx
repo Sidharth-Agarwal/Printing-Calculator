@@ -13,6 +13,7 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
                 "Paper Name",
                 "Company",
                 "GSM",
+                "Price",
                 "Price/Sheet",
                 "Length",
                 "Breadth",
@@ -40,6 +41,7 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
                 <td className="px-4 py-2">{paper.paperName}</td>
                 <td className="px-4 py-2">{paper.company}</td>
                 <td className="px-4 py-2">{paper.gsm}</td>
+                <td className="px-4 py-2">{paper.price}</td> {/* Add price here */}
                 <td className="px-4 py-2">{paper.pricePerSheet}</td>
                 <td className="px-4 py-2">{paper.length}</td>
                 <td className="px-4 py-2">{paper.breadth}</td>
