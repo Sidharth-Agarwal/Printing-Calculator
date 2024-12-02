@@ -17,7 +17,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
     clsdPrintSizeL: "",
     clsdPrintSizeB: "",
     dieCode: "",
-    price: "", // Add price field
+    price: "",
     imageUrl: "",
   });
 
@@ -49,7 +49,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
       clsdPrintSizeL: "",
       clsdPrintSizeB: "",
       dieCode: "",
-      price: "", // Reset price field
+      price: "",
       imageUrl: "",
     });
     setImage(null);
@@ -72,6 +72,12 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
   const handleRemoveImage = () => {
     setImage(null); // Clear the selected image
     setFormData((prev) => ({ ...prev, imageUrl: "" })); // Remove the image URL from form data
+
+    // Reset the input file field
+    const fileInput = document.querySelector("input[type='file']");
+    if (fileInput) {
+      fileInput.value = null; // Reset the file input
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -120,7 +126,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
           { label: "CLSD Print Size L (in)", name: "clsdPrintSizeL", type: "number", placeholder: "Enter length of CLSD print" },
           { label: "CLSD Print Size B (in)", name: "clsdPrintSizeB", type: "number", placeholder: "Enter breadth of CLSD print" },
           { label: "Die Code", name: "dieCode", type: "text", placeholder: "Enter die code" },
-          { label: "Price (INR)", name: "price", type: "number", placeholder: "Enter price of the die" }, // New field
+          { label: "Price (INR)", name: "price", type: "number", placeholder: "Enter price of the die" },
         ].map((field, idx) => (
           <div key={idx}>
             <label className="block text-xl font-medium text-gray-700">{field.label}:</label>
