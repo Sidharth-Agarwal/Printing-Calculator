@@ -329,8 +329,8 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import DieSelectionPopup from "./DieSelectionPopup";
 import AddDieFormForPopup from "./AddDieFormForPopup";
-import { storage, db } from "../../firebaseConfig";
-import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../firebaseConfig"; // Ensure db is imported correctly
+import { collection, onSnapshot } from "firebase/firestore"; // Using onSnapshot for real-time updates
 
 const OrderAndPaper = ({ onNext, initialData }) => {
   const [data, setData] = useState({
@@ -348,26 +348,22 @@ const OrderAndPaper = ({ onNext, initialData }) => {
     image: initialData?.image || "",
   });
 
-  const [papers, setPapers] = useState([]); // State for fetching papers
+  const [papers, setPapers] = useState([]); // State for papers
   const [showDiePopup, setShowDiePopup] = useState(false);
   const [showAddDiePopup, setShowAddDiePopup] = useState(false);
 
   useEffect(() => {
-    // Fetch papers from the Papers DB
-    const fetchPapers = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "papers"));
-        const paperData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-        setPapers(paperData);
-      } catch (error) {
-        console.error("Error fetching papers:", error);
-      }
-    };
+    // Set up real-time listener for papers
+    const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
+      const paperData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPapers(paperData); // Update state with new paper data
+    });
 
-    fetchPapers();
+    // Cleanup listener when the component unmounts
+    return () => unsubscribe();
   }, []);
 
   const handleChange = (e) => {
