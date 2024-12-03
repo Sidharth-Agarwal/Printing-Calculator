@@ -8,6 +8,7 @@ import { storage } from "../../firebaseConfig";
 const OrderAndPaper = ({ onNext, initialData }) => {
   const [data, setData] = useState({
     clientName: initialData?.clientName || "",
+    projectName: initialData?.projectName || "", // New field for Project Name
     date: initialData?.date ? new Date(initialData.date) : null,
     deliveryDate: initialData?.deliveryDate ? new Date(initialData.deliveryDate) : null,
     jobType: initialData?.jobType || "",
@@ -80,6 +81,23 @@ const OrderAndPaper = ({ onNext, initialData }) => {
               name="clientName"
               placeholder="Enter the client name"
               value={data.clientName}
+              onChange={handleChange}
+              className="border rounded-md p-2 w-full"
+              required
+            />
+          </div>
+
+          {/* Project Name */}
+          <div>
+            <label htmlFor="projectName" className="block font-medium mb-1">
+              Project Name
+            </label>
+            <input
+              id="projectName"
+              type="text"
+              name="projectName"
+              placeholder="Enter the project name"
+              value={data.projectName}
               onChange={handleChange}
               className="border rounded-md p-2 w-full"
               required
