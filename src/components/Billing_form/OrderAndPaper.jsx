@@ -329,17 +329,18 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import DieSelectionPopup from "./DieSelectionPopup";
 import AddDieFormForPopup from "./AddDieFormForPopup";
-import { storage, db } from "../../firebaseConfig";  // Assuming db is the Firestore instance
+import { storage, db } from "../../firebaseConfig";
+import { collection, getDocs } from "firebase/firestore";
 
 const OrderAndPaper = ({ onNext, initialData }) => {
   const [data, setData] = useState({
     clientName: initialData?.clientName || "",
-    projectName: initialData?.projectName || "", // New field for Project Name
+    projectName: initialData?.projectName || "",
     date: initialData?.date ? new Date(initialData.date) : null,
     deliveryDate: initialData?.deliveryDate ? new Date(initialData.deliveryDate) : null,
-    jobType: initialData?.jobType || "Card",  // Default job type to "Card"
+    jobType: initialData?.jobType || "Card", // Default job type
     quantity: initialData?.quantity || "",
-    paperProvided: initialData?.paperProvided || "Yes",  // Default to "Yes"
+    paperProvided: initialData?.paperProvided || "Yes", // Default as Yes
     paperName: initialData?.paperName || "",
     dieSelection: initialData?.dieSelection || "",
     dieCode: initialData?.dieCode || "",
@@ -347,20 +348,22 @@ const OrderAndPaper = ({ onNext, initialData }) => {
     image: initialData?.image || "",
   });
 
+  const [papers, setPapers] = useState([]); // State for fetching papers
   const [showDiePopup, setShowDiePopup] = useState(false);
   const [showAddDiePopup, setShowAddDiePopup] = useState(false);
-  const [papers, setPapers] = useState([]);  // To store fetched papers
 
-  // Fetch paper options from the database
   useEffect(() => {
+    // Fetch papers from the Papers DB
     const fetchPapers = async () => {
       try {
-        const paperRef = db.collection("papers");  // Assuming papers collection in Firestore
-        const paperSnapshot = await paperRef.get();
-        const paperList = paperSnapshot.docs.map(doc => doc.data());
-        setPapers(paperList);
+        const querySnapshot = await getDocs(collection(db, "papers"));
+        const paperData = querySnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+        setPapers(paperData);
       } catch (error) {
-        console.error("Error fetching papers: ", error);
+        console.error("Error fetching papers:", error);
       }
     };
 
@@ -369,7 +372,11 @@ const OrderAndPaper = ({ onNext, initialData }) => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    setData((prev) => ({ ...prev, [name]: value }));
+
+    setData((prev) => ({
+      ...prev,
+      [name]: name === "quantity" ? Math.max(0, value) : value, // Ensure quantity is not negative
+    }));
   };
 
   const handleNestedChange = (e) => {
@@ -404,7 +411,6 @@ const OrderAndPaper = ({ onNext, initialData }) => {
       deliveryDate: data.deliveryDate
         ? data.deliveryDate.toLocaleDateString("en-US")
         : "",
-      quantity: -data.quantity, // Convert quantity to negative
     };
     onNext(formattedData);
   };
@@ -493,7 +499,7 @@ const OrderAndPaper = ({ onNext, initialData }) => {
               className="border rounded-md p-2 w-full"
               required
             >
-              <option value="Card">Card</option>  {/* Default value "Card" */}
+              <option value="Card">Card</option>
               {["Biz Card", "Vellum Jacket", "Envelope", "Tag", "Magnet"].map((type, index) => (
                 <option key={index} value={type}>
                   {type}
@@ -532,7 +538,7 @@ const OrderAndPaper = ({ onNext, initialData }) => {
               className="border rounded-md p-2 w-full"
               required
             >
-              <option value="Yes">Yes</option>  {/* Default value "Yes" */}
+              <option value="Yes">Yes</option>
               <option value="No">No</option>
             </select>
           </div>
@@ -551,9 +557,9 @@ const OrderAndPaper = ({ onNext, initialData }) => {
               required
             >
               <option value="">Select Paper Name</option>
-              {papers.map((paper, index) => (
-                <option key={index} value={paper.name}>
-                  {paper.name}
+              {papers.map((paper) => (
+                <option key={paper.id} value={paper.paperName}>
+                  {paper.paperName}
                 </option>
               ))}
             </select>
