@@ -9,6 +9,7 @@ import Header from "./components/Header";
 import Transactions from "./components/Transactions/Transactions";
 import Login from "./components/Login/login";
 import EstimatesPage from "./components/Estimates/Estimate";
+import FSDetails from "./components/Billing_form/FSDetails";
 import OrderAndPaper from "./components/Billing_form/OrderAndPaper";
 import './styles/tailwind.css';
 
@@ -18,7 +19,7 @@ function App() {
       <Header />
       <main className="container mx-auto mt-6">
         <Routes>
-          <Route path="/" element={<OrderAndPaper />} />
+          <Route path="/" element={<FSDetails />} />
           <Route path="/new-bill" element={<BillingForm />} />
           <Route path="/material-stock/paper-db" element={<PaperManagement />} />
           <Route path="/material-stock/material-db" element={<MaterialManagement />} />
