@@ -329,7 +329,7 @@ import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import DieSelectionPopup from "./DieSelectionPopup";
 import AddDieFormForPopup from "./AddDieFormForPopup";
-import { db } from "../../firebaseConfig"; // Ensure db is imported correctly
+import { db, storage } from "../../firebaseConfig"; // Ensure db is imported correctly
 import { collection, onSnapshot } from "firebase/firestore"; // Using onSnapshot for real-time updates
 
 const OrderAndPaper = ({ onNext, initialData }) => {
