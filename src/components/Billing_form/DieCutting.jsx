@@ -85,23 +85,27 @@
 
 import React, { useState } from "react";
 
-const DieCutting = ({ onNext, onPrevious }) => {
+const DieCutting = ({ onNext, onPrevious, initialData }) => {
   const [data, setData] = useState({
-    difficulty: "",
-    pdc: "",
-    dcMR: "",
+    isDieCuttingUsed: initialData?.isDieCuttingUsed || false,
+    difficulty: initialData?.difficulty || "",
+    pdc: initialData?.pdc || "",
+    dcMR: initialData?.dcMR || "",
   });
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
-    setData((prev) => ({ ...prev, [name]: value }));
+    const { name, value, type, checked } = e.target;
+    setData((prev) => ({
+      ...prev,
+      [name]: type === "checkbox" ? checked : value,
+    }));
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
 
     // Ensure PDC field validation if selected as "Yes"
-    if (data.pdc === "Yes" && !data.dcMR) {
+    if (data.isDieCuttingUsed && data.pdc === "Yes" && !data.dcMR) {
       alert("Please select a DC MR type when PDC is 'Yes'.");
       return;
     }
@@ -113,51 +117,67 @@ const DieCutting = ({ onNext, onPrevious }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Die Cutting</h2>
 
-      <div>
-        <label className="block font-medium mb-2">Difficulty:</label>
-        <select
-          name="difficulty"
-          value={data.difficulty}
+      <label className="flex items-center">
+        <input
+          type="checkbox"
+          name="isDieCuttingUsed"
+          checked={data.isDieCuttingUsed}
           onChange={handleChange}
-          className="border rounded-md p-2 w-full"
-          required
-        >
-          <option value="">Select Difficulty</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-        </select>
-      </div>
+          className="mr-2"
+        />
+        Is Die Cutting being used?
+      </label>
 
-      <div>
-        <label className="block font-medium mb-2">PDC:</label>
-        <select
-          name="pdc"
-          value={data.pdc}
-          onChange={handleChange}
-          className="border rounded-md p-2 w-full"
-          required
-        >
-          <option value="">Select PDC</option>
-          <option value="Yes">Yes</option>
-          <option value="No">No</option>
-        </select>
-      </div>
+      {data.isDieCuttingUsed && (
+        <>
+          <div>
+            <label className="block font-medium mb-2">Difficulty:</label>
+            <select
+              name="difficulty"
+              value={data.difficulty}
+              onChange={handleChange}
+              className="border rounded-md p-2 w-full"
+              required
+            >
+              <option value="">Select Difficulty</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
 
-      {data.pdc === "Yes" && (
-        <div>
-          <label className="block font-medium mb-2">DC MR:</label>
-          <select
-            name="dcMR"
-            value={data.dcMR}
-            onChange={handleChange}
-            className="border rounded-md p-2 w-full"
-          >
-            <option value="">Select MR Type</option>
-            <option value="Simple">Simple</option>
-            <option value="Complex">Complex</option>
-            <option value="Super Complex">Super Complex</option>
-          </select>
-        </div>
+          <div>
+            <label className="block font-medium mb-2">PDC:</label>
+            <select
+              name="pdc"
+              value={data.pdc}
+              onChange={handleChange}
+              className="border rounded-md p-2 w-full"
+              required
+            >
+              <option value="">Select PDC</option>
+              <option value="Yes">Yes</option>
+              <option value="No">No</option>
+            </select>
+          </div>
+
+          {data.pdc === "Yes" && (
+            <div>
+              <label className="block font-medium mb-2">DC MR:</label>
+              <select
+                name="dcMR"
+                value={data.dcMR}
+                onChange={handleChange}
+                className="border rounded-md p-2 w-full"
+                required
+              >
+                <option value="">Select MR Type</option>
+                <option value="Simple">Simple</option>
+                <option value="Complex">Complex</option>
+                <option value="Super Complex">Super Complex</option>
+              </select>
+            </div>
+          )}
+        </>
       )}
 
       <div className="flex justify-between">
