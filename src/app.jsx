@@ -8,10 +8,7 @@ import StandardRatesDB from "./components/Standard_rates/StandardRates";
 import Header from "./components/Header";
 import Transactions from "./components/Transactions/Transactions";
 import Login from "./components/Login/login";
-import EstimatesPage from "./components/Estimates/Estimate";
-import FSDetails from "./components/Billing_form/FSDetails";
-import LPDetails from "./components/Billing_form/LPDetails";
-import OrderAndPaper from "./components/Billing_form/OrderAndPaper";
+import EstimatesPage from "./components/Estimates/EstimatePage";
 import './styles/tailwind.css';
 
 function App() {
