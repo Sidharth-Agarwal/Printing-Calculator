@@ -1,12 +1,13 @@
-// import React, { useState, useEffect } from "react";
+// import React, { useEffect, useState } from "react";
 // import { collection, getDocs } from "firebase/firestore";
 // import { db } from "../../firebaseConfig";
 // import GroupDropdown from "./GroupDropdown";
 
 // const EstimatesPage = () => {
-//   const [estimates, setEstimates] = useState([]);
+//   const [estimatesData, setEstimatesData] = useState([]);
 //   const [loading, setLoading] = useState(true);
 
+//   // Fetch estimates from Firestore
 //   useEffect(() => {
 //     const fetchEstimates = async () => {
 //       try {
@@ -15,7 +16,17 @@
 //           id: doc.id,
 //           ...doc.data(),
 //         }));
-//         setEstimates(data);
+
+//         // Group by clientName and projectName
+//         const groupedData = data.reduce((acc, estimate) => {
+//           const { clientName, projectName } = estimate;
+//           const groupKey = `${clientName}-${projectName}`;
+//           if (!acc[groupKey]) acc[groupKey] = [];
+//           acc[groupKey].push(estimate);
+//           return acc;
+//         }, {});
+
+//         setEstimatesData(groupedData);
 //       } catch (error) {
 //         console.error("Error fetching estimates:", error);
 //       } finally {
@@ -26,53 +37,48 @@
 //     fetchEstimates();
 //   }, []);
 
-//   if (loading) {
-//     return (
-//       <div className="text-center mt-8">
-//         <h2 className="text-xl font-bold">Estimates DB</h2>
-//         <p>Loading estimates...</p>
-//       </div>
-//     );
-//   }
-
-//   const groupedEstimates = estimates.reduce((acc, estimate) => {
-//     const key = `${estimate.clientName}-${estimate.projectName}`;
-//     if (!acc[key]) {
-//       acc[key] = [];
-//     }
-//     acc[key].push(estimate);
-//     return acc;
-//   }, {});
-
 //   return (
-//     <div className="container mx-auto mt-8 space-y-6">
-//       <h2 className="text-2xl font-bold mb-6">Estimates DB</h2>
-//       {Object.keys(groupedEstimates).map((groupKey) => {
-//         const [clientName, projectName] = groupKey.split("-");
-//         return (
-//           <GroupDropdown
-//             key={groupKey}
-//             clientName={clientName}
-//             projectName={projectName}
-//             estimates={groupedEstimates[groupKey]}
-//           />
-//         );
-//       })}
+//     <div className="p-6 bg-gray-100 rounded shadow">
+//       <h1 className="text-2xl font-bold mb-6">Estimates DB</h1>
+
+//       {loading ? (
+//         <p className="text-gray-600">Loading estimates...</p>
+//       ) : Object.keys(estimatesData).length === 0 ? (
+//         <p className="text-gray-600">No estimates found. Please create an estimate.</p>
+//       ) : (
+//         <div className="space-y-4">
+//           {Object.entries(estimatesData).map(([groupKey, estimates]) => {
+//             const [clientName, projectName] = groupKey.split("-");
+//             return (
+//               <GroupDropdown
+//                 key={groupKey}
+//                 clientName={clientName}
+//                 projectName={projectName}
+//                 estimates={estimates}
+//               />
+//             );
+//           })}
+//         </div>
+//       )}
 //     </div>
 //   );
 // };
 
 // export default EstimatesPage;
 
-import React, { useState, useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import GroupDropdown from "./GroupDropdown";
 
 const EstimatesPage = () => {
-  const [estimates, setEstimates] = useState([]);
+  const [estimatesData, setEstimatesData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState(""); // State for the search query
+  const [filteredData, setFilteredData] = useState({}); // State for filtered estimates
+  const [noResults, setNoResults] = useState(false); // State to track "no results"
 
+  // Fetch estimates from Firestore
   useEffect(() => {
     const fetchEstimates = async () => {
       try {
@@ -81,7 +87,18 @@ const EstimatesPage = () => {
           id: doc.id,
           ...doc.data(),
         }));
-        setEstimates(data);
+
+        // Group by clientName and projectName
+        const groupedData = data.reduce((acc, estimate) => {
+          const { clientName, projectName } = estimate;
+          const groupKey = `${clientName}-${projectName}`;
+          if (!acc[groupKey]) acc[groupKey] = [];
+          acc[groupKey].push(estimate);
+          return acc;
+        }, {});
+
+        setEstimatesData(groupedData);
+        setFilteredData(groupedData); // Initialize filtered data
       } catch (error) {
         console.error("Error fetching estimates:", error);
       } finally {
@@ -92,52 +109,73 @@ const EstimatesPage = () => {
     fetchEstimates();
   }, []);
 
+  // Handle search input
+  const handleSearch = (e) => {
+    const query = e.target.value.toLowerCase();
+    setSearchQuery(query);
+
+    // Filter the grouped data based on the search query
+    const filtered = Object.entries(estimatesData).reduce((acc, [groupKey, estimates]) => {
+      const [clientName, projectName] = groupKey.split("-");
+
+      // Check if the search query matches clientName, projectName, jobType, or quantity
+      const filteredEstimates = estimates.filter((estimate) => {
+        const jobType = estimate?.jobDetails?.jobType?.toLowerCase() || "";
+        const quantity = estimate?.jobDetails?.quantity?.toString() || "";
+        return (
+          clientName.toLowerCase().includes(query) ||
+          projectName.toLowerCase().includes(query) ||
+          jobType.includes(query) ||
+          quantity.includes(query)
+        );
+      });
+
+      if (filteredEstimates.length > 0) {
+        acc[groupKey] = filteredEstimates;
+      }
+
+      return acc;
+    }, {});
+
+    setFilteredData(filtered);
+    setNoResults(Object.keys(filtered).length === 0); // Update "no results" state
+  };
+
   if (loading) {
-    return (
-      <div className="text-center mt-8">
-        <h2 className="text-xl font-bold text-gray-700">Estimates DB</h2>
-        <p className="text-gray-500">Loading estimates...</p>
-      </div>
-    );
+    return <p>Loading estimates...</p>;
   }
-
-  if (estimates.length === 0) {
-    return (
-      <div className="text-center mt-8">
-        <h2 className="text-xl font-bold text-gray-700">Estimates DB</h2>
-        <p className="text-gray-500">
-          No estimates available. Please create an estimate using the billing form.
-        </p>
-      </div>
-    );
-  }
-
-  const groupedEstimates = estimates.reduce((acc, estimate) => {
-    const key = `${estimate.clientName}-${estimate.projectName}`;
-    if (!acc[key]) {
-      acc[key] = [];
-    }
-    acc[key].push(estimate);
-    return acc;
-  }, {});
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-5xl mx-auto">
-        <h2 className="text-3xl font-bold text-gray-700 mb-6">Estimates DB</h2>
-        <div className="space-y-6">
-          {Object.keys(groupedEstimates).map((groupKey) => {
-            const [clientName, projectName] = groupKey.split("-");
-            return (
-              <GroupDropdown
-                key={groupKey}
-                clientName={clientName}
-                projectName={projectName}
-                estimates={groupedEstimates[groupKey]}
-              />
-            );
-          })}
-        </div>
+    <div className="p-6 bg-gray-100 rounded shadow">
+      <h2 className="text-2xl font-bold mb-4">Estimates DB</h2>
+
+      {/* Search Bar */}
+      <div className="mt-6 mb-6">
+        <input
+          type="text"
+          placeholder="Search by client, project name, job type, or quantity..."
+          value={searchQuery}
+          onChange={handleSearch}
+          className="w-full p-3 border rounded-md shadow-sm focus:outline-none focus:ring focus:ring-blue-300"
+        />
+        {noResults && (
+          <p className="text-gray-500 mt-2 text-sm">No such estimate found.</p>
+        )}
+      </div>
+
+      {/* Grouped Estimates */}
+      <div className="space-y-4">
+        {Object.entries(filteredData).map(([groupKey, estimates]) => {
+          const [clientName, projectName] = groupKey.split("-");
+          return (
+            <GroupDropdown
+              key={groupKey}
+              clientName={clientName}
+              projectName={projectName}
+              estimates={estimates}
+            />
+          );
+        })}
       </div>
     </div>
   );
