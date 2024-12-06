@@ -9,6 +9,7 @@ import Header from "./components/Header";
 import Transactions from "./components/Transactions/Transactions";
 import Login from "./components/Login/login";
 import EstimatesPage from "./components/Estimates/EstimatePage";
+import OrdersPage from "./components/Orders/OrdersPage";
 import './styles/tailwind.css';
 
 function App() {
@@ -24,7 +25,7 @@ function App() {
           <Route path="/material-stock/dies-db" element={<DieManagement />} />
           <Route path="/material-stock/estimates-db" element={<EstimatesPage />} />
           <Route path="/material-stock/standard-rates-db" element={<StandardRatesDB />} />
-          <Route path="/transactions" element={<Transactions />} />
+          <Route path="/orders" element={<OrdersPage />} />
         </Routes>
       </main>
     </div>

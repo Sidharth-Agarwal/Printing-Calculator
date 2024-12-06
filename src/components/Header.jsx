@@ -35,8 +35,8 @@ const Header = () => {
             </div>
           </div>
 
-          <Link to="/transactions" className="hover:underline hover:text-blue-300 transition">
-            Transactions
+          <Link to="/orders" className="hover:underline hover:text-blue-300 transition">
+            Orders
           </Link>
         </nav>
       </div>
