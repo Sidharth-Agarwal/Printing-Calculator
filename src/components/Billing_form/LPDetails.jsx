@@ -3,21 +3,34 @@ import React from "react";
 const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
   const lpDetails = state.lpDetails || {
     isLPUsed: false,
-    noOfColors: 1,
+    noOfColors: 0,
     colorDetails: [], // Holds plate size, ink type, plate type, MR type for each color
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    dispatch({
-      type: "UPDATE_LP_DETAILS",
-      payload: {
-        [name]: type === "checkbox" ? checked : value,
-      },
-    });
 
-    if (name === "noOfColors") {
-      generateColorDetails(value);
+    if (name === "isLPUsed" && !checked) {
+      // Reset noOfColors to 0 and clear colorDetails if LP is not used
+      dispatch({
+        type: "UPDATE_LP_DETAILS",
+        payload: {
+          isLPUsed: false,
+          noOfColors: 0,
+          colorDetails: [],
+        },
+      });
+    } else {
+      dispatch({
+        type: "UPDATE_LP_DETAILS",
+        payload: {
+          [name]: type === "checkbox" ? checked : value,
+        },
+      });
+
+      if (name === "noOfColors") {
+        generateColorDetails(value);
+      }
     }
   };
 

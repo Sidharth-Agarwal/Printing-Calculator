@@ -30,7 +30,7 @@ const initialState = {
   },
   lpDetails: {
     isLPUsed: false,
-    noOfColors: 1,
+    noOfColors: 0,
     colorDetails: [],
   },
   fsDetails: {
@@ -81,6 +81,8 @@ const reducer = (state, action) => {
       return { ...state, sandwich: { ...state.sandwich, ...action.payload } };
     case "UPDATE_PASTING":
       return { ...state, pasting: { ...state.pasting, ...action.payload } };
+    case "RESET_FORM":
+      return initialState; // Reset the state to initialState
     case "SET_STEP":
       return { ...state, currentStep: action.payload };
     default:
@@ -184,7 +186,12 @@ const BillingForm = () => {
       // Save to Firestore
       await addDoc(collection(db, "estimates"), formattedData);
       alert("Estimate created successfully!");
-      dispatch({ type: "SET_STEP", payload: 1 }); // Reset to step 1
+
+      // Reset form state
+      dispatch({ type: "RESET_FORM" });
+
+      // Reload the page
+      window.location.reload();
     } catch (error) {
       console.error("Error creating estimate:", error);
       alert("Failed to create estimate.");
