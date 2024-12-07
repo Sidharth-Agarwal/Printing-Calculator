@@ -6,7 +6,6 @@ import MaterialManagement from "./components/Material_management/MaterialManagem
 import DieManagement from "./components/Die_management/DieManagement";
 import StandardRatesDB from "./components/Standard_rates/StandardRates";
 import Header from "./components/Header";
-import Transactions from "./components/Transactions/Transactions";
 import Login from "./components/Login/login";
 import EstimatesPage from "./components/Estimates/EstimatePage";
 import OrdersPage from "./components/Orders/OrdersPage";
