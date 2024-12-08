@@ -43,7 +43,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-700 mb-4">EMB Details</h2>
+      <h2 className="text-xl font-bold text-gray-700 mb-4">Embossing (EMB) Details</h2>
       <label className="flex items-center">
         <input
           type="checkbox"

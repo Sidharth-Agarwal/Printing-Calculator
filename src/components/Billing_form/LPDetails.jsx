@@ -70,7 +70,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-700 mb-4">LP Details</h2>
+      <h2 className="text-xl font-bold text-gray-700 mb-4">Letter Press (LP) Details</h2>
       <label className="flex items-center">
         <input
           type="checkbox"
@@ -96,139 +96,150 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
             />
           </div>
 
-          <div>
-            <h3 className="text-lg font-semibold mt-4 mb-2">Color Details</h3>
-            {Array.from({ length: lpDetails.noOfColors }, (_, index) => (
-              <div
-                key={index}
-                className="mb-4 p-4 border rounded-md bg-gray-50"
-              >
-                <h4 className="text-md font-bold mb-2">Color {index + 1}</h4>
+          {lpDetails.noOfColors > 0 && (
+            <div>
+              <h3 className="text-lg font-semibold mt-4 mb-2">Color Details</h3>
+              {Array.from({ length: lpDetails.noOfColors }, (_, index) => (
+                <div
+                  key={index}
+                  className="mb-4 p-4 border rounded-md bg-gray-50"
+                >
+                  <h4 className="text-md font-bold mb-2">Color {index + 1}</h4>
 
-                {/* Plate Size Type */}
-                <div>
-                  <label>Plate Size:</label>
-                  <select
-                    value={lpDetails.colorDetails[index]?.plateSizeType || ""}
-                    onChange={(e) =>
-                      handleColorDetailsChange(
-                        index,
-                        "plateSizeType",
-                        e.target.value
-                      )
-                    }
-                    className="border rounded-md p-2 w-full"
-                  >
-                    <option value="">Select Plate Size</option>
-                    <option value="Auto">Auto</option>
-                    <option value="Manual">Manual</option>
-                  </select>
-                </div>
-
-                {/* Manual Plate Dimensions */}
-                {lpDetails.colorDetails[index]?.plateSizeType === "Manual" && (
-                  <div className="grid grid-cols-2 gap-4 mt-2">
-                    <input
-                      type="number"
-                      name="length"
-                      placeholder="Length (cm)"
-                      value={
-                        lpDetails.colorDetails[index]?.plateDimensions?.length ||
-                        ""
-                      }
+                  {/* Plate Size Type */}
+                  <div>
+                    <label>Plate Size:</label>
+                    <select
+                      value={lpDetails.colorDetails[index]?.plateSizeType || ""}
                       onChange={(e) =>
-                        handleColorDetailsChange(index, "plateDimensions", {
-                          ...lpDetails.colorDetails[index]?.plateDimensions,
-                          length: e.target.value,
-                        })
+                        handleColorDetailsChange(
+                          index,
+                          "plateSizeType",
+                          e.target.value
+                        )
                       }
-                      className="border rounded-md p-2"
-                    />
-                    <input
-                      type="number"
-                      name="breadth"
-                      placeholder="Breadth (cm)"
-                      value={
-                        lpDetails.colorDetails[index]?.plateDimensions
-                          ?.breadth || ""
-                      }
-                      onChange={(e) =>
-                        handleColorDetailsChange(index, "plateDimensions", {
-                          ...lpDetails.colorDetails[index]?.plateDimensions,
-                          breadth: e.target.value,
-                        })
-                      }
-                      className="border rounded-md p-2"
-                    />
+                      className="border rounded-md p-2 w-full"
+                    >
+                      <option value="">Select Plate Size</option>
+                      <option value="Auto">Auto</option>
+                      <option value="Manual">Manual</option>
+                    </select>
                   </div>
-                )}
 
-                {/* Ink Type */}
-                <div>
-                  <label>Ink Type:</label>
-                  <select
-                    value={lpDetails.colorDetails[index]?.inkType || ""}
-                    onChange={(e) =>
-                      handleColorDetailsChange(index, "inkType", e.target.value)
-                    }
-                    className="border rounded-md p-2 w-full"
-                  >
-                    <option value="">Select Ink Type</option>
-                    {[
-                      "Ink Black",
-                      "Ink Cyan",
-                      "Ink Magenta",
-                      "Ink Varnish",
-                      "Ink Milk White",
-                      "Ink Opaque White",
-                      "Ink White",
-                      "Ink Yellow",
-                    ].map((ink, idx) => (
-                      <option key={idx} value={ink}>
-                        {ink}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                  {/* Manual Plate Dimensions */}
+                  {lpDetails.colorDetails[index]?.plateSizeType ===
+                    "Manual" && (
+                    <div className="grid grid-cols-2 gap-4 mt-2">
+                      <input
+                        type="number"
+                        name="length"
+                        placeholder="Length (cm)"
+                        value={
+                          lpDetails.colorDetails[index]?.plateDimensions
+                            ?.length || ""
+                        }
+                        onChange={(e) =>
+                          handleColorDetailsChange(index, "plateDimensions", {
+                            ...lpDetails.colorDetails[index]?.plateDimensions,
+                            length: e.target.value,
+                          })
+                        }
+                        className="border rounded-md p-2"
+                      />
+                      <input
+                        type="number"
+                        name="breadth"
+                        placeholder="Breadth (cm)"
+                        value={
+                          lpDetails.colorDetails[index]?.plateDimensions
+                            ?.breadth || ""
+                        }
+                        onChange={(e) =>
+                          handleColorDetailsChange(index, "plateDimensions", {
+                            ...lpDetails.colorDetails[index]?.plateDimensions,
+                            breadth: e.target.value,
+                          })
+                        }
+                        className="border rounded-md p-2"
+                      />
+                    </div>
+                  )}
 
-                {/* Plate Type */}
-                <div>
-                  <label>Plate Type:</label>
-                  <select
-                    value={lpDetails.colorDetails[index]?.plateType || ""}
-                    onChange={(e) =>
-                      handleColorDetailsChange(
-                        index,
-                        "plateType",
-                        e.target.value
-                      )
-                    }
-                    className="border rounded-md p-2 w-full"
-                  >
-                    <option value="">Select Plate Type</option>
-                    <option value="Polymer Plate">Polymer Plate</option>
-                  </select>
-                </div>
+                  {/* Ink Type */}
+                  <div>
+                    <label>Ink Type:</label>
+                    <select
+                      value={lpDetails.colorDetails[index]?.inkType || ""}
+                      onChange={(e) =>
+                        handleColorDetailsChange(
+                          index,
+                          "inkType",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded-md p-2 w-full"
+                    >
+                      <option value="">Select Ink Type</option>
+                      {[
+                        "Ink Black",
+                        "Ink Cyan",
+                        "Ink Magenta",
+                        "Ink Varnish",
+                        "Ink Milk White",
+                        "Ink Opaque White",
+                        "Ink White",
+                        "Ink Yellow",
+                      ].map((ink, idx) => (
+                        <option key={idx} value={ink}>
+                          {ink}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-                {/* MR Type */}
-                <div>
-                  <label>MR Type:</label>
-                  <select
-                    value={lpDetails.colorDetails[index]?.mrType || ""}
-                    onChange={(e) =>
-                      handleColorDetailsChange(index, "mrType", e.target.value)
-                    }
-                    className="border rounded-md p-2 w-full"
-                  >
-                    <option value="">Select MR Type</option>
-                    <option value="Simple">Simple</option>
-                    <option value="Complex">Complex</option>
-                    <option value="Super Complex">Super Complex</option>
-                  </select>
+                  {/* Plate Type */}
+                  <div>
+                    <label>Plate Type:</label>
+                    <select
+                      value={lpDetails.colorDetails[index]?.plateType || ""}
+                      onChange={(e) =>
+                        handleColorDetailsChange(
+                          index,
+                          "plateType",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded-md p-2 w-full"
+                    >
+                      <option value="">Select Plate Type</option>
+                      <option value="Polymer Plate">Polymer Plate</option>
+                    </select>
+                  </div>
+
+                  {/* MR Type */}
+                  <div>
+                    <label>MR Type:</label>
+                    <select
+                      value={lpDetails.colorDetails[index]?.mrType || ""}
+                      onChange={(e) =>
+                        handleColorDetailsChange(
+                          index,
+                          "mrType",
+                          e.target.value
+                        )
+                      }
+                      className="border rounded-md p-2 w-full"
+                    >
+                      <option value="">Select MR Type</option>
+                      <option value="Simple">Simple</option>
+                      <option value="Complex">Complex</option>
+                      <option value="Super Complex">Super Complex</option>
+                    </select>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </>
       )}
       <div className="flex justify-between">
