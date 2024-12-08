@@ -33,9 +33,7 @@ const OrderProgressBar = ({ currentStage, onStageClick }) => {
                 {index + 1}
               </div>
               {/* Label */}
-              <span className="mt-2 text-sm text-center w-20">
-                {stage}
-              </span>
+              <span className="mt-2 text-sm text-center w-20">{stage}</span>
             </div>
 
             {/* Connector */}
