@@ -55,16 +55,20 @@ const OrdersPage = () => {
 
   const handleOrderUpdate = async (orderId, updatedOrder) => {
     try {
-      const orderRef = doc(db, "orders", orderId); // Reference to the Firebase document
-      await updateDoc(orderRef, { stage: updatedOrder.stage }); // Update the `stage` field
+      const orderRef = doc(db, "orders", orderId);
+      await updateDoc(orderRef, { stage: updatedOrder.stage });
 
       // Update local state for UI synchronization
       setOrdersData((prevOrders) =>
-        prevOrders.map((order) => (order.id === orderId ? { ...order, stage: updatedOrder.stage } : order))
+        prevOrders.map((order) =>
+          order.id === orderId ? { ...order, stage: updatedOrder.stage } : order
+        )
       );
 
       setFilteredOrders((prevOrders) =>
-        prevOrders.map((order) => (order.id === orderId ? { ...order, stage: updatedOrder.stage } : order))
+        prevOrders.map((order) =>
+          order.id === orderId ? { ...order, stage: updatedOrder.stage } : order
+        )
       );
     } catch (error) {
       console.error("Error updating order in Firebase:", error);

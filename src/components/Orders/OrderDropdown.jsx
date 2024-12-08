@@ -18,9 +18,8 @@ const OrderDropdown = ({ order, onOrderUpdate }) => {
   const toggleDropdown = () => setIsOpen((prev) => !prev);
 
   const handleProgressUpdate = (newStage) => {
-    setCurrentStage(newStage); // Update the local state
-    const updatedOrder = { ...order, stage: newStage }; // Create an updated order object
-    onOrderUpdate(order.id, updatedOrder); // Call parent function to update Firebase
+    setCurrentStage(newStage); // Update local state
+    onOrderUpdate({ stage: newStage }); // Update Firebase through parent
   };
 
   const dropdownColor = statusColors[currentStage] || "bg-gray-100";
@@ -28,7 +27,7 @@ const OrderDropdown = ({ order, onOrderUpdate }) => {
   return (
     <div className={`border rounded-lg shadow-md ${dropdownColor} relative`}>
       {/* Status Badge */}
-      <div className="absolute top-3 right-3 text-sm px-3 py-1 rounded-md text-white">
+      <div className="absolute top-3 right-3 text-sm px-3 py-1 rounded-md">
         {currentStage}
       </div>
 
@@ -57,7 +56,7 @@ const OrderDropdown = ({ order, onOrderUpdate }) => {
         <div className="p-4 space-y-4 bg-gray-50">
           <OrderProgressBar
             currentStage={currentStage}
-            onStageClick={handleProgressUpdate}
+            onStageClick={(newStage) => handleProgressUpdate(newStage)}
           />
           <OrderDetails order={order} />
         </div>
