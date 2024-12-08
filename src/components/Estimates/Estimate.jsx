@@ -26,8 +26,11 @@ const Estimate = ({
     if (isMovedToOrders || cannotMoveToOrders || isCanceled) return;
 
     try {
-      // Add the selected estimate to the "orders" collection
-      await addDoc(collection(db, "orders"), estimate);
+      // Add the selected estimate to the "orders" collection with the default "stage" field
+      await addDoc(collection(db, "orders"), {
+        ...estimate,
+        stage: "Not started yet", // Add the default stage field
+      });
 
       // Update all estimates in the group
       const batch = writeBatch(db);
