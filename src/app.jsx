@@ -1,5 +1,5 @@
 import React from "react";
-import { Routes, Route } from "react-router-dom";
+import { BrowserRouter, Route, Routes } from "react-router-dom";
 import BillingForm from "./components/Billing_form/BillingForm";
 import PaperManagement from "./components/Paper_management/PaperManagement";
 import MaterialManagement from "./components/Material_management/MaterialManagement";
