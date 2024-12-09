@@ -3,7 +3,7 @@
 // const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
 //   const { isFSUsed, fsType, foilDetails = [] } = state.fsDetails || {};
 
-//   // Effect to update foil details whenever fsType changes
+//   // Effect to update foil details only when fsType changes
 //   useEffect(() => {
 //     if (fsType) {
 //       const numberOfFoilOptions =
@@ -30,7 +30,8 @@
 //         payload: { foilDetails: updatedFoilDetails },
 //       });
 //     }
-//   }, [fsType, foilDetails, dispatch]);
+//     // eslint-disable-next-line react-hooks/exhaustive-deps
+//   }, [fsType]); // Remove `foilDetails` and `dispatch` from dependencies
 
 //   const handleChange = (e) => {
 //     const { name, value, type, checked } = e.target;
@@ -60,7 +61,7 @@
 
 //   return (
 //     <form onSubmit={handleSubmit} className="space-y-4">
-//       <h2 className="text-xl font-bold text-gray-700 mb-4">FS Details</h2>
+//       <h2 className="text-xl font-bold text-gray-700 mb-4">Foil Stamping (FS) Details</h2>
 //       <label className="flex items-center">
 //         <input
 //           type="checkbox"
@@ -233,11 +234,17 @@
 import React, { useEffect } from "react";
 
 const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
-  const { isFSUsed, fsType, foilDetails = [] } = state.fsDetails || {};
+  const fsDetails = state.fsDetails || {
+    isFSUsed: false,
+    fsType: "FS1", // Default to FS1
+    foilDetails: [],
+  };
 
-  // Effect to update foil details only when fsType changes
+  const { isFSUsed, fsType, foilDetails } = fsDetails;
+
+  // Automatically generate foil details based on the selected FS type
   useEffect(() => {
-    if (fsType) {
+    if (isFSUsed && fsType) {
       const numberOfFoilOptions =
         fsType === "FS1"
           ? 1
@@ -248,6 +255,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
           : fsType === "FS4"
           ? 4
           : 5; // For FS5
+
       const updatedFoilDetails = Array.from({ length: numberOfFoilOptions }, (_, index) => ({
         blockSizeType: foilDetails[index]?.blockSizeType || "",
         blockLength: foilDetails[index]?.blockLength || "",
@@ -262,15 +270,48 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
         payload: { foilDetails: updatedFoilDetails },
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fsType]); // Remove `foilDetails` and `dispatch` from dependencies
+  }, [fsType, isFSUsed, foilDetails, dispatch]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    dispatch({
-      type: "UPDATE_FS_DETAILS",
-      payload: { [name]: type === "checkbox" ? checked : value },
-    });
+
+    if (name === "isFSUsed") {
+      if (checked) {
+        // Default FS Type to FS1 and generate initial foil details
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: {
+            isFSUsed: true,
+            fsType: "FS1",
+            foilDetails: [
+              {
+                blockSizeType: "",
+                blockLength: "",
+                blockBreadth: "",
+                foilType: "",
+                blockType: "",
+                mrType: "",
+              },
+            ],
+          },
+        });
+      } else {
+        // Reset FS details
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: {
+            isFSUsed: false,
+            fsType: "",
+            foilDetails: [],
+          },
+        });
+      }
+    } else {
+      dispatch({
+        type: "UPDATE_FS_DETAILS",
+        payload: { [name]: value },
+      });
+    }
   };
 
   const handleFoilDetailsChange = (index, field, value) => {
@@ -294,6 +335,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Foil Stamping (FS) Details</h2>
+
       <label className="flex items-center">
         <input
           type="checkbox"
@@ -304,13 +346,15 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
         />
         Is FS being used?
       </label>
+
       {isFSUsed && (
         <>
+          {/* FS Type */}
           <div>
             <label>FS Type:</label>
             <select
               name="fsType"
-              value={fsType || ""}
+              value={fsType || "FS1"} // Default to FS1
               onChange={handleChange}
               className="border rounded-md p-2 w-full"
             >
@@ -322,6 +366,8 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
               ))}
             </select>
           </div>
+
+          {/* Foil Details */}
           {fsType && (
             <div>
               <h3 className="text-lg font-semibold mt-4 mb-2">Foil Details</h3>
@@ -442,6 +488,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
           )}
         </>
       )}
+
       <div className="flex justify-between mt-4">
         <button
           type="button"
