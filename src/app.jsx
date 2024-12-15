@@ -1,45 +1,9 @@
-// import React from "react";
-// import { BrowserRouter, Route, Routes } from "react-router-dom";
-// import BillingForm from "./components/Billing_form/BillingForm";
-// import PaperManagement from "./components/Paper_management/PaperManagement";
-// import MaterialManagement from "./components/Material_management/MaterialManagement";
-// import DieManagement from "./components/Die_management/DieManagement";
-// import StandardRatesDB from "./components/Standard_rates/StandardRates";
-// import Header from "./components/Header";
-// import AuthPage from "./components/Authentication/AuthPage";
-// import EstimatesPage from "./components/Estimates/EstimatePage";
-// import OrderPage from "./components/Orders/OrderPage";
-// import './styles/tailwind.css';
-
-// function App() {
-//   return (
-//     <div>
-//       <Header />
-//       <main className="container mx-auto mt-6">
-//         <Routes>
-//           <Route path="/" element={<AuthPage />} />
-//           <Route path="/new-bill" element={<BillingForm />} />
-//           <Route path="/material-stock/paper-db" element={<PaperManagement />} />
-//           <Route path="/material-stock/material-db" element={<MaterialManagement />} />
-//           <Route path="/material-stock/dies-db" element={<DieManagement />} />
-//           <Route path="/material-stock/estimates-db" element={<EstimatesPage />} />
-//           <Route path="/material-stock/standard-rates-db" element={<StandardRatesDB />} />
-//           <Route path="/orders" element={<OrderPage />} />
-//         </Routes>
-//       </main>
-//     </div>
-//   );
-// }
-
-// export default App;
-
 import React from "react";
 import { Route, Routes } from "react-router-dom";
 import BillingForm from "./components/Billing_form/BillingForm";
 import PaperManagement from "./components/Paper_management/PaperManagement";
 import MaterialManagement from "./components/Material_management/MaterialManagement";
 import DieManagement from "./components/Die_management/DieManagement";
-import StandardRatesDB from "./components/Standard_rates/StandardRates";
 import Header from "./components/Header";
 import AuthPage from "./components/Authentication/AuthPage";
 import EstimatesPage from "./components/Estimates/EstimatePage";
@@ -94,14 +58,6 @@ function App() {
             element={
               <ProtectedRoute>
                 <EstimatesPage />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/material-stock/standard-rates-db"
-            element={
-              <ProtectedRoute>
-                <StandardRatesDB />
               </ProtectedRoute>
             }
           />
