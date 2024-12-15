@@ -7,7 +7,11 @@ const Header = () => {
       <div className="container mx-auto px-4 py-3 flex justify-between items-center">
         <h1 className="text-xl font-bold">Print Calculator</h1>
         <nav className="space-x-6 relative">
-          <Link to="/new-bill" className="hover:underline hover:text-blue-300 transition">
+          {/* New Bill */}
+          <Link
+            to="/new-bill"
+            className="hover:underline hover:text-blue-300 transition"
+          >
             New Bill
           </Link>
 
@@ -17,25 +21,40 @@ const Header = () => {
               Material and Stock
             </button>
             <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md mt-1 z-10">
-              <Link to="/material-stock/paper-db" className="block px-4 py-2 hover:bg-gray-200">
+              <Link
+                to="/material-stock/paper-db"
+                className="block px-4 py-2 hover:bg-gray-200"
+              >
                 Paper DB
               </Link>
-              <Link to="/material-stock/material-db" className="block px-4 py-2 hover:bg-gray-200">
+              <Link
+                to="/material-stock/material-db"
+                className="block px-4 py-2 hover:bg-gray-200"
+              >
                 Material DB
               </Link>
-              <Link to="/material-stock/dies-db" className="block px-4 py-2 hover:bg-gray-200">
+              <Link
+                to="/material-stock/dies-db"
+                className="block px-4 py-2 hover:bg-gray-200"
+              >
                 Dies DB
-              </Link>
-              <Link to="/material-stock/estimates-db" className="block px-4 py-2 hover:bg-gray-200">
-                Estimates DB
-              </Link>
-              <Link to="/material-stock/standard-rates-db" className="block px-4 py-2 hover:bg-gray-200">
-                Standard Rates DB
               </Link>
             </div>
           </div>
 
-          <Link to="/orders" className="hover:underline hover:text-blue-300 transition">
+          {/* Estimates */}
+          <Link
+            to="/material-stock/estimates-db"
+            className="hover:underline hover:text-blue-300 transition"
+          >
+            Estimates
+          </Link>
+
+          {/* Orders */}
+          <Link
+            to="/orders"
+            className="hover:underline hover:text-blue-300 transition"
+          >
             Orders
           </Link>
         </nav>

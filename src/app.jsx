@@ -4,12 +4,11 @@ import BillingForm from "./components/Billing_form/BillingForm";
 import PaperManagement from "./components/Paper_management/PaperManagement";
 import MaterialManagement from "./components/Material_management/MaterialManagement";
 import DieManagement from "./components/Die_management/DieManagement";
-import StandardRatesDB from "./components/Standard_rates/StandardRates";
 import Header from "./components/Header";
 import Login from "./components/Login/login";
 import EstimatesPage from "./components/Estimates/EstimatePage";
 import OrderPage from "./components/Orders/OrderPage";
-import './styles/tailwind.css';
+import "./styles/tailwind.css";
 
 function App() {
   return (
@@ -23,7 +22,6 @@ function App() {
           <Route path="/material-stock/material-db" element={<MaterialManagement />} />
           <Route path="/material-stock/dies-db" element={<DieManagement />} />
           <Route path="/material-stock/estimates-db" element={<EstimatesPage />} />
-          <Route path="/material-stock/standard-rates-db" element={<StandardRatesDB />} />
           <Route path="/orders" element={<OrderPage />} />
         </Routes>
       </main>
