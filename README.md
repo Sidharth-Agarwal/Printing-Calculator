@@ -76,7 +76,7 @@ The **Print Calculator** is a comprehensive web application designed for managin
     npm run install:legacy
 
 3. Configure firebase:
-    Replace the Firebase configuration in ```firebaseConfig.js ``` with your firebase project details.
+    Replace the Firebase configuration in ```firebaseConfig.js``` with your firebase project details.
 
 4. Start the development server:
     ```bash
