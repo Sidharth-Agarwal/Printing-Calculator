@@ -81,22 +81,3 @@ The **Print Calculator** is a comprehensive web application designed for managin
 4. Start the development server:
     ```bash
     npm start
-
-src/  
-├── components/  
-│   ├── Authentication/       # AuthPage, LoginForm, RegisterForm  
-│   ├── Billing_form/         # Multi-step billing form components  
-│   ├── Material_management/  # Material DB management components  
-│   ├── Paper_management/     # Paper DB management components  
-│   ├── Die_management/       # Die DB management components  
-│   ├── Orders/               # Orders page components  
-│   ├── Estimates/            # Estimates page components  
-│   └── Header.jsx            # Header component  
-├── utils/  
-│   ├── AuthProvider.jsx      # Firebase Authentication provider  
-│   ├── ProtectedRoute.jsx    # Role-based route protection  
-│   └── ...  
-├── styles/  
-│   └── tailwind.css          # Styling with Tailwind CSS  
-├── firebaseConfig.js         # Firebase configuration  
-└── index.jsx                 # Entry point for React  
