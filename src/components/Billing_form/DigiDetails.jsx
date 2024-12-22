@@ -30,7 +30,7 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
     <form onSubmit={handleSubmit} className="space-y-4">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Digi Details</h2>
       {/* Checkbox for Digi Usage */}
-      <label className="flex items-center">
+      <label className="font-semibold flex items-center">
         <input
           type="checkbox"
           name="isDigiUsed"
