@@ -1,26 +1,42 @@
-import React from "react";
+import React, { useState } from "react";
 
 const Pasting = ({ state, dispatch, onPrevious, onNext }) => {
-  const { isPastingUsed = false } = state.pasting || {};
+  const { isPastingUsed = false, pastingType = "" } = state.pasting || {};
+  const [errors, setErrors] = useState({});
 
   const handleChange = (field, value) => {
     dispatch({
       type: "UPDATE_PASTING",
       payload: { [field]: value },
     });
+
+    // Clear errors on input change
+    setErrors((prevErrors) => ({ ...prevErrors, [field]: "" }));
+  };
+
+  const validateFields = () => {
+    const validationErrors = {};
+    if (isPastingUsed && !pastingType) {
+      validationErrors.pastingType = "Please select a Pasting Type.";
+    }
+    setErrors(validationErrors);
+    return Object.keys(validationErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onNext();
+    if (validateFields()) {
+      onNext();
+    }
   };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Pasting</h2>
 
+      {/* Checkbox for "Is Pasting being used?" */}
       <div className="space-y-2">
-        <label className="flex items-center">
+        <label className="font-semibold flex items-center">
           <input
             type="checkbox"
             checked={isPastingUsed}
@@ -31,6 +47,27 @@ const Pasting = ({ state, dispatch, onPrevious, onNext }) => {
         </label>
       </div>
 
+      {/* Conditional Pasting Type Dropdown */}
+      {isPastingUsed && (
+        <div>
+          <label className="block font-medium mb-2">Pasting Type:</label>
+          <select
+            value={pastingType}
+            onChange={(e) => handleChange("pastingType", e.target.value)}
+            className={`border rounded-md p-2 w-full ${errors.pastingType ? "border-red-500" : ""}`}
+          >
+            <option value="">Select Pasting Type</option>
+            <option value="DST">DST</option>
+            <option value="Fold">Fold</option>
+            <option value="Paste">Paste</option>
+            <option value="Fold & Paste">Fold & Paste</option>
+            <option value="Sandwich">Sandwich</option>
+          </select>
+          {errors.pastingType && <p className="text-red-500 text-sm mt-1">{errors.pastingType}</p>}
+        </div>
+      )}
+
+      {/* Navigation Buttons */}
       <div className="flex justify-between mt-6">
         <button
           type="button"
