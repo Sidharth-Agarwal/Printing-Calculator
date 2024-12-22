@@ -134,6 +134,7 @@
 //                         )
 //                       }
 //                       className="border rounded-md p-2 w-full"
+//                       required
 //                     >
 //                       <option value="">Select Plate Size</option>
 //                       <option value="Auto">Auto</option>
@@ -151,6 +152,7 @@
 //                         value={
 //                           lpDetails.colorDetails[index]?.plateDimensions?.length || ""
 //                         }
+//                         required
 //                         onChange={(e) =>
 //                           handleColorDetailsChange(index, "plateDimensions", {
 //                             ...lpDetails.colorDetails[index]?.plateDimensions,
@@ -166,6 +168,7 @@
 //                         value={
 //                           lpDetails.colorDetails[index]?.plateDimensions?.breadth || ""
 //                         }
+//                         required
 //                         onChange={(e) =>
 //                           handleColorDetailsChange(index, "plateDimensions", {
 //                             ...lpDetails.colorDetails[index]?.plateDimensions,
@@ -182,6 +185,7 @@
 //                     <label>Ink Type:</label>
 //                     <select
 //                       value={lpDetails.colorDetails[index]?.inkType || ""}
+//                       required
 //                       onChange={(e) =>
 //                         handleColorDetailsChange(index, "inkType", e.target.value)
 //                       }
@@ -210,6 +214,7 @@
 //                     <label>Plate Type:</label>
 //                     <select
 //                       value={lpDetails.colorDetails[index]?.plateType || ""}
+//                       required
 //                       onChange={(e) =>
 //                         handleColorDetailsChange(index, "plateType", e.target.value)
 //                       }
@@ -225,6 +230,7 @@
 //                     <label>MR Type:</label>
 //                     <select
 //                       value={lpDetails.colorDetails[index]?.mrType || ""}
+//                       required
 //                       onChange={(e) =>
 //                         handleColorDetailsChange(index, "mrType", e.target.value)
 //                       }
