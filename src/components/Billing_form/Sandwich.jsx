@@ -1,232 +1,232 @@
-// import React from "react";
+import React from "react";
 
-// const Sandwich = ({ state, dispatch, onPrevious, onNext }) => {
-//   const {
-//     isSandwichComponentUsed = false,
-//     lpDetails = {},
-//     fsDetails = {},
-//     embDetails = {},
-//   } = state.sandwich || {};
+const Sandwich = ({ state, dispatch, onPrevious, onNext }) => {
+  const {
+    isSandwichComponentUsed = false,
+    lpDetails = {},
+    fsDetails = {},
+    embDetails = {},
+  } = state.sandwich || {};
 
-//   const handleChange = (section, field, value) => {
-//     dispatch({
-//       type: "UPDATE_SANDWICH",
-//       payload: {
-//         [section]: {
-//           ...state.sandwich[section],
-//           [field]: value,
-//         },
-//       },
-//     });
-//   };
+  const handleChange = (section, field, value) => {
+    dispatch({
+      type: "UPDATE_SANDWICH",
+      payload: {
+        [section]: {
+          ...state.sandwich[section],
+          [field]: value,
+        },
+      },
+    });
+  };
 
-//   const handleToggle = (field, value) => {
-//     dispatch({
-//       type: "UPDATE_SANDWICH",
-//       payload: { [field]: value },
-//     });
-//   };
+  const handleToggle = (field, value) => {
+    dispatch({
+      type: "UPDATE_SANDWICH",
+      payload: { [field]: value },
+    });
+  };
 
-//   const handleNestedChange = (section, field, value) => {
-//     dispatch({
-//       type: "UPDATE_SANDWICH",
-//       payload: {
-//         [section]: {
-//           ...state.sandwich[section],
-//           [field]: value,
-//         },
-//       },
-//     });
-//   };
+  const handleNestedChange = (section, field, value) => {
+    dispatch({
+      type: "UPDATE_SANDWICH",
+      payload: {
+        [section]: {
+          ...state.sandwich[section],
+          [field]: value,
+        },
+      },
+    });
+  };
 
-//   const handleSubmit = (e) => {
-//     e.preventDefault();
-//     onNext();
-//   };
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    onNext();
+  };
 
-//   return (
-//     <form onSubmit={handleSubmit} className="space-y-6">
-//       <h2 className="text-xl font-bold text-gray-700 mb-4">Sandwich Component</h2>
+  return (
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-700 mb-4">Sandwich Component</h2>
 
-//       {/* Sandwich Component Toggle */}
-//       <div>
-//         <label className="flex items-center">
-//           <input
-//             type="checkbox"
-//             checked={isSandwichComponentUsed}
-//             onChange={(e) => handleToggle("isSandwichComponentUsed", e.target.checked)}
-//             className="mr-2"
-//           />
-//           Is Sandwich Component being used?
-//         </label>
-//       </div>
+      {/* Sandwich Component Toggle */}
+      <div>
+        <label className="flex items-center">
+          <input
+            type="checkbox"
+            checked={isSandwichComponentUsed}
+            onChange={(e) => handleToggle("isSandwichComponentUsed", e.target.checked)}
+            className="mr-2"
+          />
+          Is Sandwich Component being used?
+        </label>
+      </div>
 
-//       {isSandwichComponentUsed && (
-//         <>
-//           {/* LP Details */}
-//           <section className="space-y-4">
-//             <h3 className="text-lg font-semibold">LP Details</h3>
-//             <label className="flex items-center">
-//               <input
-//                 type="checkbox"
-//                 checked={lpDetails.isLPUsed || false}
-//                 onChange={(e) => handleChange("lpDetails", "isLPUsed", e.target.checked)}
-//                 className="mr-2"
-//               />
-//               Is LP being used?
-//             </label>
+      {isSandwichComponentUsed && (
+        <>
+          {/* LP Details */}
+          <section className="space-y-4">
+            <h3 className="text-lg font-semibold">LP Details</h3>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={lpDetails.isLPUsed || false}
+                onChange={(e) => handleChange("lpDetails", "isLPUsed", e.target.checked)}
+                className="mr-2"
+              />
+              Is LP being used?
+            </label>
 
-//             {lpDetails.isLPUsed && (
-//               <>
-//                 <div>
-//                   <label>No of Colors:</label>
-//                   <input
-//                     type="number"
-//                     value={lpDetails.noOfColors || 1}
-//                     min="1"
-//                     max="10"
-//                     onChange={(e) =>
-//                       handleChange("lpDetails", "noOfColors", parseInt(e.target.value))
-//                     }
-//                     className="border rounded-md p-2 w-full"
-//                   />
-//                 </div>
-//                 <div>
-//                   <label>Plate Size:</label>
-//                   <select
-//                     value={lpDetails.plateSizeType || ""}
-//                     onChange={(e) =>
-//                       handleChange("lpDetails", "plateSizeType", e.target.value)
-//                     }
-//                     className="border rounded-md p-2 w-full"
-//                   >
-//                     <option value="">Select Plate Size Type</option>
-//                     <option value="Auto">Auto</option>
-//                     <option value="Manual">Manual</option>
-//                   </select>
-//                 </div>
-//                 {lpDetails.plateSizeType === "Manual" && (
-//                   <div className="grid grid-cols-2 gap-4">
-//                     <input
-//                       type="number"
-//                       placeholder="Length (cm)"
-//                       value={lpDetails.plateDimensions?.length || ""}
-//                       onChange={(e) =>
-//                         handleNestedChange("lpDetails", "plateDimensions", {
-//                           ...lpDetails.plateDimensions,
-//                           length: e.target.value,
-//                         })
-//                       }
-//                       className="border rounded-md p-2"
-//                     />
-//                     <input
-//                       type="number"
-//                       placeholder="Breadth (cm)"
-//                       value={lpDetails.plateDimensions?.breadth || ""}
-//                       onChange={(e) =>
-//                         handleNestedChange("lpDetails", "plateDimensions", {
-//                           ...lpDetails.plateDimensions,
-//                           breadth: e.target.value,
-//                         })
-//                       }
-//                       className="border rounded-md p-2"
-//                     />
-//                   </div>
-//                 )}
-//               </>
-//             )}
-//           </section>
+            {lpDetails.isLPUsed && (
+              <>
+                <div>
+                  <label>No of Colors:</label>
+                  <input
+                    type="number"
+                    value={lpDetails.noOfColors || 1}
+                    min="1"
+                    max="10"
+                    onChange={(e) =>
+                      handleChange("lpDetails", "noOfColors", parseInt(e.target.value))
+                    }
+                    className="border rounded-md p-2 w-full"
+                  />
+                </div>
+                <div>
+                  <label>Plate Size:</label>
+                  <select
+                    value={lpDetails.plateSizeType || ""}
+                    onChange={(e) =>
+                      handleChange("lpDetails", "plateSizeType", e.target.value)
+                    }
+                    className="border rounded-md p-2 w-full"
+                  >
+                    <option value="">Select Plate Size Type</option>
+                    <option value="Auto">Auto</option>
+                    <option value="Manual">Manual</option>
+                  </select>
+                </div>
+                {lpDetails.plateSizeType === "Manual" && (
+                  <div className="grid grid-cols-2 gap-4">
+                    <input
+                      type="number"
+                      placeholder="Length (cm)"
+                      value={lpDetails.plateDimensions?.length || ""}
+                      onChange={(e) =>
+                        handleNestedChange("lpDetails", "plateDimensions", {
+                          ...lpDetails.plateDimensions,
+                          length: e.target.value,
+                        })
+                      }
+                      className="border rounded-md p-2"
+                    />
+                    <input
+                      type="number"
+                      placeholder="Breadth (cm)"
+                      value={lpDetails.plateDimensions?.breadth || ""}
+                      onChange={(e) =>
+                        handleNestedChange("lpDetails", "plateDimensions", {
+                          ...lpDetails.plateDimensions,
+                          breadth: e.target.value,
+                        })
+                      }
+                      className="border rounded-md p-2"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+          </section>
 
-//           {/* FS Details */}
-//           <section className="space-y-4">
-//             <h3 className="text-lg font-semibold">FS Details</h3>
-//             <label className="flex items-center">
-//               <input
-//                 type="checkbox"
-//                 checked={fsDetails.isFSUsed || false}
-//                 onChange={(e) => handleChange("fsDetails", "isFSUsed", e.target.checked)}
-//                 className="mr-2"
-//               />
-//               Is FS being used?
-//             </label>
+          {/* FS Details */}
+          <section className="space-y-4">
+            <h3 className="text-lg font-semibold">FS Details</h3>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={fsDetails.isFSUsed || false}
+                onChange={(e) => handleChange("fsDetails", "isFSUsed", e.target.checked)}
+                className="mr-2"
+              />
+              Is FS being used?
+            </label>
 
-//             {fsDetails.isFSUsed && (
-//               <>
-//                 <div>
-//                   <label>FS Type:</label>
-//                   <select
-//                     value={fsDetails.fsType || ""}
-//                     onChange={(e) => handleChange("fsDetails", "fsType", e.target.value)}
-//                     className="border rounded-md p-2 w-full"
-//                   >
-//                     <option value="">Select FS Type</option>
-//                     {["FS1", "FS2", "FS3"].map((type, index) => (
-//                       <option key={index} value={type}>
-//                         {type}
-//                       </option>
-//                     ))}
-//                   </select>
-//                 </div>
-//               </>
-//             )}
-//           </section>
+            {fsDetails.isFSUsed && (
+              <>
+                <div>
+                  <label>FS Type:</label>
+                  <select
+                    value={fsDetails.fsType || ""}
+                    onChange={(e) => handleChange("fsDetails", "fsType", e.target.value)}
+                    className="border rounded-md p-2 w-full"
+                  >
+                    <option value="">Select FS Type</option>
+                    {["FS1", "FS2", "FS3"].map((type, index) => (
+                      <option key={index} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </>
+            )}
+          </section>
 
-//           {/* EMB Details */}
-//           <section className="space-y-4">
-//             <h3 className="text-lg font-semibold">EMB Details</h3>
-//             <label className="flex items-center">
-//               <input
-//                 type="checkbox"
-//                 checked={embDetails.isEMBUsed || false}
-//                 onChange={(e) => handleChange("embDetails", "isEMBUsed", e.target.checked)}
-//                 className="mr-2"
-//               />
-//               Is EMB being used?
-//             </label>
+          {/* EMB Details */}
+          <section className="space-y-4">
+            <h3 className="text-lg font-semibold">EMB Details</h3>
+            <label className="flex items-center">
+              <input
+                type="checkbox"
+                checked={embDetails.isEMBUsed || false}
+                onChange={(e) => handleChange("embDetails", "isEMBUsed", e.target.checked)}
+                className="mr-2"
+              />
+              Is EMB being used?
+            </label>
 
-//             {embDetails.isEMBUsed && (
-//               <>
-//                 <div>
-//                   <label>Plate Size:</label>
-//                   <select
-//                     value={embDetails.plateSizeType || ""}
-//                     onChange={(e) =>
-//                       handleChange("embDetails", "plateSizeType", e.target.value)
-//                     }
-//                     className="border rounded-md p-2 w-full"
-//                   >
-//                     <option value="">Select Plate Size Type</option>
-//                     <option value="Auto">Auto</option>
-//                     <option value="Manual">Manual</option>
-//                   </select>
-//                 </div>
-//               </>
-//             )}
-//           </section>
-//         </>
-//       )}
+            {embDetails.isEMBUsed && (
+              <>
+                <div>
+                  <label>Plate Size:</label>
+                  <select
+                    value={embDetails.plateSizeType || ""}
+                    onChange={(e) =>
+                      handleChange("embDetails", "plateSizeType", e.target.value)
+                    }
+                    className="border rounded-md p-2 w-full"
+                  >
+                    <option value="">Select Plate Size Type</option>
+                    <option value="Auto">Auto</option>
+                    <option value="Manual">Manual</option>
+                  </select>
+                </div>
+              </>
+            )}
+          </section>
+        </>
+      )}
 
-//       {/* Navigation Buttons */}
-//       <div className="flex justify-between">
-//         <button
-//           type="button"
-//           onClick={onPrevious}
-//           className="bg-gray-500 text-white px-4 py-2 rounded-md"
-//         >
-//           Previous
-//         </button>
-//         <button
-//           type="submit"
-//           className="bg-blue-500 text-white px-4 py-2 rounded-md"
-//         >
-//           Next
-//         </button>
-//       </div>
-//     </form>
-//   );
-// };
+      {/* Navigation Buttons */}
+      <div className="flex justify-between">
+        <button
+          type="button"
+          onClick={onPrevious}
+          className="bg-gray-500 text-white px-4 py-2 rounded-md"
+        >
+          Previous
+        </button>
+        <button
+          type="submit"
+          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+        >
+          Next
+        </button>
+      </div>
+    </form>
+  );
+};
 
-// export default Sandwich;
+export default Sandwich;
 
 // import React, { useState } from "react";
 
@@ -807,207 +807,207 @@
 // export default Sandwich;
 
 // Latest Component
-import React, { useState } from "react";
+// import React, { useState } from "react";
 
-const Sandwich = ({ state, dispatch, onPrevious, onNext }) => {
-  const { isSandwichComponentUsed = false, lpDetails, fsDetails, embDetails } =
-    state.sandwich || {
-      lpDetails: {
-        isLPUsed: false,
-        noOfColors: 0,
-        colorDetails: [],
-      },
-      fsDetails: {
-        isFSUsed: false,
-        fsType: "",
-        foilDetails: [],
-      },
-      embDetails: {
-        isEMBUsed: false,
-        plateSizeType: "",
-        plateDimensions: { length: "", breadth: "" },
-        plateTypeMale: "",
-        plateTypeFemale: "",
-        embMR: "",
-      },
-    };
+// const Sandwich = ({ state, dispatch, onPrevious, onNext }) => {
+//   const { isSandwichComponentUsed = false, lpDetails, fsDetails, embDetails } =
+//     state.sandwich || {
+//       lpDetails: {
+//         isLPUsed: false,
+//         noOfColors: 0,
+//         colorDetails: [],
+//       },
+//       fsDetails: {
+//         isFSUsed: false,
+//         fsType: "",
+//         foilDetails: [],
+//       },
+//       embDetails: {
+//         isEMBUsed: false,
+//         plateSizeType: "",
+//         plateDimensions: { length: "", breadth: "" },
+//         plateTypeMale: "",
+//         plateTypeFemale: "",
+//         embMR: "",
+//       },
+//     };
 
-  const [errors, setErrors] = useState({});
+//   const [errors, setErrors] = useState({});
 
-  const handleChange = (section, field, value) => {
-    dispatch({
-      type: "UPDATE_SANDWICH",
-      payload: {
-        [section]: {
-          ...state.sandwich[section],
-          [field]: value,
-        },
-      },
-    });
-  };
+//   const handleChange = (section, field, value) => {
+//     dispatch({
+//       type: "UPDATE_SANDWICH",
+//       payload: {
+//         [section]: {
+//           ...state.sandwich[section],
+//           [field]: value,
+//         },
+//       },
+//     });
+//   };
 
-  const handleNestedChange = (section, nestedField, field, value) => {
-    dispatch({
-      type: "UPDATE_SANDWICH",
-      payload: {
-        [section]: {
-          ...state.sandwich[section],
-          [nestedField]: {
-            ...state.sandwich[section][nestedField],
-            [field]: value,
-          },
-        },
-      },
-    });
-  };
+//   const handleNestedChange = (section, nestedField, field, value) => {
+//     dispatch({
+//       type: "UPDATE_SANDWICH",
+//       payload: {
+//         [section]: {
+//           ...state.sandwich[section],
+//           [nestedField]: {
+//             ...state.sandwich[section][nestedField],
+//             [field]: value,
+//           },
+//         },
+//       },
+//     });
+//   };
 
-  const validateFields = () => {
-    const newErrors = {};
+//   const validateFields = () => {
+//     const newErrors = {};
 
-    // Validate LP Details
-    if (lpDetails.isLPUsed) {
-      if (!lpDetails.noOfColors || lpDetails.noOfColors < 1) {
-        newErrors.noOfColors = "Number of colors must be at least 1.";
-      }
+//     // Validate LP Details
+//     if (lpDetails.isLPUsed) {
+//       if (!lpDetails.noOfColors || lpDetails.noOfColors < 1) {
+//         newErrors.noOfColors = "Number of colors must be at least 1.";
+//       }
 
-      lpDetails.colorDetails.forEach((color, index) => {
-        if (!color.plateSizeType) {
-          newErrors[`lp_plateSizeType_${index}`] =
-            "Plate size type is required.";
-        }
-        if (color.plateSizeType === "Manual") {
-          if (!color.plateDimensions?.length) {
-            newErrors[`lp_plateLength_${index}`] = "Plate length is required.";
-          }
-          if (!color.plateDimensions?.breadth) {
-            newErrors[`lp_plateBreadth_${index}`] =
-              "Plate breadth is required.";
-          }
-        }
-        if (!color.inkType) {
-          newErrors[`lp_inkType_${index}`] = "Ink type is required.";
-        }
-        if (!color.plateType) {
-          newErrors[`lp_plateType_${index}`] = "Plate type is required.";
-        }
-        if (!color.mrType) {
-          newErrors[`lp_mrType_${index}`] = "MR type is required.";
-        }
-      });
-    }
+//       lpDetails.colorDetails.forEach((color, index) => {
+//         if (!color.plateSizeType) {
+//           newErrors[`lp_plateSizeType_${index}`] =
+//             "Plate size type is required.";
+//         }
+//         if (color.plateSizeType === "Manual") {
+//           if (!color.plateDimensions?.length) {
+//             newErrors[`lp_plateLength_${index}`] = "Plate length is required.";
+//           }
+//           if (!color.plateDimensions?.breadth) {
+//             newErrors[`lp_plateBreadth_${index}`] =
+//               "Plate breadth is required.";
+//           }
+//         }
+//         if (!color.inkType) {
+//           newErrors[`lp_inkType_${index}`] = "Ink type is required.";
+//         }
+//         if (!color.plateType) {
+//           newErrors[`lp_plateType_${index}`] = "Plate type is required.";
+//         }
+//         if (!color.mrType) {
+//           newErrors[`lp_mrType_${index}`] = "MR type is required.";
+//         }
+//       });
+//     }
 
-    // Validate FS Details
-    if (fsDetails.isFSUsed) {
-      if (!fsDetails.fsType) {
-        newErrors.fsType = "FS Type is required.";
-      }
+//     // Validate FS Details
+//     if (fsDetails.isFSUsed) {
+//       if (!fsDetails.fsType) {
+//         newErrors.fsType = "FS Type is required.";
+//       }
 
-      fsDetails.foilDetails.forEach((foil, index) => {
-        if (!foil.blockSizeType) {
-          newErrors[`fs_blockSizeType_${index}`] =
-            "Block size type is required.";
-        }
-        if (foil.blockSizeType === "Manual") {
-          if (!foil.blockLength) {
-            newErrors[`fs_blockLength_${index}`] = "Block length is required.";
-          }
-          if (!foil.blockBreadth) {
-            newErrors[`fs_blockBreadth_${index}`] =
-              "Block breadth is required.";
-          }
-        }
-        if (!foil.foilType) {
-          newErrors[`fs_foilType_${index}`] = "Foil type is required.";
-        }
-        if (!foil.blockType) {
-          newErrors[`fs_blockType_${index}`] = "Block type is required.";
-        }
-        if (!foil.mrType) {
-          newErrors[`fs_mrType_${index}`] = "MR type is required.";
-        }
-      });
-    }
+//       fsDetails.foilDetails.forEach((foil, index) => {
+//         if (!foil.blockSizeType) {
+//           newErrors[`fs_blockSizeType_${index}`] =
+//             "Block size type is required.";
+//         }
+//         if (foil.blockSizeType === "Manual") {
+//           if (!foil.blockLength) {
+//             newErrors[`fs_blockLength_${index}`] = "Block length is required.";
+//           }
+//           if (!foil.blockBreadth) {
+//             newErrors[`fs_blockBreadth_${index}`] =
+//               "Block breadth is required.";
+//           }
+//         }
+//         if (!foil.foilType) {
+//           newErrors[`fs_foilType_${index}`] = "Foil type is required.";
+//         }
+//         if (!foil.blockType) {
+//           newErrors[`fs_blockType_${index}`] = "Block type is required.";
+//         }
+//         if (!foil.mrType) {
+//           newErrors[`fs_mrType_${index}`] = "MR type is required.";
+//         }
+//       });
+//     }
 
-    // Validate EMB Details
-    if (embDetails.isEMBUsed) {
-      if (!embDetails.plateSizeType) {
-        newErrors.plateSizeType = "Plate size type is required.";
-      }
-      if (embDetails.plateSizeType === "Manual") {
-        if (!embDetails.plateDimensions.length) {
-          newErrors.embLength = "Plate length is required.";
-        }
-        if (!embDetails.plateDimensions.breadth) {
-          newErrors.embBreadth = "Plate breadth is required.";
-        }
-      }
-      if (!embDetails.plateTypeMale) {
-        newErrors.plateTypeMale = "Plate type male is required.";
-      }
-      if (!embDetails.plateTypeFemale) {
-        newErrors.plateTypeFemale = "Plate type female is required.";
-      }
-      if (!embDetails.embMR) {
-        newErrors.embMR = "EMB MR is required.";
-      }
-    }
+//     // Validate EMB Details
+//     if (embDetails.isEMBUsed) {
+//       if (!embDetails.plateSizeType) {
+//         newErrors.plateSizeType = "Plate size type is required.";
+//       }
+//       if (embDetails.plateSizeType === "Manual") {
+//         if (!embDetails.plateDimensions.length) {
+//           newErrors.embLength = "Plate length is required.";
+//         }
+//         if (!embDetails.plateDimensions.breadth) {
+//           newErrors.embBreadth = "Plate breadth is required.";
+//         }
+//       }
+//       if (!embDetails.plateTypeMale) {
+//         newErrors.plateTypeMale = "Plate type male is required.";
+//       }
+//       if (!embDetails.plateTypeFemale) {
+//         newErrors.plateTypeFemale = "Plate type female is required.";
+//       }
+//       if (!embDetails.embMR) {
+//         newErrors.embMR = "EMB MR is required.";
+//       }
+//     }
 
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+//     setErrors(newErrors);
+//     return Object.keys(newErrors).length === 0;
+//   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (validateFields()) {
-      onNext();
-    }
-  };
+//   const handleSubmit = (e) => {
+//     e.preventDefault();
+//     if (validateFields()) {
+//       onNext();
+//     }
+//   };
 
-  return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-700 mb-4">
-        Sandwich Component
-      </h2>
+//   return (
+//     <form onSubmit={handleSubmit} className="space-y-6">
+//       <h2 className="text-xl font-bold text-gray-700 mb-4">
+//         Sandwich Component
+//       </h2>
 
-      <div>
-        <label className="flex items-center">
-          <input
-            type="checkbox"
-            checked={isSandwichComponentUsed}
-            onChange={(e) =>
-              handleChange("isSandwichComponentUsed", e.target.checked)
-            }
-            className="mr-2"
-          />
-          Is Sandwich Component being used?
-        </label>
-      </div>
+//       <div>
+//         <label className="flex items-center">
+//           <input
+//             type="checkbox"
+//             checked={isSandwichComponentUsed}
+//             onChange={(e) =>
+//               handleChange("isSandwichComponentUsed", e.target.checked)
+//             }
+//             className="mr-2"
+//           />
+//           Is Sandwich Component being used?
+//         </label>
+//       </div>
 
-      {isSandwichComponentUsed && (
-        <>
-          {/* LP Section */}
-          {/* FS Section */}
-          {/* EMB Section */}
-        </>
-      )}
+//       {isSandwichComponentUsed && (
+//         <>
+//           {/* LP Section */}
+//           {/* FS Section */}
+//           {/* EMB Section */}
+//         </>
+//       )}
 
-      <div className="flex justify-between">
-        <button
-          type="button"
-          onClick={onPrevious}
-          className="bg-gray-500 text-white px-4 py-2 rounded-md"
-        >
-          Previous
-        </button>
-        <button
-          type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded-md"
-        >
-          Next
-        </button>
-      </div>
-    </form>
-  );
-};
+//       <div className="flex justify-between">
+//         <button
+//           type="button"
+//           onClick={onPrevious}
+//           className="bg-gray-500 text-white px-4 py-2 rounded-md"
+//         >
+//           Previous
+//         </button>
+//         <button
+//           type="submit"
+//           className="bg-blue-500 text-white px-4 py-2 rounded-md"
+//         >
+//           Next
+//         </button>
+//       </div>
+//     </form>
+//   );
+// };
 
-export default Sandwich;
+// export default Sandwich;

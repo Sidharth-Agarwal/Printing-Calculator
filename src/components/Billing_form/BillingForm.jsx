@@ -179,7 +179,7 @@ const BillingForm = () => {
   };
 
   const steps = [
-    // <OrderAndPaper state={state} dispatch={dispatch} onNext={handleNext} key="step1" />,
+    <OrderAndPaper state={state} dispatch={dispatch} onNext={handleNext} key="step1" />,
     <LPDetails state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step2" />,
     <FSDetails state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step3" />,
     <EMBDetails state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step4" />,
