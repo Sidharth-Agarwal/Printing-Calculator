@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import DieSelectionPopup from "./DieSelectionPopup";
@@ -12,6 +12,15 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
   const [papers, setPapers] = useState([]);
   const [showDiePopup, setShowDiePopup] = useState(false);
   const [showAddDiePopup, setShowAddDiePopup] = useState(false);
+
+  const firstInputRef = useRef(null);
+
+  // Focus on the first input field when the component loads
+  useEffect(() => {
+    if (firstInputRef.current) {
+      firstInputRef.current.focus();
+    }
+  }, []);
 
   // Fetch papers from Firestore
   useEffect(() => {
@@ -93,6 +102,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
             </label>
             <input
               id="clientName"
+              ref={firstInputRef} // Attach the ref to the first input field
               type="text"
               name="clientName"
               placeholder="Enter the client name"
@@ -129,8 +139,8 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
               id="date"
               selected={orderAndPaper.date}
               onChange={(date) => handleDateChange("date", date)}
-              dateFormat="MM/dd/yyyy"
-              placeholderText="MM/DD/YYYY"
+              dateFormat="dd/MM/yyyy"
+              placeholderText="DD/MM/YYYY"
               className="border rounded-md p-2 w-full"
               required
             />
@@ -145,8 +155,8 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
               id="deliveryDate"
               selected={orderAndPaper.deliveryDate}
               onChange={(date) => handleDateChange("deliveryDate", date)}
-              dateFormat="MM/dd/yyyy"
-              placeholderText="MM/DD/YYYY"
+              dateFormat="dd/MM/yyyy"
+              placeholderText="DD/MM/YYYY"
               className="border rounded-md p-2 w-full"
               required
             />
