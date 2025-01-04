@@ -1,4 +1,4 @@
-import React, { useReducer, useEffect } from "react";
+import React, { useReducer, useEffect, useState } from "react";
 import OrderAndPaper from "./OrderAndPaper";
 import LPDetails from "./LPDetails";
 import FSDetails from "./FSDetails";
@@ -8,6 +8,7 @@ import DieCutting from "./DieCutting";
 import Sandwich from "./Sandwich";
 import Pasting from "./Pasting";
 import ReviewAndSubmit from "./ReviewAndSubmit";
+import { calculateEstimateCosts } from "./calculations"; // Import calculations logic
 import { db } from "../../firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
 
@@ -91,7 +92,7 @@ const reducer = (state, action) => {
 };
 
 // Function to map the state to the desired Firebase structure
-const mapStateToFirebaseStructure = (state) => {
+const mapStateToFirebaseStructure = (state, calculations) => {
   const {
     orderAndPaper,
     lpDetails,
@@ -127,30 +128,32 @@ const mapStateToFirebaseStructure = (state) => {
     dieCuttingDetails: dieCutting.isDieCuttingUsed ? dieCutting : null,
     sandwichDetails: sandwich.isSandwichComponentUsed ? sandwich : null,
     pastingDetails: pasting,
+    calculations, // Include calculations in the Firebase structure
   };
 };
 
 const BillingForm = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
+  const [calculations, setCalculations] = useState(null); // Holds calculated data
+  const [isCalculating, setIsCalculating] = useState(false); // Loading state for calculations
 
-  // Save form state to local storage on every update
+  // Perform calculations after the Pasting step
   useEffect(() => {
-    localStorage.setItem("billingFormState", JSON.stringify(state));
+    const performCalculations = async () => {
+      setIsCalculating(true);
+      try {
+        const result = await calculateEstimateCosts(state); // Perform calculations
+        setCalculations(result); // Store the result
+      } catch (error) {
+        console.error("Error during calculations:", error);
+        setCalculations({ error: "Failed to calculate costs." });
+      } finally {
+        setIsCalculating(false);
+      }
+    };
+
+    if (state.currentStep >= 8) performCalculations();
   }, [state]);
-
-  // Load form state from local storage on initial render
-  useEffect(() => {
-    const storedState = JSON.parse(localStorage.getItem("billingFormState"));
-    if (storedState) {
-      if (storedState.orderAndPaper.date) {
-        storedState.orderAndPaper.date = new Date(storedState.orderAndPaper.date);
-      }
-      if (storedState.orderAndPaper.deliveryDate) {
-        storedState.orderAndPaper.deliveryDate = new Date(storedState.orderAndPaper.deliveryDate);
-      }
-      dispatch({ type: "LOAD_STATE", payload: storedState });
-    }
-  }, []);
 
   const handleNext = () => {
     if (state.currentStep < 9) {
@@ -166,12 +169,10 @@ const BillingForm = () => {
 
   const handleCreateEstimate = async () => {
     try {
-      const formattedData = mapStateToFirebaseStructure(state);
+      const formattedData = mapStateToFirebaseStructure(state, calculations);
       await addDoc(collection(db, "estimates"), formattedData);
       alert("Estimate created successfully!");
       dispatch({ type: "RESET_FORM" }); // Reset form to initial state
-      localStorage.removeItem("billingFormState"); // Clear local storage
-      window.location.reload(); // Reload the page
     } catch (error) {
       console.error("Error creating estimate:", error);
       alert("Failed to create estimate.");
@@ -189,6 +190,8 @@ const BillingForm = () => {
     <Pasting state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step8" />,
     <ReviewAndSubmit
       state={state}
+      calculations={calculations} // Pass calculations as a prop
+      isCalculating={isCalculating} // Pass loading state
       onPrevious={handlePrevious}
       onCreateEstimate={handleCreateEstimate}
       key="step9"

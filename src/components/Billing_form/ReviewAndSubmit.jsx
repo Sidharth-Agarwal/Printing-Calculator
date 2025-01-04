@@ -1,27 +1,15 @@
 import React from "react";
 
-const ReviewAndSubmit = ({ state, onPrevious, onCreateEstimate }) => {
+const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCreateEstimate }) => {
   const handleCreateEstimate = (e) => {
     e.preventDefault();
-    onCreateEstimate(); // Trigger the final submission logic
+    onCreateEstimate();
   };
 
   const renderValue = (key, value) => {
-    if (key === "image" && value) {
-      return (
-        <img
-          src={value}
-          alt="Uploaded"
-          className="w-24 h-24 object-contain border rounded-md"
-        />
-      );
-    }
-
     if (typeof value === "object" && value !== null) {
-      // For nested objects like dimensions or details arrays
       return JSON.stringify(value, null, 2);
     }
-
     return value || "Not Provided";
   };
 
@@ -55,6 +43,33 @@ const ReviewAndSubmit = ({ state, onPrevious, onCreateEstimate }) => {
           ) : null
         )}
       </div>
+
+      {isCalculating ? (
+        // Show loading state while calculations are being performed
+        <div className="bg-white p-6 rounded shadow-md">
+          <p className="text-gray-600 text-center">Calculating costs...</p>
+        </div>
+      ) : calculations ? (
+        // Show calculations if available
+        <div className="space-y-4 bg-white p-6 rounded shadow-md">
+          <h3 className="text-lg font-semibold text-gray-600 mb-4">Cost Calculations</h3>
+          {Object.entries(calculations).map(([key, value]) => (
+            <div
+              key={key}
+              className="flex justify-between items-center bg-gray-100 p-3 rounded-md"
+            >
+              <span className="font-medium text-gray-600 capitalize">{key}:</span>
+              <span className="text-gray-800">{renderValue(key, value)}</span>
+            </div>
+          ))}
+        </div>
+      ) : (
+        // Fallback for missing calculations
+        <div className="bg-white p-6 rounded shadow-md">
+          <p className="text-red-600 text-center">Unable to fetch calculations.</p>
+        </div>
+      )}
+
       <div className="flex justify-between mt-6">
         <button
           type="button"
