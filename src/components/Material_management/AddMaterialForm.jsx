@@ -46,14 +46,10 @@ const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, setSelectedMate
   };
 
   const calculateFields = () => {
-    const area = (formData.sizeL * formData.sizeB).toFixed(2);
+    const area = (formData.sizeL * formData.sizeB * formData.quantity).toFixed(2);
     const landedCost = (parseFloat(formData.rate || 0) + parseFloat(formData.courier || 0)).toFixed(2);
-    const costPerUnit = (
-      parseFloat(landedCost || 0) / parseFloat(formData.quantity || 1)
-    ).toFixed(2);
-    const finalCostPerUnit = (
-      parseFloat(costPerUnit || 0) + parseFloat(formData.markUp || 0)
-    ).toFixed(2);
+    const costPerUnit = area > 0 ? (parseFloat(landedCost || 0) / parseFloat(area)).toFixed(2) : "0.00";
+    const finalCostPerUnit = (parseFloat(costPerUnit || 0) * parseFloat(formData.markUp || 0)).toFixed(2);
 
     return { area, landedCost, costPerUnit, finalCostPerUnit };
   };
