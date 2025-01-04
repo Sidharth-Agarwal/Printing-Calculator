@@ -8,7 +8,7 @@ const Header = () => {
         <h1 className="text-xl font-bold">Print Calculator</h1>
         <nav className="space-x-6 relative">
           {/* New Bill */}
-          <Link to="/new-bill"className="hover:underline hover:text-blue-300 transition">
+          <Link to="/new-bill" className="hover:underline hover:text-blue-300 transition">
             New Bill
           </Link>
 
@@ -26,6 +26,9 @@ const Header = () => {
               </Link>
               <Link to="/material-stock/dies-db" className="block px-4 py-2 hover:bg-gray-200">
                 Dies DB
+              </Link>
+              <Link to="/material-stock/standard-rates-db" className="block px-4 py-2 hover:bg-gray-200">
+                Standard Rates DB
               </Link>
             </div>
           </div>
