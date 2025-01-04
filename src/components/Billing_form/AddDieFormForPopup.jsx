@@ -112,20 +112,21 @@ const AddDieFormForPopup = ({ onAddDie, onClose }) => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
           {[
             { label: "Job Type", name: "jobType", type: "select", options: ["Card", "Biz Card", "Magnet", "Envelope"] },
+            { label: "Die Code", name: "dieCode", type: "text", placeholder: "Enter die code" },
             { label: "Type", name: "type", type: "text", placeholder: "Enter the type of the die" },
+            { label: "Frags", name: "frags", type: "number", placeholder: "Enter number of frags" },
             { label: "Product Size L (in)", name: "productSizeL", type: "number", placeholder: "Enter product length" },
             { label: "Product Size B (in)", name: "productSizeB", type: "number", placeholder: "Enter product breadth" },
             { label: "Die Size L (in)", name: "dieSizeL", type: "number", placeholder: "Enter die length" },
             { label: "Die Size B (in)", name: "dieSizeB", type: "number", placeholder: "Enter die breadth" },
-            { label: "Paper Size L (in)", name: "paperSizeL", type: "number", placeholder: "Enter paper length" },
-            { label: "Paper Size B (in)", name: "paperSizeB", type: "number", placeholder: "Enter paper breadth" },
-            { label: "Frags", name: "frags", type: "number", placeholder: "Enter number of frags" },
+            // { label: "Paper Size L (in)", name: "paperSizeL", type: "number", placeholder: "Enter paper length" },
+            // { label: "Paper Size B (in)", name: "paperSizeB", type: "number", placeholder: "Enter paper breadth" },
+            // { label: "Frags", name: "frags", type: "number", placeholder: "Enter number of frags" },
             // { label: "Plate Size L (in)", name: "plateSizeL", type: "number", placeholder: "Enter plate length" },
             // { label: "Plate Size B (in)", name: "plateSizeB", type: "number", placeholder: "Enter plate breadth" },
             // { label: "CLSD Print Size L (in)", name: "clsdPrintSizeL", type: "number", placeholder: "Enter CLSD print length" },
             // { label: "CLSD Print Size B (in)", name: "clsdPrintSizeB", type: "number", placeholder: "Enter CLSD print breadth" },
-            { label: "Die Code", name: "dieCode", type: "text", placeholder: "Enter die code" },
-            { label: "Price (INR)", name: "price", type: "number", placeholder: "Enter price of the die" },
+            // { label: "Price (INR)", name: "price", type: "number", placeholder: "Enter price of the die" },
           ].map((field, idx) => (
             <div key={idx}>
               <label className="block text-sm font-medium mb-1">{field.label}:</label>

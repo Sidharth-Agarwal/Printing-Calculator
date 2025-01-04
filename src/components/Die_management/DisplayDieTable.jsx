@@ -11,19 +11,19 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
               {[
                 "Job Type",
                 "Type",
+                "Die Code",
+                "Frags",
                 "Product L",
                 "Product B",
                 "Die L",
                 "Die B",
-                "Paper L",
-                "Paper B",
-                "Frags",
+                // "Paper L",
+                // "Paper B",
                 // "Plate L",
                 // "Plate B",
                 // "CLSD L",
                 // "CLSD B",
-                "Die Code",
-                "Price (INR)", // Add price to table header
+                "Price (INR)",
                 "Image",
                 "Actions",
               ].map((header, idx) => (
@@ -38,18 +38,18 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
               <tr key={die.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-2">{die.jobType}</td>
                 <td className="px-4 py-2">{die.type}</td>
+                <td className="px-4 py-2">{die.dieCode}</td>
+                <td className="px-4 py-2">{die.frags}</td>
                 <td className="px-4 py-2">{die.productSizeL}</td>
                 <td className="px-4 py-2">{die.productSizeB}</td>
                 <td className="px-4 py-2">{die.dieSizeL}</td>
                 <td className="px-4 py-2">{die.dieSizeB}</td>
-                <td className="px-4 py-2">{die.paperSizeL}</td>
-                <td className="px-4 py-2">{die.paperSizeB}</td>
-                <td className="px-4 py-2">{die.frags}</td>
+                {/* <td className="px-4 py-2">{die.paperSizeL}</td>
+                <td className="px-4 py-2">{die.paperSizeB}</td> */}
                 {/* <td className="px-4 py-2">{die.plateSizeL}</td>
                 <td className="px-4 py-2">{die.plateSizeB}</td>
                 <td className="px-4 py-2">{die.clsdPrintSizeL}</td>
                 <td className="px-4 py-2">{die.clsdPrintSizeB}</td> */}
-                <td className="px-4 py-2">{die.dieCode}</td>
                 <td className="px-4 py-2">{die.price}</td> {/* Add price to table row */}
                 <td className="px-4 py-2">
                   {die.imageUrl ? (
