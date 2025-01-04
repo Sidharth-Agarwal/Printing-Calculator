@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
   const lpDetails = state.lpDetails || {
@@ -7,10 +7,12 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
     colorDetails: [], // Holds plate size, pantone type, plate type, MR type for each color
   };
 
+  const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
+
   const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value, checked } = e.target;
 
     if (name === "isLPUsed") {
       if (checked) {
@@ -39,7 +41,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
             colorDetails: [],
           },
         });
-        setErrors({}); // Clear errors when toggled off
+        setErrors({});
       }
     } else if (name === "noOfColors") {
       dispatch({
@@ -52,10 +54,31 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
 
   const handleColorDetailsChange = (index, field, value) => {
     const updatedDetails = [...lpDetails.colorDetails];
-    updatedDetails[index] = {
-      ...updatedDetails[index],
-      [field]: value,
-    };
+
+    if (field === "plateSizeType") {
+      updatedDetails[index].plateSizeType = value;
+
+      // Reset plate dimensions when switching to Manual
+      if (value === "Manual") {
+        updatedDetails[index].plateDimensions = { length: "", breadth: "" };
+      }
+
+      // Populate dimensions when switching to Auto
+      if (value === "Auto") {
+        updatedDetails[index].plateDimensions = {
+          length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
+          breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+        };
+      }
+    } else if (field === "plateDimensions") {
+      updatedDetails[index].plateDimensions = {
+        ...updatedDetails[index].plateDimensions,
+        ...value,
+      };
+    } else {
+      updatedDetails[index][field] = value;
+    }
+
     dispatch({
       type: "UPDATE_LP_DETAILS",
       payload: { colorDetails: updatedDetails },
@@ -112,7 +135,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
     }
 
     setErrors(newErrors);
-    return Object.keys(newErrors).length === 0; // Validation passes if no errors
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
@@ -121,6 +144,29 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
       onNext();
     }
   };
+
+  const inchesToCm = (inches) => parseFloat(inches) * 2.54; // Convert inches to centimeters
+
+  useEffect(() => {
+    if (lpDetails.isLPUsed) {
+      const updatedDetails = lpDetails.colorDetails.map((color) => {
+        if (color.plateSizeType === "Auto") {
+          return {
+            ...color,
+            plateDimensions: {
+              length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
+              breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+            },
+          };
+        }
+        return color;
+      });
+      dispatch({
+        type: "UPDATE_LP_DETAILS",
+        payload: { colorDetails: updatedDetails },
+      });
+    }
+  }, [lpDetails.isLPUsed, lpDetails.colorDetails, dieSize, dispatch]);
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
@@ -165,7 +211,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
 
                   {/* Plate Size Type */}
                   <div>
-                    <div className="mb-1">Plate Size:</div>
+                    <div className="mb-1">Plate Size (cm):</div>
                     <select
                       value={lpDetails.colorDetails[index]?.plateSizeType || ""}
                       onChange={(e) =>
@@ -188,8 +234,8 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
                     )}
                   </div>
 
-                  {/* Manual Plate Dimensions */}
-                  {lpDetails.colorDetails[index]?.plateSizeType === "Manual" && (
+                  {/* Display Plate Dimensions Only When Plate Size Type is Selected */}
+                  {lpDetails.colorDetails[index]?.plateSizeType && (
                     <div className="grid grid-cols-2 gap-4 mt-2">
                       <input
                         type="number"
@@ -200,38 +246,39 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
                         }
                         onChange={(e) =>
                           handleColorDetailsChange(index, "plateDimensions", {
-                            ...lpDetails.colorDetails[index]?.plateDimensions,
                             length: e.target.value,
                           })
                         }
-                        className="border rounded-md p-2"
+                        className={`border rounded-md p-2 ${
+                          lpDetails.colorDetails[index]?.plateSizeType === "Auto"
+                            ? "bg-gray-100"
+                            : ""
+                        }`}
+                        readOnly={
+                          lpDetails.colorDetails[index]?.plateSizeType === "Auto"
+                        }
                       />
-                      {errors[`plateLength_${index}`] && (
-                        <p className="text-red-500 text-sm">
-                          {errors[`plateLength_${index}`]}
-                        </p>
-                      )}
                       <input
                         type="number"
                         name="breadth"
                         placeholder="Breadth (cm)"
                         value={
-                          lpDetails.colorDetails[index]?.plateDimensions?.breadth ||
-                          ""
+                          lpDetails.colorDetails[index]?.plateDimensions?.breadth || ""
                         }
                         onChange={(e) =>
                           handleColorDetailsChange(index, "plateDimensions", {
-                            ...lpDetails.colorDetails[index]?.plateDimensions,
                             breadth: e.target.value,
                           })
                         }
-                        className="border rounded-md p-2"
+                        className={`border rounded-md p-2 ${
+                          lpDetails.colorDetails[index]?.plateSizeType === "Auto"
+                            ? "bg-gray-100"
+                            : ""
+                        }`}
+                        readOnly={
+                          lpDetails.colorDetails[index]?.plateSizeType === "Auto"
+                        }
                       />
-                      {errors[`plateBreadth_${index}`] && (
-                        <p className="text-red-500 text-sm">
-                          {errors[`plateBreadth_${index}`]}
-                        </p>
-                      )}
                     </div>
                   )}
 
@@ -242,10 +289,14 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
                       type="text"
                       value={lpDetails.colorDetails[index]?.pantoneType || ""}
                       onChange={(e) =>
-                        handleColorDetailsChange(index, "pantoneType", e.target.value)
+                        handleColorDetailsChange(
+                          index,
+                          "pantoneType",
+                          e.target.value
+                        )
                       }
-                      placeholder="Enter Pantone Type"
                       className="border rounded-md p-2 w-full"
+                      placeholder="Enter Pantone Type"
                     />
                     {errors[`pantoneType_${index}`] && (
                       <p className="text-red-500 text-sm">
