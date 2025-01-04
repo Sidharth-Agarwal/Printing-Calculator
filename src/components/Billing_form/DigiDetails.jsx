@@ -1,7 +1,8 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 
 const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
   const { isDigiUsed = false, digiDie = "" } = state.digiDetails || {};
+  const [errors, setErrors] = useState({});
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -11,6 +12,22 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
     });
   };
 
+  const validateFields = () => {
+    const validationErrors = {};
+    if (isDigiUsed && !digiDie) {
+      validationErrors.digiDie = "Digi Die is required when Digi is being used.";
+    }
+    setErrors(validationErrors);
+    return Object.keys(validationErrors).length === 0;
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    if (validateFields()) {
+      onNext();
+    }
+  };
+
   useEffect(() => {
     if (!isDigiUsed) {
       // Clear digiDie field when Digi is not used
@@ -18,19 +35,15 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
         type: "UPDATE_DIGI_DETAILS",
         payload: { digiDie: "" },
       });
+      setErrors({});
     }
   }, [isDigiUsed, dispatch]);
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onNext();
-  };
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Digi Details</h2>
       {/* Checkbox for Digi Usage */}
-      <label className="flex items-center">
+      <label className="font-semibold flex items-center">
         <input
           type="checkbox"
           name="isDigiUsed"
@@ -48,12 +61,17 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
             name="digiDie"
             value={digiDie}
             onChange={handleChange}
-            className="border rounded-md p-2 w-full"
+            className={`border rounded-md p-2 w-full ${
+              errors.digiDie ? "border-red-500" : ""
+            }`}
           >
             <option value="">Select Digi Die</option>
             <option value="12x18">12x18</option>
             <option value="13x19">13x19</option>
           </select>
+          {errors.digiDie && (
+            <p className="text-red-500 text-sm mt-1">{errors.digiDie}</p>
+          )}
         </div>
       )}
       {/* Navigation Buttons */}
