@@ -25,6 +25,30 @@ export const fetchPaperDetails = async (paperName) => {
   }
 };
 
+// /**
+//  * Fetch material details from the Firebase Firestore database by material name.
+//  * @param {string} materialName - The name of the material to fetch.
+//  * @returns {Promise<Object|null>} - The material details or null if not found.
+//  */
+// export const fetchMaterialDetails = async (materialName) => {
+//   try {
+//     const materialsCollection = collection(db, "materials"); // Replace "materials" with your collection name in Firestore
+//     const q = query(materialsCollection, where("materialName", "==", materialName));
+//     const querySnapshot = await getDocs(q);
+
+//     if (!querySnapshot.empty) {
+//       const materialData = querySnapshot.docs[0].data();
+//       return materialData; // Return the first matching document's data
+//     } else {
+//       console.warn(`No material found with the name: ${materialName}`);
+//       return null;
+//     }
+//   } catch (error) {
+//     console.error("Error fetching material details:", error);
+//     throw new Error("Failed to fetch material details");
+//   }
+// };
+
 /**
  * Fetch material details from the Firebase Firestore database by material name.
  * @param {string} materialName - The name of the material to fetch.
@@ -32,12 +56,13 @@ export const fetchPaperDetails = async (paperName) => {
  */
 export const fetchMaterialDetails = async (materialName) => {
   try {
-    const materialsCollection = collection(db, "materials"); // Replace "materials" with your collection name in Firestore
+    const materialsCollection = collection(db, "materials");
     const q = query(materialsCollection, where("materialName", "==", materialName));
     const querySnapshot = await getDocs(q);
 
     if (!querySnapshot.empty) {
       const materialData = querySnapshot.docs[0].data();
+      console.log(materialData, materialName)
       return materialData; // Return the first matching document's data
     } else {
       console.warn(`No material found with the name: ${materialName}`);
@@ -94,5 +119,43 @@ export const fetchMRDetailsForLPDetails = async (lpDetails) => {
   } catch (error) {
     console.error("Error fetching MR details for LP details:", error);
     throw new Error("Failed to fetch MR details for LP details");
+  }
+};
+
+/**
+ * Fetch MR details for FS details from Firebase Firestore.
+ * @param {Object} fsDetails - The FS details object containing foilDetails array.
+ * @returns {Promise<Object[]>} - Array of MR details for each foil or an error if not found.
+ */
+export const fetchMRDetailsForFSDetails = async (fsDetails) => {
+  try {
+    const standardRatesCollection = collection(db, "standard_rates");
+    const mrDetailsArray = [];
+
+    for (const foil of fsDetails.foilDetails) {
+      const mrType = foil.mrType;
+      if (!mrType) {
+        console.warn("Missing MR type for foil:", foil);
+        continue; // Skip if no MR type is specified
+      }
+
+      const fsMRConcatenate = `FS MR ${mrType.toUpperCase()}`;
+      const q = query(
+        standardRatesCollection,
+        where("concatenate", "==", fsMRConcatenate)
+      );
+      const querySnapshot = await getDocs(q);
+
+      if (!querySnapshot.empty) {
+        mrDetailsArray.push(querySnapshot.docs[0].data());
+      } else {
+        console.warn(`No FS MR details found for type: ${mrType}`);
+      }
+    }
+
+    return mrDetailsArray;
+  } catch (error) {
+    console.error("Error fetching MR details for FS details:", error);
+    throw new Error("Failed to fetch MR details for FS details");
   }
 };
