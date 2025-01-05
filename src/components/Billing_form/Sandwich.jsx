@@ -8,17 +8,17 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
   // Local state for Sandwich component details
   const [sandwichDetails, setSandwichDetails] = useState({
-    lpDetails: {
+    lpDetailsSandwich: {
       isLPUsed: false,
       noOfColors: 0,
       colorDetails: [],
     },
-    fsDetails: {
+    fsDetailsSandwich: {
       isFSUsed: false,
       fsType: "FS1",
       foilDetails: [],
     },
-    embDetails: {
+    embDetailsSandwich: {
       isEMBUsed: false,
       plateSizeType: "",
       plateDimensions: { length: "", breadth: "" },
@@ -69,11 +69,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
     const newErrors = {};
 
     // Validate LP Details
-    if (sandwichDetails.lpDetails.isLPUsed) {
-      if (!sandwichDetails.lpDetails.noOfColors) {
+    if (sandwichDetails.lpDetailsSandwich.isLPUsed) {
+      if (!sandwichDetails.lpDetailsSandwich.noOfColors) {
         newErrors.lpNoOfColors = "Number of colors is required";
       }
-      sandwichDetails.lpDetails.colorDetails.forEach((color, index) => {
+      sandwichDetails.lpDetailsSandwich.colorDetails.forEach((color, index) => {
         if (!color.plateSizeType)
           newErrors[`lpPlateSizeType_${index}`] = "Plate size type is required";
         if (color.plateSizeType === "Manual") {
@@ -134,13 +134,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
               <input
                 type="checkbox"
                 name="isLPUsedSandwich"
-                checked={state.sandwich.lpDetails?.isLPUsed || false}
+                checked={state.sandwich.lpDetailsSandwich?.isLPUsed || false}
                 onChange={(e) =>
                   dispatch({
                     type: "UPDATE_SANDWICH",
                     payload: {
-                      lpDetails: {
-                        ...state.sandwich.lpDetails,
+                      lpDetailsSandwich: {
+                        ...state.sandwich.lpDetailsSandwich,
                         isLPUsed: e.target.checked,
                         noOfColors: e.target.checked ? 1 : 0,
                         colorDetails: e.target.checked
@@ -164,7 +164,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
             </label>
 
             {/* LP Fields */}
-            {state.sandwich.lpDetails?.isLPUsed && (
+            {state.sandwich.lpDetailsSandwich?.isLPUsed && (
               <div className="space-y-4">
                 {/* Number of Colors */}
                 <div>
@@ -174,13 +174,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                     name="noOfColors"
                     min="1"
                     max="10"
-                    value={state.sandwich.lpDetails.noOfColors || ""}
+                    value={state.sandwich.lpDetailsSandwich.noOfColors || ""}
                     onChange={(e) => {
                       const numColors = parseInt(e.target.value, 10) || 0;
                       const updatedColorDetails = Array.from({ length: numColors }, (_, index) => ({
-                        plateSizeType: state.sandwich.lpDetails.colorDetails[index]?.plateSizeType || "",
+                        plateSizeType: state.sandwich.lpDetailsSandwich.colorDetails[index]?.plateSizeType || "",
                         plateDimensions:
-                          state.sandwich.lpDetails.colorDetails[index]?.plateSizeType === "Auto"
+                          state.sandwich.lpDetailsSandwich.colorDetails[index]?.plateSizeType === "Auto"
                             ? {
                                 length: dieSize.length
                                   ? (parseFloat(dieSize.length) * 2.54).toFixed(2)
@@ -189,19 +189,19 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                                   ? (parseFloat(dieSize.breadth) * 2.54).toFixed(2)
                                   : "",
                               }
-                            : state.sandwich.lpDetails.colorDetails[index]?.plateDimensions || {
+                            : state.sandwich.lpDetailsSandwich.colorDetails[index]?.plateDimensions || {
                                 length: "",
                                 breadth: "",
                               },
-                        pantoneType: state.sandwich.lpDetails.colorDetails[index]?.pantoneType || "",
-                        plateType: state.sandwich.lpDetails.colorDetails[index]?.plateType || "",
-                        mrType: state.sandwich.lpDetails.colorDetails[index]?.mrType || "",
+                        pantoneType: state.sandwich.lpDetailsSandwich.colorDetails[index]?.pantoneType || "",
+                        plateType: state.sandwich.lpDetailsSandwich.colorDetails[index]?.plateType || "",
+                        mrType: state.sandwich.lpDetailsSandwich.colorDetails[index]?.mrType || "",
                       }));
                       dispatch({
                         type: "UPDATE_SANDWICH",
                         payload: {
-                          lpDetails: {
-                            ...state.sandwich.lpDetails,
+                          lpDetailsSandwich: {
+                            ...state.sandwich.lpDetailsSandwich,
                             noOfColors: numColors,
                             colorDetails: updatedColorDetails,
                           },
@@ -213,7 +213,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                 </div>
 
                 {/* Color Details */}
-                {state.sandwich.lpDetails.colorDetails.map((color, index) => (
+                {state.sandwich.lpDetailsSandwich.colorDetails.map((color, index) => (
                   <div key={index} className="p-4 border rounded-md bg-gray-50 space-y-4">
                     <h4 className="font-semibold">Color {index + 1}</h4>
 
@@ -223,7 +223,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       <select
                         value={color.plateSizeType || ""}
                         onChange={(e) => {
-                          const updatedDetails = [...state.sandwich.lpDetails.colorDetails];
+                          const updatedDetails = [...state.sandwich.lpDetailsSandwich.colorDetails];
                           updatedDetails[index] = {
                             ...updatedDetails[index],
                             plateSizeType: e.target.value,
@@ -240,7 +240,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                           };
                           dispatch({
                             type: "UPDATE_SANDWICH",
-                            payload: { lpDetails: { ...state.sandwich.lpDetails, colorDetails: updatedDetails } },
+                            payload: { lpDetailsSandwich: { ...state.sandwich.lpDetailsSandwich, colorDetails: updatedDetails } },
                           });
                         }}
                         className="border rounded-md p-2 w-full"
@@ -260,11 +260,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                             placeholder="Length (cm)"
                             value={color.plateDimensions.length || ""}
                             onChange={(e) => {
-                              const updatedDetails = [...state.sandwich.lpDetails.colorDetails];
+                              const updatedDetails = [...state.sandwich.lpDetailsSandwich.colorDetails];
                               updatedDetails[index].plateDimensions.length = e.target.value;
                               dispatch({
                                 type: "UPDATE_SANDWICH",
-                                payload: { lpDetails: { ...state.sandwich.lpDetails, colorDetails: updatedDetails } },
+                                payload: { lpDetailsSandwich: { ...state.sandwich.lpDetailsSandwich, colorDetails: updatedDetails } },
                               });
                             }}
                             className={`border rounded-md p-2 w-full ${
@@ -279,11 +279,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                             placeholder="Breadth (cm)"
                             value={color.plateDimensions.breadth || ""}
                             onChange={(e) => {
-                              const updatedDetails = [...state.sandwich.lpDetails.colorDetails];
+                              const updatedDetails = [...state.sandwich.lpDetailsSandwich.colorDetails];
                               updatedDetails[index].plateDimensions.breadth = e.target.value;
                               dispatch({
                                 type: "UPDATE_SANDWICH",
-                                payload: { lpDetails: { ...state.sandwich.lpDetails, colorDetails: updatedDetails } },
+                                payload: { lpDetailsSandwich: { ...state.sandwich.lpDetailsSandwich, colorDetails: updatedDetails } },
                               });
                             }}
                             className={`border rounded-md p-2 w-full ${
@@ -302,11 +302,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                         type="text"
                         value={color.pantoneType || ""}
                         onChange={(e) => {
-                          const updatedDetails = [...state.sandwich.lpDetails.colorDetails];
+                          const updatedDetails = [...state.sandwich.lpDetailsSandwich.colorDetails];
                           updatedDetails[index].pantoneType = e.target.value;
                           dispatch({
                             type: "UPDATE_SANDWICH",
-                            payload: { lpDetails: { ...state.sandwich.lpDetails, colorDetails: updatedDetails } },
+                            payload: { lpDetailsSandwich: { ...state.sandwich.lpDetailsSandwich, colorDetails: updatedDetails } },
                           });
                         }}
                         className="border rounded-md p-2 w-full"
@@ -319,11 +319,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       <select
                         value={color.plateType || ""}
                         onChange={(e) => {
-                          const updatedDetails = [...state.sandwich.lpDetails.colorDetails];
+                          const updatedDetails = [...state.sandwich.lpDetailsSandwich.colorDetails];
                           updatedDetails[index].plateType = e.target.value;
                           dispatch({
                             type: "UPDATE_SANDWICH",
-                            payload: { lpDetails: { ...state.sandwich.lpDetails, colorDetails: updatedDetails } },
+                            payload: { lpDetailsSandwich: { ...state.sandwich.lpDetailsSandwich, colorDetails: updatedDetails } },
                           });
                         }}
                         className="border rounded-md p-2 w-full"
@@ -339,11 +339,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       <select
                         value={color.mrType || ""}
                         onChange={(e) => {
-                          const updatedDetails = [...state.sandwich.lpDetails.colorDetails];
+                          const updatedDetails = [...state.sandwich.lpDetailsSandwich.colorDetails];
                           updatedDetails[index].mrType = e.target.value;
                           dispatch({
                             type: "UPDATE_SANDWICH",
-                            payload: { lpDetails: { ...state.sandwich.lpDetails, colorDetails: updatedDetails } },
+                            payload: { lpDetailsSandwich: { ...state.sandwich.lpDetailsSandwich, colorDetails: updatedDetails } },
                           });
                         }}
                         className="border rounded-md p-2 w-full"
@@ -369,13 +369,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
               <input
                 type="checkbox"
                 name="isFSUsedSandwich"
-                checked={state.sandwich.fsDetails?.isFSUsed || false}
+                checked={state.sandwich.fsDetailsSandwich?.isFSUsed || false}
                 onChange={(e) =>
                   dispatch({
                     type: "UPDATE_SANDWICH",
                     payload: {
-                      fsDetails: {
-                        ...state.sandwich.fsDetails,
+                      fsDetailsSandwich: {
+                        ...state.sandwich.fsDetailsSandwich,
                         isFSUsed: e.target.checked,
                         fsType: e.target.checked ? "FS1" : "",
                         foilDetails: e.target.checked
@@ -399,13 +399,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
             </label>
 
             {/* FS Fields */}
-            {state.sandwich.fsDetails?.isFSUsed && (
+            {state.sandwich.fsDetailsSandwich?.isFSUsed && (
               <div className="space-y-4">
                 {/* FS Type */}
                 <div>
                   <label className="block mb-1">FS Type:</label>
                   <select
-                    value={state.sandwich.fsDetails.fsType || ""}
+                    value={state.sandwich.fsDetailsSandwich.fsType || ""}
                     onChange={(e) => {
                       const numFoils = parseInt(e.target.value.replace("FS", ""), 10) || 0;
                       const updatedFoilDetails = Array.from({ length: numFoils }, () => ({
@@ -418,8 +418,8 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       dispatch({
                         type: "UPDATE_SANDWICH",
                         payload: {
-                          fsDetails: {
-                            ...state.sandwich.fsDetails,
+                          fsDetailsSandwich: {
+                            ...state.sandwich.fsDetailsSandwich,
                             fsType: e.target.value,
                             foilDetails: updatedFoilDetails,
                           },
@@ -437,7 +437,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                 </div>
 
                 {/* Foil Details */}
-                {state.sandwich.fsDetails.foilDetails.map((foil, index) => (
+                {state.sandwich.fsDetailsSandwich.foilDetails.map((foil, index) => (
                   <div key={index} className="p-4 border rounded-md bg-gray-50 space-y-4">
                     <h4 className="font-semibold">Foil {index + 1}</h4>
 
@@ -447,7 +447,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       <select
                         value={foil.blockSizeType || ""}
                         onChange={(e) => {
-                          const updatedFoilDetails = [...state.sandwich.fsDetails.foilDetails];
+                          const updatedFoilDetails = [...state.sandwich.fsDetailsSandwich.foilDetails];
                           updatedFoilDetails[index] = {
                             ...updatedFoilDetails[index],
                             blockSizeType: e.target.value,
@@ -464,7 +464,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                           };
                           dispatch({
                             type: "UPDATE_SANDWICH",
-                            payload: { fsDetails: { ...state.sandwich.fsDetails, foilDetails: updatedFoilDetails } },
+                            payload: { fsDetailsSandwich: { ...state.sandwich.fsDetailsSandwich, foilDetails: updatedFoilDetails } },
                           });
                         }}
                         className="border rounded-md p-2 w-full"
@@ -484,11 +484,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                             placeholder="Length (cm)"
                             value={foil.blockDimension.length || ""}
                             onChange={(e) => {
-                              const updatedFoilDetails = [...state.sandwich.fsDetails.foilDetails];
+                              const updatedFoilDetails = [...state.sandwich.fsDetailsSandwich.foilDetails];
                               updatedFoilDetails[index].blockDimension.length = e.target.value;
                               dispatch({
                                 type: "UPDATE_SANDWICH",
-                                payload: { fsDetails: { ...state.sandwich.fsDetails, foilDetails: updatedFoilDetails } },
+                                payload: { fsDetailsSandwich: { ...state.sandwich.fsDetailsSandwich, foilDetails: updatedFoilDetails } },
                               });
                             }}
                             className={`border rounded-md p-2 w-full ${
@@ -503,11 +503,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                             placeholder="Breadth (cm)"
                             value={foil.blockDimension.breadth || ""}
                             onChange={(e) => {
-                              const updatedFoilDetails = [...state.sandwich.fsDetails.foilDetails];
+                              const updatedFoilDetails = [...state.sandwich.fsDetailsSandwich.foilDetails];
                               updatedFoilDetails[index].blockDimension.breadth = e.target.value;
                               dispatch({
                                 type: "UPDATE_SANDWICH",
-                                payload: { fsDetails: { ...state.sandwich.fsDetails, foilDetails: updatedFoilDetails } },
+                                payload: { fsDetailsSandwich: { ...state.sandwich.fsDetailsSandwich, foilDetails: updatedFoilDetails } },
                               });
                             }}
                             className={`border rounded-md p-2 w-full ${
@@ -525,11 +525,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       <select
                         value={foil.foilType || ""}
                         onChange={(e) => {
-                          const updatedFoilDetails = [...state.sandwich.fsDetails.foilDetails];
+                          const updatedFoilDetails = [...state.sandwich.fsDetailsSandwich.foilDetails];
                           updatedFoilDetails[index].foilType = e.target.value;
                           dispatch({
                             type: "UPDATE_SANDWICH",
-                            payload: { fsDetails: { ...state.sandwich.fsDetails, foilDetails: updatedFoilDetails } },
+                            payload: { fsDetailsSandwich: { ...state.sandwich.fsDetailsSandwich, foilDetails: updatedFoilDetails } },
                           });
                         }}
                         className="border rounded-md p-2 w-full"
@@ -552,11 +552,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       <select
                         value={foil.blockType || ""}
                         onChange={(e) => {
-                          const updatedFoilDetails = [...state.sandwich.fsDetails.foilDetails];
+                          const updatedFoilDetails = [...state.sandwich.fsDetailsSandwich.foilDetails];
                           updatedFoilDetails[index].blockType = e.target.value;
                           dispatch({
                             type: "UPDATE_SANDWICH",
-                            payload: { fsDetails: { ...state.sandwich.fsDetails, foilDetails: updatedFoilDetails } },
+                            payload: { fsDetailsSandwich: { ...state.sandwich.fsDetailsSandwich, foilDetails: updatedFoilDetails } },
                           });
                         }}
                         className="border rounded-md p-2 w-full"
@@ -576,11 +576,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       <select
                         value={foil.mrType || ""}
                         onChange={(e) => {
-                          const updatedFoilDetails = [...state.sandwich.fsDetails.foilDetails];
+                          const updatedFoilDetails = [...state.sandwich.fsDetailsSandwich.foilDetails];
                           updatedFoilDetails[index].mrType = e.target.value;
                           dispatch({
                             type: "UPDATE_SANDWICH",
-                            payload: { fsDetails: { ...state.sandwich.fsDetails, foilDetails: updatedFoilDetails } },
+                            payload: { fsDetailsSandwich: { ...state.sandwich.fsDetailsSandwich, foilDetails: updatedFoilDetails } },
                           });
                         }}
                         className="border rounded-md p-2 w-full"
@@ -606,13 +606,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
               <input
                 type="checkbox"
                 name="isEMBUsedSandwich"
-                checked={state.sandwich.embDetails?.isEMBUsed || false}
+                checked={state.sandwich.embDetailsSandwich?.isEMBUsed || false}
                 onChange={(e) =>
                   dispatch({
                     type: "UPDATE_SANDWICH",
                     payload: {
-                      embDetails: {
-                        ...state.sandwich.embDetails,
+                      embDetailsSandwich: {
+                        ...state.sandwich.embDetailsSandwich,
                         isEMBUsed: e.target.checked,
                         plateSizeType: "",
                         plateDimensions: { length: "", breadth: "" },
@@ -629,19 +629,19 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
             </label>
 
             {/* EMB Fields */}
-            {state.sandwich.embDetails?.isEMBUsed && (
+            {state.sandwich.embDetailsSandwich?.isEMBUsed && (
               <div className="space-y-4">
                 {/* Plate Size Type */}
                 <div>
                   <label className="block mb-1">Plate Size Type:</label>
                   <select
-                    value={state.sandwich.embDetails.plateSizeType || ""}
+                    value={state.sandwich.embDetailsSandwich.plateSizeType || ""}
                     onChange={(e) =>
                       dispatch({
                         type: "UPDATE_SANDWICH",
                         payload: {
-                          embDetails: {
-                            ...state.sandwich.embDetails,
+                          embDetailsSandwich: {
+                            ...state.sandwich.embDetailsSandwich,
                             plateSizeType: e.target.value,
                             plateDimensions:
                               e.target.value === "Auto"
@@ -667,21 +667,21 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                 </div>
 
                 {/* Dimensions */}
-                {state.sandwich.embDetails.plateSizeType && (
+                {state.sandwich.embDetailsSandwich.plateSizeType && (
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <input
                         type="number"
                         placeholder="Length (cm)"
-                        value={state.sandwich.embDetails.plateDimensions.length || ""}
+                        value={state.sandwich.embDetailsSandwich.plateDimensions.length || ""}
                         onChange={(e) =>
                           dispatch({
                             type: "UPDATE_SANDWICH",
                             payload: {
-                              embDetails: {
-                                ...state.sandwich.embDetails,
+                              embDetailsSandwich: {
+                                ...state.sandwich.embDetailsSandwich,
                                 plateDimensions: {
-                                  ...state.sandwich.embDetails.plateDimensions,
+                                  ...state.sandwich.embDetailsSandwich.plateDimensions,
                                   length: e.target.value,
                                 },
                               },
@@ -689,24 +689,24 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                           })
                         }
                         className={`border rounded-md p-2 w-full ${
-                          state.sandwich.embDetails.plateSizeType === "Auto" ? "bg-gray-100" : ""
+                          state.sandwich.embDetailsSandwich.plateSizeType === "Auto" ? "bg-gray-100" : ""
                         }`}
-                        readOnly={state.sandwich.embDetails.plateSizeType === "Auto"}
+                        readOnly={state.sandwich.embDetailsSandwich.plateSizeType === "Auto"}
                       />
                     </div>
                     <div>
                       <input
                         type="number"
                         placeholder="Breadth (cm)"
-                        value={state.sandwich.embDetails.plateDimensions.breadth || ""}
+                        value={state.sandwich.embDetailsSandwich.plateDimensions.breadth || ""}
                         onChange={(e) =>
                           dispatch({
                             type: "UPDATE_SANDWICH",
                             payload: {
-                              embDetails: {
-                                ...state.sandwich.embDetails,
+                              embDetailsSandwich: {
+                                ...state.sandwich.embDetailsSandwich,
                                 plateDimensions: {
-                                  ...state.sandwich.embDetails.plateDimensions,
+                                  ...state.sandwich.embDetailsSandwich.plateDimensions,
                                   breadth: e.target.value,
                                 },
                               },
@@ -714,9 +714,9 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                           })
                         }
                         className={`border rounded-md p-2 w-full ${
-                          state.sandwich.embDetails.plateSizeType === "Auto" ? "bg-gray-100" : ""
+                          state.sandwich.embDetailsSandwich.plateSizeType === "Auto" ? "bg-gray-100" : ""
                         }`}
-                        readOnly={state.sandwich.embDetails.plateSizeType === "Auto"}
+                        readOnly={state.sandwich.embDetailsSandwich.plateSizeType === "Auto"}
                       />
                     </div>
                   </div>
@@ -726,13 +726,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                 <div>
                   <label className="block mb-1">Plate Type Male:</label>
                   <select
-                    value={state.sandwich.embDetails.plateTypeMale || ""}
+                    value={state.sandwich.embDetailsSandwich.plateTypeMale || ""}
                     onChange={(e) =>
                       dispatch({
                         type: "UPDATE_SANDWICH",
                         payload: {
-                          embDetails: {
-                            ...state.sandwich.embDetails,
+                          embDetailsSandwich: {
+                            ...state.sandwich.embDetailsSandwich,
                             plateTypeMale: e.target.value,
                           },
                         },
@@ -749,13 +749,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                 <div>
                   <label className="block mb-1">Plate Type Female:</label>
                   <select
-                    value={state.sandwich.embDetails.plateTypeFemale || ""}
+                    value={state.sandwich.embDetailsSandwich.plateTypeFemale || ""}
                     onChange={(e) =>
                       dispatch({
                         type: "UPDATE_SANDWICH",
                         payload: {
-                          embDetails: {
-                            ...state.sandwich.embDetails,
+                          embDetailsSandwich: {
+                            ...state.sandwich.embDetailsSandwich,
                             plateTypeFemale: e.target.value,
                           },
                         },
@@ -772,13 +772,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                 <div>
                   <label className="block mb-1">EMB MR:</label>
                   <select
-                    value={state.sandwich.embDetails.embMR || ""}
+                    value={state.sandwich.embDetailsSandwich.embMR || ""}
                     onChange={(e) =>
                       dispatch({
                         type: "UPDATE_SANDWICH",
                         payload: {
-                          embDetails: {
-                            ...state.sandwich.embDetails,
+                          embDetailsSandwich: {
+                            ...state.sandwich.embDetailsSandwich,
                             embMR: e.target.value,
                           },
                         },
