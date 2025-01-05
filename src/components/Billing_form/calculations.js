@@ -64,6 +64,9 @@ const calculateLPCosts = async (state) => {
   let totalPolymerPlateCost = 0;
   let totalMRRate = 0;
 
+  const colorCostPerCard = 1; // INR 1 for color
+  const impressionCostPerCard = 0.5; // INR 0.5 for impression
+
   // Fetch MR details for all colors in LP details
   const mrDetailsArray = await fetchMRDetailsForLPDetails(lpDetails);
 
@@ -71,23 +74,26 @@ const calculateLPCosts = async (state) => {
     const color = lpDetails.colorDetails[i];
 
     // Step 1: Calculate cost per color (Pantone type)
-    totalLPColorCost += 2 * totalCards; // INR 1 for color + INR 1 for impression
+    totalLPColorCost += (colorCostPerCard + impressionCostPerCard) * totalCards;
 
-    // Step 2: Calculate polymer plate cost
-    if (color.plateType === "Polymer Plate") {
-      const materialDetails = await fetchMaterialDetails("Polymer Plate");
-      if (!materialDetails) {
-        return { error: "Material details not found for Polymer Plate" };
-      }
+    // Step 2: Calculate polymer plate cost dynamically based on plate type
+    const plateType = color.plateType || "Polymer Plate"; // Fallback to "Polymer Plate" if not provided
+    const materialDetails = await fetchMaterialDetails(plateType);
 
-      const plateArea =
-        parseFloat(color.plateDimensions.length || 0) *
-        parseFloat(color.plateDimensions.breadth || 0);
-      const plateCost = plateArea * parseFloat(materialDetails.finalCostPerUnit || 0);
-      totalPolymerPlateCost += plateCost / totalCards;
+    if (!materialDetails) {
+      console.warn(`Material details not found for plate type: ${plateType}`);
+      continue; // Skip this iteration if material details are not found
     }
 
-    // Step 3: Calculate MR cost
+    const plateArea =
+      parseFloat(color.plateDimensions.length || 0) *
+      parseFloat(color.plateDimensions.breadth || 0); // cm²
+    const plateCost = plateArea * parseFloat(materialDetails.finalCostPerUnit || 0);
+    totalPolymerPlateCost += plateCost / totalCards; // Cost per card
+  }
+
+  // Step 3: Calculate MR cost
+  for (let i = 0; i < lpDetails.colorDetails.length; i++) {
     const mrDetails = mrDetailsArray[i];
     if (mrDetails) {
       totalMRRate += parseFloat(mrDetails.finalRate || 0) / totalCards; // Cost per card
