@@ -159,3 +159,39 @@ export const fetchMRDetailsForFSDetails = async (fsDetails) => {
     throw new Error("Failed to fetch MR details for FS details");
   }
 };
+
+/**
+ * Fetch MR details for EMB Details from Firebase Firestore.
+ * @param {string} mrType - The MR type (e.g., "Simple", "Complex", "Super Complex").
+ * @returns {Promise<Object|null>} - The MR details or null if not found.
+ */
+export const fetchMRDetailsForEMBDetails = async (mrType) => {
+  try {
+    if (!mrType) {
+      console.warn("EMB MR type is missing.");
+      return null;
+    }
+
+    const standardRatesCollection = collection(db, "standard_rates");
+    const embMRConcatenate = `EMB MR ${mrType.toUpperCase()}`; // Construct the concatenate field
+
+    console.log(`Querying Firestore with concatenate: ${embMRConcatenate}`);
+    const q = query(
+      standardRatesCollection,
+      where("concatenate", "==", embMRConcatenate)
+    );
+    const querySnapshot = await getDocs(q);
+
+    if (!querySnapshot.empty) {
+      const mrDetails = querySnapshot.docs[0].data();
+      console.log("Found MR details:", mrDetails);
+      return mrDetails; // Return the first matching document's data
+    } else {
+      console.warn(`No EMB MR details found for type: ${mrType}`);
+      return null;
+    }
+  } catch (error) {
+    console.error("Error fetching EMB MR details:", error);
+    throw new Error("Failed to fetch EMB MR details");
+  }
+};
