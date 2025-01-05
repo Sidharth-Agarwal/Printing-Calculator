@@ -108,7 +108,9 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     clientName: orderAndPaper.clientName,
     projectName: orderAndPaper.projectName,
     date: orderAndPaper.date instanceof Date ? orderAndPaper.date.toISOString() : null,
-    deliveryDate: orderAndPaper.deliveryDate instanceof Date ? orderAndPaper.deliveryDate.toISOString() : null,
+    deliveryDate: orderAndPaper.deliveryDate instanceof Date
+      ? orderAndPaper.deliveryDate.toISOString()
+      : null,
     jobDetails: {
       jobType: orderAndPaper.jobType,
       quantity: orderAndPaper.quantity,
@@ -137,22 +139,28 @@ const BillingForm = () => {
   const [calculations, setCalculations] = useState(null); // Holds calculated data
   const [isCalculating, setIsCalculating] = useState(false); // Loading state for calculations
 
-  // Perform calculations after the Pasting step
   useEffect(() => {
     const performCalculations = async () => {
       setIsCalculating(true);
       try {
         const result = await calculateEstimateCosts(state); // Perform calculations
-        setCalculations(result); // Store the result
+        if (result.error) {
+          console.error("Error during calculations:", result.error);
+          alert(result.error); // Display error to the user
+        } else {
+          setCalculations(result); // Store the result
+        }
       } catch (error) {
-        console.error("Error during calculations:", error);
-        setCalculations({ error: "Failed to calculate costs." });
+        console.error("Unexpected error during calculations:", error);
+        alert("Unexpected error during calculations. Please try again.");
       } finally {
         setIsCalculating(false);
       }
     };
 
-    if (state.currentStep >= 8) performCalculations();
+    if (state.currentStep >= 8) {
+      performCalculations();
+    }
   }, [state]);
 
   const handleNext = () => {

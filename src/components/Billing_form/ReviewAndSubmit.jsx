@@ -35,6 +35,8 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
   return (
     <form onSubmit={handleCreateEstimate} className="space-y-6">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Review and Submit</h2>
+
+      {/* Review Input Sections */}
       <div className="space-y-4 bg-white p-6 rounded shadow-md">
         <h3 className="text-lg font-semibold text-gray-600 mb-4">Review Your Entries</h3>
         {Object.entries(state).map(([sectionKey, sectionData]) =>
@@ -44,15 +46,15 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
         )}
       </div>
 
+      {/* Loading State for Calculations */}
       {isCalculating ? (
-        // Show loading state while calculations are being performed
         <div className="bg-white p-6 rounded shadow-md">
           <p className="text-gray-600 text-center">Calculating costs...</p>
         </div>
-      ) : calculations ? (
-        // Show calculations if available
+      ) : calculations && !calculations.error ? (
         <div className="space-y-4 bg-white p-6 rounded shadow-md">
           <h3 className="text-lg font-semibold text-gray-600 mb-4">Cost Calculations</h3>
+          {/* Display Calculations */}
           {Object.entries(calculations).map(([key, value]) => (
             <div
               key={key}
@@ -64,12 +66,14 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
           ))}
         </div>
       ) : (
-        // Fallback for missing calculations
         <div className="bg-white p-6 rounded shadow-md">
-          <p className="text-red-600 text-center">Unable to fetch calculations.</p>
+          <p className="text-red-600 text-center">
+            {calculations?.error || "Unable to fetch calculations."}
+          </p>
         </div>
       )}
 
+      {/* Navigation Buttons */}
       <div className="flex justify-between mt-6">
         <button
           type="button"

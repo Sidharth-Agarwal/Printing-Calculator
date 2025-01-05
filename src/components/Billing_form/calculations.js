@@ -1,35 +1,35 @@
-import { fetchPaperDetails } from "../../utils/fetchDataUtils"; // Utility to fetch paper details from Firebase
+import {
+  fetchPaperDetails,
+  fetchMaterialDetails,
+  fetchMRDetailsForLPDetails,
+} from "../../utils/fetchDataUtils"; // Utility to fetch data from Firebase
 
+// Helper function to calculate maximum cards per sheet
 const calculateMaxCardsPerSheet = (dieSize, paperSize) => {
   const { length: dieLength, breadth: dieBreadth } = dieSize;
   const { length: paperLength, breadth: paperBreadth } = paperSize;
 
-  // Calculate cards per orientation
-  const cardsByLength = Math.floor(paperLength / dieLength) * Math.floor(paperBreadth / dieBreadth);
-  const cardsByBreadth = Math.floor(paperLength / dieBreadth) * Math.floor(paperBreadth / dieLength);
+  const cardsByLength =
+    Math.floor(paperLength / dieLength) * Math.floor(paperBreadth / dieBreadth);
+  const cardsByBreadth =
+    Math.floor(paperLength / dieBreadth) * Math.floor(paperBreadth / dieLength);
 
-  // Choose the maximum orientation
   return Math.max(cardsByLength, cardsByBreadth);
 };
 
+// Function to calculate paper and cutting costs
 const calculatePaperAndCuttingCosts = async (state) => {
   const { orderAndPaper } = state;
-
-  // Fetch paper details from Firebase
   const paperName = orderAndPaper.paperName;
   const paperDetails = await fetchPaperDetails(paperName);
 
   if (!paperDetails) {
-    console.error(`Paper details not found for: ${paperName}`);
-    return {
-      error: `Paper details not found for: ${paperName}`,
-    };
+    return { error: `Paper details not found for: ${paperName}` };
   }
 
-  // Convert die size to cm
   const dieSize = {
-    length: parseFloat(orderAndPaper.dieSize.length) * 2.54, // inches to cm
-    breadth: parseFloat(orderAndPaper.dieSize.breadth) * 2.54, // inches to cm
+    length: parseFloat(orderAndPaper.dieSize.length) * 2.54,
+    breadth: parseFloat(orderAndPaper.dieSize.breadth) * 2.54,
   };
 
   const paperSize = {
@@ -37,46 +37,80 @@ const calculatePaperAndCuttingCosts = async (state) => {
     breadth: parseFloat(paperDetails.breadth),
   };
 
-  // Calculate max cards per sheet
   const maxCardsPerSheet = calculateMaxCardsPerSheet(dieSize, paperSize);
-
-  // Calculate total papers required
   const totalCards = parseInt(orderAndPaper.quantity, 10);
   const totalPapersRequired = Math.ceil(totalCards / maxCardsPerSheet);
 
-  // Calculate costs
-  const paperCost = totalPapersRequired * parseFloat(paperDetails.finalRate); // INR
-  const cuttingCost = totalCards * 0.10; // Assuming a flat cutting cost of INR 0.10 per card
-
-  // Calculate per card costs
-  const paperCostPerCard = paperCost / totalCards; // Paper cost per card
-  const cuttingCostPerCard = cuttingCost / totalCards; // Cutting cost per card
-  const paperAndCuttingCostPerCard = paperCostPerCard + cuttingCostPerCard;
+  const paperCost = totalPapersRequired * parseFloat(paperDetails.finalRate);
+  const cuttingCost = totalCards * 0.10;
 
   return {
-    // maxCardsPerSheet,
-    // totalPapersRequired,
-    // paperCost,
-    // cuttingCost,
-    paperCostPerCard: paperCostPerCard.toFixed(2),
-    cuttingCostPerCard: cuttingCostPerCard.toFixed(2),
-    paperAndCuttingCostPerCard: paperAndCuttingCostPerCard.toFixed(2)
+    paperCostPerCard: (paperCost / totalCards).toFixed(2),
+    cuttingCostPerCard: (cuttingCost / totalCards).toFixed(2),
+    paperAndCuttingCostPerCard: ((paperCost + cuttingCost) / totalCards).toFixed(2),
   };
 };
 
-export const calculateEstimateCosts = async (state) => {
-  try {
-    // Step 1: Calculate paper and cutting costs
-    const paperAndCuttingCosts = await calculatePaperAndCuttingCosts(state);
+// Function to calculate LP costs
+const calculateLPCosts = async (state) => {
+  const { lpDetails, orderAndPaper } = state;
+  const totalCards = parseInt(orderAndPaper.quantity, 10);
 
-    if (paperAndCuttingCosts.error) {
-      return { error: paperAndCuttingCosts.error };
+  if (!lpDetails.isLPUsed || !lpDetails.colorDetails?.length) {
+    return { lpCostPerCard: 0 };
+  }
+
+  let totalLPColorCost = 0;
+  let totalPolymerPlateCost = 0;
+  let totalMRRate = 0;
+
+  // Fetch MR details for all colors in LP details
+  const mrDetailsArray = await fetchMRDetailsForLPDetails(lpDetails);
+
+  for (let i = 0; i < lpDetails.colorDetails.length; i++) {
+    const color = lpDetails.colorDetails[i];
+
+    // Step 1: Calculate cost per color (Pantone type)
+    totalLPColorCost += 2 * totalCards; // INR 1 for color + INR 1 for impression
+
+    // Step 2: Calculate polymer plate cost
+    if (color.plateType === "Polymer Plate") {
+      const materialDetails = await fetchMaterialDetails("Polymer Plate");
+      if (!materialDetails) {
+        return { error: "Material details not found for Polymer Plate" };
+      }
+
+      const plateArea =
+        parseFloat(color.plateDimensions.length || 0) *
+        parseFloat(color.plateDimensions.breadth || 0);
+      const plateCost = plateArea * parseFloat(materialDetails.finalCostPerUnit || 0);
+      totalPolymerPlateCost += plateCost / totalCards;
     }
 
-    // Return all calculations, including per-card costs
-    return {
-      ...paperAndCuttingCosts,
-    };
+    // Step 3: Calculate MR cost
+    const mrDetails = mrDetailsArray[i];
+    if (mrDetails) {
+      totalMRRate += parseFloat(mrDetails.finalRate || 0) / totalCards; // Cost per card
+    } else {
+      console.warn(`No MR details found for color index ${i}`);
+    }
+  }
+
+  const lpCostPerCard = (totalLPColorCost + totalPolymerPlateCost + totalMRRate) / totalCards;
+
+  return { lpCostPerCard: lpCostPerCard.toFixed(2) };
+};
+
+// Main function to calculate all estimate costs
+export const calculateEstimateCosts = async (state) => {
+  try {
+    const paperAndCuttingCosts = await calculatePaperAndCuttingCosts(state);
+    if (paperAndCuttingCosts.error) return { error: paperAndCuttingCosts.error };
+
+    const lpCosts = await calculateLPCosts(state);
+    if (lpCosts.error) return { error: lpCosts.error };
+
+    return { ...paperAndCuttingCosts, ...lpCosts };
   } catch (error) {
     console.error("Error calculating estimate costs:", error);
     return { error: "Error calculating costs. Please try again." };
