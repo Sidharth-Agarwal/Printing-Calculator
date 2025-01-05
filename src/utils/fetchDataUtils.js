@@ -195,3 +195,84 @@ export const fetchMRDetailsForEMBDetails = async (mrType) => {
     throw new Error("Failed to fetch EMB MR details");
   }
 };
+
+/**
+ * Fetch paper details from the Firebase Firestore database based on required dimensions.
+ * The function queries papers with dimensions greater than or equal to the required dimensions
+ * and returns the best match (smallest paper that meets the criteria).
+ * 
+ * @param {number} length - The required length (in cm) of the paper.
+ * @param {number} breadth - The required breadth (in cm) of the paper.
+ * @returns {Promise<Object|null>} - The best match paper details or null if not found.
+ */
+export const fetchPaperDetailsByDimensions = async (length, breadth, paperName) => {
+  try {
+    const papersCollection = collection(db, "papers");
+    const q = query(papersCollection, where("paperName", "==", paperName));
+    const querySnapshot = await getDocs(q);
+
+    if (querySnapshot.empty) {
+      console.warn(`No papers found with name: ${paperName}`);
+      return null;
+    }
+
+    // Convert Firestore results to an array
+    const papers = querySnapshot.docs.map((doc) => doc.data());
+
+    // Filter papers by length and breadth
+    const matchingPaper = papers.find(
+      (paper) =>
+        parseFloat(paper.length).toFixed(1) === parseFloat(length).toFixed(1) &&
+        parseFloat(paper.breadth).toFixed(1) === parseFloat(breadth).toFixed(1)
+    );
+
+    if (!matchingPaper) {
+      console.warn(`No paper found for dimensions: ${length} x ${breadth}`);
+      return null;
+    }
+
+    console.log("Matching paper found:", matchingPaper);
+    return matchingPaper;
+  } catch (error) {
+    console.error("Error fetching paper details by dimensions:", error);
+    throw new Error("Failed to fetch paper details based on dimensions.");
+  }
+};
+
+// export const fetchPaperDetailsByDimensions = async (length, breadth) => {
+//   try {
+//     if (!length || !breadth) {
+//       console.warn("Length or breadth is missing for fetching paper details.");
+//       return null;
+//     }
+
+//     const papersCollection = collection(db, "papers");
+
+//     // Ensure query parameters are rounded to 1 decimal place
+//     const roundedLength = parseFloat(length).toFixed(1);
+//     const roundedBreadth = parseFloat(breadth).toFixed(1);
+
+//     console.log(`Querying Firestore for paper with dimensions: ${roundedLength} x ${roundedBreadth}`);
+
+//     // Fetch the paper details using the provided dimensions
+//     const q = query(
+//       papersCollection,
+//       where("length", "==", parseFloat(roundedLength)),
+//       where("breadth", "==", parseFloat(roundedBreadth))
+//     );
+
+//     const querySnapshot = await getDocs(q);
+
+//     if (!querySnapshot.empty) {
+//       const paperDetails = querySnapshot.docs[0].data();
+//       console.log("Found paper details:", paperDetails);
+//       return paperDetails; // Return the entire paper details object
+//     } else {
+//       console.warn(`No paper found for dimensions: ${roundedLength} x ${roundedBreadth}`);
+//       return null;
+//     }
+//   } catch (error) {
+//     console.error("Error fetching paper details by dimensions:", error);
+//     throw new Error("Failed to fetch paper details based on dimensions.");
+//   }
+// };

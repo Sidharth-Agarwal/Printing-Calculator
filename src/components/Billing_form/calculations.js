@@ -4,6 +4,7 @@ import {
   fetchMRDetailsForLPDetails,
   fetchMRDetailsForFSDetails, // Import FS MR details function
   fetchMRDetailsForEMBDetails,
+  fetchPaperDetailsByDimensions,
 } from "../../utils/fetchDataUtils"; // Adjust the path if necessary
 
 // Helper function to calculate maximum cards per sheet
@@ -218,6 +219,157 @@ const calculateEMBCosts = async (state) => {
   return { embCostPerCard };
 };
 
+// const calculateDigiDetailsCosts = async (digiDetails, dieSize, totalCards) => {
+//   try {
+//     // Helper function to convert inches to cm (rounded to 1 decimal)
+//     const inchesToCm = (inches) => parseFloat(inches) * 2.54.toFixed(1);
+
+//     // Validate digiDetails
+//     const { isDigiUsed = false, digiDimensions = {} } = digiDetails || {};
+//     if (!isDigiUsed || !digiDimensions.length || !digiDimensions.breadth) {
+//       console.warn("Digital printing is not used or dimensions are invalid.");
+//       return { digiCostPerCard: 0 };
+//     }
+
+//     // Convert dimensions
+//     const dieDimensionsCm = {
+//       length: parseFloat((dieSize.length || 0) * 2.54).toFixed(1),
+//       breadth: parseFloat((dieSize.breadth || 0) * 2.54).toFixed(1),
+//     };
+
+//     const digiDimensionsCm = {
+//       length: parseFloat((digiDimensions.length || 0) * 2.54).toFixed(1),
+//       breadth: parseFloat((digiDimensions.breadth || 0) * 2.54).toFixed(1),
+//     };
+
+//     console.log("Converted Dimensions (cm):", { dieDimensionsCm, digiDimensionsCm });
+
+//     // Calculate max cards per sheet for both orientations
+//     const lengthwiseCards =
+//       Math.floor(digiDimensionsCm.length / dieDimensionsCm.length) *
+//       Math.floor(digiDimensionsCm.breadth / dieDimensionsCm.breadth);
+
+//     const breadthwiseCards =
+//       Math.floor(digiDimensionsCm.length / dieDimensionsCm.breadth) *
+//       Math.floor(digiDimensionsCm.breadth / dieDimensionsCm.length);
+
+//     const maxCardsPerSheet = Math.max(lengthwiseCards, breadthwiseCards);
+
+//     if (maxCardsPerSheet === 0) {
+//       console.warn("Die size is too large for the selected digital paper dimensions.");
+//       return { digiCostPerCard: 0 };
+//     }
+
+//     const totalPapersRequired = Math.ceil(totalCards / maxCardsPerSheet);
+
+//     // Fetch the best match paper based on dimensions
+//     const paperDetails = await fetchPaperDetailsByDimensions(
+//       parseFloat(digiDimensionsCm.length),
+//       parseFloat(digiDimensionsCm.breadth)
+//     );
+
+//     if (!paperDetails) {
+//       console.warn(`No suitable paper found for dimensions: ${digiDimensionsCm.length} x ${digiDimensionsCm.breadth}`);
+//       return { digiCostPerCard: 0 };
+//     }
+
+//     const paperCost = totalPapersRequired * parseFloat(paperDetails.finalRate);
+
+//     // Calculate printing cost
+//     const printingCost = totalCards * 20;
+
+//     // Calculate total cost
+//     const totalDigiCost = paperCost + printingCost;
+
+//     return {
+//       digiCostPerCard: (totalDigiCost / totalCards).toFixed(2),
+//       totalPapersRequired,
+//       paperCost: paperCost.toFixed(2),
+//       printingCost: printingCost.toFixed(2),
+//     };
+//   } catch (error) {
+//     console.error("Error calculating digital printing costs:", error);
+//     return { error: "Error calculating digital printing costs. Please try again." };
+//   }
+// };
+
+const calculateDigiDetailsCosts = async (digiDetails, dieSize, totalCards) => {
+  try {
+    // Helper function to convert inches to cm (rounded to 1 decimal)
+    const inchesToCm = (inches) => parseFloat((parseFloat(inches) * 2.54).toFixed(1));
+
+    // Validate digiDetails
+    const { isDigiUsed = false, digiDimensions = {} } = digiDetails || {};
+    if (!isDigiUsed || !digiDimensions.length || !digiDimensions.breadth) {
+      console.warn("Digital printing is not used or dimensions are invalid.");
+      return { digiCostPerCard: 0 };
+    }
+
+    // Convert dimensions from inches to cm
+    const dieDimensionsCm = {
+      length: inchesToCm(dieSize.length || 0),
+      breadth: inchesToCm(dieSize.breadth || 0),
+    };
+
+    const digiDimensionsCm = {
+      length: inchesToCm(digiDimensions.length || 0),
+      breadth: inchesToCm(digiDimensions.breadth || 0),
+    };
+
+    console.log("Converted Dimensions (cm):", { dieDimensionsCm, digiDimensionsCm });
+
+    // Calculate max cards per sheet for both orientations
+    const lengthwiseCards =
+      Math.floor(digiDimensionsCm.length / dieDimensionsCm.length) *
+      Math.floor(digiDimensionsCm.breadth / dieDimensionsCm.breadth);
+
+    const breadthwiseCards =
+      Math.floor(digiDimensionsCm.length / dieDimensionsCm.breadth) *
+      Math.floor(digiDimensionsCm.breadth / dieDimensionsCm.length);
+
+    const maxCardsPerSheet = Math.max(lengthwiseCards, breadthwiseCards);
+
+    if (maxCardsPerSheet === 0) {
+      console.warn("Die size is too large for the selected digital paper dimensions.");
+      return { digiCostPerCard: 0 };
+    }
+
+    const totalPapersRequired = Math.ceil(totalCards / maxCardsPerSheet);
+
+    // Fetch the best match paper based on dimensions
+    const paperDetails = await fetchPaperDetailsByDimensions(
+      digiDimensionsCm.length,
+      digiDimensionsCm.breadth,
+      "Digital" // Specify "Digital" as the paper name
+    );
+
+    if (!paperDetails) {
+      console.warn(
+        `No suitable paper found for dimensions: ${digiDimensionsCm.length} x ${digiDimensionsCm.breadth}`
+      );
+      return { digiCostPerCard: 0 };
+    }
+
+    const paperCost = totalPapersRequired * parseFloat(paperDetails.finalRate);
+
+    // Calculate printing cost
+    const printingCost = totalCards * 20;
+
+    // Calculate total cost
+    const totalDigiCost = paperCost + printingCost;
+
+    return {
+      digiCostPerCard: (totalDigiCost / totalCards).toFixed(2),
+      totalPapersRequired,
+      paperCost: paperCost.toFixed(2),
+      printingCost: printingCost.toFixed(2),
+    };
+  } catch (error) {
+    console.error("Error calculating digital printing costs:", error);
+    return { error: "Error calculating digital printing costs. Please try again." };
+  }
+};
+
 const calculateSandwichCosts = async (sandwichDetails, totalCards) => {
   try {
     // Validate sandwichDetails
@@ -396,6 +548,16 @@ export const calculateEstimateCosts = async (state) => {
     const embCosts = await calculateEMBCosts(state);
     if (embCosts.error) return { error: embCosts.error };
 
+    // const digiCosts = await calculateDigiDetailsCosts(state.digiDetails, state.orderAndPaper.dieSize, parseInt(state.orderAndPaper.quantity, 10));
+    // if (digiCosts.error) return { error: digiCosts.error };
+
+    const digiCosts = await calculateDigiDetailsCosts(
+      state.digiDetails,
+      state.orderAndPaper.dieSize,
+      parseInt(state.orderAndPaper.quantity, 10)
+    );
+    if (digiCosts.error) return { error: digiCosts.error };    
+
     // Handle Sandwich Costs
     const sandwichCosts = await calculateSandwichCosts(state.sandwich, state.orderAndPaper.quantity);
     if (sandwichCosts.error) return { error: sandwichCosts.error };
@@ -406,6 +568,7 @@ export const calculateEstimateCosts = async (state) => {
       ...lpCosts,
       ...fsCosts,
       ...embCosts,
+      ...digiCosts,
       ...sandwichCosts,
     };
   } catch (error) {
