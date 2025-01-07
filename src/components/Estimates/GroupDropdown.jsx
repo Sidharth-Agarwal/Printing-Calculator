@@ -65,12 +65,12 @@ const GroupDropdown = ({
         className="cursor-pointer px-4 py-3 rounded-t-md flex justify-between items-center transition"
       >
         <div className="space-y-1">
-          <h3 className="text-xl font-bold text-gray-800">{clientName}</h3>
-          <p className="text-lg font-semibold text-gray-700">{projectName}</p>
-          <p className="text-sm text-gray-500">
+          <h3 className="text-lg font-bold text-gray-800">{clientName}</h3>
+          <p className="text-sm font-semibold text-gray-700">{projectName}</p>
+          <p className="text-xs text-gray-500">
             {firstEstimate?.jobDetails?.jobType || "N/A"} · {firstEstimate?.jobDetails?.quantity || "0"} items
           </p>
-          <p className="text-base text-gray-600">
+          <p className="text-sm text-gray-600">
             Expected Delivery:{" "}
             {firstEstimate?.deliveryDate
               ? new Date(firstEstimate.deliveryDate).toISOString().split("T")[0]
@@ -81,21 +81,33 @@ const GroupDropdown = ({
 
       {/* Dropdown Content */}
       {openDropdown && (
-        <div className="p-4 space-y-2 bg-gray-50">
-          {estimates.map((estimate, index) => (
-            <Estimate
-              key={estimate.id}
-              estimate={estimate}
-              estimateNumber={index + 1}
-              movedToOrdersEstimateId={movedToOrdersEstimateId}
-              setMovedToOrders={(id) =>
-                setOrdersData((prev) => ({ ...prev, [groupKey]: id }))
-              }
-              estimates={estimates}
-              setEstimatesData={setEstimatesData}
-              groupKey={groupKey}
-            />
-          ))}
+        <div
+          className="absolute z-10 left-0 right-0 mt-2 p-4 bg-white border border-gray-200 rounded-md shadow-lg"
+          style={{ maxHeight: "300px", overflowY: "auto" }}
+        >
+          <div
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3"
+            style={{
+              display: "flex",
+              flexWrap: "wrap",
+              justifyContent: "space-between",
+            }}
+          >
+            {estimates.map((estimate, index) => (
+              <Estimate
+                key={estimate.id}
+                estimate={estimate}
+                estimateNumber={index + 1}
+                movedToOrdersEstimateId={movedToOrdersEstimateId}
+                setMovedToOrders={(id) =>
+                  setOrdersData((prev) => ({ ...prev, [groupKey]: id }))
+                }
+                estimates={estimates}
+                setEstimatesData={setEstimatesData}
+                groupKey={groupKey}
+              />
+            ))}
+          </div>
         </div>
       )}
     </div>

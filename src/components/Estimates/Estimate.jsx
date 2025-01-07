@@ -26,13 +26,11 @@ const Estimate = ({
     if (isMovedToOrders || cannotMoveToOrders || isCanceled) return;
 
     try {
-      // Add the selected estimate to the "orders" collection with the default "stage" field
       await addDoc(collection(db, "orders"), {
         ...estimate,
-        stage: "Not started yet", // Add the default stage field
+        stage: "Not started yet",
       });
 
-      // Update all estimates in the group
       const batch = writeBatch(db);
       estimates.forEach((est) => {
         const estimateRef = doc(db, "estimates", est.id);
@@ -40,7 +38,6 @@ const Estimate = ({
       });
       await batch.commit();
 
-      // Immediately update local state
       const updatedEstimates = estimates.map((est) => ({
         ...est,
         movedToOrders: est.id === estimate.id,
@@ -63,10 +60,8 @@ const Estimate = ({
     if (isMovedToOrders || isCanceled) return;
 
     try {
-      // Save the groupKey to local storage
       localStorage.setItem("openGroupKey", groupKey);
 
-      // Batch update all estimates in Firestore
       const batch = writeBatch(db);
       estimates.forEach((est) => {
         const estimateRef = doc(db, "estimates", est.id);
@@ -74,7 +69,6 @@ const Estimate = ({
       });
       await batch.commit();
 
-      // Immediately update local state for canceled orders
       const updatedEstimates = estimates.map((est) => ({
         ...est,
         isCanceled: true,
@@ -84,7 +78,6 @@ const Estimate = ({
         [groupKey]: updatedEstimates,
       }));
 
-      // Reload the page to restore dropdown states
       window.location.reload();
     } catch (error) {
       console.error("Error canceling estimates:", error);
@@ -95,58 +88,62 @@ const Estimate = ({
   return (
     <div
       onClick={toggleDetails}
-      className={`border rounded-md p-3 bg-white transition cursor-pointer ${
-        showDetails ? "shadow-lg" : "shadow-sm"
+      className={`border rounded-md p-2 bg-white transition cursor-pointer shadow-sm ${
+        showDetails ? "shadow-lg" : ""
       }`}
+      style={{
+        flex: "1 1 calc(25% - 10px)", // Makes it responsive and ensures 4 per row
+        minWidth: "200px",
+        maxWidth: "220px",
+        margin: "5px",
+      }}
     >
       {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <h4 className="font-medium">
+      <div className="flex justify-between items-center mb-1">
+        <h4 className="font-medium text-sm">
           Estimate {estimateNumber}: {estimate?.jobDetails?.jobType || "Unknown Job"}
         </h4>
+      </div>
 
-        <div className="space-x-2">
-          {/* Move to Orders Button */}
-          {!isCanceled && (
-            <button
-              onClick={handleAddToOrders}
-              disabled={cannotMoveToOrders}
-              className={`text-sm px-3 py-1 rounded-md ${
-                isMovedToOrders
-                  ? "bg-green-500 text-white cursor-not-allowed"
-                  : cannotMoveToOrders
-                  ? "bg-gray-400 text-white cursor-not-allowed"
-                  : "bg-blue-500 text-white hover:bg-blue-600"
-              }`}
-            >
-              {isMovedToOrders
-                ? "Moved to Orders"
+      {/* Buttons Section */}
+      <div className="space-y-1">
+        {!isCanceled && (
+          <button
+            onClick={handleAddToOrders}
+            disabled={cannotMoveToOrders}
+            className={`text-xs w-full px-2 py-1 rounded-md ${
+              isMovedToOrders
+                ? "bg-green-500 text-white cursor-not-allowed"
                 : cannotMoveToOrders
-                ? "Can't Move to Orders"
-                : "Move to Orders"}
-            </button>
-          )}
+                ? "bg-gray-400 text-white cursor-not-allowed"
+                : "bg-blue-500 text-white hover:bg-blue-600"
+            }`}
+          >
+            {isMovedToOrders
+              ? "Moved to Orders"
+              : cannotMoveToOrders
+              ? "Can't Move to Orders"
+              : "Move to Orders"}
+          </button>
+        )}
 
-          {/* Cancel Order Button */}
-          {!isMovedToOrders && !isCanceled && !movedToOrdersEstimateId && (
-            <button
-              onClick={handleCancelOrder}
-              className="text-sm px-3 py-1 rounded-md bg-red-500 text-white hover:bg-red-600"
-            >
-              Cancel Order
-            </button>
-          )}
+        {!isMovedToOrders && !isCanceled && !movedToOrdersEstimateId && (
+          <button
+            onClick={handleCancelOrder}
+            className="text-xs w-full px-2 py-1 rounded-md bg-red-500 text-white hover:bg-red-600"
+          >
+            Cancel Order
+          </button>
+        )}
 
-          {/* Orders Canceled Button */}
-          {isCanceled && (
-            <button
-              disabled
-              className="text-sm px-3 py-1 rounded-md bg-gray-400 text-white cursor-not-allowed"
-            >
-              Orders Canceled
-            </button>
-          )}
-        </div>
+        {isCanceled && (
+          <button
+            disabled
+            className="text-xs w-full px-2 py-1 rounded-md bg-gray-400 text-white cursor-not-allowed"
+          >
+            Orders Canceled
+          </button>
+        )}
       </div>
 
       {/* Details Section */}
