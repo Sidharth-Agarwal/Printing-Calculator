@@ -88,7 +88,6 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
 
       {/* Review Input Sections */}
       <div className="space-y-4 bg-white p-6 rounded shadow-md">
-        <h3 className="text-lg font-semibold text-gray-600 mb-4">Review Your Entries</h3>
 
         {/* Render sections only if data is provided */}
         {state.orderAndPaper && renderSection("Order and Paper", state.orderAndPaper)}
