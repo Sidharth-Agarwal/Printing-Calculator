@@ -441,7 +441,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
   };
 
   return (
-    <div className="bg-gray-50 min-h-screen">
+    <div>
       <div className="max-w-6xl mx-auto rounded-lg">
         <h1 className="text-xl font-bold text-gray-700 mb-4">Order and Paper Details</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -633,7 +633,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                   id="length"
                   type="number"
                   name="length"
-                  placeholder="Die Size (L)"
+                  placeholder="Die (L)"
                   value={orderAndPaper.dieSize?.length || ""}
                   onChange={handleNestedChange}
                   className="border rounded-md p-2 w-full"
@@ -648,7 +648,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                   id="breadth"
                   type="number"
                   name="breadth"
-                  placeholder="Die Size (B)"
+                  placeholder="Die (B)"
                   value={orderAndPaper.dieSize?.breadth || ""}
                   onChange={handleNestedChange}
                   className="border rounded-md p-2 w-full"
