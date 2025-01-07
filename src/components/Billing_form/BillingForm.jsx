@@ -218,7 +218,7 @@ const BillingForm = () => {
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
+      <div className="mx-auto rounded-lg p-6">
         <h1 className="text-2xl font-bold text-gray-700 mb-4">Billing Form</h1>
         <div className="text-gray-600 mb-6">
           <p>Step {state.currentStep} of {steps.length}</p>
