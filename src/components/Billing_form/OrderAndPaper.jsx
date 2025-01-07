@@ -92,7 +92,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
 
   return (
     <div>
-      <div className="max-w-6xl mx-auto rounded-lg">
+      <div>
         <h1 className="text-xl font-bold text-gray-700 mb-4">Order and Paper Details</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Form Fields Grid */}
