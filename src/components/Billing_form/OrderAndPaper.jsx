@@ -441,12 +441,12 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
   };
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-7xl mx-auto rounded-lg p-6">
-        <h1 className="text-2xl font-bold text-gray-700 mb-4">Order and Paper Details</h1>
+    <div className="bg-gray-50 min-h-screen">
+      <div className="max-w-6xl mx-auto rounded-lg">
+        <h1 className="text-xl font-bold text-gray-700 mb-4">Order and Paper Details</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Form Fields Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             {/* Client Name */}
             <div>
               <label htmlFor="clientName" className="block font-medium mb-1">
@@ -627,7 +627,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label htmlFor="length" className="block font-medium mb-1">
-                  Die Size (Length)
+                  Die Size (L)
                 </label>
                 <input
                   id="length"
@@ -642,7 +642,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
               </div>
               <div>
                 <label htmlFor="breadth" className="block font-medium mb-1">
-                  Die Size (Breadth)
+                  Die Size (B)
                 </label>
                 <input
                   id="breadth"
