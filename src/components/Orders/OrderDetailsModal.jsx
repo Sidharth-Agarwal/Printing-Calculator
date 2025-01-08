@@ -1,57 +1,9 @@
-// import React from "react";
-// import SectionWrapper from "./SectionWrapper";
-
-// const OrderDetails = ({ order }) => {
-//   const { jobDetails, dieDetails } = order;
-
-//   return (
-//     <div className="space-y-6">
-//       {/* Order and Paper Section */}
-//       <SectionWrapper title="Order and Paper">
-//         <p>
-//           <strong>Job Type:</strong> {jobDetails?.jobType || "N/A"}
-//         </p>
-//         <p>
-//           <strong>Quantity:</strong> {jobDetails?.quantity || "N/A"}
-//         </p>
-//         <p>
-//           <strong>Delivery Date:</strong> {order.deliveryDate || "N/A"}
-//         </p>
-//         <p>
-//           <strong>Paper Name:</strong> {jobDetails?.paperName || "N/A"}
-//         </p>
-//         <p>
-//           <strong>Paper Provided:</strong> {jobDetails?.paperProvided || "N/A"}
-//         </p>
-//       </SectionWrapper>
-
-//       {/* Die Details Section */}
-//       {dieDetails && (
-//         <SectionWrapper title="Die Details">
-//           <p>
-//             <strong>Die Selection:</strong> {dieDetails.dieSelection || "N/A"}
-//           </p>
-//           <p>
-//             <strong>Die Code:</strong> {dieDetails.dieCode || "N/A"}
-//           </p>
-//           <p>
-//             <strong>Die Size:</strong> {dieDetails.dieSize?.length} x{" "}
-//             {dieDetails.dieSize?.breadth || "N/A"}
-//           </p>
-//         </SectionWrapper>
-//       )}
-//     </div>
-//   );
-// };
-
-// export default OrderDetails;
-
 import React, { useRef } from "react";
 import SectionWrapper from "./SectionWrapper";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
-const OrderDetails = ({ order }) => {
+const OrderDetailsModal = ({ order }) => {
   if (!order) return <p className="text-gray-500">No details available.</p>;
 
   const {
@@ -85,7 +37,7 @@ const OrderDetails = ({ order }) => {
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
 
       // Save the PDF
-      pdf.save(`${order.clientName}_${order.projectName}_OrderDetails.pdf`);
+      pdf.save(`${order.clientName}_${order.projectName}_OrderDetailsModal.pdf`);
       alert("PDF exported successfully!");
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -250,4 +202,4 @@ const OrderDetails = ({ order }) => {
   );
 };
 
-export default OrderDetails;
+export default OrderDetailsModal;
