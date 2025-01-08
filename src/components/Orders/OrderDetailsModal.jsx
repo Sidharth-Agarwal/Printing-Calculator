@@ -3,7 +3,7 @@ import SectionWrapper from "./SectionWrapper";
 import { jsPDF } from "jspdf";
 import html2canvas from "html2canvas";
 
-const OrderDetails = ({ order }) => {
+const OrderDetailsModal = ({ order }) => {
   if (!order) return <p className="text-gray-500">No details available.</p>;
 
   const {
@@ -37,7 +37,7 @@ const OrderDetails = ({ order }) => {
       pdf.addImage(imgData, "PNG", 0, 0, pdfWidth, pdfHeight);
 
       // Save the PDF
-      pdf.save(`${order.clientName}_${order.projectName}_OrderDetails.pdf`);
+      pdf.save(`${order.clientName}_${order.projectName}_OrderDetailsModal.pdf`);
       alert("PDF exported successfully!");
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -202,4 +202,4 @@ const OrderDetails = ({ order }) => {
   );
 };
 
-export default OrderDetails;
+export default OrderDetailsModal;
