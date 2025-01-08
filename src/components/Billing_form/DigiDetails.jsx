@@ -9,8 +9,21 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
     "13x19": { length: "13", breadth: "19" },
   };
 
+  const toggleDigiUsed = () => {
+    const updatedIsDigiUsed = !isDigiUsed;
+    dispatch({
+      type: "UPDATE_DIGI_DETAILS",
+      payload: {
+        isDigiUsed: updatedIsDigiUsed,
+        digiDie: updatedIsDigiUsed ? "" : "",
+        digiDimensions: updatedIsDigiUsed ? {} : {},
+      },
+    });
+    setErrors({});
+  };
+
   const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
+    const { name, value } = e.target;
 
     if (name === "digiDie") {
       const selectedDimensions = DIGI_DIE_OPTIONS[value] || {};
@@ -24,7 +37,7 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
     } else {
       dispatch({
         type: "UPDATE_DIGI_DETAILS",
-        payload: { [name]: type === "checkbox" ? checked : value },
+        payload: { [name]: value },
       });
     }
   };
@@ -57,20 +70,21 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
   }, [isDigiUsed, dispatch]);
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-700 mb-4">Digi Details</h2>
-      {/* Checkbox for Digi Usage */}
-      <label className="font-semibold flex items-center">
-        <input
-          type="checkbox"
-          name="isDigiUsed"
-          checked={isDigiUsed}
-          onChange={handleChange}
-          className="mr-2"
-        />
-        Is Digi being used?
-      </label>
-      {/* Conditional Dropdown for Digi Die */}
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <div className="space-y-4">
+        <h2 className="text-xl font-bold text-gray-700">Digi Details</h2>
+        <div className="flex items-center space-x-3 cursor-pointer">
+          <label className="flex items-center space-x-3" onClick={toggleDigiUsed}>
+            {/* Circular Button */}
+            <div className="w-6 h-6 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+              {isDigiUsed && <div className="w-4 h-4 rounded-full bg-blue-500"></div>}
+            </div>
+            {/* Label Text */}
+            <span className="text-gray-700 font-semibold">Is Digi being used?</span>
+          </label>
+        </div>
+      </div>
+
       {isDigiUsed && (
         <div>
           <label className="block mb-2 font-medium">Select Digi Die:</label>
@@ -94,7 +108,7 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
           )}
         </div>
       )}
-      {/* Display Dimensions if Digi Die is selected */}
+
       {isDigiUsed && digiDie && (
         <div className="mt-4">
           <p className="text-gray-700">
@@ -110,7 +124,7 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious }) => {
           </div>
         </div>
       )}
-      {/* Navigation Buttons */}
+
       <div className="flex justify-between">
         <button
           type="button"

@@ -91,18 +91,9 @@ const reducer = (state, action) => {
   }
 };
 
-// Function to map the state to the desired Firebase structure
+// Map state to Firebase structure
 const mapStateToFirebaseStructure = (state, calculations) => {
-  const {
-    orderAndPaper,
-    lpDetails,
-    fsDetails,
-    embDetails,
-    digiDetails,
-    dieCutting,
-    sandwich,
-    pasting,
-  } = state;
+  const { orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich, pasting } = state;
 
   return {
     clientName: orderAndPaper.clientName,
@@ -122,43 +113,31 @@ const mapStateToFirebaseStructure = (state, calculations) => {
       image: orderAndPaper.image,
     },
     lpDetails: lpDetails.isLPUsed ? lpDetails : null,
-    fsDetails: fsDetails.isFSUsed
-      ? {
-          ...fsDetails,
-          foilDetails: fsDetails.foilDetails.map((foil) => ({
-            ...foil,
-            blockDimension: {
-              length: parseFloat(foil.blockDimension?.length || 0),
-              breadth: parseFloat(foil.blockDimension?.breadth || 0),
-            },
-          })),
-        }
-      : null,
+    fsDetails: fsDetails.isFSUsed ? fsDetails : null,
     embDetails: embDetails.isEMBUsed ? embDetails : null,
     digiDetails: digiDetails.isDigiUsed ? digiDetails : null,
     dieCuttingDetails: dieCutting.isDieCuttingUsed ? dieCutting : null,
     sandwichDetails: sandwich.isSandwichComponentUsed ? sandwich : null,
     pastingDetails: pasting,
-    calculations, // Include calculations in the Firebase structure
+    calculations,
   };
 };
 
 const BillingForm = () => {
   const [state, dispatch] = useReducer(reducer, initialState);
-  const [calculations, setCalculations] = useState(null); // Holds calculated data
-  const [isCalculating, setIsCalculating] = useState(false); // Loading state for calculations
+  const [calculations, setCalculations] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
 
-  // Perform calculations after the Pasting step
   useEffect(() => {
     const performCalculations = async () => {
       setIsCalculating(true);
       try {
-        const result = await calculateEstimateCosts(state); // Perform calculations
+        const result = await calculateEstimateCosts(state);
         if (result.error) {
           console.error("Error during calculations:", result.error);
-          alert(result.error); // Display error to the user
+          alert(result.error);
         } else {
-          setCalculations(result); // Store the result
+          setCalculations(result);
         }
       } catch (error) {
         console.error("Unexpected error during calculations:", error);
@@ -190,7 +169,7 @@ const BillingForm = () => {
       const formattedData = mapStateToFirebaseStructure(state, calculations);
       await addDoc(collection(db, "estimates"), formattedData);
       alert("Estimate created successfully!");
-      dispatch({ type: "RESET_FORM" }); // Reset form to initial state
+      dispatch({ type: "RESET_FORM" });
     } catch (error) {
       console.error("Error creating estimate:", error);
       alert("Failed to create estimate.");
@@ -208,8 +187,8 @@ const BillingForm = () => {
     <Pasting state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step8" />,
     <ReviewAndSubmit
       state={state}
-      calculations={calculations} // Pass calculations as a prop
-      isCalculating={isCalculating} // Pass loading state
+      calculations={calculations}
+      isCalculating={isCalculating}
       onPrevious={handlePrevious}
       onCreateEstimate={handleCreateEstimate}
       key="step9"
@@ -217,8 +196,8 @@ const BillingForm = () => {
   ];
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="max-w-4xl mx-auto bg-white shadow-md rounded-lg p-6">
+    <div className="min-h-screen rounded-lg">
+      <div className="max-w-screen-2xl p-2">
         <h1 className="text-2xl font-bold text-gray-700 mb-4">Billing Form</h1>
         <div className="text-gray-600 mb-6">
           <p>Step {state.currentStep} of {steps.length}</p>

@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { collection, addDoc, doc, writeBatch } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import EstimateDetails from "./EstimateDetails";
+import EstimateDetailsModal from "./EstimateDetailsModal"; // Import modal
 
 const Estimate = ({
   estimate,
@@ -12,13 +12,11 @@ const Estimate = ({
   setEstimatesData,
   groupKey,
 }) => {
-  const [showDetails, setShowDetails] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
 
   const isMovedToOrders = movedToOrdersEstimateId === estimate.id;
   const cannotMoveToOrders = !!movedToOrdersEstimateId && movedToOrdersEstimateId !== estimate.id;
   const isCanceled = estimate.isCanceled;
-
-  const toggleDetails = () => setShowDetails((prev) => !prev);
 
   const handleAddToOrders = async (e) => {
     e.stopPropagation();
@@ -26,13 +24,11 @@ const Estimate = ({
     if (isMovedToOrders || cannotMoveToOrders || isCanceled) return;
 
     try {
-      // Add the selected estimate to the "orders" collection with the default "stage" field
       await addDoc(collection(db, "orders"), {
         ...estimate,
-        stage: "Not started yet", // Add the default stage field
+        stage: "Not started yet",
       });
 
-      // Update all estimates in the group
       const batch = writeBatch(db);
       estimates.forEach((est) => {
         const estimateRef = doc(db, "estimates", est.id);
@@ -40,7 +36,6 @@ const Estimate = ({
       });
       await batch.commit();
 
-      // Immediately update local state
       const updatedEstimates = estimates.map((est) => ({
         ...est,
         movedToOrders: est.id === estimate.id,
@@ -63,10 +58,6 @@ const Estimate = ({
     if (isMovedToOrders || isCanceled) return;
 
     try {
-      // Save the groupKey to local storage
-      localStorage.setItem("openGroupKey", groupKey);
-
-      // Batch update all estimates in Firestore
       const batch = writeBatch(db);
       estimates.forEach((est) => {
         const estimateRef = doc(db, "estimates", est.id);
@@ -74,7 +65,6 @@ const Estimate = ({
       });
       await batch.commit();
 
-      // Immediately update local state for canceled orders
       const updatedEstimates = estimates.map((est) => ({
         ...est,
         isCanceled: true,
@@ -83,9 +73,6 @@ const Estimate = ({
         ...prevData,
         [groupKey]: updatedEstimates,
       }));
-
-      // Reload the page to restore dropdown states
-      window.location.reload();
     } catch (error) {
       console.error("Error canceling estimates:", error);
       alert("Failed to cancel the order.");
@@ -93,25 +80,31 @@ const Estimate = ({
   };
 
   return (
-    <div
-      onClick={toggleDetails}
-      className={`border rounded-md p-3 bg-white transition cursor-pointer ${
-        showDetails ? "shadow-lg" : "shadow-sm"
-      }`}
-    >
-      {/* Header Section */}
-      <div className="flex justify-between items-center">
-        <h4 className="font-medium">
-          Estimate {estimateNumber}: {estimate?.jobDetails?.jobType || "Unknown Job"}
-        </h4>
+    <>
+      <div
+        onClick={() => setIsModalOpen(true)}
+        className={`border rounded-md p-2 bg-white transition cursor-pointer shadow-sm`}
+        style={{
+          flex: "1 1 calc(25% - 10px)", // Makes it responsive and ensures 4 per row
+          minWidth: "200px",
+          maxWidth: "220px",
+          margin: "5px",
+        }}
+      >
+        {/* Header Section */}
+        <div className="flex justify-between items-center mb-1">
+          <h4 className="font-medium text-sm">
+            Estimate {estimateNumber}: {estimate?.jobDetails?.jobType || "Unknown Job"}
+          </h4>
+        </div>
 
-        <div className="space-x-2">
-          {/* Move to Orders Button */}
+        {/* Buttons Section */}
+        <div className="space-y-1">
           {!isCanceled && (
             <button
               onClick={handleAddToOrders}
               disabled={cannotMoveToOrders}
-              className={`text-sm px-3 py-1 rounded-md ${
+              className={`text-xs w-full px-2 py-1 rounded-md ${
                 isMovedToOrders
                   ? "bg-green-500 text-white cursor-not-allowed"
                   : cannotMoveToOrders
@@ -127,21 +120,19 @@ const Estimate = ({
             </button>
           )}
 
-          {/* Cancel Order Button */}
           {!isMovedToOrders && !isCanceled && !movedToOrdersEstimateId && (
             <button
               onClick={handleCancelOrder}
-              className="text-sm px-3 py-1 rounded-md bg-red-500 text-white hover:bg-red-600"
+              className="text-xs w-full px-2 py-1 rounded-md bg-red-500 text-white hover:bg-red-600"
             >
               Cancel Order
             </button>
           )}
 
-          {/* Orders Canceled Button */}
           {isCanceled && (
             <button
               disabled
-              className="text-sm px-3 py-1 rounded-md bg-gray-400 text-white cursor-not-allowed"
+              className="text-xs w-full px-2 py-1 rounded-md bg-gray-400 text-white cursor-not-allowed"
             >
               Orders Canceled
             </button>
@@ -149,9 +140,14 @@ const Estimate = ({
         </div>
       </div>
 
-      {/* Details Section */}
-      {showDetails && <EstimateDetails estimate={estimate} />}
-    </div>
+      {/* Modal for Estimate Details */}
+      {isModalOpen && (
+        <EstimateDetailsModal
+          estimate={estimate}
+          onClose={() => setIsModalOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

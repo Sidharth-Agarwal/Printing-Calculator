@@ -31,19 +31,20 @@ const Pasting = ({ state, dispatch, onPrevious, onNext }) => {
   };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <h2 className="text-xl font-bold text-gray-700 mb-4">Pasting</h2>
+    <form onSubmit={handleSubmit} className="space-y-6">
+      <h2 className="text-xl font-bold text-gray-700">Pasting</h2>
 
-      {/* Checkbox for "Is Pasting being used?" */}
-      <div className="space-y-2">
-        <label className="font-semibold flex items-center">
-          <input
-            type="checkbox"
-            checked={isPastingUsed}
-            onChange={(e) => handleChange("isPastingUsed", e.target.checked)}
-            className="mr-2"
-          />
-          Is Pasting being used?
+      {/* Toggle for "Is Pasting being used?" */}
+      <div className="flex items-center space-x-3 cursor-pointer">
+        <label
+          className="flex items-center space-x-3"
+          onClick={() => handleChange("isPastingUsed", !isPastingUsed)}
+        >
+          {/* Circular Toggle */}
+          <div className="w-6 h-6 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+            {isPastingUsed && <div className="w-4 h-4 rounded-full bg-blue-500"></div>}
+          </div>
+          <span className="text-gray-700 font-semibold">Use Pasting Component?</span>
         </label>
       </div>
 
@@ -54,7 +55,9 @@ const Pasting = ({ state, dispatch, onPrevious, onNext }) => {
           <select
             value={pastingType}
             onChange={(e) => handleChange("pastingType", e.target.value)}
-            className={`border rounded-md p-2 w-full ${errors.pastingType ? "border-red-500" : ""}`}
+            className={`border rounded-md p-2 w-full ${
+              errors.pastingType ? "border-red-500" : ""
+            }`}
           >
             <option value="">Select Pasting Type</option>
             <option value="DST">DST</option>
