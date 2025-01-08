@@ -1,6 +1,52 @@
 import React from "react";
 
 const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCreateEstimate }) => {
+  const fieldLabels = {
+    clientName: "Client Name",
+    projectName: "Project Name",
+    date: "Order Date",
+    deliveryDate: "Expected Delivery Date",
+    jobType: "Job Type",
+    quantity: "Quantity",
+    paperProvided: "Paper Provided",
+    paperName: "Paper Name",
+    paperCostPerCard: "Paper Cost",
+    cuttingCostPerCard: "Cutting Cost",
+    paperAndCuttingCostPerCard: "Paper & Cutting Cost",
+    lpCostPerCardSandwich: "LP Costing Per Card Sandwich",
+    fsCostPerCardSandwich: "FS Cost Per Card Sandwich",
+    embCostPerCardSandwich: "EMB Cost Per Card Sandwich",
+    dieSize: "Die Size",
+    dieCode: "Die Code",
+    image: "Image",
+    fsType: "FS Type",
+    foilDetails: "Foil Details",
+    blockSizeType: "Block Size Type",
+    plateDimensions: "Plate Dimensions",
+    digiDimensions: "Digi Dimensions",
+    pantoneType: "Pantone Type",
+    plateType: "Plate Type",
+    plateTypeMale: "Plate Type Male",
+    plateTypeFemale: "Plate Type Female",
+    mrType: "MR Type",
+    digiDie: "Digi Die",
+    length: "Length",
+    breadth: "Breadth",
+  };
+
+  const getLabel = (key) => {
+    if (fieldLabels[key]) {
+      return fieldLabels[key];
+    }
+    return key
+      .replace(/([a-z])([A-Z])/g, "$1 $2")
+      .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
+      .replace(/([a-z])([0-9])/g, "$1 $2")
+      .replace(/([0-9])([a-z])/g, "$1 $2")
+      .replace(/([A-Z][a-z]+)/g, (match) => match.charAt(0).toUpperCase() + match.slice(1))
+      .trim();
+  };
+
   const handleCreateEstimate = (e) => {
     e.preventDefault();
     onCreateEstimate();
@@ -8,12 +54,23 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
 
   const renderValue = (key, value) => {
     if (key.toLowerCase().includes("date") && value) {
-      // Format date values
       return new Date(value).toLocaleDateString();
     }
 
+    // Handle Length x Breadth formatting
+    if (typeof value === "object" && value !== null && "length" in value && "breadth" in value) {
+      const { length, breadth } = value;
+      return `${length || "N/A"} x ${breadth || "N/A"}`;
+    }
+
+    if (key === "digiDimensions" || key === "plateDimensions" || key === "dieSize") {
+      if (typeof value === "object") {
+        const { length, breadth } = value;
+        return `${length || "N/A"} x ${breadth || "N/A"}`;
+      }
+    }
+
     if (key.toLowerCase() === "image" && value) {
-      // Render image if the key is "Image" and value is a valid URL
       return (
         <img
           src={value}
@@ -24,7 +81,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     }
 
     if (Array.isArray(value)) {
-      // Render arrays as lists for better readability
+      // Render arrays as lists
       return (
         <ul className="list-disc pl-6">
           {value.map((item, index) => (
@@ -35,9 +92,9 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     }
 
     if (typeof value === "object" && value !== null) {
-      // Render objects as key-value pairs in a styled table
+      // Render nested objects as a table
       return (
-        <table className="w-full table-auto border-collapse border border-gray-300 rounded-md">
+        <table className="w-full border-collapse border border-gray-300 rounded-md mt-2">
           <tbody>
             {Object.entries(value).map(([subKey, subValue], index) => (
               <tr
@@ -46,37 +103,57 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
                   index % 2 === 0 ? "bg-gray-100" : "bg-white"
                 } border border-gray-300`}
               >
-                <td className="p-2 font-medium text-gray-700 capitalize">{subKey}:</td>
+                <td className="p-2 font-medium text-gray-600 capitalize">{getLabel(subKey)}:</td>
                 <td className="p-2 text-gray-800">{renderValue(subKey, subValue)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       );
-    }    
+    }
 
     return value || "Not Provided";
   };
 
-  const renderSection = (heading, sectionData) => {
+  const renderSectionInFlex = (heading, sectionData, excludedFields = []) => {
     if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
-      // Skip rendering if section data is missing or empty
       return null;
     }
 
     return (
       <div key={heading} className="mb-6">
         <h3 className="text-lg font-semibold text-gray-600 capitalize mb-4">{heading}:</h3>
-        <div className="space-y-2">
-          {Object.entries(sectionData).map(([key, value]) => (
-            <div
-              key={key}
-              className="flex flex-col bg-gray-100 p-3 rounded-md"
-            >
-              <span className="font-medium text-gray-600 capitalize">{key}:</span>
-              <span className="text-gray-800 mt-1">{renderValue(key, value)}</span>
-            </div>
-          ))}
+        <div className="space-y-4 bg-white">
+          {Object.entries(sectionData)
+            .filter(([key]) => !excludedFields.includes(key)) // Exclude specific fields
+            .map(([key, value]) => (
+              <div key={key} className="flex flex-col bg-gray-100 p-2 rounded-md">
+                <span className="font-medium text-gray-600 capitalize">{getLabel(key)}:</span>
+                <span className="text-gray-800">{renderValue(key, value)}</span>
+              </div>
+            ))}
+        </div>
+      </div>
+    );
+  };
+
+  const renderSectionInGrid = (heading, sectionData, excludedFields = []) => {
+    if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
+      return null;
+    }
+
+    return (
+      <div key={heading} className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-600 capitalize mb-4">{heading}:</h3>
+        <div className="grid grid-cols-2 gap-4 bg-white">
+          {Object.entries(sectionData)
+            .filter(([key]) => !excludedFields.includes(key))
+            .map(([key, value]) => (
+              <div key={key} className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
+                <span className="font-medium text-gray-600 capitalize">{getLabel(key)}:</span>
+                <span className="text-gray-800">{renderValue(key, value)}</span>
+              </div>
+            ))}
         </div>
       </div>
     );
@@ -86,43 +163,51 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     <form onSubmit={handleCreateEstimate} className="space-y-6">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Review and Submit</h2>
 
-      {/* Review Input Sections */}
-      <div className="space-y-4 bg-white p-6 rounded shadow-md">
+      {/* Order and Paper Details in Grid */}
+      {state.orderAndPaper &&
+        renderSectionInGrid("Order and Paper", state.orderAndPaper, ["dieSelection"])}
 
-        {/* Render sections only if data is provided */}
-        {state.orderAndPaper && renderSection("Order and Paper", state.orderAndPaper)}
-        {state.lpDetails?.isLPUsed && renderSection("LP Details", state.lpDetails)}
-        {state.fsDetails?.isFSUsed && renderSection("FS Details", state.fsDetails)}
-        {state.embDetails?.isEMBUsed && renderSection("EMB Details", state.embDetails)}
-        {state.digiDetails?.isDigiUsed && renderSection("Digi Details", state.digiDetails)}
-        {state.dieCutting?.isDieCuttingUsed && renderSection("Die Cutting", state.dieCutting)}
+      {/* Other Sections in Flex Layout */}
+      <div className="space-y-4 bg-white">
+        {state.lpDetails?.isLPUsed && renderSectionInFlex("LP Details", state.lpDetails, ["isLPUsed"])}
+        {state.fsDetails?.isFSUsed &&
+          renderSectionInFlex("FS Details", state.fsDetails, ["isFSUsed"])}
+        {state.embDetails?.isEMBUsed &&
+          renderSectionInFlex("EMB Details", state.embDetails, ["isEMBUsed"])}
+        {state.digiDetails?.isDigiUsed &&
+          renderSectionInFlex("Digi Details", state.digiDetails, ["isDigiUsed"])}
+        {state.dieCutting?.isDieCuttingUsed &&
+          renderSectionInFlex("Die Cutting", state.dieCutting, ["isDieCuttingUsed"])}
         {state.sandwich?.isSandwichComponentUsed &&
-          renderSection("Sandwich Details", state.sandwich)}
-        {state.pasting?.isPastingUsed && renderSection("Pasting Details", state.pasting)}
+          renderSectionInFlex("Sandwich Details", state.sandwich, ["isSandwichComponentUsed"])}
+        {state.pasting?.isPastingUsed &&
+          renderSectionInFlex("Pasting Details", state.pasting, ["isPastingUsed"])}
       </div>
 
       {/* Calculations */}
       {isCalculating ? (
-        <div className="bg-white p-6 rounded shadow-md">
+        <div className="bg-white">
           <p className="text-gray-600 text-center">Calculating costs...</p>
         </div>
       ) : calculations && !calculations.error ? (
-        <div className="space-y-4 bg-white p-6 rounded shadow-md">
-          <h3 className="text-lg font-semibold text-gray-600 mb-4">Cost Calculations</h3>
-          <div className="grid grid-cols-2 gap-4">
-            {Object.entries(calculations).map(([key, value]) => (
-              <div
-                key={key}
-                className="flex justify-between items-center bg-gray-100 p-3 rounded-md"
-              >
-                <span className="font-medium text-gray-600 capitalize">{key}:</span>
-                <span className="text-gray-800">{renderValue(key, value)}</span>
-              </div>
-            ))}
+        <div className="space-y-4 bg-white">
+          <h3 className="text-lg font-semibold text-gray-600 mb-4">Cost Calculations (Per Card)</h3>
+          <div className="grid grid-cols-3 gap-4">
+            {Object.entries(calculations)
+              .filter(([key, value]) => value !== null && value !== "Not Provided" && parseFloat(value) !== 0)
+              .map(([key, value]) => (
+                <div
+                  key={key}
+                  className="flex justify-between items-center bg-gray-100 p-2 rounded-md"
+                >
+                  <span className="font-medium text-gray-600 capitalize">{getLabel(key)}:</span>
+                  <span className="text-gray-800">{renderValue(key, value)}</span>
+                </div>
+              ))}
           </div>
         </div>
       ) : (
-        <div className="bg-white p-6 rounded shadow-md">
+        <div className="bg-white">
           <p className="text-red-600 text-center">
             {calculations?.error || "Unable to fetch calculations."}
           </p>
