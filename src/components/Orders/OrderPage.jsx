@@ -284,7 +284,7 @@ const OrdersPage = () => {
 
   return (
     <div>
-      <h2 className="text-2xl font-bold mb-8">Orders Page</h2>
+      <h2 className="text-2xl font-bold mb-6">Orders Page</h2>
 
       {/* Orders Table */}
       <table className="table-auto w-full bg-white rounded-lg shadow-md overflow-hidden text-center">
