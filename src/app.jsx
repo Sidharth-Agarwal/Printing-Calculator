@@ -15,7 +15,7 @@ function App() {
   return (
     <div>
       <Header />
-      <main className="container mx-auto mt-6">
+      <main className="container mx-auto mt-6 p-6">
         <Routes>
           <Route path="/" element={<Login />} />
           <Route path="/new-bill" element={<BillingForm />} />
