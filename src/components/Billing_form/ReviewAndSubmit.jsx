@@ -49,7 +49,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     digiCostPerCard: "Digital Print Cost per Unit ",
     paperCost: "Digital Paper Cost ",
     printingCost: "Digital Print Cost ",
-    totalPapersRequired: "Total Papers in Digital Print ",
+    totalPapersRequired: "Papers Required in Digital Print ",
   };
 
   const getLabel = (key) => {
