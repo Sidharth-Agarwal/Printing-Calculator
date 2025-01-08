@@ -57,7 +57,6 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
       return new Date(value).toLocaleDateString();
     }
 
-    // Handle Length x Breadth formatting
     if (typeof value === "object" && value !== null && "length" in value && "breadth" in value) {
       const { length, breadth } = value;
       return `${length || "N/A"} x ${breadth || "N/A"}`;
@@ -81,20 +80,20 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     }
 
     if (Array.isArray(value)) {
-      // Render arrays as lists
       return (
-        <ul className="list-disc pl-6">
+        <div className="space-y-2">
           {value.map((item, index) => (
-            <li key={index}>{renderValue("item", item)}</li>
+            <div key={index} className="flex justify-between items-center gap-4 bg-gray-100 p-2 rounded-md">
+              {renderValue("item", item)}
+            </div>
           ))}
-        </ul>
+        </div>
       );
     }
 
     if (typeof value === "object" && value !== null) {
-      // Render nested objects as a table
       return (
-        <table className="w-full border-collapse border border-gray-300 rounded-md mt-2">
+        <table className="w-full border-collapse border border-gray-300 rounded-md">
           <tbody>
             {Object.entries(value).map(([subKey, subValue], index) => (
               <tr
@@ -115,6 +114,18 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     return value || "Not Provided";
   };
 
+  const renderMultipleTablesInRow = (dataArray) => {
+    return (
+      <div className="grid grid-cols-3 gap-4">
+        {dataArray.map((item, index) => (
+          <div key={index} className="bg-white p-2 rounded-md border">
+            {renderValue("table", item)}
+          </div>
+        ))}
+      </div>
+    );
+  };
+
   const renderSectionInFlex = (heading, sectionData, excludedFields = []) => {
     if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
       return null;
@@ -123,15 +134,25 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     return (
       <div key={heading} className="mb-6">
         <h3 className="text-lg font-semibold text-gray-600 capitalize mb-2">{heading}:</h3>
-        <div className="space-y-4 bg-gray-100 p-2 rounded-md">
+        <div className="space-y-4 bg-gray-100 p-4 rounded-md">
           {Object.entries(sectionData)
-            .filter(([key]) => !excludedFields.includes(key)) // Exclude specific fields
-            .map(([key, value]) => (
-              <div key={key} className="flex flex-row gap- 1">
-                <span className="font-medium text-gray-600 capitalize">{getLabel(key)}:</span>
-                <span className="text-gray-800">{renderValue(key, value)}</span>
-              </div>
-            ))}
+            .filter(([key]) => !excludedFields.includes(key))
+            .map(([key, value]) => {
+              if (Array.isArray(value)) {
+                return (
+                  <div key={key}>
+                    <h4 className="font-medium text-gray-600 capitalize mb-2">{getLabel(key)}:</h4>
+                    {renderMultipleTablesInRow(value)}
+                  </div>
+                );
+              }
+              return (
+                <div key={key} className="flex items-center gap-2">
+                  <span className="font-medium text-gray-600">{getLabel(key)}:</span>
+                  <span className="text-gray-800">{renderValue(key, value)}</span>
+                </div>
+              );
+            })}
         </div>
       </div>
     );
@@ -150,7 +171,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
             .filter(([key]) => !excludedFields.includes(key))
             .map(([key, value]) => (
               <div key={key} className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
-                <span className="font-medium text-gray-600 capitalize">{getLabel(key)}:</span>
+                <span className="font-medium text-gray-600">{getLabel(key)}:</span>
                 <span className="text-gray-800">{renderValue(key, value)}</span>
               </div>
             ))}
@@ -163,11 +184,9 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     <form onSubmit={handleCreateEstimate} className="space-y-6">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Review and Submit</h2>
 
-      {/* Order and Paper Details in Grid */}
       {state.orderAndPaper &&
         renderSectionInGrid("Order and Paper", state.orderAndPaper, ["dieSelection"])}
 
-      {/* Other Sections in Flex Layout */}
       <div className="space-y-4 bg-white">
         {state.lpDetails?.isLPUsed && renderSectionInFlex("LP Details", state.lpDetails, ["isLPUsed"])}
         {state.fsDetails?.isFSUsed &&
@@ -184,7 +203,6 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
           renderSectionInFlex("Pasting Details", state.pasting, ["isPastingUsed"])}
       </div>
 
-      {/* Calculations */}
       {isCalculating ? (
         <div className="bg-white">
           <p className="text-gray-600 text-center">Calculating costs...</p>
@@ -200,7 +218,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
                   key={key}
                   className="flex justify-between items-center bg-gray-100 p-2 rounded-md"
                 >
-                  <span className="font-medium text-gray-600 capitalize">{getLabel(key)}:</span>
+                  <span className="font-medium text-gray-600">{getLabel(key)}:</span>
                   <span className="text-gray-800">{renderValue(key, value)}</span>
                 </div>
               ))}
@@ -214,7 +232,6 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
         </div>
       )}
 
-      {/* Navigation Buttons */}
       <div className="flex justify-between mt-6">
         <button
           type="button"
