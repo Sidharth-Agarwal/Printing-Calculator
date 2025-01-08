@@ -48,7 +48,7 @@ const GroupDropdown = ({
     <div className={`border rounded-lg shadow-md ${groupColor} relative`}>
       {/* Status Badge */}
       <div
-        className={`absolute top-3 right-3 text-sm px-3 py-1 rounded-md ${
+        className={`absolute top-3 right-3 text-xs px-2 py-1 rounded-md font-semibold ${
           groupStatus === "Cancelled"
             ? "bg-red-500 text-white"
             : groupStatus === "Order Confirmed"
@@ -70,10 +70,10 @@ const GroupDropdown = ({
           <p className="text-xs text-gray-500">
             {firstEstimate?.jobDetails?.jobType || "N/A"} · {firstEstimate?.jobDetails?.quantity || "0"} items
           </p>
-          <p className="text-sm text-gray-600">
+          <p className="text-xs text-gray-600">
             Expected Delivery:{" "}
             {firstEstimate?.deliveryDate
-              ? new Date(firstEstimate.deliveryDate).toISOString().split("T")[0]
+              ? new Date(firstEstimate.deliveryDate).toLocaleDateString("en-GB") // Format to DD/MM/YYYY
               : "Not Specified"}
           </p>
         </div>
