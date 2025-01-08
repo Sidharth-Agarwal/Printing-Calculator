@@ -2,36 +2,41 @@ import React from "react";
 
 const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCreateEstimate }) => {
   const fieldLabels = {
-    clientName: "Client Name",
-    projectName: "Project Name",
+    clientName: "Name of the Client",
+    projectName: "Name of the Project",
     date: "Order Date",
     deliveryDate: "Expected Delivery Date",
     jobType: "Job Type",
     quantity: "Quantity",
     paperProvided: "Paper Provided",
-    paperName: "Paper Name",
-    paperCostPerCard: "Paper Cost",
-    cuttingCostPerCard: "Cutting Cost",
-    paperAndCuttingCostPerCard: "Paper & Cutting Cost",
-    lpCostPerCardSandwich: "LP Costing Per Card Sandwich",
-    fsCostPerCardSandwich: "FS Cost Per Card Sandwich",
-    embCostPerCardSandwich: "EMB Cost Per Card Sandwich",
-    dieSize: "Die Size",
     dieCode: "Die Code",
+    dieSize: "Die Size",
+    dieSelection: "Die Selection",
     image: "Image",
-    fsType: "FS Type",
-    foilDetails: "Foil Details",
-    blockSizeType: "Block Size Type",
-    plateDimensions: "Plate Dimensions",
-    digiDimensions: "Digi Dimensions",
-    pantoneType: "Pantone Type",
-    plateType: "Plate Type",
-    plateTypeMale: "Plate Type Male",
-    plateTypeFemale: "Plate Type Female",
-    mrType: "MR Type",
-    digiDie: "Digi Die",
-    length: "Length",
     breadth: "Breadth",
+    length: "Length",
+    paperName: "Paper Name",
+    plateSizeType: "Type of Plate Size",
+    noOfColors: "Total number of colors",
+    colorDetails: "Color Details of LP",
+    mrType: "Type of MR",
+    pantoneType: "Type of Pantone",
+    plateDimensions: "Dimensions of Plate",
+    plateType: "Type of Plate",
+    fsType: "Type of FS",
+    foilDetails: "Foil Details of FS",
+    blockSizeType: "Block size Type",
+    blockDimension: "Block Dimensions",
+    foilType: "Type of Foil",
+    blockType: "Type of Block",
+    plateTypeMale: "Male Plate Type",
+    plateTypeFemale: "Female Plate Type",
+    embMR: "Type of MR",
+    digiDie: "Digital Die Selected",
+    digiDimensions: "Digital Die Dimensions",
+    lpDetailsSandwich: "LP Details in Sandwich",
+    fsDetailsSandwich: "FS Details in Sandwich",
+    embDetailsSandwich: "EMB Details in Sandwich",
   };
 
   const getLabel = (key) => {
@@ -102,7 +107,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
                   index % 2 === 0 ? "bg-gray-100" : "bg-white"
                 } border border-gray-300`}
               >
-                <td className="p-2 font-medium text-gray-600 capitalize">{getLabel(subKey)}:</td>
+                <td className="p-2 font-medium text-gray-600">{getLabel(subKey)}:</td>
                 <td className="p-2 text-gray-800">{renderValue(subKey, subValue)}</td>
               </tr>
             ))}
@@ -133,7 +138,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
 
     return (
       <div key={heading} className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 capitalize mb-2">{heading}:</h3>
+        <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}:</h3>
         <div className="space-y-4 bg-gray-100 p-4 rounded-md">
           {Object.entries(sectionData)
             .filter(([key]) => !excludedFields.includes(key))
@@ -141,7 +146,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
               if (Array.isArray(value)) {
                 return (
                   <div key={key}>
-                    <h4 className="font-medium text-gray-600 capitalize mb-2">{getLabel(key)}:</h4>
+                    <h4 className="font-medium text-gray-600 mb-2">{getLabel(key)}:</h4>
                     {renderMultipleTablesInRow(value)}
                   </div>
                 );
@@ -165,7 +170,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
 
     return (
       <div key={heading} className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 capitalize mb-2">{heading}:</h3>
+        <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}:</h3>
         <div className="grid grid-cols-2 gap-3 bg-white">
           {Object.entries(sectionData)
             .filter(([key]) => !excludedFields.includes(key))
