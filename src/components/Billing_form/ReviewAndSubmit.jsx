@@ -75,7 +75,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
         <img
           src={value}
           alt="Die Image"
-          className="max-w-full max-h-40 object-contain border rounded-md"
+          className="max-w-full max-h-20 object-contain border rounded-md"
         />
       );
     }
@@ -122,12 +122,12 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
 
     return (
       <div key={heading} className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 capitalize mb-4">{heading}:</h3>
-        <div className="space-y-4 bg-white">
+        <h3 className="text-lg font-semibold text-gray-600 capitalize mb-2">{heading}:</h3>
+        <div className="space-y-4 bg-gray-100 p-2 rounded-md">
           {Object.entries(sectionData)
             .filter(([key]) => !excludedFields.includes(key)) // Exclude specific fields
             .map(([key, value]) => (
-              <div key={key} className="flex flex-col bg-gray-100 p-2 rounded-md">
+              <div key={key} className="flex flex-row gap- 1">
                 <span className="font-medium text-gray-600 capitalize">{getLabel(key)}:</span>
                 <span className="text-gray-800">{renderValue(key, value)}</span>
               </div>
@@ -144,8 +144,8 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
 
     return (
       <div key={heading} className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 capitalize mb-4">{heading}:</h3>
-        <div className="grid grid-cols-2 gap-4 bg-white">
+        <h3 className="text-lg font-semibold text-gray-600 capitalize mb-2">{heading}:</h3>
+        <div className="grid grid-cols-2 gap-3 bg-white">
           {Object.entries(sectionData)
             .filter(([key]) => !excludedFields.includes(key))
             .map(([key, value]) => (
@@ -191,8 +191,8 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
         </div>
       ) : calculations && !calculations.error ? (
         <div className="space-y-4 bg-white">
-          <h3 className="text-lg font-semibold text-gray-600 mb-4">Cost Calculations (Per Card)</h3>
-          <div className="grid grid-cols-3 gap-4">
+          <h3 className="text-lg font-semibold text-gray-600 mb-2">Cost Calculations (per card)</h3>
+          <div className="grid grid-cols-3 gap-3">
             {Object.entries(calculations)
               .filter(([key, value]) => value !== null && value !== "Not Provided" && parseFloat(value) !== 0)
               .map(([key, value]) => (
