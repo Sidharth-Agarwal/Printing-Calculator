@@ -87,8 +87,7 @@ const Estimate = ({
         style={{
           flex: "1 1 calc(25% - 10px)", // Makes it responsive and ensures 4 per row
           minWidth: "200px",
-          maxWidth: "220px",
-          margin: "5px",
+          maxWidth: "250px",
         }}
       >
         {/* Header Section */}

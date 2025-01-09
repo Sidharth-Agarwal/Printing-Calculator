@@ -202,45 +202,24 @@ const OrdersPage = () => {
     fetchOrders();
   }, []);
 
-  // // Function to update the Firestore stage
-  // const updateFirestoreStage = async (orderId, stage) => {
-  //   console.log("Updating stage for order ID:", orderId); // Log the orderId
-  //   try {
-  //     const orderRef = doc(db, "orders", orderId); // Reference the document
-  //     const docSnapshot = await getDoc(orderRef); // Fetch the document
-
-  //     if (!docSnapshot.exists()) {
-  //       console.error(`Order with ID ${orderId} does not exist in Firestore.`);
-  //       return; // Exit the function early
-  //     }
-
-  //     await updateDoc(orderRef, { stage });
-  //     console.log(`Order ${orderId} updated to stage: ${stage}`);
-  //   } catch (error) {
-  //     console.error("Error updating Firestore stage:", error);
-  //   }
-  // };
-
+  // Function to update the Firestore stage
   const updateFirestoreStage = async (orderId, stage) => {
     console.log("Updating stage for order ID:", orderId); // Log the orderId
-  
     try {
       const orderRef = doc(db, "orders", orderId); // Reference the document
-      console.log("OrderRef Path:", orderRef.path); // Log the Firestore path
-  
-      const docSnapshot = await getDoc(orderRef, { source: "server" }); // Fetch from server
-  
+      const docSnapshot = await getDoc(orderRef); // Fetch the document
+
       if (!docSnapshot.exists()) {
         console.error(`Order with ID ${orderId} does not exist in Firestore.`);
-        return; // Exit if document does not exist
+        return; // Exit the function early
       }
-  
-      await updateDoc(orderRef, { stage }); // Update the document
+
+      await updateDoc(orderRef, { stage });
       console.log(`Order ${orderId} updated to stage: ${stage}`);
     } catch (error) {
       console.error("Error updating Firestore stage:", error);
     }
-  };  
+  };
 
   // Handle toggle updates
   const handleToggle = (orderId, clickedStage) => {
