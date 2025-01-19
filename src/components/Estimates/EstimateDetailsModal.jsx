@@ -264,12 +264,12 @@ const EstimateDetailsModal = ({ estimate, onClose, onDownloadPdf }) => {
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-center p-6 border-b">
+        <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-xl font-bold text-gray-700">Estimate Details</h2>
           <div className="flex items-center gap-4">
             <button
               onClick={onDownloadPdf}
-              className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
+              className="flex items-center gap-2 px-2 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3M3 7V4a2 2 0 012-2h14a2 2 0 012 2v3" />
