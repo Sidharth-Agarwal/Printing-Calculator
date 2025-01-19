@@ -12,6 +12,7 @@ const EstimatesPage = () => {
   const [ordersData, setOrdersData] = useState({});
   const [sortCriteria, setSortCriteria] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [openGroupKey, setOpenGroupKey] = useState(null);
 
   useEffect(() => {
     const fetchEstimates = async () => {
@@ -19,8 +20,9 @@ const EstimatesPage = () => {
         const querySnapshot = await getDocs(collection(db, "estimates"));
         const data = querySnapshot.docs.map((doc) => ({
           id: doc.id,
-          ...doc.data(),
+          ...doc.data()
         }));
+        console.log(data)
 
         const groupedData = data.reduce((acc, estimate) => {
           const { clientName, projectName } = estimate;
@@ -184,6 +186,10 @@ const EstimatesPage = () => {
               ordersData={ordersData}
               setOrdersData={setOrdersData}
               setEstimatesData={setEstimatesData}
+              isOpen={openGroupKey === groupKey}
+              onToggle={() => {
+                setOpenGroupKey(openGroupKey === groupKey ? null : groupKey);
+              }}
             />
           );
         })}
