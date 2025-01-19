@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect } from "react";
 import Estimate from "./Estimate";
 
 const GroupDropdown = ({
@@ -8,21 +8,21 @@ const GroupDropdown = ({
   ordersData,
   setOrdersData,
   setEstimatesData,
+  isOpen,
+  onToggle
 }) => {
-  const [openDropdown, setOpenDropdown] = useState(false);
-
   const groupKey = `${clientName}-${projectName}`;
   const movedToOrdersEstimateId = ordersData[groupKey] || null;
-
   const firstEstimate = estimates[0] || {};
 
-  // Determine the status dynamically
+  // Determine the group status
   const groupStatus = (() => {
     if (estimates.some((est) => est.isCanceled)) return "Cancelled";
     if (movedToOrdersEstimateId) return "Order Confirmed";
     return "Pending";
   })();
 
+  // Set background color based on status
   const groupColor = (() => {
     switch (groupStatus) {
       case "Cancelled":
@@ -35,14 +35,20 @@ const GroupDropdown = ({
     }
   })();
 
-  // Restore dropdown state from local storage
+  // Restore dropdown state from local storage on mount
   useEffect(() => {
-    const openGroupKey = localStorage.getItem("openGroupKey");
-    if (openGroupKey === groupKey) {
-      setOpenDropdown(true);
+    const savedGroupKey = localStorage.getItem("openGroupKey");
+    if (savedGroupKey === groupKey) {
+      onToggle();
       localStorage.removeItem("openGroupKey");
     }
-  }, [groupKey]);
+  }, [groupKey, onToggle]);
+
+  // Function to format date
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not Specified";
+    return new Date(dateString).toLocaleDateString("en-GB");
+  };
 
   return (
     <div className={`border rounded-lg shadow-md ${groupColor} relative`}>
@@ -59,28 +65,45 @@ const GroupDropdown = ({
         {groupStatus}
       </div>
 
-      {/* Header */}
+      {/* Group Header */}
       <div
-        onClick={() => setOpenDropdown(!openDropdown)}
-        className="cursor-pointer px-4 py-3 rounded-t-md flex justify-between items-center transition"
+        onClick={onToggle}
+        className="cursor-pointer px-4 py-3 rounded-t-md transition relative"
       >
         <div className="space-y-1">
+          {/* Client and Project Info */}
           <h3 className="text-lg font-bold text-gray-800">{clientName}</h3>
           <p className="text-sm font-semibold text-gray-700">{projectName}</p>
+          
+          {/* Job Details */}
           <p className="text-xs text-gray-500">
             {firstEstimate?.jobDetails?.jobType || "N/A"} · {firstEstimate?.jobDetails?.quantity || "0"} items
           </p>
+          
+          {/* Delivery Date */}
           <p className="text-xs text-gray-600">
-            Expected Delivery:{" "}
-            {firstEstimate?.deliveryDate
-              ? new Date(firstEstimate.deliveryDate).toLocaleDateString("en-GB") // Format to DD/MM/YYYY
-              : "Not Specified"}
+            Expected Delivery: {formatDate(firstEstimate?.deliveryDate)}
           </p>
+        </div>
+
+        {/* Dropdown Arrow Indicator - Now at bottom right */}
+        <div className={`absolute bottom-2 right-4 transform transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`}>
+          <svg
+            className="w-5 h-5 text-gray-500"
+            fill="none"
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeWidth="2"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path d="M19 9l-7 7-7-7" />
+          </svg>
         </div>
       </div>
 
       {/* Dropdown Content */}
-      {openDropdown && (
+      {isOpen && (
         <div
           className="absolute z-10 left-0 right-0 mt-2 p-4 bg-white border border-gray-200 rounded-md shadow-lg"
           style={{ maxHeight: "300px", overflowY: "auto" }}
@@ -93,6 +116,7 @@ const GroupDropdown = ({
               justifyContent: "space-between",
             }}
           >
+            {/* Render Estimate Cards */}
             {estimates.map((estimate, index) => (
               <Estimate
                 key={estimate.id}

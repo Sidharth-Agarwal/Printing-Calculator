@@ -1,7 +1,9 @@
 import React, { useState } from "react";
 import { collection, addDoc, doc, writeBatch } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import EstimateDetailsModal from "./EstimateDetailsModal"; // Import modal
+import EstimateDetailsModal from "./EstimateDetailsModal";
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const Estimate = ({
   estimate,
@@ -13,6 +15,7 @@ const Estimate = ({
   groupKey,
 }) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
 
   const isMovedToOrders = movedToOrdersEstimateId === estimate.id;
   const cannotMoveToOrders = !!movedToOrdersEstimateId && movedToOrdersEstimateId !== estimate.id;
@@ -79,13 +82,79 @@ const Estimate = ({
     }
   };
 
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true);
+    try {
+      // Wait for a brief moment to ensure modal content is rendered
+      await new Promise(resolve => setTimeout(resolve, 500));
+
+      const modalContent = document.querySelector('.overflow-y-auto');
+      if (!modalContent) {
+        throw new Error('Modal content not found');
+      }
+
+      // Temporarily modify the modal content for better PDF capture
+      const originalOverflow = modalContent.style.overflow;
+      const originalHeight = modalContent.style.height;
+      modalContent.style.overflow = 'visible';
+      modalContent.style.height = 'auto';
+
+      const canvas = await html2canvas(modalContent, {
+        scale: 2,
+        useCORS: true,
+        logging: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
+        windowWidth: modalContent.scrollWidth,
+        windowHeight: modalContent.scrollHeight
+      });
+
+      // Restore original modal styles
+      modalContent.style.overflow = originalOverflow;
+      modalContent.style.height = originalHeight;
+
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      const imgData = canvas.toDataURL('image/png', 1.0);
+
+      // Handle multi-page if content is longer than A4
+      let heightLeft = imgHeight;
+      let position = 0;
+      let pageData = imgData;
+
+      pdf.addImage(pageData, 'PNG', 0, position, imgWidth, imgHeight);
+      heightLeft -= pageHeight;
+
+      while (heightLeft >= 0) {
+        position = heightLeft - imgHeight;
+        pdf.addPage();
+        pdf.addImage(pageData, 'PNG', 0, position, imgWidth, imgHeight);
+        heightLeft -= pageHeight;
+      }
+      
+      // Generate filename using client name and estimate number
+      const clientName = estimate?.clientName || 'Unknown';
+      const filename = `${clientName} Estimate-${estimateNumber}.pdf`;
+      
+      pdf.save(filename);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      alert('Failed to generate PDF. Please try again.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   return (
     <>
       <div
         onClick={() => setIsModalOpen(true)}
         className={`border rounded-md p-2 bg-white transition cursor-pointer shadow-sm`}
         style={{
-          flex: "1 1 calc(25% - 10px)", // Makes it responsive and ensures 4 per row
+          flex: "1 1 calc(25% - 10px)",
           minWidth: "200px",
           maxWidth: "250px",
         }}
@@ -144,6 +213,8 @@ const Estimate = ({
         <EstimateDetailsModal
           estimate={estimate}
           onClose={() => setIsModalOpen(false)}
+          onDownloadPdf={handleDownloadPdf}
+          isGeneratingPdf={isGeneratingPdf}
         />
       )}
     </>
