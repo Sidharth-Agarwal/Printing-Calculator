@@ -14,19 +14,38 @@ const OrdersPage = () => {
   // Define the toggle stages in correct sequence
   const stages = ["Design", "Positives", "Printing", "Quality Check", "Delivery"];
 
+  // Initialize toggles based on current stage
+  const initializeToggles = (currentStage) => {
+    const toggles = {};
+    let enableToggles = true;
+    
+    stages.forEach((stage) => {
+      if (!currentStage || currentStage === "Not started yet") {
+        toggles[stage] = false;
+      } else {
+        toggles[stage] = enableToggles;
+        if (stage === currentStage) {
+          enableToggles = false;
+        }
+      }
+    });
+    
+    return toggles;
+  };
+
+  // Fetch orders on component mount
   useEffect(() => {
     const fetchOrders = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "orders"));
-        const ordersData = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          toggles: stages.reduce((acc, stage) => {
-            acc[stage] = false;
-            return acc;
-          }, {}),
-        }));
-        console.log("Fetched Orders:", ordersData);
+        const ordersData = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data,
+            toggles: data.toggleStates || initializeToggles(data.stage)
+          };
+        });
         setOrders(ordersData);
       } catch (error) {
         console.error("Error fetching orders:", error);
@@ -38,8 +57,8 @@ const OrdersPage = () => {
     fetchOrders();
   }, []);
 
-  const updateFirestoreStage = async (orderId, stage) => {
-    console.log("Updating stage for order ID:", orderId);
+  // Update Firebase with new stage and toggle states
+  const updateFirestoreStage = async (orderId, stage, toggles) => {
     try {
       const orderRef = doc(db, "orders", orderId);
       const docSnapshot = await getDoc(orderRef);
@@ -49,20 +68,29 @@ const OrdersPage = () => {
         return;
       }
 
-      await updateDoc(orderRef, { stage });
+      // Update both stage and toggles in Firestore
+      await updateDoc(orderRef, {
+        stage,
+        toggleStates: toggles
+      });
+
       console.log(`Order ${orderId} updated to stage: ${stage}`);
     } catch (error) {
       console.error("Error updating Firestore stage:", error);
     }
   };
 
-  const handleToggle = (orderId, clickedStage) => {
+  // Handle toggle click for stages
+  const handleToggle = async (orderId, clickedStage, e) => {
+    e.stopPropagation(); // Prevent row click event
+
     setOrders((prevOrders) =>
       prevOrders.map((order) => {
         if (order.id === orderId) {
           const updatedToggles = { ...order.toggles };
           let enableToggles = true;
 
+          // Update toggles sequentially
           stages.forEach((stage) => {
             if (enableToggles) {
               updatedToggles[stage] = true;
@@ -75,13 +103,20 @@ const OrdersPage = () => {
             }
           });
 
-          const lastCheckedStage = stages.findLast((stage) => updatedToggles[stage]);
-          updateFirestoreStage(order.id, lastCheckedStage || "Not started yet");
+          // Find the last checked stage
+          const lastCheckedStage = stages.find(stage => 
+            updatedToggles[stage] === true && 
+            (stages[stages.indexOf(stage) + 1] === undefined || 
+             updatedToggles[stages[stages.indexOf(stage) + 1]] === false)
+          ) || "Not started yet";
+
+          // Update Firestore
+          updateFirestoreStage(order.id, lastCheckedStage, updatedToggles);
 
           return {
             ...order,
             toggles: updatedToggles,
-            stage: lastCheckedStage || "Not started yet",
+            stage: lastCheckedStage
           };
         }
         return order;
@@ -89,6 +124,7 @@ const OrdersPage = () => {
     );
   };
 
+  // Handle PDF generation
   const handleDownloadPdf = async () => {
     setIsGeneratingPdf(true);
     try {
@@ -117,8 +153,8 @@ const OrdersPage = () => {
       modalContent.style.overflow = originalOverflow;
       modalContent.style.height = originalHeight;
 
-      const imgWidth = 210;
-      const pageHeight = 297;
+      const imgWidth = 210; // A4 width in mm
+      const pageHeight = 297; // A4 height in mm
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
       const pdf = new jsPDF('p', 'mm', 'a4');
@@ -152,67 +188,86 @@ const OrdersPage = () => {
     }
   };
 
-  if (loading) return <p>Loading orders...</p>;
+  // Loading state
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <p className="text-lg font-semibold text-gray-600">Loading orders...</p>
+      </div>
+    );
+  }
 
   return (
-    <div>
+    <div className="p-6">
       <h2 className="text-2xl font-bold mb-6">Orders Page</h2>
 
       {/* Orders Table */}
-      <table className="table-auto w-full bg-white rounded-lg shadow-md overflow-hidden text-center">
-        <thead className="bg-gray-200">
-          <tr>
-            <th className="px-4 py-2">Client Name</th>
-            <th className="px-4 py-2">Project Type</th>
-            <th className="px-4 py-2">Quantity</th>
-            <th className="px-4 py-2">Delivery Date</th>
-            <th className="px-4 py-2">Design</th>
-            <th className="px-4 py-2">Positives</th>
-            <th className="px-4 py-2">Printing</th>
-            <th className="px-4 py-2">Quality Check</th>
-            <th className="px-4 py-2">Delivery</th>
-          </tr>
-        </thead>
-        <tbody>
-          {orders.map((order) => (
-            <tr key={order.id} className="border-b">
-              <td
-                className="px-4 py-2 text-blue-600 cursor-pointer"
-                onClick={() => setSelectedOrder(order)}
-              >
-                {order.clientName || "N/A"}
-              </td>
-              <td className="px-4 py-2">{order.jobDetails?.jobType || "N/A"}</td>
-              <td className="px-4 py-2">{order.jobDetails?.quantity || "N/A"}</td>
-              <td className="px-4 py-2">
-                {order.deliveryDate
-                  ? new Date(order.deliveryDate).toLocaleDateString("en-GB")
-                  : "Not Specified"}
-              </td>
+      <div className="overflow-x-auto">
+        <table className="table-auto w-full bg-white rounded-lg shadow-md overflow-hidden text-center">
+          <thead className="bg-gray-200">
+            <tr>
+              <th className="px-4 py-2">Client Name</th>
+              <th className="px-4 py-2">Project Type</th>
+              <th className="px-4 py-2">Quantity</th>
+              <th className="px-4 py-2">Delivery Date</th>
+              <th className="px-4 py-2">Current Stage</th>
               {stages.map((stage) => (
-                <td key={stage} className="px-4 py-2">
-                  <div
-                    className="flex items-center justify-center cursor-pointer"
-                    onClick={() => handleToggle(order.id, stage)}
-                  >
-                    <div
-                      className={`w-6 h-6 flex items-center justify-center border rounded-full ${
-                        order.toggles[stage]
-                          ? "border-blue-400 bg-blue-500"
-                          : "border-gray-300 bg-gray-200"
-                      }`}
-                    >
-                      {order.toggles[stage] && (
-                        <div className="w-4 h-4 rounded-full bg-white"></div>
-                      )}
-                    </div>
-                  </div>
-                </td>
+                <th key={stage} className="px-4 py-2">{stage}</th>
               ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {orders.map((order) => (
+              <tr 
+                key={order.id} 
+                className="border-b hover:bg-gray-50 transition-colors"
+                onClick={() => setSelectedOrder(order)}
+              >
+                <td className="px-4 py-2 text-blue-600 cursor-pointer">
+                  {order.clientName || "N/A"}
+                </td>
+                <td className="px-4 py-2">{order.jobDetails?.jobType || "N/A"}</td>
+                <td className="px-4 py-2">{order.jobDetails?.quantity || "N/A"}</td>
+                <td className="px-4 py-2">
+                  {order.deliveryDate
+                    ? new Date(order.deliveryDate).toLocaleDateString("en-GB")
+                    : "Not Specified"}
+                </td>
+                <td className="px-4 py-2">
+                  <span className={`inline-block px-2 py-1 rounded-full text-sm font-medium
+                    ${order.stage === "Delivery" ? "bg-green-100 text-green-800" :
+                      order.stage === "Not started yet" ? "bg-gray-100 text-gray-800" :
+                      "bg-blue-100 text-blue-800"}`}
+                  >
+                    {order.stage || "Not started yet"}
+                  </span>
+                </td>
+                {stages.map((stage) => (
+                  <td key={stage} className="px-4 py-2">
+                    <div
+                      className="flex items-center justify-center cursor-pointer"
+                      onClick={(e) => handleToggle(order.id, stage, e)}
+                    >
+                      <div
+                        className={`w-6 h-6 flex items-center justify-center border rounded-full
+                          transition-colors duration-200 ${
+                          order.toggles[stage]
+                            ? "border-blue-400 bg-blue-500"
+                            : "border-gray-300 bg-gray-200"
+                        }`}
+                      >
+                        {order.toggles[stage] && (
+                          <div className="w-4 h-4 rounded-full bg-white"></div>
+                        )}
+                      </div>
+                    </div>
+                  </td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
 
       {/* Order Details Modal */}
       {selectedOrder && (
