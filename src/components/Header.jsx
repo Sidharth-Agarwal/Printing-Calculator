@@ -17,7 +17,7 @@ const Header = () => {
             <button className="hover:underline hover:text-blue-300 transition">
               Material and Stock
             </button>
-            <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md mt-1 z-10">
+            <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10">
               <Link to="/material-stock/paper-db" className="block px-4 py-2 hover:bg-gray-200">
                 Paper DB
               </Link>

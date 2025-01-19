@@ -50,6 +50,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     paperCost: "Digital Paper Cost ",
     printingCost: "Digital Print Cost ",
     totalPapersRequired: "Papers Required in Digital Print ",
+    pastingType: "Pasting Type "
   };
 
   const getLabel = (key) => {
