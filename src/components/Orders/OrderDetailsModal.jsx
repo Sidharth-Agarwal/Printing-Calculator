@@ -288,7 +288,7 @@ const OrderDetailsModal = ({ order, onClose, onDownloadPdf, isGeneratingPdf }) =
                         className="flex justify-between items-center bg-gray-100 p-2 rounded-md"
                       >
                         <span className="font-medium text-gray-600">{getLabel(key)}:</span>
-                        <span className="text-gray-800">{renderValue(key, value)}</span>
+                        <span className="text-gray-800">₹ {renderValue(key, value)}</span>
                       </div>
                     ))}
                 </div>
