@@ -47,11 +47,21 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
     fsCostPerCardSandwich: "Cost of FS in Sandwich ",
     embCostPerCardSandwich: "Cost of EMB in Sandwich ",
     digiCostPerCard: "Digital Print Cost per Unit ",
-    paperCost: "Digital Paper Cost ",
-    printingCost: "Digital Print Cost ",
-    totalPapersRequired: "Papers Required in Digital Print ",
     pastingType: "Pasting Type "
   };
+
+  const costFieldsOrder = [
+    'paperCostPerCard',
+    'cuttingCostPerCard',
+    'paperAndCuttingCostPerCard',
+    'lpCostPerCard',
+    'fsCostPerCard',
+    'embCostPerCard',
+    'lpCostPerCardSandwich',
+    'fsCostPerCardSandwich',
+    'embCostPerCardSandwich',
+    'digiCostPerCard',
+  ];
 
   const getLabel = (key) => {
     if (fieldLabels[key]) {
@@ -66,12 +76,11 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
       .trim();
   };
 
-  const handleCreateEstimate = (e) => {
-    e.preventDefault();
-    onCreateEstimate();
-  };
-
   const renderValue = (key, value) => {
+    if (value === null || value === undefined || value === "") {
+      return "Not Provided";
+    }
+
     if (key.toLowerCase().includes("date") && value) {
       return new Date(value).toLocaleDateString();
     }
@@ -200,7 +209,7 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
   };
 
   return (
-    <form onSubmit={handleCreateEstimate} className="space-y-6">
+    <form onSubmit={(e) => { e.preventDefault(); onCreateEstimate(); }} className="space-y-6">
       <h2 className="text-xl font-bold text-gray-700 mb-4">Review and Submit</h2>
 
       {state.orderAndPaper &&
@@ -208,18 +217,14 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
 
       <div className="space-y-4 bg-white">
         {state.lpDetails?.isLPUsed && renderSectionInFlex("LP Details", state.lpDetails, ["isLPUsed"])}
-        {state.fsDetails?.isFSUsed &&
-          renderSectionInFlex("FS Details", state.fsDetails, ["isFSUsed"])}
-        {state.embDetails?.isEMBUsed &&
-          renderSectionInFlex("EMB Details", state.embDetails, ["isEMBUsed"])}
-        {state.digiDetails?.isDigiUsed &&
-          renderSectionInFlex("Digi Details", state.digiDetails, ["isDigiUsed"])}
-        {state.dieCutting?.isDieCuttingUsed &&
-          renderSectionInFlex("Die Cutting", state.dieCutting, ["isDieCuttingUsed"])}
-        {state.sandwich?.isSandwichComponentUsed &&
-          renderSectionInFlex("Sandwich Details", state.sandwich, ["isSandwichComponentUsed"])}
-        {state.pasting?.isPastingUsed &&
-          renderSectionInFlex("Pasting Details", state.pasting, ["isPastingUsed"])}
+        {state.fsDetails?.isFSUsed && renderSectionInFlex("FS Details", state.fsDetails, ["isFSUsed"])}
+        {state.embDetails?.isEMBUsed && renderSectionInFlex("EMB Details", state.embDetails, ["isEMBUsed"])}
+        {state.digiDetails?.isDigiUsed && renderSectionInFlex("Digi Details", state.digiDetails, ["isDigiUsed"])}
+        {state.dieCutting?.isDieCuttingUsed && renderSectionInFlex("Die Cutting", state.dieCutting, ["isDieCuttingUsed"])}
+        {state.sandwich?.isSandwichComponentUsed && state.sandwich.lpDetailsSandwich?.isLPUsed && renderSectionInFlex("Sandwich LP Details", state.sandwich.lpDetailsSandwich, ["isLPUsed"])}
+        {state.sandwich?.isSandwichComponentUsed && state.sandwich.fsDetailsSandwich?.isFSUsed && renderSectionInFlex("Sandwich FS Details", state.sandwich.fsDetailsSandwich, ["isFSUsed"])}
+        {state.sandwich?.isSandwichComponentUsed && state.sandwich.embDetailsSandwich?.isEMBUsed && renderSectionInFlex("Sandwich EMB Details", state.sandwich.embDetailsSandwich, ["isEMBUsed"])}
+        {state.pasting?.isPastingUsed && renderSectionInFlex("Pasting Details", state.pasting, ["isPastingUsed"])}
       </div>
 
       {isCalculating ? (
@@ -230,17 +235,60 @@ const ReviewAndSubmit = ({ state, calculations, isCalculating, onPrevious, onCre
         <div className="space-y-4 bg-white">
           <h3 className="text-lg font-semibold text-gray-600 mb-2">Cost Calculations (per card)</h3>
           <div className="grid grid-cols-3 gap-3">
-            {Object.entries(calculations)
-              .filter(([key, value]) => value !== null && value !== "Not Provided" && parseFloat(value) !== 0)
-              .map(([key, value]) => (
+            {costFieldsOrder
+              .filter(key => 
+                calculations[key] !== null && 
+                calculations[key] !== undefined &&
+                calculations[key] !== "" &&
+                calculations[key] !== "Not Provided" && 
+                parseFloat(calculations[key]) !== 0
+              )
+              .map((key) => (
                 <div
                   key={key}
                   className="flex justify-between items-center bg-gray-100 p-2 rounded-md"
                 >
                   <span className="font-medium text-gray-600">{getLabel(key)}:</span>
-                  <span className="text-gray-800">{renderValue(key, value)}</span>
+                  <span className="text-gray-800">₹ {parseFloat(calculations[key]).toFixed(2)}</span>
                 </div>
               ))}
+          </div>
+
+          {/* Total Calculations */}
+          <div className="mt-6 bg-gray-100 p-4 rounded-md">
+            <div className="flex justify-between items-center border-b border-gray-300 pb-3">
+              <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
+              <span className="text-lg font-bold text-gray-900">
+                ₹ {(['paperAndCuttingCostPerCard', 'lpCostPerCard', 'fsCostPerCard', 'embCostPerCard', 
+                    'lpCostPerCardSandwich', 'fsCostPerCardSandwich', 'embCostPerCardSandwich', 
+                    'digiCostPerCard']
+                    .reduce((acc, key) => {
+                      const value = calculations[key];
+                      if (value !== null && value !== undefined && value !== "" && value !== "Not Provided") {
+                        return acc + (parseFloat(value) || 0);
+                      }
+                      return acc;
+                    }, 0))
+                  .toFixed(2)}
+              </span>
+            </div>
+            <div className="flex justify-between items-center pt-3">
+              <span className="text-lg font-bold text-gray-700">
+                Total Cost ({state.orderAndPaper?.quantity || 0} pcs):
+              </span>
+              <span className="text-xl font-bold text-blue-600">
+                ₹ {(['paperAndCuttingCostPerCard', 'lpCostPerCard', 'fsCostPerCard', 'embCostPerCard', 
+                    'lpCostPerCardSandwich', 'fsCostPerCardSandwich', 'embCostPerCardSandwich', 
+                    'digiCostPerCard']
+                    .reduce((acc, key) => {
+                      const value = calculations[key];
+                      if (value !== null && value !== undefined && value !== "" && value !== "Not Provided") {
+                        return acc + (parseFloat(value) || 0);
+                      }
+                      return acc;
+                    }, 0) * (state.orderAndPaper?.quantity || 0)).toFixed(2)}
+              </span>
+            </div>
           </div>
         </div>
       ) : (
