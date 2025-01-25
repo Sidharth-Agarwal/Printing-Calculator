@@ -284,11 +284,14 @@ const calculateDigiDetailsCosts = async (digiDetails, dieSize, totalCards) => {
     // Calculate total cost
     const totalDigiCost = paperCost + printingCost;
 
+    // return {
+    //   digiCostPerCard: (totalDigiCost / totalCards).toFixed(2),
+    //   totalPapersRequired,
+    //   paperCost: paperCost.toFixed(2),
+    //   printingCost: printingCost.toFixed(2),
+    // };
     return {
-      digiCostPerCard: (totalDigiCost / totalCards).toFixed(2),
-      totalPapersRequired,
-      paperCost: paperCost.toFixed(2),
-      printingCost: printingCost.toFixed(2),
+      digiCostPerCard: (totalDigiCost / totalCards).toFixed(2)
     };
   } catch (error) {
     console.error("Error calculating digital printing costs:", error);
