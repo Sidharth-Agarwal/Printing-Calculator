@@ -1,183 +1,263 @@
-import React, { useState, useEffect } from "react";
-import { collection, query, where, getDocs, doc, updateDoc, onSnapshot, orderBy } from "firebase/firestore";
-import { db } from "../../firebaseConfig";
-import OrderDetailsModal from "./OrderDetailsModal";
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
+import React, { useEffect, useState } from 'react';
+import { collection, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { db } from '../../firebaseConfig';
+import OrderDetailsModal from './OrderDetailsModal';
 
 const OrdersPage = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [filteredOrders, setFilteredOrders] = useState([]);
+  const [updating, setUpdating] = useState(false);
+  const [error, setError] = useState(null);
 
-  const stages = ["Design", "Positives", "Printing", "Quality Check", "Delivery"];
+  const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
 
   const stageColors = {
-    "Design": "bg-yellow-100 text-yellow-800",
-    "Positives": "bg-orange-100 text-orange-800", 
-    "Printing": "bg-purple-100 text-purple-800",
-    "Quality Check": "bg-blue-100 text-blue-800",
-    "Delivery": "bg-green-100 text-green-800"
+    'Design': { bg: 'bg-indigo-500', hover: 'hover:bg-indigo-600', border: 'border-indigo-500' },
+    'Positives': { bg: 'bg-cyan-500', hover: 'hover:bg-cyan-600', border: 'border-cyan-500' },
+    'Printing': { bg: 'bg-orange-500', hover: 'hover:bg-orange-600', border: 'border-orange-500' },
+    'Quality Check': { bg: 'bg-pink-500', hover: 'hover:bg-pink-600', border: 'border-pink-500' },
+    'Delivery': { bg: 'bg-emerald-500', hover: 'hover:bg-emerald-600', border: 'border-emerald-500' }
   };
 
+  // Set up real-time listener
   useEffect(() => {
-    const ordersRef = collection(db, "orders");
-    const q = query(ordersRef, orderBy("lastUpdated", "desc"));
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      try {
-        const orderMap = new Map();
-        
-        snapshot.docs.forEach(doc => {
-          const orderData = { id: doc.id, ...doc.data() };
-          const key = `${orderData.clientName}_${orderData.jobDetails?.jobType}_${orderData.jobDetails?.quantity}`;
-          
-          if (!orderMap.has(key) || 
-              new Date(orderData.lastUpdated) > new Date(orderMap.get(key).lastUpdated)) {
-            orderMap.set(key, orderData);
-          }
-        });
-
-        setOrders(Array.from(orderMap.values()));
-      } catch (error) {
-        console.error("Error loading orders:", error);
-      } finally {
+    const unsubscribe = onSnapshot(
+      collection(db, "orders"),
+      {
+        includeMetadataChanges: true
+      },
+      (snapshot) => {
+        try {
+          const ordersData = snapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              clientName: data.clientName || '',
+              projectName: data.projectName || '',
+              date: data.date || null,
+              deliveryDate: data.deliveryDate || null,
+              stage: data.stage || 'Not started yet',
+              status: data.status || 'In Progress',
+              jobDetails: data.jobDetails || {},
+              dieDetails: data.dieDetails || {},
+              calculations: data.calculations || {},
+              lpDetails: data.lpDetails || null,
+              fsDetails: data.fsDetails || null,
+              embDetails: data.embDetails || null,
+              digiDetails: data.digiDetails || null,
+              dieCuttingDetails: data.dieCuttingDetails || null,
+              sandwichDetails: data.sandwichDetails || null,
+              pastingDetails: data.pastingDetails || {}
+            };
+          });
+          setOrders(ordersData);
+          setFilteredOrders(ordersData);
+          setError(null);
+        } catch (err) {
+          console.error("Error processing orders data:", err);
+          setError(err);
+        } finally {
+          setLoading(false);
+        }
+      },
+      (err) => {
+        console.error("Firestore subscription error:", err);
+        setError(err);
         setLoading(false);
       }
-    });
+    );
 
     return () => unsubscribe();
   }, []);
 
-  const handleToggle = async (orderId, clickedStage, e) => {
-    e.stopPropagation();
-    
-    const order = orders.find(o => o.id === orderId);
-    if (!order) return;
+  useEffect(() => {
+    const filtered = orders.filter(order => 
+      order.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.projectName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.jobDetails?.jobType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.jobDetails?.quantity?.toString().includes(searchQuery)
+    );
+    setFilteredOrders(filtered);
+  }, [searchQuery, orders]);
 
+  const updateStage = async (orderId, newStage) => {
     try {
-      const updatedToggles = { ...order.toggleStates } || {};
-      stages.forEach(stage => {
-        const stageIndex = stages.indexOf(stage);
-        const clickedIndex = stages.indexOf(clickedStage);
-        updatedToggles[stage] = stageIndex <= clickedIndex;
-      });
-
-      const lastCheckedStage = stages.find(stage => 
-        updatedToggles[stage] === true && 
-        (!stages[stages.indexOf(stage) + 1] || !updatedToggles[stages[stages.indexOf(stage) + 1]])
-      ) || "Not started yet";
-
+      setUpdating(true);
       const orderRef = doc(db, "orders", orderId);
+      
+      // Update both stage and status for Delivery stage
       await updateDoc(orderRef, {
-        stage: lastCheckedStage,
-        toggleStates: updatedToggles,
+        stage: newStage,
+        status: newStage === 'Delivery' ? 'Delivered' : 'In Progress',
         lastUpdated: new Date().toISOString()
       });
-
     } catch (error) {
       console.error("Error updating stage:", error);
-      alert("Failed to update stage. Please try again.");
+      throw error;
+    } finally {
+      setUpdating(false);
     }
   };
 
-  const handleDownloadPdf = async () => {
-    if (!selectedOrder) return;
-    
-    setIsGeneratingPdf(true);
+  const StatusCircle = ({ stage, currentStage, orderId }) => {
+    const currentStageOrder = stages.indexOf(currentStage || 'Not started yet');
+    const thisStageOrder = stages.indexOf(stage);
+    const isCompleted = currentStageOrder > thisStageOrder || currentStage === stage;
+    const isCurrent = currentStage === stage;
+    const colors = stageColors[stage];
+  
+    const handleStageClick = async (e) => {
+      e.stopPropagation();
+      if (updating) return;
+  
+      try {
+        // If clicking current stage, move back one stage
+        if (isCurrent) {
+          const previousStage = stages[thisStageOrder - 1] || 'Not started yet';
+          await updateStage(orderId, previousStage);
+        } else {
+          // If clicking another stage, move to that stage
+          await updateStage(orderId, stage);
+        }
+      } catch (error) {
+        alert("Failed to update stage. Please try again.");
+      }
+    };
+  
+    return (
+      <div className="flex justify-center">
+        <div 
+          onClick={handleStageClick}
+          className={`w-8 h-8 rounded-full border-2 flex items-center justify-center cursor-pointer
+            transition duration-150 ease-in-out
+            ${isCompleted ? `${colors.bg} ${colors.border}` : 'bg-gray-200 border-gray-300'} 
+            ${!isCompleted ? 'hover:bg-gray-300' : colors.hover}
+            ${updating ? 'opacity-50 cursor-not-allowed' : ''}`}
+        >
+          {isCompleted && (
+            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+            </svg>
+          )}
+        </div>
+      </div>
+    );
+  };
+
+  const formatDate = (dateString) => {
+    if (!dateString) return "Not specified";
     try {
-      const modalContent = document.querySelector('#pdf-content');
-      if (!modalContent) throw new Error('Modal content not found');
-
-      const canvas = await html2canvas(modalContent, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff'
-      });
-
-      const imgWidth = 210;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      const pdf = new jsPDF('p', 'mm', 'a4');
-      pdf.addImage(canvas.toDataURL('image/png'), 'PNG', 0, 0, imgWidth, imgHeight);
-      
-      const filename = `${selectedOrder.clientName || 'Unknown'}_Order.pdf`;
-      pdf.save(filename);
+      return new Date(dateString).toLocaleDateString('en-GB');
     } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Failed to generate PDF. Please try again.');
-    } finally {
-      setIsGeneratingPdf(false);
+      return dateString;
     }
   };
 
   if (loading) {
-    return <div className="flex justify-center p-8">Loading orders...</div>;
+    return (
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold">Orders</h1>
+          <div className="animate-pulse w-64 h-10 bg-gray-200 rounded-md"></div>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="h-12 bg-gray-200 rounded-md"></div>
+          <div className="h-12 bg-gray-200 rounded-md"></div>
+          <div className="h-12 bg-gray-200 rounded-md"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-6">
+        <div className="bg-red-50 border border-red-200 rounded-md p-4">
+          <h3 className="text-red-800 font-medium">Error loading orders</h3>
+          <p className="text-red-600 mt-1">{error.message}</p>
+          <button 
+            onClick={() => window.location.reload()}
+            className="mt-2 px-4 py-2 bg-red-100 text-red-800 rounded-md hover:bg-red-200"
+          >
+            Retry
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
     <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">Orders Page</h2>
+      <div className="flex justify-between items-center mb-6">
+        <h1 className="text-2xl font-bold">Orders</h1>
+        <input
+          type="text"
+          placeholder="Search orders..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="px-4 py-2 border rounded-md w-64 focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+      </div>
 
       <div className="overflow-x-auto">
-        <table className="w-full bg-white rounded-lg shadow">
-          <thead className="bg-gray-200">
+        <table className="min-w-full bg-white rounded-lg overflow-hidden shadow-md">
+          <thead className="bg-gray-100">
             <tr>
-              <th className="px-4 py-2">Client Name</th>
-              <th className="px-4 py-2">Project Type</th>
-              <th className="px-4 py-2">Quantity</th>
-              <th className="px-4 py-2">Delivery Date</th>
-              <th className="px-4 py-2">Current Stage</th>
-              {stages.map(stage => (
-                <th key={stage} className="px-4 py-2">{stage}</th>
+              <th className="px-4 py-3 text-left">Client Name</th>
+              <th className="px-4 py-3 text-left">Project Type</th>
+              <th className="px-4 py-3 text-left">Quantity</th>
+              <th className="px-4 py-3 text-left">Delivery Date</th>
+              <th className="px-4 py-3 text-left">Current Stage</th>
+              {stages.slice(1).map((stage) => (
+                <th key={stage} className="px-4 py-3 text-center relative group">
+                  {stage}
+                </th>
               ))}
             </tr>
           </thead>
-          <tbody>
-            {orders.map((order) => (
+          <tbody className="divide-y divide-gray-200">
+            {filteredOrders.map((order) => (
               <tr 
                 key={order.id} 
-                className="border-b hover:bg-gray-50 cursor-pointer"
+                className="hover:bg-gray-50 cursor-pointer transition-colors"
                 onClick={() => setSelectedOrder(order)}
               >
-                <td className="px-4 py-2 text-blue-600">{order.clientName || "N/A"}</td>
-                <td className="px-4 py-2">{order.jobDetails?.jobType || "N/A"}</td>
-                <td className="px-4 py-2">{order.jobDetails?.quantity || "N/A"}</td>
-                <td className="px-4 py-2">
-                  {order.deliveryDate
-                    ? new Date(order.deliveryDate).toLocaleDateString("en-GB")
-                    : "Not Specified"}
-                </td>
-                <td className="px-4 py-2">
-                  <span className={`inline-block px-2 py-1 rounded-full text-sm font-medium
-                    ${order.stage && stageColors[order.stage] 
-                      ? stageColors[order.stage] 
-                      : "bg-gray-100 text-gray-800"}`}
-                  >
-                    {order.stage || "Not started yet"}
+                <td className="px-4 py-3">
+                  <span className="text-blue-500 hover:underline">
+                    {order.clientName}
                   </span>
                 </td>
-                {stages.map((stage) => (
-                  <td key={stage} className="px-4 py-2">
-                    <div
-                      className="flex justify-center"
-                      onClick={(e) => handleToggle(order.id, stage, e)}
-                    >
-                      <div className={`w-6 h-6 flex items-center justify-center border rounded-full
-                        ${order.toggleStates?.[stage]
-                          ? "border-blue-400 bg-blue-500"
-                          : "border-gray-300 bg-gray-200"}`}
-                      >
-                        {order.toggleStates?.[stage] && (
-                          <div className="w-4 h-4 rounded-full bg-white"/>
-                        )}
-                      </div>
-                    </div>
+                <td className="px-4 py-3">{order.jobDetails?.jobType || 'N/A'}</td>
+                <td className="px-4 py-3">{order.jobDetails?.quantity || 'N/A'}</td>
+                <td className="px-4 py-3">{formatDate(order.deliveryDate)}</td>
+                <td className="px-4 py-3">
+                  <span className={`px-2 py-1 text-sm rounded-full text-white
+                    ${stageColors[order.stage]?.bg || 'bg-gray-100 text-gray-800'}`}
+                  >
+                    {order.stage === 'Delivery' ? 'Delivered' : order.stage || 'Not started yet'}
+                  </span>
+                </td>
+                {stages.slice(1).map((stage) => (
+                  <td key={`${order.id}-${stage}`} className="px-4 py-3">
+                    <StatusCircle 
+                      stage={stage} 
+                      currentStage={order.stage} 
+                      orderId={order.id}
+                    />
                   </td>
                 ))}
               </tr>
             ))}
+            {filteredOrders.length === 0 && (
+              <tr>
+                <td colSpan={stages.length + 4} className="px-4 py-8 text-center text-gray-500">
+                  No orders found
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -186,8 +266,7 @@ const OrdersPage = () => {
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
-          onDownloadPdf={handleDownloadPdf}
-          isGeneratingPdf={isGeneratingPdf}
+          onStageUpdate={(newStage) => updateStage(selectedOrder.id, newStage)}
         />
       )}
     </div>
