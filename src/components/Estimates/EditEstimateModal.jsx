@@ -100,7 +100,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
 
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[60] p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-4xl">
+      <div className="bg-white rounded-lg shadow-lg w-full">
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-bold text-gray-700">Edit Estimate</h2>
           <button
