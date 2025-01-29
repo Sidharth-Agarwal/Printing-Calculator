@@ -251,44 +251,6 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
         </div>
 
         <div className="flex-1 overflow-y-auto p-6" id="order-content">
-          {/* Progress Tracker */}
-          <div className="mb-8 bg-white p-4 rounded-lg shadow">
-            <h3 className="text-lg font-semibold mb-4">Order Progress</h3>
-            <div className="flex justify-between items-center">
-              {stages.map((stage, index) => {
-                const isCompleted = stages.indexOf(order.stage) > index;
-                const isCurrent = order.stage === stage;
-                
-                return (
-                  <div key={stage} className="flex flex-col items-center flex-1">
-                    <div 
-                      className={`w-10 h-10 rounded-full flex items-center justify-center mb-2 cursor-pointer
-                        ${isCompleted ? 'bg-green-500' : 
-                          isCurrent ? 'bg-blue-500' : 
-                          'bg-gray-200'}`}
-                      onClick={() => handleStageUpdate(stage)}
-                    >
-                      {isCompleted ? (
-                        <svg className="w-6 h-6 text-white" fill="currentColor" viewBox="0 0 20 20">
-                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                        </svg>
-                      ) : (
-                        <span className={`text-sm ${isCurrent ? 'text-white' : 'text-gray-600'}`}>
-                          {index + 1}
-                        </span>
-                      )}
-                    </div>
-                    <span className="text-sm text-center">{stage}</span>
-                    {index < stages.length - 1 && (
-                      <div className={`h-0.5 w-full mt-5 
-                        ${isCompleted ? 'bg-green-500' : 'bg-gray-200'}`} />
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-
           {/* Order and Paper Details */}
           {renderSectionInGrid("Order and Paper", {
             clientName: order.clientName,
