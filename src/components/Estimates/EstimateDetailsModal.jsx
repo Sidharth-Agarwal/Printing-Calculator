@@ -98,6 +98,9 @@ const EstimateDetailsModal = ({
 
       setIsEditModalOpen(false);
       alert('New estimate created successfully!');
+      
+      // Reload the page after Firebase update
+      window.location.reload();
     } catch (error) {
       console.error('Error creating new estimate:', error);
       alert('Failed to create new estimate. Please try again.');

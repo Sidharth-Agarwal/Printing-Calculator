@@ -1,4 +1,5 @@
 import React, { useReducer, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import OrderAndPaper from "./OrderAndPaper";
 import LPDetails from "./LPDetails";
 import FSDetails from "./FSDetails";
@@ -148,6 +149,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
 };
 
 const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess = null, onClose = null }) => {
+  const navigate = useNavigate();
   const [state, dispatch] = useReducer(reducer, initialState || initialFormState);
   const [calculations, setCalculations] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
@@ -206,6 +208,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         await addDoc(collection(db, "estimates"), formattedData);
         alert("Estimate created successfully!");
         dispatch({ type: "RESET_FORM" });
+        // Navigate to estimates page
+        navigate('/material-stock/estimates-db');
       }
     } catch (error) {
       console.error("Error handling estimate:", error);
