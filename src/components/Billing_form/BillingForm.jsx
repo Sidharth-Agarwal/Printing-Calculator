@@ -8,12 +8,12 @@ import DieCutting from "./DieCutting";
 import Sandwich from "./Sandwich";
 import Pasting from "./Pasting";
 import ReviewAndSubmit from "./ReviewAndSubmit";
-import { calculateEstimateCosts } from "./calculations"; // Import calculations logic
+import { calculateEstimateCosts } from "./calculations";
 import { db } from "../../firebaseConfig";
 import { collection, addDoc } from "firebase/firestore";
 
 // Initial state for all steps
-const initialState = {
+const initialFormState = {
   currentStep: 1,
   orderAndPaper: {
     clientName: "",
@@ -50,6 +50,7 @@ const initialState = {
   digiDetails: {
     isDigiUsed: false,
     digiDie: "",
+    digiDimensions: { length: "", breadth: "" },
   },
   dieCutting: {
     isDieCuttingUsed: false,
@@ -59,8 +60,29 @@ const initialState = {
   },
   sandwich: {
     isSandwichComponentUsed: false,
+    lpDetailsSandwich: {
+      isLPUsed: false,
+      noOfColors: 0,
+      colorDetails: [],
+    },
+    fsDetailsSandwich: {
+      isFSUsed: false,
+      fsType: "",
+      foilDetails: [],
+    },
+    embDetailsSandwich: {
+      isEMBUsed: false,
+      plateSizeType: "",
+      plateDimensions: { length: "", breadth: "" },
+      plateTypeMale: "",
+      plateTypeFemale: "",
+      embMR: "",
+    },
   },
-  pasting: {},
+  pasting: {
+    isPastingUsed: false,
+    pastingType: "",
+  },
 };
 
 // Reducer function to handle updates to the state
@@ -85,7 +107,9 @@ const reducer = (state, action) => {
     case "SET_STEP":
       return { ...state, currentStep: action.payload };
     case "RESET_FORM":
-      return initialState;
+      return initialFormState;
+    case "INITIALIZE_FORM":
+      return { ...action.payload, currentStep: 1 };
     default:
       return state;
   }
@@ -116,41 +140,49 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     fsDetails: fsDetails.isFSUsed ? fsDetails : null,
     embDetails: embDetails.isEMBUsed ? embDetails : null,
     digiDetails: digiDetails.isDigiUsed ? digiDetails : null,
-    dieCuttingDetails: dieCutting.isDieCuttingUsed ? dieCutting : null,
-    sandwichDetails: sandwich.isSandwichComponentUsed ? sandwich : null,
-    pastingDetails: pasting,
+    dieCutting: dieCutting.isDieCuttingUsed ? dieCutting : null,
+    sandwich: sandwich.isSandwichComponentUsed ? sandwich : null,
+    pasting: pasting.isPastingUsed ? pasting : null,
     calculations,
   };
 };
 
-const BillingForm = () => {
-  const [state, dispatch] = useReducer(reducer, initialState);
+const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess = null, onClose = null }) => {
+  const [state, dispatch] = useReducer(reducer, initialState || initialFormState);
   const [calculations, setCalculations] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
 
+  // Initialize form with data if in edit mode
+  useEffect(() => {
+    if (initialState && isEditMode) {
+      dispatch({ type: "INITIALIZE_FORM", payload: initialState });
+    }
+  }, [initialState, isEditMode]);
+
+  // Calculate costs when reaching the review step
   useEffect(() => {
     const performCalculations = async () => {
-      setIsCalculating(true);
-      try {
-        const result = await calculateEstimateCosts(state);
-        if (result.error) {
-          console.error("Error during calculations:", result.error);
-          alert(result.error);
-        } else {
-          setCalculations(result);
+      if (state.currentStep >= 8) {
+        setIsCalculating(true);
+        try {
+          const result = await calculateEstimateCosts(state);
+          if (result.error) {
+            console.error("Error during calculations:", result.error);
+            alert(result.error);
+          } else {
+            setCalculations(result);
+          }
+        } catch (error) {
+          console.error("Unexpected error during calculations:", error);
+          alert("Unexpected error during calculations. Please try again.");
+        } finally {
+          setIsCalculating(false);
         }
-      } catch (error) {
-        console.error("Unexpected error during calculations:", error);
-        alert("Unexpected error during calculations. Please try again.");
-      } finally {
-        setIsCalculating(false);
       }
     };
 
-    if (state.currentStep >= 8) {
-      performCalculations();
-    }
-  }, [state]);
+    performCalculations();
+  }, [state.currentStep]);
 
   const handleNext = () => {
     if (state.currentStep < 9) {
@@ -164,15 +196,20 @@ const BillingForm = () => {
     }
   };
 
-  const handleCreateEstimate = async () => {
+  const handleSubmit = async () => {
     try {
       const formattedData = mapStateToFirebaseStructure(state, calculations);
-      await addDoc(collection(db, "estimates"), formattedData);
-      alert("Estimate created successfully!");
-      dispatch({ type: "RESET_FORM" });
+      if (isEditMode && onSubmitSuccess) {
+        await onSubmitSuccess(formattedData);
+        if (onClose) onClose();
+      } else {
+        await addDoc(collection(db, "estimates"), formattedData);
+        alert("Estimate created successfully!");
+        dispatch({ type: "RESET_FORM" });
+      }
     } catch (error) {
-      console.error("Error creating estimate:", error);
-      alert("Failed to create estimate.");
+      console.error("Error handling estimate:", error);
+      alert("Failed to handle estimate.");
     }
   };
 
@@ -190,25 +227,34 @@ const BillingForm = () => {
       calculations={calculations}
       isCalculating={isCalculating}
       onPrevious={handlePrevious}
-      onCreateEstimate={handleCreateEstimate}
+      onCreateEstimate={handleSubmit}
+      isEditMode={isEditMode}
       key="step9"
     />,
   ];
 
   return (
-    <div className="min-h-screen rounded-lg">
-      <div className="max-w-screen-2xl p-2">
-        <h1 className="text-2xl font-bold text-gray-700 mb-4">Billing Form</h1>
+    <div className="min-h-screen bg-white rounded-lg">
+      <div className="max-w-screen-xl mx-auto p-4">
+        <h1 className="text-2xl font-bold text-gray-700 mb-4">
+          {isEditMode ? "Edit Estimate" : "Billing Form"}
+        </h1>
+        
+        {/* Progress Bar */}
         <div className="text-gray-600 mb-6">
           <p>Step {state.currentStep} of {steps.length}</p>
-          <div className="h-2 bg-gray-300 rounded-full mt-2">
+          <div className="h-2 bg-gray-200 rounded-full mt-2">
             <div
-              className="h-2 bg-blue-500 rounded-full"
+              className="h-2 bg-blue-500 rounded-full transition-all duration-300"
               style={{ width: `${(state.currentStep / steps.length) * 100}%` }}
             />
           </div>
         </div>
-        {steps[state.currentStep - 1]}
+
+        {/* Current Step */}
+        <div className="bg-white rounded-lg">
+          {steps[state.currentStep - 1]}
+        </div>
       </div>
     </div>
   );
