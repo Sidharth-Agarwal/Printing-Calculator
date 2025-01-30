@@ -27,7 +27,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                 "Image",
                 "Actions",
               ].map((header, idx) => (
-                <th key={idx} className="px-4 py-2 border font-medium text-gray-700 uppercase">
+                <th key={idx} className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">
                   {header}
                 </th>
               ))}

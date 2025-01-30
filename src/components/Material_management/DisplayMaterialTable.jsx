@@ -23,7 +23,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                 "Final Cost/Unit",
                 "Actions",
               ].map((header, idx) => (
-                <th key={idx} className="px-4 py-2 border font-medium text-gray-700 uppercase">
+                <th key={idx} className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">
                   {header}
                 </th>
               ))}
