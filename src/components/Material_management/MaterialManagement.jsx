@@ -52,7 +52,7 @@ const MaterialManagement = () => {
 
   return (
     <div className="p-6 bg-gray-100 rounded shadow">
-      <h1 className="text-2xl font-bold mb-6">Material Management</h1>
+      <h1 className="text-xl font-bold mb-6">MATERIAL MANAGEMENT</h1>
       <AddMaterialForm
         onSubmit={addMaterial}
         selectedMaterial={selectedMaterial}
