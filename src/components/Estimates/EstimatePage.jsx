@@ -144,7 +144,7 @@ const EstimatesPage = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Estimates DB</h1>
+        <h1 className="text-xl font-medium">ESTIMATES MANAGEMENT</h1>
         <div className="flex gap-4">
           <input
             type="text"
