@@ -68,7 +68,7 @@ const GroupDropdown = ({
       {/* Group Header */}
       <div
         onClick={onToggle}
-        className="cursor-pointer px-4 py-3 rounded-t-md transition relative"
+        className="cursor-pointer px-4 py-3 rounded-sm transition relative"
       >
         <div className="space-y-1">
           {/* Client and Project Info */}
@@ -109,7 +109,7 @@ const GroupDropdown = ({
           style={{ maxHeight: "300px", overflowY: "auto" }}
         >
           <div
-            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3"
+            className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4"
             style={{
               display: "flex",
               flexWrap: "wrap",

@@ -118,7 +118,7 @@ const Estimate = ({
       >
         {/* Header Section */}
         <div className="flex justify-between items-center mb-1">
-          <h4 className="font-medium text-sm">
+          <h4 className="font-normal text-sm">
             Estimate {estimateNumber}: {estimate?.jobDetails?.jobType || "Unknown Job"}
           </h4>
         </div>
@@ -129,7 +129,7 @@ const Estimate = ({
             <button
               onClick={handleAddToOrders}
               disabled={cannotMoveToOrders}
-              className={`text-xs w-full px-2 py-1 rounded-md ${
+              className={`text-xs w-full px-2 py-1 rounded-md shadow-sm ${
                 isMovedToOrders
                   ? "bg-green-500 text-white cursor-not-allowed"
                   : cannotMoveToOrders
