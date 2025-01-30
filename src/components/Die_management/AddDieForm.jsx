@@ -109,8 +109,8 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-      <h2 className="text-2xl font-bold mb-6">{editingDie ? "Edit Die" : "Add Die"}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <h2 className="text-lg font-medium mb-4">{editingDie ? "EDIT DIE" : "ADD NEW DIE"}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
         {[
           { label: "Job Type", name: "jobType", type: "select", options: jobTypeOptions },
           { label: "Type", name: "type", type: "text", placeholder: "Enter the type of the die" },
@@ -129,7 +129,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
           { label: "Price (INR)", name: "price", type: "number", placeholder: "Enter price of the die" },
         ].map((field, idx) => (
           <div key={idx}>
-            <label className="block text-xl font-medium text-gray-700">{field.label}:</label>
+            <label className="block text-sm font-medium text-gray-700">{field.label}:</label>
             {field.type === "select" ? (
               <select
                 name={field.name}
@@ -159,10 +159,10 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
           </div>
         ))}
         <div>
-          <label className="block text-xl font-medium text-gray-700">Image:</label>
+          <label className="block text-sm font-medium text-gray-700">Image:</label>
           <input type="file" accept="image/*" onChange={handleImageChange} className="mt-1 block w-full" />
           {image || formData.imageUrl ? (
-            <div className="mt-2 flex items-center space-x-4">
+            <div className="mt-2 flex items-center space-x-4 text-sm">
               <img
                 src={image ? URL.createObjectURL(image) : formData.imageUrl}
                 alt="Selected"
@@ -179,7 +179,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
           ) : null}
         </div>
       </div>
-      <button type="submit" className="mt-6 px-4 py-2 bg-blue-600 text-white rounded">
+      <button type="submit" className="mt-6 px-3 py-2 bg-blue-500 text-white rounded text-sm">
         {editingDie ? "Save Changes" : "Submit"}
       </button>
     </form>
