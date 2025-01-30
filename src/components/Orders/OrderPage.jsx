@@ -186,7 +186,7 @@ const OrdersPage = () => {
           placeholder="Search orders..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-4 py-2 border rounded-md w-[350px] focus:outline-none"
+          className="px-4 py-2 text-sm border rounded-md w-[350px] focus:outline-none"
         />
       </div>
 
