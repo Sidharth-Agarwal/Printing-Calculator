@@ -3,7 +3,7 @@ import React from "react";
 const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
   return (
     <div className="bg-white p-6 rounded shadow">
-      <h2 className="text-2xl font-bold mb-6">Papers Available</h2>
+      <h2 className="text-lg font-medium mb-6">AVAILABLE PAPERS</h2>
       <div className="overflow-x-auto">
         <table className="text-sm w-full text-left border-collapse">
           <thead className="bg-gray-100">
@@ -25,7 +25,7 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
                 "Final Rate",
                 "Actions",
               ].map((header, idx) => (
-                <th key={idx} className="px-4 py-2 border">
+                <th key={idx} className="px-4 py-2 border font-medium text-gray-700 uppercase">
                   {header}
                 </th>
               ))}

@@ -57,7 +57,7 @@ const PaperManagement = () => {
 
   return (
     <div className="p-6 bg-gray-100 rounded shadow">
-      <h1 className="text-2xl font-bold mb-6">Paper Management</h1>
+      <h1 className="text-xl font-bold mb-6">PAPER MANAGEMENT</h1>
       <AddPaperForm
         onAddPaper={addPaper}
         onUpdatePaper={updatePaper}

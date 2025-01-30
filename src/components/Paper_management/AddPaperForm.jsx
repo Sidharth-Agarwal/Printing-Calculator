@@ -101,8 +101,8 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-      <h2 className="text-2xl font-bold mb-6">{editingPaper ? "Edit Paper" : "Add Paper"}</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <h2 className="text-lg font-medium mb-4">{editingPaper ? "EDIT PAPER" : "ADD NEW PAPER"}</h2>
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 text-sm">
         {[
           { label: "Paper Name", placeholder: "Enter the name of the paper", name: "paperName", type: "text" },
           { label: "Company", placeholder: "Enter the name of the company", name: "company", type: "text" },
@@ -119,7 +119,7 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
           { label: "Final Rate (INR)", name: "finalRate", type: "text", readOnly: true },
         ].map((field, idx) => (
           <div key={idx}>
-            <label className="block text-xl font-medium text-gray-700">{field.label}:</label>
+            <label className="block text-sm font-medium text-gray-700">{field.label}:</label>
             <input
               type={field.type}
               name={field.name}
@@ -133,7 +133,7 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
           </div>
         ))}
       </div>
-      <button type="submit" className="mt-6 px-4 py-2 bg-blue-600 text-white rounded">
+      <button type="submit" className="mt-6 px-3 py-2 bg-blue-500 text-white rounded text-sm">
         {editingPaper ? "Save Changes" : "Submit"}
       </button>
     </form>
