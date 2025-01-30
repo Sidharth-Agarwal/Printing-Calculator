@@ -3,13 +3,13 @@ import React from "react";
 const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
   return (
     <div className="bg-white p-6 rounded shadow">
-      <h2 className="text-2xl font-bold mb-6">Standard Rates</h2>
+      <h2 className="text-lg font-medium mb-6">STANDARD RATES</h2>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-gray-100">
             <tr>
               {["Group", "Type", "Concatenate", "Final Rate (INR)", "Actions"].map((header, idx) => (
-                <th key={idx} className="px-4 py-2 border text-left">
+                <th key={idx} className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">
                   {header}
                 </th>
               ))}
