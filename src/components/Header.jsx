@@ -1,53 +1,52 @@
 import React from "react";
 
 const Header = () => {
-  // Function to create a link that opens in a new tab
   const navigateToNewTab = (path) => {
     window.open(path, '_blank', 'noopener noreferrer');
   };
 
   return (
     <header className="bg-blue-600 text-white shadow">
-      <div className="container mx-auto px-4 py-3 flex justify-between items-center">
-        <h1 className="text-xl font-bold">Print Calculator</h1>
-        <nav className="space-x-6 relative">
+      <div className="w-full px-6 py-3 flex items-center justify-between">
+        <h1 className="text-lg font-bold whitespace-nowrap">FAMOUS LETTER PRESS</h1>
+        <nav className="flex items-center space-x-8">
           {/* New Bill */}
           <button 
             onClick={() => navigateToNewTab('/new-bill')} 
-            className="hover:underline hover:text-blue-300 transition"
+            className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
-            New Bill
+            NEW BILL
           </button>
 
           {/* Material and Stock Dropdown */}
           <div className="group inline-block relative">
-            <button className="hover:underline hover:text-blue-300 transition">
-              Material and Stock
+            <button className="hover:underline hover:text-blue-300 transition whitespace-nowrap">
+              MATERIAL & STOCK
             </button>
-            <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10">
+            <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10 left-0 min-w-max">
               <button 
                 onClick={() => navigateToNewTab('/material-stock/paper-db')}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-200"
+                className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
               >
-                Paper DB
+                PAPER MANAGEMENT
               </button>
               <button 
                 onClick={() => navigateToNewTab('/material-stock/material-db')}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-200"
+                className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
               >
-                Material DB
+                MATERIAL MANAGEMENT
               </button>
               <button 
                 onClick={() => navigateToNewTab('/material-stock/dies-db')}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-200"
+                className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
               >
-                Dies DB
+                DIE MANAGEMENT
               </button>
               <button 
                 onClick={() => navigateToNewTab('/material-stock/standard-rates-db')}
-                className="block w-full text-left px-4 py-2 hover:bg-gray-200"
+                className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
               >
-                Standard Rates DB
+                STANDARD RATES MANAGEMENT
               </button>
             </div>
           </div>
@@ -55,17 +54,17 @@ const Header = () => {
           {/* Estimates */}
           <button 
             onClick={() => navigateToNewTab('/material-stock/estimates-db')} 
-            className="hover:underline hover:text-blue-300 transition"
+            className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
-            Estimates
+            ESTIMATES
           </button>
 
           {/* Orders */}
           <button 
             onClick={() => navigateToNewTab('/orders')} 
-            className="hover:underline hover:text-blue-300 transition"
+            className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
-            Orders
+            ORDERS
           </button>
         </nav>
       </div>
