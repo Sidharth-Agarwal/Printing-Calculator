@@ -93,13 +93,13 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
   return (
     <div>
       <div>
-        <h1 className="text-xl font-bold text-gray-700 mb-4">Order and Paper Details</h1>
+        <h1 className="text-sm font-bold text-gray-700 mb-4">ORDER & PAPER DETAILS</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Form Fields Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
+          <div className="grid grid-cols-1 md:grid-cols-6  gap-3 text-sm">
             {/* Client Name */}
             <div>
-              <label htmlFor="clientName" className="block font-medium mb-1">
+              <label htmlFor="clientName" className="block mb-1">
                 Client Name
               </label>
               <input
@@ -110,14 +110,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 placeholder="Enter the client name"
                 value={orderAndPaper.clientName || ""}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               />
             </div>
 
             {/* Project Name */}
             <div>
-              <label htmlFor="projectName" className="block font-medium mb-1">
+              <label htmlFor="projectName" className="block mb-1">
                 Project Name
               </label>
               <input
@@ -127,14 +127,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 placeholder="Enter the project name"
                 value={orderAndPaper.projectName || ""}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               />
             </div>
 
             {/* Date */}
             <div>
-              <label htmlFor="date" className="block font-medium mb-1">
+              <label htmlFor="date" className="block mb-1">
                 Date
               </label>
               <DatePicker
@@ -143,14 +143,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 onChange={(date) => handleDateChange("date", date)}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               />
             </div>
 
             {/* Delivery Date */}
             <div>
-              <label htmlFor="deliveryDate" className="block font-medium mb-1">
+              <label htmlFor="deliveryDate" className="block mb-1">
                 Estimated Delivery Date
               </label>
               <DatePicker
@@ -159,14 +159,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 onChange={(date) => handleDateChange("deliveryDate", date)}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               />
             </div>
 
             {/* Job Type */}
             <div>
-              <label htmlFor="jobType" className="block font-medium mb-1">
+              <label htmlFor="jobType" className="block mb-1">
                 Job Type
               </label>
               <select
@@ -174,7 +174,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 name="jobType"
                 value={orderAndPaper.jobType || "Card"}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               >
                 <option value="Card">Card</option>
@@ -188,7 +188,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
 
             {/* Quantity */}
             <div>
-              <label htmlFor="quantity" className="block font-medium mb-1">
+              <label htmlFor="quantity" className="block mb-1">
                 Quantity
               </label>
               <input
@@ -198,14 +198,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 placeholder="Enter the required quantity"
                 value={orderAndPaper.quantity || ""}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               />
             </div>
 
             {/* Paper Provided */}
             <div>
-              <label htmlFor="paperProvided" className="block font-medium mb-1">
+              <label htmlFor="paperProvided" className="block mb-1">
                 Paper Provided
               </label>
               <select
@@ -213,7 +213,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 name="paperProvided"
                 value={orderAndPaper.paperProvided || "Yes"}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               >
                 <option value="Yes">Yes</option>
@@ -223,7 +223,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
 
             {/* Paper Name */}
             <div>
-              <label htmlFor="paperName" className="block font-medium mb-1">
+              <label htmlFor="paperName" className="block mb-1">
                 Paper Name
               </label>
               <select
@@ -231,7 +231,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 name="paperName"
                 value={orderAndPaper.paperName || ""}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               >
                 <option value="">Select Paper Name</option>
@@ -245,14 +245,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
 
             {/* Die Selection */}
             <div>
-              <label htmlFor="dieSelection" className="block font-medium mb-1">
+              <label htmlFor="dieSelection" className="block mb-1">
                 Die Selection
               </label>
               <button
                 id="dieSelection"
                 type="button"
                 onClick={() => setShowDiePopup(true)}
-                className="border rounded-md p-2 bg-gray-100 w-full"
+                className="border rounded-md p-2 bg-gray-100 w-full text-xs"
               >
                 {orderAndPaper.dieSelection || "Select Die"}
               </button>
@@ -260,7 +260,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
 
             {/* Die Code */}
             <div>
-              <label htmlFor="dieCode" className="block font-medium mb-1">
+              <label htmlFor="dieCode" className="block mb-1">
                 Die Code
               </label>
               <input
@@ -269,14 +269,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 name="dieCode"
                 value={orderAndPaper.dieCode || ""}
                 readOnly
-                className="border rounded-md p-2 w-full bg-gray-200"
+                className="border rounded-md p-2 w-full bg-gray-200 text-xs"
               />
             </div>
 
             {/* Die Size */}
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <label htmlFor="length" className="block font-medium mb-1">
+                <label htmlFor="length" className="block mb-1">
                   Die Size (L)
                 </label>
                 <input
@@ -286,12 +286,12 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                   placeholder="Die (L)"
                   value={orderAndPaper.dieSize?.length || ""}
                   onChange={handleNestedChange}
-                  className="border rounded-md p-2 w-full"
+                  className="border rounded-md p-2 w-full text-xs"
                   readOnly
                 />
               </div>
               <div>
-                <label htmlFor="breadth" className="block font-medium mb-1">
+                <label htmlFor="breadth" className="block mb-1">
                   Die Size (B)
                 </label>
                 <input
@@ -301,7 +301,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                   placeholder="Die (B)"
                   value={orderAndPaper.dieSize?.breadth || ""}
                   onChange={handleNestedChange}
-                  className="border rounded-md p-2 w-full"
+                  className="border rounded-md p-2 w-full text-xs"
                   readOnly
                 />
               </div>
@@ -309,20 +309,20 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
 
             {/* Die Image */}
             <div>
-              <label htmlFor="image" className="block font-medium mb-1">
+              <label htmlFor="image" className="block mb-1">
                 Die Image
               </label>
               <img
                 id="image"
-                src={orderAndPaper.image || "https://via.placeholder.com/150"}
+                src={orderAndPaper.image || "https://via.placeholder.com/100"}
                 alt="Die"
-                className="w-40 h-40 object-contain border"
+                className="w-[100px] h-[100px] object-contain border"
               />
             </div>
           </div>
 
           <div className="flex justify-end mt-6">
-            <button type="submit" className="bg-blue-500 text-white px-4 py-2 rounded-md">
+            <button type="submit" className="mt-4 px-3 py-2 bg-blue-500 text-white rounded text-sm">
               Next
             </button>
           </div>

@@ -238,16 +238,16 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   ];
 
   return (
-    <div className="min-h-screen bg-white rounded-lg">
+    <div className="bg-white rounded-lg">
       <div className="max-w-screen-xl mx-auto p-4">
-        <h1 className="text-2xl font-bold text-gray-700 mb-4">
-          {isEditMode ? "Edit Estimate" : "Billing Form"}
+        <h1 className="text-xl font-bold text-gray-700 mb-4">
+          {isEditMode ? "EDIT EDTIMATE" : "CREATE NEW BILL"}
         </h1>
         
         {/* Progress Bar */}
-        <div className="text-gray-600 mb-6">
+        <div className="text-sm text-gray-600 mb-6">
           <p>Step {state.currentStep} of {steps.length}</p>
-          <div className="h-2 bg-gray-200 rounded-full mt-2">
+          <div className="h-2 bg-gray-200 rounded-full mt-1">
             <div
               className="h-2 bg-blue-500 rounded-full transition-all duration-300"
               style={{ width: `${(state.currentStep / steps.length) * 100}%` }}
