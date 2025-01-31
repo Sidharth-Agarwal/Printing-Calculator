@@ -169,17 +169,17 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-gray-700">Letter Press (LP) Details</h2>
+        <h2 className="text-lg font-bold text-gray-700 mb-4">LETTER PRESS (LP) DETAILS</h2>
         <div className="flex items-center space-x-3 cursor-pointer">
           <label className="flex items-center space-x-3" onClick={toggleLPUsed}>
             {/* Circular Button */}
-            <div className="w-6 h-6 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+            <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
               {lpDetails.isLPUsed && (
-                <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
               )}
             </div>
             {/* Label Text */}
-            <span className="text-gray-700 font-semibold">Is LP being used?</span>
+            <span className="text-gray-700 font-semibold text-sm">Is LP being used?</span>
           </label>
         </div>
       </div>
@@ -187,7 +187,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
       {lpDetails.isLPUsed && (
         <>
           <div>
-            <div className="mb-1">No of Colors:</div>
+            <div className="mb-1 text-sm">No of Colors:</div>
             <input
               type="number"
               name="noOfColors"
@@ -195,7 +195,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
               min="1"
               max="10"
               onChange={handleChange}
-              className="border rounded-md p-2 w-full"
+              className="border rounded-md p-2 w-full text-sm"
             />
             {errors.noOfColors && (
               <p className="text-red-500 text-sm">{errors.noOfColors}</p>
@@ -204,15 +204,15 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
 
           {lpDetails.noOfColors > 0 && (
             <div>
-              <h3 className="text-lg font-semibold mt-4 mb-2">Color Details</h3>
+              <h3 className="text-md font-semibold mt-4 mb-2">Color Details</h3>
               {Array.from({ length: lpDetails.noOfColors }, (_, index) => (
                 <div
                   key={index}
                   className="mb-4 p-4 border rounded-md bg-gray-50"
                 >
-                  <h4 className="text-md font-bold mb-2">Color {index + 1}</h4>
+                  <h4 className="text-sm font-semibold mb-2">Color {index + 1}</h4>
 
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-4 text-sm">
                     {/* Plate Size Type */}
                     <div className="flex-1">
                       <div className="mb-1">Plate Size (cm):</div>
@@ -374,13 +374,13 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious }) => {
         <button
           type="button"
           onClick={onPrevious}
-          className="bg-gray-500 text-white px-4 py-2 rounded-md"
+          className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
         >
           Previous
         </button>
         <button
           type="submit"
-          className="bg-blue-500 text-white px-4 py-2 rounded-md"
+          className="mt-2 px-3 py-2 bg-blue-500 text-white rounded text-sm"
         >
           Next
         </button>

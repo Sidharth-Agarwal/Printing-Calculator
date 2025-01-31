@@ -240,7 +240,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   return (
     <div className="bg-white rounded-lg">
       <div className="max-w-screen-xl mx-auto p-4">
-        <h1 className="text-xl font-bold text-gray-700 mb-4">
+        <h1 className="text-2xl font-bold text-gray-700 mb-4">
           {isEditMode ? "EDIT EDTIMATE" : "CREATE NEW BILL"}
         </h1>
         

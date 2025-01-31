@@ -93,7 +93,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
   return (
     <div>
       <div>
-        <h1 className="text-sm font-bold text-gray-700 mb-4">ORDER & PAPER DETAILS</h1>
+        <h1 className="text-lg font-bold text-gray-700 mb-4">ORDER & PAPER DETAILS</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Form Fields Grid */}
           <div className="grid grid-cols-1 md:grid-cols-6  gap-3 text-sm">
@@ -322,7 +322,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
           </div>
 
           <div className="flex justify-end mt-6">
-            <button type="submit" className="mt-4 px-3 py-2 bg-blue-500 text-white rounded text-sm">
+            <button type="submit" className="mt-2 px-3 py-2 bg-blue-500 text-white rounded text-sm">
               Next
             </button>
           </div>

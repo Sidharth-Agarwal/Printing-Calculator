@@ -161,13 +161,13 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        <h2 className="text-xl font-bold text-gray-700">Foil Stamping (FS) Details</h2>
+        <h2 className="text-lg font-bold text-gray-700 mb-4">FOIL STAMPING (FS) DETAILS</h2>
         <div className="flex items-center space-x-3 cursor-pointer">
           <label className="flex items-center space-x-3" onClick={toggleFSUsed}>
-            <div className="w-6 h-6 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
-              {isFSUsed && <div className="w-4 h-4 rounded-full bg-blue-500"></div>}
+            <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+              {isFSUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
             </div>
-            <span className="text-gray-700 font-semibold">Is FS being used?</span>
+            <span className="text-gray-700 font-semibold text-sm">Is FS being used?</span>
           </label>
         </div>
       </div>
@@ -175,12 +175,12 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
       {isFSUsed && (
         <>
           <div>
-            <div className="mb-1">FS Type:</div>
+            <div className="mb-1 text-sm">FS Type:</div>
             <select
               name="fsType"
               value={fsType}
               onChange={handleChange}
-              className="border rounded-md p-2 w-full"
+              className="border rounded-md p-2 w-full text-sm"
             >
               <option value="">Select FS Type</option>
               {["FS1", "FS2", "FS3", "FS4", "FS5"].map((type, idx) => (
@@ -194,12 +194,12 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
 
           {fsType && (
             <div>
-              <h3 className="text-lg font-semibold mt-4 mb-2">Foil Details</h3>
+              <h3 className="text-md font-semibold mt-4 mb-2">Foil Details</h3>
               {foilDetails.map((foil, index) => (
                 <div key={index} className="mb-4 p-4 border rounded-md bg-gray-50">
-                  <h4 className="text-md font-bold mb-2">Foil {index + 1}</h4>
+                  <h4 className="text-sm font-semibold mb-2">Foil {index + 1}</h4>
 
-                  <div className="flex flex-wrap gap-4">
+                  <div className="flex flex-wrap gap-4 text-sm">
                     {/* Block Size Type */}
                     <div className="flex-1">
                       <div className="mb-1">Block Size (cm):</div>
@@ -353,13 +353,13 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious }) => {
         <button
           type="button"
           onClick={onPrevious}
-          className="px-4 py-2 bg-gray-500 text-white rounded-md"
+          className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
         >
           Previous
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+          className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
         >
           Next
         </button>

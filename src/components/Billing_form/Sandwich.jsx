@@ -109,7 +109,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <h2 className="text-xl font-bold text-gray-700">Sandwich Component</h2>
+      <h2 className="text-lg font-bold text-gray-700 mb-4">SANDWICH DETAILS</h2>
 
       {/* Main Sandwich Toggle */}
       <div className="flex items-center space-x-3 cursor-pointer">
@@ -122,12 +122,12 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
             })
           }
         >
-          <div className="w-6 h-6 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+          <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
             {isSandwichComponentUsed && (
-              <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+              <div className="w-3 h-3 rounded-full bg-blue-500"></div>
             )}
           </div>
-          <span className="text-gray-700 font-semibold">
+          <span className="text-gray-700 font-semibold text-sm">
             Use Sandwich Component?
           </span>
         </label>
@@ -137,7 +137,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
         <div className="space-y-8">
           {/* LP Section */}
           <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold mb-4">Letter Press (LP) Details</h3>
+            <h3 className="text-medium font-semibold mb-4">LETTER PRESS (LP) DETAILS</h3>
 
             {/* Toggle LP Usage */}
             <div className="flex items-center space-x-3 cursor-pointer">
@@ -167,20 +167,20 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                   })
                 }
               >
-                <div className="w-6 h-6 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+                <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
                   {state.sandwich.lpDetailsSandwich?.isLPUsed && (
-                    <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                   )}
                 </div>
-                <span className="text-gray-700 font-semibold">Use LP Component?</span>
+                <span className="text-gray-700 font-semibold text-sm">Use LP Component?</span>
               </label>
             </div>
 
             {state.sandwich.lpDetailsSandwich?.isLPUsed && (
-              <div className="space-y-4">
+              <div className="space-y-4 text-sm">
                 {/* Number of Colors */}
                 <div>
-                  <label className="block mt-3 mb-1 font-medium">Number of Colors:</label>
+                  <label className="block mt-4 mb-1 font-medium">Number of Colors:</label>
                   <input
                     type="number"
                     min="1"
@@ -231,7 +231,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                     <div className="flex flex-wrap gap-4">
                       {/* Plate Size Type */}
                       <div className="flex-1">
-                        <label className="block mb-1 font-medium">Plate Size Type:</label>
+                        <label className="block mb-1">Plate Size Type:</label>
                         <select
                           value={color.plateSizeType || ""}
                           onChange={(e) => {
@@ -273,7 +273,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       {color.plateSizeType && (
                         <div className="flex flex-wrap gap-4 flex-1">
                           <div className="flex-1">
-                            <label className="block mb-1 font-medium">Length:</label>
+                            <label className="block mb-1">Length:</label>
                             <input
                               type="number"
                               placeholder="(cm)"
@@ -300,7 +300,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                           </div>
 
                           <div className="flex-1">
-                            <label className="block mb-1 font-medium">Breadth:</label>
+                            <label className="block mb-1">Breadth:</label>
                             <input
                               type="number"
                               placeholder="(cm)"
@@ -330,7 +330,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                       {/* Pantone Type */}
                       <div className="flex-1">
-                        <label className="block mb-1 font-medium">Pantone Type:</label>
+                        <label className="block mb-1">Pantone Type:</label>
                         <input
                           type="text"
                           placeholder="Pantone Type"
@@ -354,7 +354,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                       {/* Plate Type */}
                       <div className="flex-1">
-                        <label className="block mb-1 font-medium">Plate Type:</label>
+                        <label className="block mb-1">Plate Type:</label>
                         <select
                           value={color.plateType || ""}
                           onChange={(e) => {
@@ -379,7 +379,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                       {/* MR Type */}
                       <div className="flex-1">
-                        <label className="block mb-1 font-medium">MR Type:</label>
+                        <label className="block mb-1">MR Type:</label>
                         <select
                           value={color.mrType || ""}
                           onChange={(e) => {
@@ -412,7 +412,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
           {/* FS Section */}
           <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold mb-4">Foil Stamping (FS) Details</h3>
+            <h3 className="text-medium font-semibold mb-4">FOIL STAMPING (FS) DETAILS</h3>
 
             {/* Toggle FS Usage */}
             <div className="flex items-center space-x-3 cursor-pointer">
@@ -442,17 +442,17 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                   })
                 }
               >
-                <div className="w-6 h-6 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+                <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
                   {state.sandwich.fsDetailsSandwich?.isFSUsed && (
-                    <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                   )}
                 </div>
-                <span className="text-gray-700 font-semibold">Use FS Component?</span>
+                <span className="text-gray-700 font-semibold text-sm">Use FS Component?</span>
               </label>
             </div>
 
             {state.sandwich.fsDetailsSandwich?.isFSUsed && (
-              <div className="space-y-4">
+              <div className="space-y-4 text-sm">
                 {/* FS Type */}
                 <div>
                   <label className="block mt-3 mb-1 font-medium">FS Type:</label>
@@ -499,7 +499,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                     <div className="flex flex-wrap gap-4">
                       {/* Block Size Type */}
                       <div className="flex-1">
-                        <label className="block mb-1 font-medium">Block Size Type:</label>
+                        <label className="block mb-1">Block Size Type:</label>
                         <select
                           value={foil.blockSizeType || ""}
                           onChange={(e) => {
@@ -541,7 +541,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                       {foil.blockSizeType && (
                         <div className="flex flex-wrap gap-4 flex-1">
                           <div className="flex-1">
-                            <label className="block mb-1 font-medium">Length:</label>
+                            <label className="block mb-1">Length:</label>
                             <input
                               type="number"
                               placeholder="(cm)"
@@ -568,7 +568,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                           </div>
 
                           <div className="flex-1">
-                            <label className="block mb-1 font-medium">Breadth:</label>
+                            <label className="block mb-1">Breadth:</label>
                             <input
                               type="number"
                               placeholder="(cm)"
@@ -598,7 +598,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                       {/* Foil Type */}
                       <div className="flex-1">
-                        <label className="block mb-1 font-medium">Foil Type:</label>
+                        <label className="block mb-1">Foil Type:</label>
                         <select
                           value={foil.foilType || ""}
                           onChange={(e) => {
@@ -630,7 +630,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                       {/* Block Type */}
                       <div className="flex-1">
-                        <label className="block mb-1 font-medium">Block Type:</label>
+                        <label className="block mb-1">Block Type:</label>
                         <select
                           value={foil.blockType || ""}
                           onChange={(e) => {
@@ -659,7 +659,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                       {/* MR Type */}
                       <div className="flex-1">
-                        <label className="block mb-1 font-medium">MR Type:</label>
+                        <label className="block mb-1">MR Type:</label>
                         <select
                           value={foil.mrType || ""}
                           onChange={(e) => {
@@ -692,7 +692,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
           {/* EMB Section */}
           <div className="border-t pt-4">
-            <h3 className="text-lg font-semibold mb-4">Embossing (EMB) Details</h3>
+            <h3 className="text-medium font-semibold mb-4">EMBOSSING (EMB) DETAILS</h3>
 
             {/* Toggle EMB Usage */}
             <div className="flex items-center space-x-3 cursor-pointer mb-4">
@@ -715,20 +715,20 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                   })
                 }
               >
-                <div className="w-6 h-6 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+                <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
                   {state.sandwich.embDetailsSandwich?.isEMBUsed && (
-                    <div className="w-4 h-4 rounded-full bg-blue-500"></div>
+                    <div className="w-3 h-3 rounded-full bg-blue-500"></div>
                   )}
                 </div>
-                <span className="text-gray-700 font-semibold">Use EMB Component?</span>
+                <span className="text-gray-700 font-semibold text-sm">Use EMB Component?</span>
               </label>
             </div>
 
             {state.sandwich.embDetailsSandwich?.isEMBUsed && (
-              <div className="flex flex-wrap gap-4">
+              <div className="flex flex-wrap gap-4 text-sm">
                 {/* Plate Size Type */}
                 <div className="flex-1">
-                  <label className="block mb-1 font-medium">Plate Size Type:</label>
+                  <label className="block mb-1">Plate Size Type:</label>
                   <select
                     name="plateSizeType"
                     value={state.sandwich.embDetailsSandwich.plateSizeType || ""}
@@ -766,7 +766,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                 {state.sandwich.embDetailsSandwich.plateSizeType && (
                   <>
                     <div className="flex-1">
-                      <label className="block mb-1 font-medium">Length (cm):</label>
+                      <label className="block mb-1">Length (cm):</label>
                       <input
                         type="number"
                         placeholder="Length"
@@ -797,7 +797,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
                     </div>
 
                     <div className="flex-1">
-                      <label className="block mb-1 font-medium">Breadth (cm):</label>
+                      <label className="block mb-1">Breadth (cm):</label>
                       <input
                         type="number"
                         placeholder="Breadth"
@@ -831,7 +831,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                 {/* Plate Type Male */}
                 <div className="flex-1">
-                  <label className="block mb-1 font-medium">Plate Type Male:</label>
+                  <label className="block mb-1">Plate Type Male:</label>
                   <select
                     name="plateTypeMale"
                     value={state.sandwich.embDetailsSandwich.plateTypeMale || ""}
@@ -855,7 +855,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                 {/* Plate Type Female */}
                 <div className="flex-1">
-                  <label className="block mb-1 font-medium">Plate Type Female:</label>
+                  <label className="block mb-1">Plate Type Female:</label>
                   <select
                     name="plateTypeFemale"
                     value={state.sandwich.embDetailsSandwich.plateTypeFemale || ""}
@@ -879,7 +879,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
 
                 {/* EMB MR */}
                 <div className="flex-1">
-                  <label className="block mb-1 font-medium">EMB MR:</label>
+                  <label className="block mb-1">EMB MR:</label>
                   <select
                     name="embMR"
                     value={state.sandwich.embDetailsSandwich.embMR || ""}
@@ -909,17 +909,17 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious }) => {
       )}
 
       {/* Navigation Buttons */}
-      <div className="flex justify-between mt-6">
+      <div className="flex justify-between">
         <button
           type="button"
           onClick={onPrevious}
-          className="px-4 py-2 bg-gray-500 text-white rounded-md"
+          className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
         >
           Previous
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-blue-600 text-white rounded-md"
+          className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
         >
           Next
         </button>

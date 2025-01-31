@@ -64,47 +64,47 @@ const DieSelectionPopup = ({ onClose, dispatch, onAddNewDie }) => {
   return (
     <div className="fixed inset-0 bg-gray-500 bg-opacity-75 flex justify-center items-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] max-w-4xl max-h-[90vh] flex flex-col">
-        <h2 className="text-2xl font-bold mb-4">Select Die</h2>
+        <h2 className="text-md font-semibold mb-4">Select Die</h2>
 
         {/* Search Fields */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
-            <label className="block text-sm font-medium mb-1">Length *</label>
+            <label className="block text-sm mb-1">Length *</label>
             <input
               type="number"
               name="length"
               placeholder="Enter Length (inches)"
               value={searchDimensions.length}
               onChange={handleSearchChange}
-              className="border rounded-md p-2 w-full"
+              className="border text-sm mt-1 rounded-md p-2 w-full"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">Breadth *</label>
+            <label className="block text-sm mb-1">Breadth *</label>
             <input
               type="number"
               name="breadth"
               placeholder="Enter Breadth (inches)"
               value={searchDimensions.breadth}
               onChange={handleSearchChange}
-              className="border rounded-md p-2 w-full"
+              className="border text-sm mt-1 rounded-md p-2 w-full"
               required
             />
           </div>
         </div>
 
         {/* Search and Add New Die Buttons */}
-        <div className="flex justify-between items-center mb-6">
+        <div className="flex justify-between items-center mb-6 text-sm">
           <button
             onClick={handleSearch}
-            className="bg-blue-500 text-white px-4 py-2 rounded-md hover:bg-blue-600"
+            className="bg-blue-500 text-white px-3 py-2 rounded-md"
           >
             Search
           </button>
           <button
             onClick={onAddNewDie}
-            className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+            className="bg-gray-500 text-white px-3 py-2 rounded-md"
           >
             Add New Die
           </button>
@@ -116,7 +116,7 @@ const DieSelectionPopup = ({ onClose, dispatch, onAddNewDie }) => {
             filteredDies.map((die) => (
               <div
                 key={die.id}
-                className="flex justify-between items-center border p-4 rounded-md hover:bg-gray-50 cursor-pointer"
+                className="flex justify-between items-center border px-4 py-2 rounded-md hover:bg-gray-50 cursor-pointer"
                 onClick={() => handleSelectDie(die)}
               >
                 <div>
@@ -145,7 +145,7 @@ const DieSelectionPopup = ({ onClose, dispatch, onAddNewDie }) => {
         <div className="flex justify-end mt-4">
           <button
             onClick={onClose}
-            className="bg-gray-500 text-white px-4 py-2 rounded-md hover:bg-gray-600"
+            className="bg-gray-500 text-sm text-white px-3 py-2 rounded-md"
           >
             Close
           </button>

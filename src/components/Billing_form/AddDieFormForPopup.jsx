@@ -108,8 +108,8 @@ const AddDieFormForPopup = ({ onAddDie, onClose }) => {
         onSubmit={handleSubmit}
         className="bg-white p-6 rounded-lg shadow-lg w-[90%] md:w-[70%] max-w-6xl"
       >
-        <h2 className="text-2xl font-bold mb-6">Add New Die</h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+        <h2 className="text-lg font-semibold mb-5">ADD NEW DIE</h2>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-xs">
           {[
             { label: "Job Type", name: "jobType", type: "select", options: ["Card", "Biz Card", "Magnet", "Envelope"] },
             { label: "Die Code", name: "dieCode", type: "text", placeholder: "Enter die code" },
@@ -129,13 +129,13 @@ const AddDieFormForPopup = ({ onAddDie, onClose }) => {
             // { label: "Price (INR)", name: "price", type: "number", placeholder: "Enter price of the die" },
           ].map((field, idx) => (
             <div key={idx}>
-              <label className="block text-sm font-medium mb-1">{field.label}:</label>
+              <label className="block text-sm font-medium mb-1 text-xs">{field.label}:</label>
               {field.type === "select" ? (
                 <select
                   name={field.name}
                   value={formData[field.name]}
                   onChange={handleChange}
-                  className="text-sm p-2 w-full border rounded-md shadow-sm"
+                  className="text-xs p-2 w-full border rounded-md shadow-sm"
                   required
                 >
                   <option value="">Select {field.label}</option>
@@ -152,7 +152,7 @@ const AddDieFormForPopup = ({ onAddDie, onClose }) => {
                   value={formData[field.name] || ""}
                   onChange={handleChange}
                   placeholder={field.placeholder}
-                  className="text-sm p-2 w-full border rounded-md shadow-sm"
+                  className="text-xs p-2 w-full border rounded-md shadow-sm"
                   required
                 />
               )}
@@ -183,13 +183,13 @@ const AddDieFormForPopup = ({ onAddDie, onClose }) => {
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 bg-gray-500 text-white rounded hover:bg-gray-600"
+            className="text-sm px-3 py-2 bg-gray-500 text-white rounded"
           >
             Cancel
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="text-sm px-3 py-2 bg-blue-500 text-white rounded"
           >
             Submit
           </button>
