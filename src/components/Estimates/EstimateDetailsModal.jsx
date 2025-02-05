@@ -290,7 +290,7 @@ const EstimateDetailsModal = ({
               </svg>
               Edit Estimate
             </button>
-            <button
+            {/* <button
               onClick={onDownloadPdf}
               disabled={isGeneratingPdf}
               className="flex items-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600"
@@ -299,7 +299,7 @@ const EstimateDetailsModal = ({
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3M3 17v3a2 2 0 002 2h14a2 2 0 002-2v-3M3 7V4a2 2 0 012-2h14a2 2 0 012 2v3" />
               </svg>
               {isGeneratingPdf ? 'Generating PDF...' : 'Download PDF'}
-            </button>
+            </button> */}
             <button
               onClick={onClose}
               className="text-gray-600 hover:text-gray-900 text-xl"
