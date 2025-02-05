@@ -24,7 +24,8 @@
     "react-firebase-hooks": "^5.1.1",
     "react-router": "^6.15.0",
     "react-router-dom": "^6.15.0",
-    "react-toastify": "^10.0.6"
+    "react-toastify": "^10.0.6",
+    "recharts": "^2.15.1"
   },
   "devDependencies": {
     "@parcel/core": "^2.13.3",

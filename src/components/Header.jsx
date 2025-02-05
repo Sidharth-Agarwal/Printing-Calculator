@@ -66,6 +66,14 @@ const Header = () => {
           >
             ORDERS
           </button>
+
+          {/* Transactions */}
+          <button 
+            onClick={() => navigateToNewTab('/transactions')} 
+            className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
+          >
+            TRANSACTIONS
+          </button>
         </nav>
       </div>
     </header>
