@@ -11,8 +11,18 @@ const OrdersPage = () => {
   const [filteredOrders, setFilteredOrders] = useState([]);
   const [updating, setUpdating] = useState(false);
   const [error, setError] = useState(null);
+  const [sortBy, setSortBy] = useState("date-desc"); // Default sort: Latest to oldest
+  const [stageFilter, setStageFilter] = useState(""); // Default: All stages
 
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
+
+  const sortOptions = {
+    "quantity-asc": "Quantity - Low to High",
+    "quantity-desc": "Quantity - High to Low",
+    "date-desc": "Delivery Date - Latest to Oldest",
+    "date-asc": "Delivery Date - Oldest to Latest",
+    "status": "Status"
+  };
 
   const stageColors = {
     'Design': { bg: 'bg-[#6366F1]' },
@@ -67,15 +77,48 @@ const OrdersPage = () => {
     return () => unsubscribe();
   }, []);
 
+  // Sort function
+  const sortOrders = (ordersToSort) => {
+    return [...ordersToSort].sort((a, b) => {
+      switch (sortBy) {
+        case "quantity-asc":
+          return (a.jobDetails?.quantity || 0) - (b.jobDetails?.quantity || 0);
+        case "quantity-desc":
+          return (b.jobDetails?.quantity || 0) - (a.jobDetails?.quantity || 0);
+        case "date-desc":
+          return new Date(b.deliveryDate) - new Date(a.deliveryDate);
+        case "date-asc":
+          return new Date(a.deliveryDate) - new Date(b.deliveryDate);
+        case "status":
+          return a.stage.localeCompare(b.stage);
+        default:
+          return new Date(b.date) - new Date(a.date);
+      }
+    });
+  };
+
   useEffect(() => {
-    const filtered = orders.filter(order => 
-      order.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.projectName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.jobDetails?.jobType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      order.jobDetails?.quantity?.toString().includes(searchQuery)
-    );
-    setFilteredOrders(filtered);
-  }, [searchQuery, orders]);
+    let filtered = orders;
+
+    // Apply search filter
+    if (searchQuery) {
+      filtered = filtered.filter(order =>
+        order.clientName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.projectName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.jobDetails?.jobType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        order.jobDetails?.quantity?.toString().includes(searchQuery)
+      );
+    }
+
+    // Apply stage filter
+    if (stageFilter) {
+      filtered = filtered.filter(order => order.stage === stageFilter);
+    }
+
+    // Apply sorting
+    const sortedOrders = sortOrders(filtered);
+    setFilteredOrders(sortedOrders);
+  }, [searchQuery, orders, sortBy, stageFilter]);
 
   const updateStage = async (orderId, newStage) => {
     try {
@@ -181,13 +224,36 @@ const OrdersPage = () => {
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h2 className="text-xl font-medium">ORDERS</h2>
-        <input
-          type="text"
-          placeholder="Search orders..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-4 py-2 text-sm border rounded-md w-[350px] focus:outline-none"
-        />
+        <div className="flex gap-4">
+          <input
+            type="text"
+            placeholder="Search orders..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="px-4 py-2 text-sm border rounded-md w-[350px] focus:outline-none"
+          />
+          <select
+            value={stageFilter}
+            onChange={(e) => setStageFilter(e.target.value)}
+            className="px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            <option value="">All Stages</option>
+            {stages.map(stage => (
+              <option key={stage} value={stage}>{stage}</option>
+            ))}
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {Object.entries(sortOptions).map(([value, label]) => (
+              <option key={value} value={value}>
+                Sort by: {label}
+              </option>
+            ))}
+          </select>
+        </div>
       </div>
 
       <div className="bg-white rounded-lg shadow-sm">

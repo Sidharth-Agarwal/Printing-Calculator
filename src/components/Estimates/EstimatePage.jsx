@@ -18,6 +18,15 @@ const EstimatesPage = () => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [isPreviewOpen, setIsPreviewOpen] = useState(false);
+  const [sortBy, setSortBy] = useState("date-desc"); // Default sort: Latest to oldest
+
+  const sortOptions = {
+    "quantity-asc": "Quantity - Low to High",
+    "quantity-desc": "Quantity - High to Low",
+    "date-desc": "Delivery Date - Latest to Oldest",
+    "date-asc": "Delivery Date - Oldest to Latest",
+    "status": "Status"
+  };
 
   useEffect(() => {
     const fetchEstimates = async () => {
@@ -69,41 +78,34 @@ const EstimatesPage = () => {
     return "Pending";
   };
 
-  const handlePreview = (groupKey, estimates) => {
-    setPreviewData({ groupKey, estimates });
-    setIsPreviewOpen(true);
-  };
+  // Sort function for groups
+  const sortGroups = (groups) => {
+    return Object.entries(groups).sort((a, b) => {
+      const [, estimatesA] = a;
+      const [, estimatesB] = b;
+      const firstEstimateA = estimatesA[0];
+      const firstEstimateB = estimatesB[0];
 
-  const handleGenerateGroupedJobTicket = async (groupKey, estimates) => {
-    setIsGeneratingPDF(true);
-    try {
-      // Create a temporary div for the job ticket
-      const tempDiv = document.createElement('div');
-      document.body.appendChild(tempDiv);
-
-      // Render the GroupedJobTicket component
-      ReactDOM.render(
-        <GroupedJobTicket 
-          estimates={estimates} 
-          groupKey={groupKey}
-        />, 
-        tempDiv,
-        async () => {
-          try {
-            await generateGroupedJobTicketPDF(tempDiv, groupKey);
-          } finally {
-            // Clean up
-            ReactDOM.unmountComponentAtNode(tempDiv);
-            document.body.removeChild(tempDiv);
-            setIsGeneratingPDF(false);
-          }
-        }
-      );
-    } catch (error) {
-      console.error('Error generating group job ticket:', error);
-      alert('Failed to generate job ticket. Please try again.');
-      setIsGeneratingPDF(false);
-    }
+      switch (sortBy) {
+        case "quantity-asc":
+          return (firstEstimateA.jobDetails?.quantity || 0) - (firstEstimateB.jobDetails?.quantity || 0);
+        case "quantity-desc":
+          return (firstEstimateB.jobDetails?.quantity || 0) - (firstEstimateA.jobDetails?.quantity || 0);
+        case "date-desc":
+          return new Date(firstEstimateB.deliveryDate) - new Date(firstEstimateA.deliveryDate);
+        case "date-asc":
+          return new Date(firstEstimateA.deliveryDate) - new Date(firstEstimateB.deliveryDate);
+        case "status":
+          const statusA = getGroupStatus(estimatesA);
+          const statusB = getGroupStatus(estimatesB);
+          return statusA.localeCompare(statusB);
+        default:
+          return new Date(firstEstimateB.date) - new Date(firstEstimateA.date);
+      }
+    }).reduce((acc, [key, value]) => {
+      acc[key] = value;
+      return acc;
+    }, {});
   };
 
   // Handle search and filtering
@@ -133,8 +135,44 @@ const EstimatesPage = () => {
       return acc;
     }, {});
 
-    setFilteredData(filtered);
-  }, [searchQuery, estimatesData, filterStatus]);
+    // Apply sorting to filtered data
+    const sortedData = sortGroups(filtered);
+    setFilteredData(sortedData);
+  }, [searchQuery, estimatesData, filterStatus, sortBy]);
+
+  const handlePreview = (groupKey, estimates) => {
+    setPreviewData({ groupKey, estimates });
+    setIsPreviewOpen(true);
+  };
+
+  const handleGenerateGroupedJobTicket = async (groupKey, estimates) => {
+    setIsGeneratingPDF(true);
+    try {
+      const tempDiv = document.createElement('div');
+      document.body.appendChild(tempDiv);
+
+      ReactDOM.render(
+        <GroupedJobTicket 
+          estimates={estimates} 
+          groupKey={groupKey}
+        />, 
+        tempDiv,
+        async () => {
+          try {
+            await generateGroupedJobTicketPDF(tempDiv, groupKey);
+          } finally {
+            ReactDOM.unmountComponentAtNode(tempDiv);
+            document.body.removeChild(tempDiv);
+            setIsGeneratingPDF(false);
+          }
+        }
+      );
+    } catch (error) {
+      console.error('Error generating group job ticket:', error);
+      alert('Failed to generate job ticket. Please try again.');
+      setIsGeneratingPDF(false);
+    }
+  };
 
   const toggleGroup = (groupKey) => {
     setExpandedGroups(prev => ({
@@ -181,6 +219,17 @@ const EstimatesPage = () => {
             <option value="Pending">Pending</option>
             <option value="Moved to Orders">Moved to Orders</option>
             <option value="Cancelled">Cancelled</option>
+          </select>
+          <select
+            value={sortBy}
+            onChange={(e) => setSortBy(e.target.value)}
+            className="px-2 py-2 text-sm border rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          >
+            {Object.entries(sortOptions).map(([value, label]) => (
+              <option key={value} value={value}>
+                Sort by: {label}
+              </option>
+            ))}
           </select>
         </div>
       </div>
@@ -254,7 +303,6 @@ const EstimatesPage = () => {
                   {expandedGroups[groupKey] && (
                     <tr>
                       <td colSpan="6" className="px-6 py-4 bg-gray-50">
-                        {/* Preview Button */}
                         <div className="flex justify-end mb-4">
                           <button
                             onClick={(e) => {
@@ -271,7 +319,6 @@ const EstimatesPage = () => {
                           </button>
                         </div>
 
-                        {/* Estimates Grid */}
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
                           {estimates.map((estimate, index) => (
                             <Estimate
