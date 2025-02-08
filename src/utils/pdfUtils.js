@@ -1466,3 +1466,82 @@ const formatDate = (dateString) => {
     year: 'numeric' 
   });
 };
+
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
+
+export const generateGroupedJobTicketPDF = async (contentRef, groupKey) => {
+  if (!contentRef) return;
+  const [clientName, projectName] = groupKey.split('-');
+
+  try {
+    // Wait for all images to load
+    const images = contentRef.getElementsByTagName('img');
+    const imagePromises = Array.from(images).map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = reject;
+      });
+    });
+
+    await Promise.all(imagePromises);
+
+    // Generate canvas from the HTML content
+    const canvas = await html2canvas(contentRef, {
+      scale: 2, // Higher scale for better quality
+      useCORS: true, // Enable CORS for images
+      logging: false,
+      allowTaint: true,
+      imageTimeout: 0
+    });
+    
+    // Convert canvas to image data
+    const imgData = canvas.toDataURL('image/jpeg', 1.0);
+    
+    // Initialize PDF with A4 format
+    const pdf = new jsPDF({
+      orientation: 'portrait',
+      unit: 'mm',
+      format: 'a4'
+    });
+
+    // Calculate dimensions
+    const imgWidth = 210; // A4 width in mm
+    const imgHeight = canvas.height * imgWidth / canvas.width;
+    
+    // Handle multiple pages if content is too long
+    let position = 0;
+    while (position < imgHeight) {
+      // Add new page if not first page
+      if (position > 0) {
+        pdf.addPage();
+      }
+      
+      // Add image to page
+      pdf.addImage(
+        imgData,
+        'JPEG',
+        0,
+        position === 0 ? 0 : -position, // Adjust position for continuation
+        imgWidth,
+        imgHeight
+      );
+      
+      position += 297; // A4 height in mm
+    }
+
+    // Save the PDF
+    pdf.save(`Group_Job_Ticket_${clientName}_${projectName}_${new Date().toISOString().split('T')[0]}.pdf`);
+    return true;
+  } catch (error) {
+    console.error("Error generating PDF:", error);
+    throw error;
+  }
+};
+
+// Helper function to calculate page height
+const calculatePDFHeight = (element) => {
+  const { height } = element.getBoundingClientRect();
+  return height * (210 / element.offsetWidth); // Convert to mm based on A4 width (210mm)
+};
