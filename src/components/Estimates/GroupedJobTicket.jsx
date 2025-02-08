@@ -63,9 +63,9 @@ const LPSection = ({ lpDetails }) => {
   return (
     <div className="space-y-1">
       <p className="font-medium text-xs">Colors: {lpDetails.noOfColors}</p>
-      <div className="flex gap-4">
+      <div className="flex gap-2">
         {lpDetails.colorDetails.map((color, idx) => (
-          <div key={idx} className="bg-white text-xs space-y-1">
+          <div key={idx} className="bg-white text-xs space-y-1 p-2 rounded">
             <p><strong>Color {idx + 1}:</strong> {color.pantoneType}</p>
             <p><strong>Size:</strong> {color.plateDimensions?.length} x {color.plateDimensions?.breadth}</p>
             <p><strong>Plate:</strong> {color.plateType}</p>
@@ -83,9 +83,9 @@ const FSSection = ({ fsDetails }) => {
   return (
     <div className="space-y-1">
       <p className="font-medium text-xs">Type: {fsDetails.fsType}</p>
-      <div className="space-y-2">
+      <div className="flex gap-2">
         {fsDetails.foilDetails.map((foil, idx) => (
-          <div key={idx} className="bg-white text-xs space-y-1">
+          <div key={idx} className="bg-white text-xs space-y-1 p-2 rounded">
             <p><strong>Foil {idx + 1}:</strong> {foil.foilType}</p>
             <p><strong>Size:</strong> {foil.blockDimension?.length} x {foil.blockDimension?.breadth}</p>
             <p><strong>Block:</strong> {foil.blockType}</p>
@@ -101,7 +101,7 @@ const EMBSection = ({ embDetails }) => {
   if (!embDetails?.isEMBUsed) return null;
 
   return (
-    <div className="bg-white text-xs space-y-1">
+    <div className="bg-white text-xs space-y-1 p-2 rounded">
       <p><strong>Plate Size:</strong> {embDetails.plateDimensions?.length} x {embDetails.plateDimensions?.breadth}</p>
       <p><strong>Male Plate:</strong> {embDetails.plateTypeMale}</p>
       <p><strong>Female Plate:</strong> {embDetails.plateTypeFemale}</p>
@@ -114,16 +114,16 @@ const SandwichDetails = ({ sandwich }) => {
   if (!sandwich?.isSandwichComponentUsed) return null;
 
   return (
-    <div className="col-span-3 bg-white p-2 rounded">
+    <div className="bg-white p-2 rounded">
       <h3 className="font-bold text-xs mb-2">Sandwich Details</h3>
       
       {/* LP in Sandwich */}
       {sandwich.lpDetailsSandwich?.isLPUsed && (
         <div className="mb-2">
-          <div className="border-l-2 border-blue-500 pl-2">
-            <p className="font-medium text-xs mb-1">LP Details - Colors: {sandwich.lpDetailsSandwich.noOfColors}</p>
+          <p className="font-medium text-xs mb-1">LP Details - Colors: {sandwich.lpDetailsSandwich.noOfColors}</p>
+          <div className="border-l-2 border-blue-500 pl-2 flex gap-2">
             {sandwich.lpDetailsSandwich.colorDetails.map((color, idx) => (
-              <div key={idx} className="text-xs space-y-1">
+              <div key={idx} className="text-xs space-y-1 mb-2 bg-gray-50 p-2 rounded">
                 <p><strong>Color {idx + 1}:</strong> {color.pantoneType}</p>
                 <p><strong>Size:</strong> {color.plateDimensions?.length} x {color.plateDimensions?.breadth}</p>
                 <p><strong>Plate:</strong> {color.plateType}</p>
@@ -137,10 +137,10 @@ const SandwichDetails = ({ sandwich }) => {
       {/* FS in Sandwich */}
       {sandwich.fsDetailsSandwich?.isFSUsed && (
         <div className="mb-2">
-          <div className="border-l-2 border-green-500 pl-2">
-            <p className="font-medium text-xs mb-1">FS Details - Type: {sandwich.fsDetailsSandwich.fsType}</p>
+          <p className="font-medium text-xs mb-1">FS Details - Type: {sandwich.fsDetailsSandwich.fsType}</p>
+          <div className="border-l-2 border-green-500 pl-2 flex gap-2">
             {sandwich.fsDetailsSandwich.foilDetails.map((foil, idx) => (
-              <div key={idx} className="text-xs space-y-1">
+              <div key={idx} className="text-xs space-y-1 mb-2 bg-gray-50 p-2 rounded">
                 <p><strong>Foil {idx + 1}:</strong> {foil.foilType}</p>
                 <p><strong>Size:</strong> {foil.blockDimension?.length} x {foil.blockDimension?.breadth}</p>
                 <p><strong>Block:</strong> {foil.blockType}</p>
@@ -154,9 +154,9 @@ const SandwichDetails = ({ sandwich }) => {
       {/* EMB in Sandwich */}
       {sandwich.embDetailsSandwich?.isEMBUsed && (
         <div className="mb-2">
+          <p className="font-medium text-xs mb-1">EMB Details</p>
           <div className="border-l-2 border-purple-500 pl-2">
-            <p className="font-medium text-xs mb-1">EMB Details</p>
-            <div className="text-xs space-y-1">
+            <div className="text-xs space-y-1 bg-gray-50 p-2 rounded">
               <p><strong>Plate Size:</strong> {sandwich.embDetailsSandwich.plateDimensions?.length} x {sandwich.embDetailsSandwich.plateDimensions?.breadth}</p>
               <p><strong>Male Plate:</strong> {sandwich.embDetailsSandwich.plateTypeMale}</p>
               <p><strong>Female Plate:</strong> {sandwich.embDetailsSandwich.plateTypeFemale}</p>
@@ -194,65 +194,58 @@ const EstimateDetails = ({ estimate, index }) => {
         Estimate #{index + 1} - Quantity: {estimate.jobDetails?.quantity} pcs
       </h2>
 
-      <div className="grid grid-cols-12 gap-3">
-        {/* Left Column - Paper, Die, Cost */}
-        <div className="col-span-3">
-          <div className="space-y-2">
-            {/* Paper and Die Details */}
-            <div className="bg-white p-1 rounded text-xs">
+      <div className="space-y-3">
+        {/* Paper and Die Details */}
+        <div className="bg-white p-2 rounded">
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-1 text-xs">
               <h3 className="font-bold mb-1">Paper and Die Details</h3>
-              <div className="space-y-1">
-                <p><strong>Paper:</strong> {estimate.jobDetails?.paperName}</p>
-                <p><strong>Provided:</strong> {estimate.jobDetails?.paperProvided}</p>
-                <p><strong>Die Code:</strong> {estimate.dieDetails?.dieCode}</p>
-                <p><strong>Size:</strong> {estimate.dieDetails?.dieSize?.length} x {estimate.dieDetails?.dieSize?.breadth}</p>
-              </div>
-              <div className="mt-1">
-                <DieImage imageUrl={estimate.dieDetails?.image} />
-              </div>
+              <p><strong>Paper:</strong> {estimate.jobDetails?.paperName}</p>
+              <p><strong>Provided:</strong> {estimate.jobDetails?.paperProvided}</p>
+              <p><strong>Die Code:</strong> {estimate.dieDetails?.dieCode}</p>
+              <p><strong>Size:</strong> {estimate.dieDetails?.dieSize?.length} x {estimate.dieDetails?.dieSize?.breadth}</p>
             </div>
-
-            {/* Cost Summary */}
-            <div className="bg-white p-1 rounded text-xs">
-              <h4 className="font-bold mb-1">Cost Summary</h4>
-              <p><strong>Per Card:</strong> ₹ {costs.perCard.toFixed(2)}</p>
-              <p><strong>Total:</strong> ₹ {costs.total.toFixed(2)}</p>
+            <div>
+              <DieImage imageUrl={estimate.dieDetails?.image} />
+              <div className="mt-2 text-xs">
+                <h4 className="font-bold mb-1">Cost Summary</h4>
+                <p><strong>Per Card:</strong> ₹ {costs.perCard.toFixed(2)}</p>
+                <p><strong>Total:</strong> ₹ {costs.total.toFixed(2)}</p>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* Right Column - Process Details */}
-        <div className="col-span-9">
-          <div className="flex flex-col">
-            {/* LP Details */}
-            {estimate.lpDetails?.isLPUsed && (
-              <div className="bg-white p-1 rounded">
-                <h3 className="font-bold text-xs mb-1">LP Details</h3>
-                <LPSection lpDetails={estimate.lpDetails} />
-              </div>
-            )}
+        {/* Process Details */}
+        <div className="flex gap-2">
+          {/* LP Details */}
+          {estimate.lpDetails?.isLPUsed && (
+            <div className="bg-white p-2 rounded">
+              <h3 className="font-bold text-xs mb-1">LP Details</h3>
+              <LPSection lpDetails={estimate.lpDetails} />
+            </div>
+          )}
 
-            {/* FS Details */}
-            {estimate.fsDetails?.isFSUsed && (
-              <div className="bg-white p-1 rounded">
-                <h3 className="font-bold text-xs mb-1">FS Details</h3>
-                <FSSection fsDetails={estimate.fsDetails} />
-              </div>
-            )}
+          {/* FS Details */}
+          {estimate.fsDetails?.isFSUsed && (
+            <div className="bg-white p-2 rounded">
+              <h3 className="font-bold text-xs mb-1">FS Details</h3>
+              <FSSection fsDetails={estimate.fsDetails} />
+            </div>
+          )}
 
-            {/* EMB Details */}
-            {estimate.embDetails?.isEMBUsed && (
-              <div className="bg-white p-1 rounded">
-                <h3 className="font-bold text-xs mb-1">EMB Details</h3>
-                <EMBSection embDetails={estimate.embDetails} />
-              </div>
-            )}
+          {/* EMB Details */}
+          {estimate.embDetails?.isEMBUsed && (
+            <div className="bg-white p-2 rounded">
+              <h3 className="font-bold text-xs mb-1">EMB Details</h3>
+              <EMBSection embDetails={estimate.embDetails} />
+            </div>
+          )}
 
-            {/* Sandwich Details */}
-            {estimate.sandwich?.isSandwichComponentUsed && (
-              <SandwichDetails sandwich={estimate.sandwich} />
-            )}
-          </div>
+          {/* Sandwich Details */}
+          {estimate.sandwich?.isSandwichComponentUsed && (
+            <SandwichDetails sandwich={estimate.sandwich} />
+          )}
         </div>
       </div>
     </div>
@@ -268,14 +261,15 @@ const GroupedJobTicket = ({ estimates, groupKey }) => {
   };
 
   return (
-    <div className="bg-white p-4" style={{ minWidth: '1200px' }}>
+    <div className="bg-white p-4 mx-auto" style={{ maxWidth: '100%', margin: '0 auto' }}>
       {/* Header */}
       <div className="border-b-2 border-gray-800 pb-2 mb-4">
         <h1 className="text-xl font-bold text-center mb-2">GROUP JOB TICKET</h1>
-        <div className="grid grid-cols-3 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
             <p><strong>Client:</strong> {clientName}</p>
             <p><strong>Project:</strong> {projectName}</p>
+            <p><strong>Job Type:</strong> {estimates[0]?.jobDetails?.jobType}</p>
           </div>
           <div>
             <p><strong>Initial Date:</strong> {formatDate(estimates[0]?.date)}</p>
@@ -284,10 +278,7 @@ const GroupedJobTicket = ({ estimates, groupKey }) => {
                 !latest || new Date(est.deliveryDate) > new Date(latest) ? est.deliveryDate : latest, null
               ))
             }</p>
-          </div>
-          <div>
             <p><strong>Estimates:</strong> {estimates.length}</p>
-            <p><strong>Job Type:</strong> {estimates[0]?.jobDetails?.jobType}</p>
           </div>
         </div>
       </div>
