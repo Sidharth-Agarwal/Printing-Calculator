@@ -4,10 +4,10 @@ const PreviewModal = ({ isOpen, onClose, onDownload, isGeneratingPDF, children }
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-start justify-center overflow-y-auto py-4">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl my-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-[95%] max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center sticky top-0 bg-white rounded-t-lg">
+        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">
             Preview Group Job Ticket
           </h2>
@@ -46,7 +46,7 @@ const PreviewModal = ({ isOpen, onClose, onDownload, isGeneratingPDF, children }
         </div>
 
         {/* Modal Content */}
-        <div className="p-6 overflow-y-auto max-h-[80vh]">
+        <div className="p-6 overflow-y-auto flex-grow">
           {children}
         </div>
       </div>
