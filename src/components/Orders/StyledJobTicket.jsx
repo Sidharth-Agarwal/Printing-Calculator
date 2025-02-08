@@ -1,291 +1,274 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+
+// DieImage Component
+const DieImage = ({ imageUrl }) => {
+  const [imageStatus, setImageStatus] = useState('loading');
+
+  useEffect(() => {
+    if (!imageUrl) {
+      setImageStatus('error');
+      return;
+    }
+
+    const img = new Image();
+    
+    img.onload = () => {
+      setImageStatus('loaded');
+    };
+
+    img.onerror = () => {
+      console.error('Error loading image from URL:', imageUrl);
+      setImageStatus('error');
+    };
+
+    img.src = imageUrl;
+
+    return () => {
+      img.onload = null;
+      img.onerror = null;
+    };
+  }, [imageUrl]);
+
+  if (imageStatus === 'loading') {
+    return (
+      <div className="border rounded-lg p-4 h-32 flex items-center justify-center bg-gray-50">
+        <div className="text-center text-gray-500">
+          <svg className="animate-spin h-8 w-8 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+          </svg>
+          <span className="text-sm">Loading image...</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (imageStatus === 'error') {
+    return (
+      <div className="border rounded-lg p-4 h-32 flex items-center justify-center bg-gray-50">
+        <div className="text-center text-gray-500">
+          <svg className="w-8 h-8 mx-auto mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <span className="text-sm">Die image unavailable</span>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="border rounded-lg p-2 h-32 bg-white">
+      <div className="relative w-full h-full">
+        <img 
+          src={imageUrl} 
+          alt="Die" 
+          className="w-full h-full object-contain"
+          onError={() => setImageStatus('error')}
+        />
+      </div>
+    </div>
+  );
+};
 
 const StyledJobTicket = ({ order }) => {
-  const {
-    clientName,
-    projectName,
-    date,
-    deliveryDate,
-    jobDetails,
-    dieDetails,
-    lpDetails,
-    fsDetails,
-    embDetails,
-    digiDetails,
-    dieCutting,
-    sandwich,
-    pasting,
-    stage
-  } = order;
-
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
-    return new Date(dateString).toLocaleDateString();
-  };
-
-  const getStageNumber = (currentStage) => {
-    const stages = ['Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
-    return stages.indexOf(currentStage) + 1;
+    return new Date(dateString).toLocaleDateString('en-GB');
   };
 
   return (
-    <div className="w-full max-w-5xl mx-auto bg-white p-8">
-      {/* Header */}
-      <div className="border-b-4 border-blue-600 pb-6 mb-6">
-        <div className="flex justify-between items-start">
+    <div className="max-w-4xl mx-auto bg-white p-8">
+      {/* Header Section */}
+      <div className="border-b-2 border-gray-800 pb-4 mb-6">
+        <h1 className="text-3xl font-bold text-center mb-4">JOB TICKET</h1>
+        <div className="grid grid-cols-2 gap-4">
           <div>
-            <h1 className="text-4xl font-bold tracking-tight text-blue-600">JOB TICKET</h1>
-            <p className="text-lg text-gray-600 mt-1">#{order.id}</p>
+            <p className="font-bold">Order Date: <span className="font-normal">{formatDate(order.date)}</span></p>
+            <p className="font-bold">Client Name: <span className="font-normal">{order.clientName}</span></p>
+            <p className="font-bold">Project Name: <span className="font-normal">{order.projectName}</span></p>
           </div>
-          <div className="text-right">
-            <div className="text-sm text-gray-500">
-              Order Date: {formatDate(date)}
-            </div>
-            <div className="text-sm text-gray-500">
-              Delivery Date: {formatDate(deliveryDate)}
-            </div>
+          <div>
+            <p className="font-bold">Delivery Date: <span className="font-normal">{formatDate(order.deliveryDate)}</span></p>
+            <p className="font-bold">Quantity: <span className="font-normal">{order.jobDetails?.quantity}</span></p>
+            <p className="font-bold">Job Type: <span className="font-normal">{order.jobDetails?.jobType}</span></p>
           </div>
         </div>
       </div>
 
-      {/* Progress Bar */}
-      <div className="mb-8">
-        <div className="flex justify-between mb-2">
-          {['Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'].map((step, index) => (
-            <div 
-              key={step} 
-              className={`flex-1 text-center ${
-                getStageNumber(stage) > index ? 'text-blue-600' : 'text-gray-400'
-              }`}
-            >
-              <div className="relative">
-                <div className={`
-                  w-8 h-8 mx-auto rounded-full flex items-center justify-center
-                  ${getStageNumber(stage) > index ? 'bg-blue-600 text-white' : 'bg-gray-200'}
-                `}>
-                  {index + 1}
-                </div>
-                <div className="mt-1 text-xs font-medium">{step}</div>
+      {/* Paper and Die Details */}
+      <div className="mb-6">
+        <h2 className="text-xl font-bold mb-3 bg-gray-200 p-2">Paper and Die Details</h2>
+        <div className="grid grid-cols-3 gap-4">
+          <div className="col-span-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="font-bold">Paper: <span className="font-normal">{order.jobDetails?.paperName}</span></p>
+                <p className="font-bold">Paper Provided: <span className="font-normal">{order.jobDetails?.paperProvided}</span></p>
+              </div>
+              <div>
+                <p className="font-bold">Die Code: <span className="font-normal">{order.dieDetails?.dieCode}</span></p>
+                <p className="font-bold">Die Size: <span className="font-normal">
+                  {order.dieDetails?.dieSize?.length} x {order.dieDetails?.dieSize?.breadth}
+                </span></p>
               </div>
             </div>
-          ))}
-        </div>
-        <div className="relative mt-2">
-          <div className="absolute w-full h-1 bg-gray-200">
-            <div 
-              className="h-full bg-blue-600 transition-all duration-300"
-              style={{ width: `${(getStageNumber(stage) / 5) * 100}%` }}
-            />
+          </div>
+          <div>
+            <DieImage imageUrl={order.dieDetails?.image} />
           </div>
         </div>
       </div>
 
-      {/* Main Grid */}
-      <div className="grid grid-cols-3 gap-6">
-        {/* Left Column */}
-        <div className="col-span-1 space-y-6">
-          {/* Client Info */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold mb-3 text-blue-600">Client Details</h2>
-            <div className="space-y-2">
-              <p className="text-sm">
-                <span className="font-medium">Client Name:</span><br/>
-                {clientName}
-              </p>
-              <p className="text-sm">
-                <span className="font-medium">Project Name:</span><br/>
-                {projectName}
-              </p>
+      {/* Letterpress Details */}
+      {order.lpDetails?.isLPUsed && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-3 bg-gray-200 p-2">Letterpress Details</h2>
+          <p className="font-bold mb-2">Colors: <span className="font-normal">{order.lpDetails.noOfColors}</span></p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {order.lpDetails.colorDetails.map((color, index) => (
+              <div key={index} className="border rounded-lg p-4 bg-white">
+                <p className="font-bold mb-2">Color {index + 1}:</p>
+                <p className="text-sm">Pantone: <span className="font-normal">{color.pantoneType}</span></p>
+                <p className="text-sm">Plate Size: <span className="font-normal">{color.plateDimensions.length} x {color.plateDimensions.breadth}</span></p>
+                <p className="text-sm">Plate Type: <span className="font-normal">{color.plateType}</span></p>
+                <p className="text-sm">MR Type: <span className="font-normal">{color.mrType}</span></p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Foil Stamping Details */}
+      {order.fsDetails?.isFSUsed && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-3 bg-gray-200 p-2">Foil Stamping Details</h2>
+          <p className="font-bold mb-2">Type: <span className="font-normal">{order.fsDetails.fsType}</span></p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {order.fsDetails.foilDetails.map((foil, index) => (
+              <div key={index} className="border rounded-lg p-4 bg-white">
+                <p className="font-bold mb-2">Foil {index + 1}:</p>
+                <p className="text-sm">Size: <span className="font-normal">{foil.blockDimension.length} x {foil.blockDimension.breadth}</span></p>
+                <p className="text-sm">Foil Type: <span className="font-normal">{foil.foilType}</span></p>
+                <p className="text-sm">Block Type: <span className="font-normal">{foil.blockType}</span></p>
+                <p className="text-sm">MR Type: <span className="font-normal">{foil.mrType}</span></p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Embossing Details */}
+      {order.embDetails?.isEMBUsed && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-3 bg-gray-200 p-2">Embossing Details</h2>
+          <div className="border rounded-lg p-4 bg-white">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-sm">Plate Size: <span className="font-normal">{order.embDetails.plateDimensions.length} x {order.embDetails.plateDimensions.breadth}</span></p>
+                <p className="text-sm">Male Plate: <span className="font-normal">{order.embDetails.plateTypeMale}</span></p>
+              </div>
+              <div>
+                <p className="text-sm">Female Plate: <span className="font-normal">{order.embDetails.plateTypeFemale}</span></p>
+                <p className="text-sm">MR Type: <span className="font-normal">{order.embDetails.embMR}</span></p>
+              </div>
             </div>
           </div>
+        </div>
+      )}
 
-          {/* Job Specifications */}
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h2 className="text-lg font-semibold mb-3 text-blue-600">Job Specifications</h2>
-            <div className="space-y-2 text-sm">
-              <p><span className="font-medium">Job Type:</span> {jobDetails?.jobType}</p>
-              <p><span className="font-medium">Quantity:</span> {jobDetails?.quantity}</p>
-              <p><span className="font-medium">Paper:</span> {jobDetails?.paperName}</p>
-              <p><span className="font-medium">Paper Provided:</span> {jobDetails?.paperProvided}</p>
+      {/* Sandwich Component Details */}
+      {order.sandwich?.isSandwichComponentUsed && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-3 bg-gray-200 p-2">Sandwich Details</h2>
+          
+          {/* LP in Sandwich */}
+          {order.sandwich.lpDetailsSandwich?.isLPUsed && (
+            <div className="mb-4">
+              <h3 className="font-bold text-lg mb-3 bg-gray-100 p-2">LP in Sandwich</h3>
+              <p className="font-bold mb-2">Colors: <span className="font-normal">{order.sandwich.lpDetailsSandwich.noOfColors}</span></p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {order.sandwich.lpDetailsSandwich.colorDetails.map((color, index) => (
+                  <div key={index} className="border rounded-lg p-4 bg-white">
+                    <p className="font-bold mb-2">Color {index + 1}:</p>
+                    <p className="text-sm">Pantone: <span className="font-normal">{color.pantoneType}</span></p>
+                    <p className="text-sm">Plate Type: <span className="font-normal">{color.plateType}</span></p>
+                    <p className="text-sm">MR Type: <span className="font-normal">{color.mrType}</span></p>
+                  </div>
+                ))}
+              </div>
             </div>
-          </div>
+          )}
 
-          {/* Die Details */}
-          {dieDetails && (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h2 className="text-lg font-semibold mb-3 text-blue-600">Die Information</h2>
-              <div className="space-y-2 text-sm">
-                <p><span className="font-medium">Die Code:</span> {dieDetails.dieCode}</p>
-                <p>
-                  <span className="font-medium">Die Size:</span><br/>
-                  {dieDetails.dieSize?.length}" × {dieDetails.dieSize?.breadth}"
-                </p>
-                {dieDetails.image && (
-                  <img 
-                    src={dieDetails.image} 
-                    alt="Die" 
-                    className="mt-2 w-full h-auto object-contain rounded border"
-                  />
-                )}
+          {/* FS in Sandwich */}
+          {order.sandwich.fsDetailsSandwich?.isFSUsed && (
+            <div className="mb-4">
+              <h3 className="font-bold text-lg mb-3 bg-gray-100 p-2">FS in Sandwich</h3>
+              <p className="font-bold mb-2">Type: <span className="font-normal">{order.sandwich.fsDetailsSandwich.fsType}</span></p>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {order.sandwich.fsDetailsSandwich.foilDetails.map((foil, index) => (
+                  <div key={index} className="border rounded-lg p-4 bg-white">
+                    <p className="font-bold mb-2">Foil {index + 1}:</p>
+                    <p className="text-sm">Foil Type: <span className="font-normal">{foil.foilType}</span></p>
+                    <p className="text-sm">Block Type: <span className="font-normal">{foil.blockType}</span></p>
+                    <p className="text-sm">MR Type: <span className="font-normal">{foil.mrType}</span></p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* EMB in Sandwich */}
+          {order.sandwich.embDetailsSandwich?.isEMBUsed && (
+            <div className="mb-4">
+              <h3 className="font-bold text-lg mb-3 bg-gray-100 p-2">EMB in Sandwich</h3>
+              <div className="border rounded-lg p-4 bg-white">
+                <p className="text-sm">Male Plate: <span className="font-normal">{order.sandwich.embDetailsSandwich.plateTypeMale}</span></p>
+                <p className="text-sm">Female Plate: <span className="font-normal">{order.sandwich.embDetailsSandwich.plateTypeFemale}</span></p>
+                <p className="text-sm">MR Type: <span className="font-normal">{order.sandwich.embDetailsSandwich.embMR}</span></p>
               </div>
             </div>
           )}
         </div>
+      )}
 
-        {/* Right Column - Process Details */}
-        <div className="col-span-2 bg-gray-50 p-6 rounded-lg">
-          <h2 className="text-xl font-semibold mb-6 text-blue-600">Production Requirements</h2>
-          
-          <div className="space-y-6">
-            {/* LP Details */}
-            {lpDetails?.isLPUsed && (
-              <div className="relative pl-6 pb-6 border-l-2 border-blue-200">
-                <div className="absolute -left-2 top-0 w-4 h-4 rounded-full bg-blue-600"/>
-                <h3 className="font-semibold mb-2">Letter Press</h3>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Colors:</span> {lpDetails.noOfColors}</p>
-                  <div className="ml-4">
-                    {lpDetails.colorDetails?.map((color, index) => (
-                      <div key={index} className="mt-2 p-2 bg-white rounded shadow-sm">
-                        <p className="font-medium text-blue-600">Color {index + 1}</p>
-                        <p>Pantone: {color.pantoneType}</p>
-                        <p>Plate: {color.plateType}</p>
-                        <p>MR Type: {color.mrType}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* FS Details */}
-            {fsDetails?.isFSUsed && (
-              <div className="relative pl-6 pb-6 border-l-2 border-blue-200">
-                <div className="absolute -left-2 top-0 w-4 h-4 rounded-full bg-blue-600"/>
-                <h3 className="font-semibold mb-2">Foil Stamping</h3>
-                <div className="space-y-2 text-sm">
-                  <p><span className="font-medium">Type:</span> {fsDetails.fsType}</p>
-                  <div className="ml-4">
-                    {fsDetails.foilDetails?.map((foil, index) => (
-                      <div key={index} className="mt-2 p-2 bg-white rounded shadow-sm">
-                        <p className="font-medium text-blue-600">Foil {index + 1}</p>
-                        <p>Type: {foil.foilType}</p>
-                        <p>Block: {foil.blockType}</p>
-                        <p>MR Type: {foil.mrType}</p>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* EMB Details */}
-            {embDetails?.isEMBUsed && (
-              <div className="relative pl-6 pb-6 border-l-2 border-blue-200">
-                <div className="absolute -left-2 top-0 w-4 h-4 rounded-full bg-blue-600"/>
-                <h3 className="font-semibold mb-2">Embossing</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="p-2 bg-white rounded shadow-sm">
-                    <p>Male Plate: {embDetails.plateTypeMale}</p>
-                    <p>Female Plate: {embDetails.plateTypeFemale}</p>
-                    <p>MR Type: {embDetails.embMR}</p>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Digital Details */}
-            {digiDetails?.isDigiUsed && (
-              <div className="relative pl-6 pb-6 border-l-2 border-blue-200">
-                <div className="absolute -left-2 top-0 w-4 h-4 rounded-full bg-blue-600"/>
-                <h3 className="font-semibold mb-2">Digital Printing</h3>
-                <div className="space-y-2 text-sm">
-                  <div className="p-2 bg-white rounded shadow-sm">
-                    <p>Die: {digiDetails.digiDie}</p>
-                    <p>Size: {digiDetails.digiDimensions?.length}" × {digiDetails.digiDimensions?.breadth}"</p>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          {/* Additional Requirements */}
-          <div className="mt-8 space-y-4">
-            {sandwich?.isSandwichComponentUsed && (
-              <div className="p-3 bg-yellow-50 border-l-4 border-yellow-400 text-sm">
-                <p className="font-medium">Sandwich Component Required</p>
-                <p className="text-gray-600">Special handling needed for sandwich construction</p>
-              </div>
-            )}
-
-            {pasting?.isPastingUsed && (
-              <div className="p-3 bg-green-50 border-l-4 border-green-400 text-sm">
-                <p className="font-medium">Pasting Required</p>
-                <p className="text-gray-600">Type: {pasting.pastingType}</p>
-              </div>
-            )}
+      {/* Pasting Details */}
+      {order.pasting?.isPastingUsed && (
+        <div className="mb-6">
+          <h2 className="text-xl font-bold mb-3 bg-gray-200 p-2">Pasting Details</h2>
+          <div className="border rounded-lg p-4 bg-white">
+            <p className="text-sm">Type: <span className="font-normal">{order.pasting.pastingType}</span></p>
           </div>
         </div>
-      </div>
-
-      {/* Quality Control */}
-      <div className="mt-8">
-        <h2 className="text-xl font-semibold mb-4 text-blue-600">Quality Control Checklist</h2>
-        <div className="grid grid-cols-2 gap-4">
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-3">Pre-Production</h3>
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500"/>
-                <span className="text-sm">Artwork/Design Approval</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500"/>
-                <span className="text-sm">Material Verification</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500"/>
-                <span className="text-sm">Die Check</span>
-              </label>
-            </div>
-          </div>
-          
-          <div className="bg-gray-50 p-4 rounded-lg">
-            <h3 className="font-semibold mb-3">Production</h3>
-            <div className="space-y-2">
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500"/>
-                <span className="text-sm">Color Matching</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500"/>
-                <span className="text-sm">Registration Check</span>
-              </label>
-              <label className="flex items-center space-x-2">
-                <input type="checkbox" className="rounded text-blue-600 focus:ring-blue-500"/>
-                <span className="text-sm">Final Quality Inspection</span>
-              </label>
-            </div>
-          </div>
-        </div>
-      </div>
+      )}
 
       {/* Sign-off Section */}
-      <div className="mt-8 pt-8 border-t-2 border-gray-200">
+      <div className="mt-12 print:mt-16">
         <div className="grid grid-cols-3 gap-8">
-          <div className="text-center">
-            <div className="h-20 border-b-2 border-gray-300 mb-2"></div>
-            <p className="text-sm font-medium">Production Manager</p>
-          </div>
-          <div className="text-center">
-            <div className="h-20 border-b-2 border-gray-300 mb-2"></div>
-            <p className="text-sm font-medium">Quality Control</p>
-          </div>
-          <div className="text-center">
-            <div className="h-20 border-b-2 border-gray-300 mb-2"></div>
-            <p className="text-sm font-medium">Client Approval</p>
-          </div>
+          {['Production Manager', 'Quality Control', 'Supervisor'].map((role) => (
+            <div key={role} className="text-center">
+              <div className="border-t border-black pt-4">
+                <p className="text-sm font-medium">{role}</p>
+                <div className="mt-8"></div> {/* Space for signature */}
+                <p className="text-xs text-gray-500 mt-2">Sign & Date</p>
+              </div>
+            </div>
+          ))}
         </div>
+      </div>
+
+      {/* Footer Notes - Optional */}
+      <div className="mt-8 pt-4 border-t border-gray-200">
+        <div className="text-xs text-gray-500 space-y-1">
+          <p>* All measurements are in inches unless otherwise specified</p>
+          <p>* Please verify all specifications before beginning production</p>
+          <p>* Report any discrepancies immediately to the production manager</p>
+        </div>
+      </div>
+
+      {/* Print Info - Only visible when printing */}
+      <div className="hidden print:block text-xs text-gray-400 text-center mt-4">
+        <p>Generated on: {new Date().toLocaleString()}</p>
+        <p>Job Ticket ID: {order.id || 'N/A'}</p>
       </div>
     </div>
   );
