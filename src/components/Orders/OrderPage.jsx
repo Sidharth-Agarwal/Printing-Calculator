@@ -89,8 +89,13 @@ const OrdersPage = () => {
           return new Date(b.deliveryDate) - new Date(a.deliveryDate);
         case "date-asc":
           return new Date(a.deliveryDate) - new Date(b.deliveryDate);
-        case "status":
-          return a.stage.localeCompare(b.stage);
+        case "status": {
+          // Get the index of each stage from the stages array
+          const stageIndexA = stages.indexOf(a.stage);
+          const stageIndexB = stages.indexOf(b.stage);
+          // Sort by stage index (this will follow the order in the stages array)
+          return stageIndexA - stageIndexB;
+        }
         default:
           return new Date(b.date) - new Date(a.date);
       }
