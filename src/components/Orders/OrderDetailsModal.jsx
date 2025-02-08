@@ -4,7 +4,7 @@ import { db } from '../../firebaseConfig';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import TaxInvoice from './TaxInvoice';
-import StyledJobTicket from './StyledJobTicket';
+import OrderJobTicket from './OrderJobTicket';
 
 const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   const [activeView, setActiveView] = useState('details');
@@ -455,7 +455,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
               {activeView === 'invoice' ? (
                 <TaxInvoice order={order} />
               ) : (
-                <StyledJobTicket order={order} />
+                <OrderJobTicket order={order} />
               )}
             </div>
           )}

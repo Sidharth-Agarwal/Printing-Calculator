@@ -70,7 +70,7 @@ const DieImage = ({ imageUrl }) => {
   );
 };
 
-const StyledJobTicket = ({ order }) => {
+const OrderJobTicket = ({ order }) => {
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     return new Date(dateString).toLocaleDateString('en-GB');
@@ -256,15 +256,6 @@ const StyledJobTicket = ({ order }) => {
         </div>
       </div>
 
-      {/* Footer Notes - Optional */}
-      <div className="mt-8 pt-4 border-t border-gray-200">
-        <div className="text-xs text-gray-500 space-y-1">
-          <p>* All measurements are in inches unless otherwise specified</p>
-          <p>* Please verify all specifications before beginning production</p>
-          <p>* Report any discrepancies immediately to the production manager</p>
-        </div>
-      </div>
-
       {/* Print Info - Only visible when printing */}
       <div className="hidden print:block text-xs text-gray-400 text-center mt-4">
         <p>Generated on: {new Date().toLocaleString()}</p>
@@ -274,4 +265,4 @@ const StyledJobTicket = ({ order }) => {
   );
 };
 
-export default StyledJobTicket;
+export default OrderJobTicket;
