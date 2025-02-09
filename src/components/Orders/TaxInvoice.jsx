@@ -840,4 +840,3 @@ const TaxInvoice = ({ order }) => {
 };
 
 export default TaxInvoice;
-
