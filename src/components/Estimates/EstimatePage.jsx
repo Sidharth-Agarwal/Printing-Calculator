@@ -6,6 +6,9 @@ import Estimate from "./Estimate";
 import GroupedJobTicket from "./GroupedJobTicket";
 import PreviewModal from "./PreviewModal";
 import { generateGroupedJobTicketPDF } from "../../utils/pdfUtils";
+import { createRoot } from "react-dom/client";
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 
 const EstimatesPage = () => {
   const [estimatesData, setEstimatesData] = useState({});
@@ -150,30 +153,60 @@ const EstimatesPage = () => {
     try {
       const tempDiv = document.createElement('div');
       document.body.appendChild(tempDiv);
-
-      ReactDOM.render(
-        <GroupedJobTicket 
-          estimates={estimates} 
-          groupKey={groupKey}
-        />, 
-        tempDiv,
-        async () => {
-          try {
-            await generateGroupedJobTicketPDF(tempDiv, groupKey);
-          } finally {
-            ReactDOM.unmountComponentAtNode(tempDiv);
-            document.body.removeChild(tempDiv);
-            setIsGeneratingPDF(false);
-          }
-        }
-      );
+  
+      // Create a promise to handle the rendering and PDF generation
+      await new Promise((resolve, reject) => {
+        const root = createRoot(tempDiv);
+        root.render(
+          <GroupedJobTicket 
+            estimates={estimates} 
+            groupKey={groupKey} 
+            onRenderComplete={async () => {
+              try {
+                // Wait a moment to ensure all images are loaded
+                await new Promise(res => setTimeout(res, 1000));
+  
+                const canvas = await html2canvas(tempDiv, {
+                  scale: 2,
+                  useCORS: true,
+                  logging: false,
+                  allowTaint: true,
+                  imageTimeout: 0
+                });
+  
+                const imgData = canvas.toDataURL('image/jpeg', 1.0);
+                const pdf = new jsPDF({
+                  orientation: 'portrait',
+                  unit: 'mm',
+                  format: 'a4'
+                });
+  
+                const imgWidth = 210;
+                const imgHeight = canvas.height * imgWidth / canvas.width;
+                
+                pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+                pdf.save(`${groupKey}_Job_Ticket_${new Date().toISOString().split('T')[0]}.pdf`);
+  
+                resolve();
+              } catch (error) {
+                console.error('Error generating PDF:', error);
+                reject(error);
+              } finally {
+                root.unmount();
+                document.body.removeChild(tempDiv);
+              }
+            }}
+          />
+        );
+      });
     } catch (error) {
       console.error('Error generating group job ticket:', error);
       alert('Failed to generate job ticket. Please try again.');
+    } finally {
       setIsGeneratingPDF(false);
     }
   };
-
+  
   const toggleGroup = (groupKey) => {
     setExpandedGroups(prev => ({
       ...prev,

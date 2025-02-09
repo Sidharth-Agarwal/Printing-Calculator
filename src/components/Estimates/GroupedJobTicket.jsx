@@ -1,28 +1,52 @@
 import React, { useState, useEffect } from 'react';
 
 const DieImage = ({ imageUrl }) => {
+  const [imageData, setImageData] = useState(null);
   const [imageStatus, setImageStatus] = useState('loading');
+  const [imageDimensions, setImageDimensions] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
-    if (!imageUrl) {
-      setImageStatus('error');
-      return;
-    }
+    const loadImage = async () => {
+      if (!imageUrl) {
+        setImageStatus('error');
+        return;
+      }
 
-    const img = new Image();
-    img.onload = () => setImageStatus('loaded');
-    img.onerror = () => setImageStatus('error');
-    img.src = imageUrl;
+      try {
+        const response = await fetch(imageUrl);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        
+        const img = new Image();
+        img.onload = () => {
+          setImageData(objectUrl);
+          setImageDimensions({ width: img.width, height: img.height });
+          setImageStatus('loaded');
+        };
+        img.onerror = () => {
+          console.error('Error loading image:', imageUrl);
+          URL.revokeObjectURL(objectUrl);
+          setImageStatus('error');
+        };
+        img.src = objectUrl;
+      } catch (error) {
+        console.error('Error loading image:', error);
+        setImageStatus('error');
+      }
+    };
+
+    loadImage();
 
     return () => {
-      img.onload = null;
-      img.onerror = null;
+      if (imageData) {
+        URL.revokeObjectURL(imageData);
+      }
     };
   }, [imageUrl]);
 
   if (imageStatus === 'loading') {
     return (
-      <div className="border rounded p-1 h-16 flex items-center justify-center bg-gray-50">
+      <div className="border rounded p-1 h-32 flex items-center justify-center bg-gray-50">
         <div className="text-center text-gray-500">
           <svg className="animate-spin h-4 w-4 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
             <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" />
@@ -35,7 +59,7 @@ const DieImage = ({ imageUrl }) => {
 
   if (imageStatus === 'error') {
     return (
-      <div className="border rounded p-1 h-16 flex items-center justify-center bg-gray-50">
+      <div className="border rounded p-1 h-32 flex items-center justify-center bg-gray-50">
         <div className="text-center text-gray-500">
           <svg className="w-4 h-4 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -45,12 +69,29 @@ const DieImage = ({ imageUrl }) => {
     );
   }
 
+  // Calculate aspect ratio and max height
+  const maxHeight = 150; // Adjust this value as needed
+  const aspectRatio = imageDimensions.width / imageDimensions.height;
+  const displayHeight = Math.min(maxHeight, imageDimensions.height);
+  const displayWidth = displayHeight * aspectRatio;
+
   return (
-    <div className="border rounded p-1 h-36 bg-white">
+    <div 
+      className="border rounded p-1 bg-white flex justify-center items-center" 
+      style={{ 
+        height: `${displayHeight}px`, 
+        width: '100%' 
+      }}
+    >
       <img 
-        src={imageUrl} 
+        src={imageData} 
         alt="Die" 
-        className="w-full h-full object-contain"
+        style={{
+          maxHeight: '100%',
+          maxWidth: '100%',
+          objectFit: 'contain'
+        }}
+        crossOrigin="anonymous"
         onError={() => setImageStatus('error')}
       />
     </div>
@@ -63,7 +104,7 @@ const LPSection = ({ lpDetails }) => {
   return (
     <div className="space-y-1">
       <p className="font-medium text-xs">Colors: {lpDetails.noOfColors}</p>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
         {lpDetails.colorDetails.map((color, idx) => (
           <div key={idx} className="bg-white text-xs space-y-1 p-2 rounded">
             <p><strong>Color {idx + 1}:</strong> {color.pantoneType}</p>
@@ -83,7 +124,7 @@ const FSSection = ({ fsDetails }) => {
   return (
     <div className="space-y-1">
       <p className="font-medium text-xs">Type: {fsDetails.fsType}</p>
-      <div className="flex gap-2">
+      <div className="flex flex-col gap-2">
         {fsDetails.foilDetails.map((foil, idx) => (
           <div key={idx} className="bg-white text-xs space-y-1 p-2 rounded">
             <p><strong>Foil {idx + 1}:</strong> {foil.foilType}</p>
@@ -252,13 +293,31 @@ const EstimateDetails = ({ estimate, index }) => {
   );
 };
 
-const GroupedJobTicket = ({ estimates, groupKey }) => {
+const GroupedJobTicket = ({ estimates, groupKey, onRenderComplete }) => {
   const [clientName, projectName] = groupKey.split('-');
 
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     return new Date(dateString).toLocaleDateString('en-GB');
   };
+
+  useEffect(() => {
+    // Ensure images are loaded before calling onRenderComplete
+    const images = document.getElementsByTagName('img');
+    const imagePromises = Array.from(images).map(img => {
+      if (img.complete) return Promise.resolve();
+      return new Promise((resolve, reject) => {
+        img.onload = resolve;
+        img.onerror = resolve; // Resolve even if image fails to load
+      });
+    });
+
+    Promise.all(imagePromises).then(() => {
+      if (onRenderComplete) {
+        onRenderComplete();
+      }
+    });
+  }, [onRenderComplete]);
 
   return (
     <div className="bg-white p-4 mx-auto" style={{ maxWidth: '100%', margin: '0 auto' }}>
@@ -284,7 +343,7 @@ const GroupedJobTicket = ({ estimates, groupKey }) => {
       </div>
 
       {/* Estimates */}
-      <div className="mb-4 space-y-2">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-2">
         {estimates.map((estimate, index) => (
           <EstimateDetails 
             key={estimate.id} 
@@ -294,7 +353,7 @@ const GroupedJobTicket = ({ estimates, groupKey }) => {
         ))}
       </div>
 
-      {/* Print Info */}
+      {/* Print Info - Only visible when printing */}
       <div className="hidden print:block text-xs text-gray-400 text-center mt-4">
         <p>Generated on: {new Date().toLocaleString()}</p>
         <p>Group Job Ticket - {clientName} - {projectName}</p>

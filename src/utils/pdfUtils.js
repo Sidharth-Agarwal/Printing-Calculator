@@ -1469,31 +1469,62 @@ const formatDate = (dateString) => {
 
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
+import { createRoot } from 'react-dom/client';
 
 export const generateGroupedJobTicketPDF = async (contentRef, groupKey) => {
   if (!contentRef) return;
   const [clientName, projectName] = groupKey.split('-');
 
   try {
-    // Wait for all images to load
+    // Pre-process all images
     const images = contentRef.getElementsByTagName('img');
-    const imagePromises = Array.from(images).map(img => {
+    const imagePromises = Array.from(images).map(async (img) => {
+      try {
+        if (img.src.startsWith('blob:')) {
+          return; // Skip if already blob URL
+        }
+        const response = await fetch(img.src);
+        const blob = await response.blob();
+        const objectUrl = URL.createObjectURL(blob);
+        img.src = objectUrl;
+        return objectUrl;
+      } catch (error) {
+        console.error('Error loading image:', error);
+        img.src = '/api/placeholder/400/320';
+      }
+    });
+
+    const objectUrls = (await Promise.all(imagePromises)).filter(Boolean);
+
+    // Wait for all images to load
+    const loadImagePromises = Array.from(images).map(img => {
       if (img.complete) return Promise.resolve();
-      return new Promise((resolve, reject) => {
+      return new Promise((resolve) => {
         img.onload = resolve;
-        img.onerror = reject;
+        img.onerror = () => {
+          img.src = '/api/placeholder/400/320';
+          resolve();
+        };
       });
     });
 
-    await Promise.all(imagePromises);
+    await Promise.all(loadImagePromises);
 
     // Generate canvas from the HTML content
     const canvas = await html2canvas(contentRef, {
-      scale: 2, // Higher scale for better quality
-      useCORS: true, // Enable CORS for images
-      logging: false,
+      scale: 2,
+      useCORS: true,
       allowTaint: true,
-      imageTimeout: 0
+      logging: false,
+      imageTimeout: 0,
+      onclone: (clonedDoc) => {
+        Array.from(clonedDoc.getElementsByTagName('img')).forEach(img => {
+          if (!img.complete || img.naturalHeight === 0) {
+            img.src = '/api/placeholder/400/320';
+          }
+          img.crossOrigin = 'anonymous';
+        });
+      }
     });
     
     // Convert canvas to image data
@@ -1513,23 +1544,24 @@ export const generateGroupedJobTicketPDF = async (contentRef, groupKey) => {
     // Handle multiple pages if content is too long
     let position = 0;
     while (position < imgHeight) {
-      // Add new page if not first page
       if (position > 0) {
         pdf.addPage();
       }
       
-      // Add image to page
       pdf.addImage(
         imgData,
         'JPEG',
         0,
-        position === 0 ? 0 : -position, // Adjust position for continuation
+        position === 0 ? 0 : -position,
         imgWidth,
         imgHeight
       );
       
       position += 297; // A4 height in mm
     }
+
+    // Cleanup object URLs
+    objectUrls.forEach(URL.revokeObjectURL);
 
     // Save the PDF
     pdf.save(`Group_Job_Ticket_${clientName}_${projectName}_${new Date().toISOString().split('T')[0]}.pdf`);
@@ -1538,10 +1570,4 @@ export const generateGroupedJobTicketPDF = async (contentRef, groupKey) => {
     console.error("Error generating PDF:", error);
     throw error;
   }
-};
-
-// Helper function to calculate page height
-const calculatePDFHeight = (element) => {
-  const { height } = element.getBoundingClientRect();
-  return height * (210 / element.offsetWidth); // Convert to mm based on A4 width (210mm)
 };
