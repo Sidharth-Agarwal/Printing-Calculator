@@ -3,8 +3,8 @@ import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
-import TaxInvoice from './TaxInvoice';
 import OrderJobTicket from './OrderJobTicket';
+import TaxInvoice from './TaxInvoice';
 
 const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   const [activeView, setActiveView] = useState('details');
