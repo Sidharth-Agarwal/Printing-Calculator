@@ -60,7 +60,7 @@ const Pasting = ({ state, dispatch, onPrevious, onNext }) => {
             }`}
           >
             <option value="">Select Pasting Type</option>
-            <option value="DST">DST</option>
+            <option value="DST">DST - Double Sided Tape</option>
             <option value="Fold">Fold</option>
             <option value="Paste">Paste</option>
             <option value="Fold & Paste">Fold & Paste</option>
