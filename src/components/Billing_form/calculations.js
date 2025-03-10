@@ -55,6 +55,81 @@ const calculatePaperAndCuttingCosts = async (state) => {
 };
 
 // Function to calculate LP costs
+// const calculateLPCosts = async (state) => {
+//   const { lpDetails, orderAndPaper } = state;
+//   const totalCards = parseInt(orderAndPaper.quantity, 10);
+
+//   if (!lpDetails.isLPUsed || !lpDetails.colorDetails?.length) {
+//     return { lpCostPerCard: 0 };
+//   }
+
+//   let totalLPCosting = 0;
+
+//   // Fetch MR details for all colors in LP details
+//   const mrDetailsArray = await fetchMRDetailsForLPDetails(lpDetails);
+//   console.log(mrDetailsArray)
+
+//   // Positive Film Calculations
+//   length = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+//   breadth = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+
+//   const positiveFilm = "Positive Film"; // Fallback to "Polymer Plate" if not provided
+//   const positives = await fetchMaterialDetails(positiveFilm);
+
+//   if (!positives) {
+//     console.warn(`Material details not found for plate type: ${plateType}`);
+//   }
+  
+//   const postiveFilmCost = (length * breadth * positives.finalCostPerUnit);
+
+//   totalLPCosting = totalLPCosting + postiveFilmCost
+
+//   for (let i = 0; i < lpDetails.colorDetails.length; i++) {
+//     let lpCostForEachIteration = 0;
+
+//     const color = lpDetails.colorDetails[i];
+
+//     // Step 1: Calculate cost per color (Pantone type)
+//     const colorCostPerCard = 1; // INR 1 for color
+//     const impressionCostPerCard = 0.5; // INR 0.5 for impression
+//     let totalLPColorCost = (colorCostPerCard + impressionCostPerCard) * totalCards;
+//     console.log("color cost : ",totalLPColorCost)
+
+//     const plateArea =
+//       parseFloat(color.plateDimensions.length || 0) *
+//       parseFloat(color.plateDimensions.breadth || 0); // cm²
+
+//     // Step 2: Calculate polymer plate cost dynamically based on plate type
+//     const plateType = color.plateType || "Polymer Plate"; // Fallback to "Polymer Plate" if not provided
+//     const materialDetails = await fetchMaterialDetails(plateType);
+
+//     if (!materialDetails) {
+//       console.warn(`Material details not found for plate type: ${plateType}`);
+//       continue; // Skip this iteration if material details are not found
+//     }
+//     const plateCost = plateArea * parseFloat(materialDetails.finalCostPerUnit || 0);
+
+//     // Step 3: Calculate MR cost
+//     const mrDetails = mrDetailsArray[i];
+
+//     let totalMRRate = 0;
+    
+//     if (mrDetails) {
+//       totalMRRate = parseFloat(mrDetails.finalRate || 0)
+//     } else {
+//       console.warn(`No MR details found for color index ${i}`);
+//     }
+
+//     lpCostForEachIteration = totalLPColorCost + plateCost + totalMRRate
+    
+//     totalLPCosting = totalLPCosting + lpCostForEachIteration
+//   }
+
+//   const lpCostPerCard = totalLPCosting / totalCards;
+
+//   return { lpCostPerCard: lpCostPerCard.toFixed(2) };
+// };
+// Function to calculate LP costs
 const calculateLPCosts = async (state) => {
   const { lpDetails, orderAndPaper } = state;
   const totalCards = parseInt(orderAndPaper.quantity, 10);
@@ -67,22 +142,21 @@ const calculateLPCosts = async (state) => {
 
   // Fetch MR details for all colors in LP details
   const mrDetailsArray = await fetchMRDetailsForLPDetails(lpDetails);
-  console.log(mrDetailsArray)
+  console.log(mrDetailsArray);
 
   // Positive Film Calculations
-  length = parseFloat(orderAndPaper.dieSize.length) * 2.54;
-  breadth = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+  const dieSizeLength = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+  const dieSizeBreadth = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
 
   const positiveFilm = "Positive Film"; // Fallback to "Polymer Plate" if not provided
   const positives = await fetchMaterialDetails(positiveFilm);
 
   if (!positives) {
-    console.warn(`Material details not found for plate type: ${plateType}`);
+    console.warn(`Material details not found for plate type: ${positiveFilm}`);
+  } else {
+    const postiveFilmCost = dieSizeLength * dieSizeBreadth * positives.finalCostPerUnit;
+    totalLPCosting = totalLPCosting + postiveFilmCost;
   }
-  
-  const postiveFilmCost = (length * breadth * positives.finalCostPerUnit);
-
-  totalLPCosting = totalLPCosting + postiveFilmCost
 
   for (let i = 0; i < lpDetails.colorDetails.length; i++) {
     let lpCostForEachIteration = 0;
@@ -93,7 +167,7 @@ const calculateLPCosts = async (state) => {
     const colorCostPerCard = 1; // INR 1 for color
     const impressionCostPerCard = 0.5; // INR 0.5 for impression
     let totalLPColorCost = (colorCostPerCard + impressionCostPerCard) * totalCards;
-    console.log("color cost : ",totalLPColorCost)
+    console.log("color cost : ", totalLPColorCost);
 
     const plateArea =
       parseFloat(color.plateDimensions.length || 0) *
@@ -115,14 +189,14 @@ const calculateLPCosts = async (state) => {
     let totalMRRate = 0;
     
     if (mrDetails) {
-      totalMRRate = parseFloat(mrDetails.finalRate || 0)
+      totalMRRate = parseFloat(mrDetails.finalRate || 0);
     } else {
       console.warn(`No MR details found for color index ${i}`);
     }
 
-    lpCostForEachIteration = totalLPColorCost + plateCost + totalMRRate
+    lpCostForEachIteration = totalLPColorCost + plateCost + totalMRRate;
     
-    totalLPCosting = totalLPCosting + lpCostForEachIteration
+    totalLPCosting = totalLPCosting + lpCostForEachIteration;
   }
 
   const lpCostPerCard = totalLPCosting / totalCards;
