@@ -25,30 +25,6 @@ export const fetchPaperDetails = async (paperName) => {
   }
 };
 
-// /**
-//  * Fetch material details from the Firebase Firestore database by material name.
-//  * @param {string} materialName - The name of the material to fetch.
-//  * @returns {Promise<Object|null>} - The material details or null if not found.
-//  */
-// export const fetchMaterialDetails = async (materialName) => {
-//   try {
-//     const materialsCollection = collection(db, "materials"); // Replace "materials" with your collection name in Firestore
-//     const q = query(materialsCollection, where("materialName", "==", materialName));
-//     const querySnapshot = await getDocs(q);
-
-//     if (!querySnapshot.empty) {
-//       const materialData = querySnapshot.docs[0].data();
-//       return materialData; // Return the first matching document's data
-//     } else {
-//       console.warn(`No material found with the name: ${materialName}`);
-//       return null;
-//     }
-//   } catch (error) {
-//     console.error("Error fetching material details:", error);
-//     throw new Error("Failed to fetch material details");
-//   }
-// };
-
 /**
  * Fetch material details from the Firebase Firestore database by material name.
  * @param {string} materialName - The name of the material to fetch.
@@ -62,7 +38,7 @@ export const fetchMaterialDetails = async (materialName) => {
 
     if (!querySnapshot.empty) {
       const materialData = querySnapshot.docs[0].data();
-      console.log(materialData, materialName)
+
       return materialData; // Return the first matching document's data
     } else {
       console.warn(`No material found with the name: ${materialName}`);
@@ -97,7 +73,7 @@ export const fetchMRDetailsForLPDetails = async (lpDetails) => {
       }
 
       const lpMRConcatenate = `LP MR ${mrType.toUpperCase()}`; // Construct the concatenate field
-      console.log(`Querying Firestore with concatenate: ${lpMRConcatenate}`);
+      // console.log(`Querying Firestore with concatenate: ${lpMRConcatenate}`);
 
       const q = query(
         standardRatesCollection,
@@ -107,7 +83,7 @@ export const fetchMRDetailsForLPDetails = async (lpDetails) => {
 
       if (!querySnapshot.empty) {
         const mrDetails = querySnapshot.docs[0].data();
-        console.log("Found MR details:", mrDetails);
+
         mrDetailsArray.push(mrDetails);
       } else {
         console.warn(`No LP MR details found for type: ${mrType}`);
@@ -175,7 +151,7 @@ export const fetchMRDetailsForEMBDetails = async (mrType) => {
     const standardRatesCollection = collection(db, "standard_rates");
     const embMRConcatenate = `EMB MR ${mrType.toUpperCase()}`; // Construct the concatenate field
 
-    console.log(`Querying Firestore with concatenate: ${embMRConcatenate}`);
+    // console.log(`Querying Firestore with concatenate: ${embMRConcatenate}`);
     const q = query(
       standardRatesCollection,
       where("concatenate", "==", embMRConcatenate)
@@ -184,7 +160,7 @@ export const fetchMRDetailsForEMBDetails = async (mrType) => {
 
     if (!querySnapshot.empty) {
       const mrDetails = querySnapshot.docs[0].data();
-      console.log("Found MR details:", mrDetails);
+      
       return mrDetails; // Return the first matching document's data
     } else {
       console.warn(`No EMB MR details found for type: ${mrType}`);
@@ -231,48 +207,10 @@ export const fetchPaperDetailsByDimensions = async (length, breadth, paperName) 
       return null;
     }
 
-    console.log("Matching paper found:", matchingPaper);
+    // console.log("Matching paper found:", matchingPaper);
     return matchingPaper;
   } catch (error) {
     console.error("Error fetching paper details by dimensions:", error);
     throw new Error("Failed to fetch paper details based on dimensions.");
   }
 };
-
-// export const fetchPaperDetailsByDimensions = async (length, breadth) => {
-//   try {
-//     if (!length || !breadth) {
-//       console.warn("Length or breadth is missing for fetching paper details.");
-//       return null;
-//     }
-
-//     const papersCollection = collection(db, "papers");
-
-//     // Ensure query parameters are rounded to 1 decimal place
-//     const roundedLength = parseFloat(length).toFixed(1);
-//     const roundedBreadth = parseFloat(breadth).toFixed(1);
-
-//     console.log(`Querying Firestore for paper with dimensions: ${roundedLength} x ${roundedBreadth}`);
-
-//     // Fetch the paper details using the provided dimensions
-//     const q = query(
-//       papersCollection,
-//       where("length", "==", parseFloat(roundedLength)),
-//       where("breadth", "==", parseFloat(roundedBreadth))
-//     );
-
-//     const querySnapshot = await getDocs(q);
-
-//     if (!querySnapshot.empty) {
-//       const paperDetails = querySnapshot.docs[0].data();
-//       console.log("Found paper details:", paperDetails);
-//       return paperDetails; // Return the entire paper details object
-//     } else {
-//       console.warn(`No paper found for dimensions: ${roundedLength} x ${roundedBreadth}`);
-//       return null;
-//     }
-//   } catch (error) {
-//     console.error("Error fetching paper details by dimensions:", error);
-//     throw new Error("Failed to fetch paper details based on dimensions.");
-//   }
-// };
