@@ -34,16 +34,35 @@ const DieSelectionPopup = ({ onClose, dispatch, onAddNewDie }) => {
 
   const handleSearch = () => {
     const { length, breadth } = searchDimensions;
-    if (!length || !breadth) {
-      alert("Please enter both length and breadth to search!");
+    
+    // Check if at least one dimension is provided
+    if (!length && !breadth) {
+      alert("Please enter at least one dimension (length or breadth) to search!");
       return;
     }
 
-    const matches = dies.filter(
-      (die) =>
-        parseFloat(die.dieSizeL) === parseFloat(length) &&
-        parseFloat(die.dieSizeB) === parseFloat(breadth)
-    );
+    let matches = [];
+
+    // Case 1: Both length and breadth provided
+    if (length && breadth) {
+      matches = dies.filter(
+        (die) =>
+          parseFloat(die.dieSizeL) === parseFloat(length) &&
+          parseFloat(die.dieSizeB) === parseFloat(breadth)
+      );
+    }
+    // Case 2: Only length provided
+    else if (length && !breadth) {
+      matches = dies.filter(
+        (die) => parseFloat(die.dieSizeL) === parseFloat(length)
+      );
+    }
+    // Case 3: Only breadth provided
+    else if (!length && breadth) {
+      matches = dies.filter(
+        (die) => parseFloat(die.dieSizeB) === parseFloat(breadth)
+      );
+    }
 
     setFilteredDies(matches);
   };
@@ -69,7 +88,7 @@ const DieSelectionPopup = ({ onClose, dispatch, onAddNewDie }) => {
         {/* Search Fields */}
         <div className="grid grid-cols-2 gap-4 mb-6">
           <div>
-            <label className="block text-sm mb-1">Length *</label>
+            <label className="block text-sm mb-1">Length</label>
             <input
               type="number"
               name="length"
@@ -77,11 +96,10 @@ const DieSelectionPopup = ({ onClose, dispatch, onAddNewDie }) => {
               value={searchDimensions.length}
               onChange={handleSearchChange}
               className="border text-sm mt-1 rounded-md p-2 w-full"
-              required
             />
           </div>
           <div>
-            <label className="block text-sm mb-1">Breadth *</label>
+            <label className="block text-sm mb-1">Breadth</label>
             <input
               type="number"
               name="breadth"
@@ -89,7 +107,6 @@ const DieSelectionPopup = ({ onClose, dispatch, onAddNewDie }) => {
               value={searchDimensions.breadth}
               onChange={handleSearchChange}
               className="border text-sm mt-1 rounded-md p-2 w-full"
-              required
             />
           </div>
         </div>
@@ -134,7 +151,7 @@ const DieSelectionPopup = ({ onClose, dispatch, onAddNewDie }) => {
             ))
           ) : (
             <p className="text-sm text-gray-500">
-              {searchDimensions.length && searchDimensions.breadth
+              {searchDimensions.length || searchDimensions.breadth 
                 ? "No dies found for the given dimensions."
                 : "Enter dimensions to search for dies."}
             </p>
