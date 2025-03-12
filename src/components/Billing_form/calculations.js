@@ -55,81 +55,6 @@ const calculatePaperAndCuttingCosts = async (state) => {
 };
 
 // Function to calculate LP costs
-// const calculateLPCosts = async (state) => {
-//   const { lpDetails, orderAndPaper } = state;
-//   const totalCards = parseInt(orderAndPaper.quantity, 10);
-
-//   if (!lpDetails.isLPUsed || !lpDetails.colorDetails?.length) {
-//     return { lpCostPerCard: 0 };
-//   }
-
-//   let totalLPCosting = 0;
-
-//   // Fetch MR details for all colors in LP details
-//   const mrDetailsArray = await fetchMRDetailsForLPDetails(lpDetails);
-//   console.log(mrDetailsArray)
-
-//   // Positive Film Calculations
-//   length = parseFloat(orderAndPaper.dieSize.length) * 2.54;
-//   breadth = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-
-//   const positiveFilm = "Positive Film"; // Fallback to "Polymer Plate" if not provided
-//   const positives = await fetchMaterialDetails(positiveFilm);
-
-//   if (!positives) {
-//     console.warn(`Material details not found for plate type: ${plateType}`);
-//   }
-  
-//   const postiveFilmCost = (length * breadth * positives.finalCostPerUnit);
-
-//   totalLPCosting = totalLPCosting + postiveFilmCost
-
-//   for (let i = 0; i < lpDetails.colorDetails.length; i++) {
-//     let lpCostForEachIteration = 0;
-
-//     const color = lpDetails.colorDetails[i];
-
-//     // Step 1: Calculate cost per color (Pantone type)
-//     const colorCostPerCard = 1; // INR 1 for color
-//     const impressionCostPerCard = 0.5; // INR 0.5 for impression
-//     let totalLPColorCost = (colorCostPerCard + impressionCostPerCard) * totalCards;
-//     console.log("color cost : ",totalLPColorCost)
-
-//     const plateArea =
-//       parseFloat(color.plateDimensions.length || 0) *
-//       parseFloat(color.plateDimensions.breadth || 0); // cm²
-
-//     // Step 2: Calculate polymer plate cost dynamically based on plate type
-//     const plateType = color.plateType || "Polymer Plate"; // Fallback to "Polymer Plate" if not provided
-//     const materialDetails = await fetchMaterialDetails(plateType);
-
-//     if (!materialDetails) {
-//       console.warn(`Material details not found for plate type: ${plateType}`);
-//       continue; // Skip this iteration if material details are not found
-//     }
-//     const plateCost = plateArea * parseFloat(materialDetails.finalCostPerUnit || 0);
-
-//     // Step 3: Calculate MR cost
-//     const mrDetails = mrDetailsArray[i];
-
-//     let totalMRRate = 0;
-    
-//     if (mrDetails) {
-//       totalMRRate = parseFloat(mrDetails.finalRate || 0)
-//     } else {
-//       console.warn(`No MR details found for color index ${i}`);
-//     }
-
-//     lpCostForEachIteration = totalLPColorCost + plateCost + totalMRRate
-    
-//     totalLPCosting = totalLPCosting + lpCostForEachIteration
-//   }
-
-//   const lpCostPerCard = totalLPCosting / totalCards;
-
-//   return { lpCostPerCard: lpCostPerCard.toFixed(2) };
-// };
-// Function to calculate LP costs
 const calculateLPCosts = async (state) => {
   const { lpDetails, orderAndPaper } = state;
   const totalCards = parseInt(orderAndPaper.quantity, 10);
@@ -661,6 +586,62 @@ const calculateSandwichCosts = async (sandwichDetails, totalCards) => {
   
 //   return { pastingCostPerCard };
 // };
+// const calculatePastingCosts = async (state) => {
+//   const { pasting, orderAndPaper } = state;
+//   const totalCards = parseInt(orderAndPaper.quantity, 10);
+
+//   if (!pasting.isPastingUsed) {
+//     return { pastingCostPerCard: 0 };
+//   }
+
+//   let totalPastingCosting = 0;
+
+//   // Get the pasting type
+//   const pastingType = pasting.pastingType;
+  
+//   // Only process if pastingType is DST
+//   if (pastingType === "DST") {
+//     // Try all possible variations of the DST material name
+//     const materialNames = ["DST Type", "DST", "DST Decal FT7358"];
+//     let dstMaterial = null;
+    
+//     // Try each possible material name until we find a match
+//     for (const name of materialNames) {
+//       const material = await fetchMaterialDetails(name);
+//       if (material) {
+//         dstMaterial = material;
+//         console.log(`Found material details for: ${name}`, dstMaterial);
+//         break;
+//       }
+//     }
+    
+//     if (dstMaterial) {
+//       // Use the die dimensions for calculation
+//       const length = parseFloat(orderAndPaper.dieSize.length) * 2.54; // Convert to cm
+//       const breadth = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+      
+//       // Calculate DST cost using the formula: (Length * Breadth * Rate)
+//       const dstCost = length * breadth * parseFloat(dstMaterial.finalCostPerUnit || 0);
+      
+//       // Total pasting cost (not divided by cards yet)
+//       totalPastingCosting = dstCost;
+//       console.log(`DST cost calculation: Length=${length}cm, Breadth=${breadth}cm, Rate=${dstMaterial.finalCostPerUnit}, Total=${totalPastingCosting}`);
+//     } else {
+//       console.warn("Material details not found for any DST variant");
+//       // Provide a fallback cost
+//       const fallbackCost = 5.00; // Example fallback total cost
+//       totalPastingCosting = fallbackCost;
+//       console.log(`Using fallback DST cost: ${fallbackCost}`);
+//     }
+//   } else {
+//     console.warn(`Pasting type ${pastingType} is not currently supported for calculation`);
+//   }
+  
+//   // Calculate per card cost: (Length * Breadth * Rate) / total cards
+//   const pastingCostPerCard = (totalPastingCosting / totalCards).toFixed(2);
+  
+//   return { pastingCostPerCard };
+// };
 const calculatePastingCosts = async (state) => {
   const { pasting, orderAndPaper } = state;
   const totalCards = parseInt(orderAndPaper.quantity, 10);
@@ -712,11 +693,21 @@ const calculatePastingCosts = async (state) => {
     console.warn(`Pasting type ${pastingType} is not currently supported for calculation`);
   }
   
-  // Calculate per card cost: (Length * Breadth * Rate) / total cards
-  const pastingCostPerCard = (totalPastingCosting / totalCards).toFixed(2);
+  // Calculate per card cost, if it's extremely small, apply a minimum value
+  // This ensures visibility in the UI
+  let pastingCostPerCard = (totalPastingCosting / totalCards).toFixed(2);
   
-  return { pastingCostPerCard };
+  // Apply a minimum threshold of 0.01 if the cost is non-zero but rounds to zero
+  if (totalPastingCosting > 0 && parseFloat(pastingCostPerCard) === 0) {
+    pastingCostPerCard = "0.01"; // Minimum display value for non-zero costs
+  }
+  
+  return { 
+    pastingCostPerCard,
+    totalPastingCost: totalPastingCosting.toFixed(2) // Also return the total cost for all cards
+  };
 };
+
 
 export const calculateEstimateCosts = async (state) => {
   try {
@@ -762,43 +753,3 @@ export const calculateEstimateCosts = async (state) => {
     return { error: "Error calculating costs. Please try again." };
   }
 };
-
-// export const calculateEstimateCosts = async (state) => {
-//   try {
-//     const paperAndCuttingCosts = await calculatePaperAndCuttingCosts(state);
-//     if (paperAndCuttingCosts.error) return { error: paperAndCuttingCosts.error };
-
-//     const lpCosts = await calculateLPCosts(state);
-//     if (lpCosts.error) return { error: lpCosts.error };
-
-//     const fsCosts = await calculateFSCosts(state);
-//     if (fsCosts.error) return { error: fsCosts.error };
-
-//     const embCosts = await calculateEMBCosts(state);
-//     if (embCosts.error) return { error: embCosts.error };
-
-//     const digiCosts = await calculateDigiDetailsCosts(
-//       state.digiDetails,
-//       state.orderAndPaper.dieSize,
-//       parseInt(state.orderAndPaper.quantity, 10)
-//     );
-//     if (digiCosts.error) return { error: digiCosts.error };    
-
-//     // Handle Sandwich Costs
-//     const sandwichCosts = await calculateSandwichCosts(state.sandwich, state.orderAndPaper.quantity);
-//     if (sandwichCosts.error) return { error: sandwichCosts.error };
-
-//     // Combine all calculated costs
-//     return {
-//       ...paperAndCuttingCosts,
-//       ...lpCosts,
-//       ...fsCosts,
-//       ...embCosts,
-//       ...digiCosts,
-//       ...sandwichCosts,
-//     };
-//   } catch (error) {
-//     console.error("Error calculating estimate costs:", error);
-//     return { error: "Error calculating costs. Please try again." };
-//   }
-// };
