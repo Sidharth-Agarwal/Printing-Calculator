@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 
 const ReviewAndSubmit = ({ 
   state, 
@@ -9,6 +9,8 @@ const ReviewAndSubmit = ({
   isEditMode = false,
   isSaving = false 
 }) => {
+  const [markupPercentage, setMarkupPercentage] = useState();
+
   const fieldLabels = {
     clientName: "Name of the Client",
     projectName: "Name of the Project",
@@ -57,7 +59,8 @@ const ReviewAndSubmit = ({
     digiCostPerCard: "Digital Print Cost per Unit",
     pastingCostPerCard: "Pasting Cost per Unit",
     pastingType: "Type of Pasting",
-    totalPastingCost: "Total Pasting Cost"
+    totalPastingCost: "Total Pasting Cost",
+    markupPercentage: "Markup Percentage",
   };
 
   const costFieldsOrder = [
@@ -85,6 +88,11 @@ const ReviewAndSubmit = ({
       .replace(/([0-9])([a-z])/g, "$1 $2")
       .replace(/([A-Z][a-z]+)/g, (match) => match.charAt(0).toUpperCase() + match.slice(1))
       .trim();
+  };
+
+  const handleMarkupChange = (e) => {
+    const value = parseFloat(e.target.value) || 0;
+    setMarkupPercentage(Math.max(0, value)); // Only ensure it's not negative
   };
 
   const renderValue = (key, value) => {
@@ -237,7 +245,7 @@ const ReviewAndSubmit = ({
       'fsCostPerCardSandwich',
       'embCostPerCardSandwich',
       'digiCostPerCard',
-      'pastingCostPerCard' // Include pasting cost in total calculation
+      'pastingCostPerCard'
     ];
 
     // Calculate base cost per card
@@ -252,12 +260,19 @@ const ReviewAndSubmit = ({
     // Calculate overhead cost
     const overheadCost = baseCost * (OVERHEAD_PERCENTAGE / 100);
     
-    // Return total cost including wastage and overhead
+    // Calculate cost with wastage and overhead
+    const costWithOverhead = baseCost + wastageCost + overheadCost;
+    
+    // Calculate markup cost
+    const markupCost = costWithOverhead * (markupPercentage / 100);
+    
+    // Return total cost including wastage, overhead, and markup
     return {
       baseCost,
       wastageCost,
       overheadCost,
-      totalCost: baseCost + wastageCost + overheadCost
+      markupCost,
+      totalCost: costWithOverhead + markupCost
     };
   };
   
@@ -272,12 +287,13 @@ const ReviewAndSubmit = ({
         console.log(`totalPastingCost: ${calculations.totalPastingCost} (${typeof calculations.totalPastingCost})`);
       }
       
-      // Log the calculated costs with wastage and overhead
+      // Log the calculated costs with wastage, overhead, and markup
       const costs = calculateTotalCostPerCard(calculations);
-      console.log("Calculated costs with wastage and overhead:");
+      console.log("Calculated costs with wastage, overhead, and markup:");
       console.log(`Base cost: ${costs.baseCost.toFixed(2)}`);
       console.log(`Wastage (5%): ${costs.wastageCost.toFixed(2)}`);
       console.log(`Overhead (35%): ${costs.overheadCost.toFixed(2)}`);
+      console.log(`Markup (${markupPercentage}%): ${costs.markupCost.toFixed(2)}`);
       console.log(`Total per card: ${costs.totalCost.toFixed(2)}`);
       console.log(`Total for all cards: ${(costs.totalCost * (state.orderAndPaper?.quantity || 0)).toFixed(2)}`);
     }
@@ -285,7 +301,48 @@ const ReviewAndSubmit = ({
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onCreateEstimate();
+    
+    // Include the markup percentage and other calculated values in the estimate data
+    if (calculations) {
+      const costs = calculateTotalCostPerCard(calculations);
+      
+      // Create an enhanced calculations object with all the cost details
+      const enhancedCalculations = {
+        ...calculations,
+        // Standard cost components
+        baseCost: costs.baseCost.toFixed(2),
+        wastagePercentage: 5, // Store the actual percentages used
+        wastageAmount: costs.wastageCost.toFixed(2),
+        overheadPercentage: 35,
+        overheadAmount: costs.overheadCost.toFixed(2),
+        
+        // Markup information
+        markupPercentage: markupPercentage,
+        markupAmount: costs.markupCost.toFixed(2),
+        
+        // Totals
+        subtotalPerCard: (costs.baseCost + costs.wastageCost + costs.overheadCost).toFixed(2),
+        totalCostPerCard: costs.totalCost.toFixed(2),
+        totalCost: (costs.totalCost * (state.orderAndPaper?.quantity || 0)).toFixed(2)
+      };
+      
+      // Log the final payload going to Firebase
+      console.log("=== FIREBASE PAYLOAD ===");
+      console.log("Enhanced calculations:", enhancedCalculations);
+      
+      // Full data payload being saved
+      const fullPayload = {
+        ...state,
+        calculations: enhancedCalculations
+      };
+      console.log("Complete Firebase payload:", fullPayload);
+      console.log("=========================");
+      
+      // Pass the enhanced calculations to the parent component
+      onCreateEstimate(enhancedCalculations);
+    } else {
+      onCreateEstimate();
+    }
   };
 
   return (
@@ -383,14 +440,30 @@ const ReviewAndSubmit = ({
                   <span className="font-medium text-gray-600">Pasting Cost:</span>
                   <div className="text-right">
                     <div className="text-gray-800">₹ {parseFloat(calculations.pastingCostPerCard || 0).toFixed(2)} </div>
-                    {/* {calculations.totalPastingCost && parseFloat(calculations.totalPastingCost) > 0 && (
-                      <div className="text-xs text-gray-600">
-                        (Total: ₹ {calculations.totalPastingCost} for all cards)
-                      </div>
-                    )} */}
                   </div>
                 </div>
               )}
+            </div>
+
+            {/* Markup Input Field */}
+            <div className="mt-6 bg-blue-50 p-4 rounded-md border border-blue-200">
+              <label htmlFor="markupPercentage" className="block text-md font-semibold text-gray-700 mb-2">
+                Markup Percentage (%)
+              </label>
+              <div className="flex gap-4 items-center">
+                <input
+                  id="markupPercentage"
+                  type="number"
+                  step="1"
+                  value={markupPercentage}
+                  onChange={handleMarkupChange}
+                  className="border rounded-md p-2 w-1/4 text-lg font-bold"
+                  placeholder="Enter markup %"
+                />
+                <span className="text-md text-gray-600">
+                  Add a percentage markup to the final price as profit
+                </span>
+              </div>
             </div>
 
             {/* Total Calculations */}
@@ -421,6 +494,21 @@ const ReviewAndSubmit = ({
                           ₹ {costs.overheadCost.toFixed(2)}
                         </span>
                       </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700">Subtotal per Card:</span>
+                        <span className="text-gray-900">
+                          ₹ {(costs.baseCost + costs.wastageCost + costs.overheadCost).toFixed(2)}
+                        </span>
+                      </div>
+                      
+                      {/* Markup Line */}
+                      <div className="flex justify-between items-center text-blue-700 border-t border-gray-300 pt-2 mt-2">
+                        <span className="font-medium">Markup ({markupPercentage}%):</span>
+                        <span className="font-medium">
+                          ₹ {costs.markupCost.toFixed(2)}
+                        </span>
+                      </div>
+                      
                       <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
                         <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
                         <span className="text-lg font-bold text-gray-900">
