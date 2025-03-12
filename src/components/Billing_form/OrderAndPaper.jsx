@@ -22,7 +22,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
     }
   }, []);
 
-  // Fetch papers from Firestore
+  // Fetch papers from Firestore and set the first paper if none is selected
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
       const paperData = snapshot.docs.map((doc) => ({
@@ -30,10 +30,46 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
         ...doc.data(),
       }));
       setPapers(paperData);
+      
+      // If papers are loaded and no paper name is selected yet, set the first paper
+      if (paperData.length > 0 && !orderAndPaper.paperName) {
+        dispatch({
+          type: "UPDATE_ORDER_AND_PAPER",
+          payload: {
+            paperName: paperData[0].paperName
+          },
+        });
+      }
     });
 
     return () => unsubscribe();
-  }, []);
+  }, [dispatch, orderAndPaper.paperName]);
+
+  // Set today's date for both date fields if they're not already set
+  useEffect(() => {
+    if (!orderAndPaper.date) {
+      const today = new Date();
+      dispatch({
+        type: "UPDATE_ORDER_AND_PAPER",
+        payload: {
+          date: today
+        },
+      });
+    }
+    
+    if (!orderAndPaper.deliveryDate) {
+      const today = new Date();
+      // Set delivery date to 7 days from today by default
+      const deliveryDate = new Date();
+      deliveryDate.setDate(today.getDate() + 7);
+      dispatch({
+        type: "UPDATE_ORDER_AND_PAPER",
+        payload: {
+          deliveryDate: deliveryDate
+        },
+      });
+    }
+  }, [dispatch, orderAndPaper.date, orderAndPaper.deliveryDate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -90,8 +126,36 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
     onNext();
   };
 
+  // Custom styles for the datepicker to make it smaller
+  const customDatePickerStyles = `
+    .react-datepicker {
+      font-size: 0.8rem;
+      width: 200px;
+    }
+    .react-datepicker__month-container {
+      width: 200px;
+    }
+    .react-datepicker__day {
+      width: 1.5rem;
+      line-height: 1.5rem;
+      margin: 0.1rem;
+    }
+    .react-datepicker__day-name {
+      width: 1.5rem;
+      line-height: 1.5rem;
+      margin: 0.1rem;
+    }
+    .react-datepicker__header {
+      padding-top: 0.5rem;
+    }
+    .react-datepicker__current-month {
+      font-size: 0.9rem;
+    }
+  `;
+
   return (
     <div>
+      <style>{customDatePickerStyles}</style>
       <div>
         <h1 className="text-lg font-bold text-gray-700 mb-4">ORDER & PAPER DETAILS</h1>
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -145,6 +209,8 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 placeholderText="DD/MM/YYYY"
                 className="border rounded-md p-2 w-full text-xs"
                 required
+                popperClassName="small-calendar"
+                calendarClassName="small-calendar"
               />
             </div>
 
@@ -161,6 +227,8 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 placeholderText="DD/MM/YYYY"
                 className="border rounded-md p-2 w-full text-xs"
                 required
+                popperClassName="small-calendar"
+                calendarClassName="small-calendar"
               />
             </div>
 
@@ -229,12 +297,11 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
               <select
                 id="paperName"
                 name="paperName"
-                value={orderAndPaper.paperName || ""}
+                value={orderAndPaper.paperName || (papers.length > 0 ? papers[0].paperName : "")}
                 onChange={handleChange}
                 className="border rounded-md p-2 w-full text-xs"
                 required
               >
-                <option value="">Select Paper Name</option>
                 {papers.map((paper) => (
                   <option key={paper.id} value={paper.paperName}>
                     {paper.paperName}
