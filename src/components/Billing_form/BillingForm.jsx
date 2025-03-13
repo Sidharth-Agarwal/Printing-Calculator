@@ -226,12 +226,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     <DieCutting state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step6" />,
     <Sandwich state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step7" />,
     <Pasting state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step8" />,
-    <ReviewAndSubmit state={state} calculations={calculations} isCalculating={isCalculating}
-      onPrevious={handlePrevious}
-      onCreateEstimate={handleSubmit}
-      isEditMode={isEditMode}
-      key="step9"
-    />,
+    <ReviewAndSubmit state={state} calculations={calculations} isCalculating={isCalculating} onPrevious={handlePrevious} onCreateEstimate={handleSubmit} isEditMode={isEditMode} key="step9" />,
   ];
 
   return (
