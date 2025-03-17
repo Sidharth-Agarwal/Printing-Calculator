@@ -253,9 +253,6 @@ const calculateEMBCosts = async (state) => {
 
 const calculateDigiDetailsCosts = async (digiDetails, dieSize, totalCards) => {
   try {
-    // Helper function to convert inches to cm (rounded to 1 decimal)
-    const inchesToCm = (inches) => parseFloat((parseFloat(inches) * 2.54).toFixed(1));
-
     // Validate digiDetails
     const { isDigiUsed = false, digiDimensions = {} } = digiDetails || {};
     if (!isDigiUsed || !digiDimensions.length || !digiDimensions.breadth) {
@@ -263,15 +260,15 @@ const calculateDigiDetailsCosts = async (digiDetails, dieSize, totalCards) => {
       return { digiCostPerCard: 0 };
     }
 
-    // Convert dimensions from inches to cm
+    // Convert dimensions from inches to cm - directly multiply by 2.54 as in other functions
     const dieDimensionsCm = {
-      length: inchesToCm(dieSize.length || 0),
-      breadth: inchesToCm(dieSize.breadth || 0),
+      length: (parseFloat(dieSize.length || 0) * 2.54) + 2, // Adding 2cm margin as in other functions
+      breadth: (parseFloat(dieSize.breadth || 0) * 2.54) + 2, // Adding 2cm margin as in other functions
     };
 
     const digiDimensionsCm = {
-      length: inchesToCm(digiDimensions.length || 0),
-      breadth: inchesToCm(digiDimensions.breadth || 0),
+      length: parseFloat(digiDimensions.length || 0) * 2.54, 
+      breadth: parseFloat(digiDimensions.breadth || 0) * 2.54,
     };
 
     console.log("Converted Dimensions (cm):", { dieDimensionsCm, digiDimensionsCm });
@@ -316,12 +313,6 @@ const calculateDigiDetailsCosts = async (digiDetails, dieSize, totalCards) => {
     // Calculate total cost
     const totalDigiCost = paperCost + printingCost;
 
-    // return {
-    //   digiCostPerCard: (totalDigiCost / totalCards).toFixed(2),
-    //   totalPapersRequired,
-    //   paperCost: paperCost.toFixed(2),
-    //   printingCost: printingCost.toFixed(2),
-    // };
     return {
       digiCostPerCard: (totalDigiCost / totalCards).toFixed(2)
     };
