@@ -116,87 +116,6 @@ const calculateLPCosts = async (state) => {
 };
 
 // Function to calculate FS costs
-// const calculateFSCosts = async (state) => {
-//   const { fsDetails, orderAndPaper } = state;
-//   const totalCards = parseInt(orderAndPaper.quantity, 10);
-
-//   if (!fsDetails.isFSUsed || !fsDetails.foilDetails?.length) {
-//     return { fsCostPerCard: 0 };
-//   }
-
-//   let totalFSCosting = 0;
-
-//   // Calculate block cost outside the loop - only once for the entire project
-//   let totalBlockCost = 0;
-  
-//   // Get the first valid foil details to calculate the block cost
-//   const validFoil = fsDetails.foilDetails.find(foil => 
-//     foil.blockDimension && foil.blockDimension.length && foil.blockDimension.breadth && foil.blockType
-//   );
-  
-//   if (validFoil) {
-//     const blockMaterialDetails = await fetchMaterialDetails(validFoil.blockType);
-//     console.log(validFoil.blockType);
-    
-//     if (blockMaterialDetails) {
-//       const blockArea = parseFloat(validFoil.blockDimension.length) * parseFloat(validFoil.blockDimension.breadth); // cm²
-//       totalBlockCost = blockArea * parseFloat(blockMaterialDetails.landedCost || 0);
-//     } else {
-//       console.warn(`No material details found for block type: ${validFoil.blockType}`);
-//     }
-//   }
-  
-//   console.log("block cost : ", totalBlockCost);
-//   // Add block cost to total costing
-//   totalFSCosting += totalBlockCost;
-
-//   // Fetch MR details for all foils in FS details
-//   const mrDetailsArray = await fetchMRDetailsForFSDetails(fsDetails);
-//   console.log(mrDetailsArray);
-
-//   for (let i = 0; i < fsDetails.foilDetails.length; i++) {
-//     let fsCostForEachIteration = 0;
-    
-//     const foil = fsDetails.foilDetails[i];
-
-//     // Validate block dimensions
-//     const blockDimensions = foil.blockDimension;
-//     if (!blockDimensions || !blockDimensions.length || !blockDimensions.breadth) {
-//       console.warn(`Invalid block dimensions for foil index ${i}`, foil);
-//       continue; // Skip invalid foils
-//     }
-    
-//     // Step 1: Calculate foil cost
-//     const foilMaterialDetails = await fetchMaterialDetails(foil.foilType);
-//     console.log(foil.foilType);
-    
-//     let foilCost = 0;
-//     if (foilMaterialDetails) {
-//       const foilArea = parseFloat(blockDimensions.length) * parseFloat(blockDimensions.breadth); // cm²
-//       foilCost = foilArea * parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
-//     } else {
-//       console.warn(`No material details found for foil type: ${foil.foilType}`);
-//     }
-
-//     // Step 2: Calculate MR cost
-//     const mrDetails = mrDetailsArray[i];
-    
-//     let totalMRRate = 0;
-//     if (mrDetails) {
-//       totalMRRate = parseFloat(mrDetails.finalRate || 0);
-//     } else {
-//       console.warn(`No MR details found for foil index ${i}`);
-//     }
-
-//     fsCostForEachIteration = foilCost + totalMRRate;
-    
-//     totalFSCosting = totalFSCosting + fsCostForEachIteration;
-//   }
-
-//   const fsCostPerCard = totalFSCosting / totalCards;
-
-//   return { fsCostPerCard: fsCostPerCard.toFixed(2) };
-// };
 const calculateFSCosts = async (state) => {
   const { fsDetails, orderAndPaper } = state;
   const totalCards = parseInt(orderAndPaper.quantity, 10);
@@ -209,8 +128,10 @@ const calculateFSCosts = async (state) => {
 
   // Fetch MR details for all foils in FS details
   const mrDetailsArray = await fetchMRDetailsForFSDetails(fsDetails);
+  console.log(mrDetailsArray)
 
   for (let i = 0; i < fsDetails.foilDetails.length; i++) {
+    const impressionCostPerCard = 1;
     let fsCostForEachIteration = 0;
     
     const foil = fsDetails.foilDetails[i];
@@ -224,17 +145,21 @@ const calculateFSCosts = async (state) => {
     
     // Step 1: Calculate block cost for this foil
     const blockMaterialDetails = await fetchMaterialDetails(foil.blockType);
-    console.log(blockMaterialDetails)
     const blockFright = 500;
+
+    let blockArea = 0;
     
     let blockCost = 0;
     if (blockMaterialDetails) {
-      const blockArea = (parseFloat(blockDimensions.length) + 2) * (parseFloat(blockDimensions.breadth) + 2); // cm² with margins
+      blockArea = (parseFloat(blockDimensions.length) + 2) * (parseFloat(blockDimensions.breadth) + 2); // cm² with margins
+      console.log(blockArea);
       blockCost = blockArea * parseFloat(blockMaterialDetails.rate || 0) + blockFright;
-      console.log(blockMaterialDetails.rate)
+      console.log(blockCost)
     } else {
       console.warn(`No material details found for block type: ${foil.blockType}`);
     }
+
+    let blockCostPerUnit = blockCost / totalCards;
     
     // Step 2: Calculate foil cost
     const foilMaterialDetails = await fetchMaterialDetails(foil.foilType);
@@ -242,9 +167,8 @@ const calculateFSCosts = async (state) => {
     
     let foilCost = 0;
     if (foilMaterialDetails) {
-      const foilArea = (parseFloat(blockDimensions.length) + 2) * (parseFloat(blockDimensions.breadth) + 2); // cm² with margins
-      foilCost = foilArea * parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
-      console.log(foilMaterialDetails.finalCostPerUnit)
+      foilCost = blockArea * parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
+      console.log(foilCost)
     } else {
       console.warn(`No material details found for foil type: ${foil.foilType}`);
     }
@@ -259,13 +183,15 @@ const calculateFSCosts = async (state) => {
       console.warn(`No MR details found for foil index ${i}`);
     }
 
-    fsCostForEachIteration = blockCost + foilCost + totalMRRate;
+    mrCostPerCard = totalMRRate / totalCards
+
+    fsCostForEachIteration = blockCostPerUnit + foilCost + mrCostPerCard + impressionCostPerCard;
     console.log(fsCostForEachIteration)
     
     totalFSCosting = totalFSCosting + fsCostForEachIteration;
   }
 
-  const fsCostPerCard = totalFSCosting / totalCards;
+  const fsCostPerCard = totalFSCosting;
 
   return { fsCostPerCard: fsCostPerCard.toFixed(2) };
 };
@@ -418,25 +344,10 @@ const calculateSandwichCosts = async (sandwichDetails, totalCards) => {
     let totalFSCostSandwich = 0;
     let totalEMBCostSandwich = 0;
  
-    // LP Details Calculations for Sandwich
+    // LP Details Calculations for Sandwich - using same logic as calculateLPCosts
     if (lpDetailsSandwich?.isLPUsed && lpDetailsSandwich.colorDetails?.length > 0) {
       // Fetch MR details for all colors in LP details
       const mrDetailsArraySandwich = await fetchMRDetailsForLPDetails(lpDetailsSandwich);
-      console.log(mrDetailsArraySandwich);
- 
-      // Positive Film Calculations for Sandwich LP
-      length = parseFloat(lpDetailsSandwich.plateDimensions?.length || 0);
-      breadth = parseFloat(lpDetailsSandwich.plateDimensions?.breadth || 0);
- 
-      const positiveFilm = "Positive Film";
-      const positives = await fetchMaterialDetails(positiveFilm);
- 
-      if (!positives) {
-        console.warn(`Material details not found for Positive Film`);
-      } else {
-        const postiveFilmCost = (length * breadth * positives.finalCostPerUnit);
-        totalLPCostSandwich = totalLPCostSandwich + postiveFilmCost;
-      }
  
       for (let i = 0; i < lpDetailsSandwich.colorDetails.length; i++) {
         let lpCostForEachIteration = 0;
@@ -446,12 +357,12 @@ const calculateSandwichCosts = async (sandwichDetails, totalCards) => {
         // Step 1: Calculate cost per color (Pantone type)
         const colorCostPerCard = 1; // INR 1 for color
         const impressionCostPerCard = 0.5; // INR 0.5 for impression
-        let totalLPColorCost = (colorCostPerCard + impressionCostPerCard) * totalCards;
-        console.log("color cost : ", totalLPColorCost);
+        const labourCost = 1; // Adding labour cost as in the original LP calculation
+        let totalLPColorCost = (colorCostPerCard + impressionCostPerCard + labourCost) * totalCards;
  
-        const plateArea =
-          parseFloat(color.plateDimensions.length || 0) *
-          parseFloat(color.plateDimensions.breadth || 0); // cm²
+        const plateArea = 
+          (parseFloat(color.plateDimensions.length || 0) + 2) * 
+          (parseFloat(color.plateDimensions.breadth || 0) + 2); // cm² with margins
  
         // Step 2: Calculate polymer plate cost dynamically based on plate type
         const plateType = color.plateType || "Polymer Plate"; // Fallback to "Polymer Plate" if not provided
@@ -480,36 +391,13 @@ const calculateSandwichCosts = async (sandwichDetails, totalCards) => {
       }
     }
  
-    // FS Details Calculations for Sandwich
+    // FS Details Calculations for Sandwich - using same logic as calculateFSCosts
     if (fsDetailsSandwich?.isFSUsed && fsDetailsSandwich.foilDetails?.length > 0) {
-      // Calculate block cost outside the loop - only once for the entire sandwich project
-      let totalBlockCost = 0;
-      
-      // Get the first valid foil details to calculate the block cost
-      const validFoil = fsDetailsSandwich.foilDetails.find(foil => 
-        foil.blockDimension && foil.blockDimension.length && foil.blockDimension.breadth && foil.blockType
-      );
-      
-      if (validFoil) {
-        const blockMaterialDetails = await fetchMaterialDetails(validFoil.blockType);
-        console.log(validFoil.blockType);
-        
-        if (blockMaterialDetails) {
-          const blockArea = parseFloat(validFoil.blockDimension.length) * parseFloat(validFoil.blockDimension.breadth); // cm²
-          totalBlockCost = blockArea * parseFloat(blockMaterialDetails.landedCost || 0);
-        } else {
-          console.warn(`No material details found for block type: ${validFoil.blockType}`);
-        }
-      }
-      
-      // Add block cost to total costing
-      totalFSCostSandwich += totalBlockCost;
- 
       // Fetch MR details for all foils in FS details
       const mrDetailsArraySandwich = await fetchMRDetailsForFSDetails(fsDetailsSandwich);
-      console.log(mrDetailsArraySandwich);
  
       for (let i = 0; i < fsDetailsSandwich.foilDetails.length; i++) {
+        const impressionCostPerCard = 1;
         let fsCostForEachIteration = 0;
         
         const foil = fsDetailsSandwich.foilDetails[i];
@@ -521,19 +409,33 @@ const calculateSandwichCosts = async (sandwichDetails, totalCards) => {
           continue; // Skip invalid foils
         }
         
-        // Step 1: Calculate foil cost
+        // Step 1: Calculate block cost for this foil
+        const blockMaterialDetails = await fetchMaterialDetails(foil.blockType);
+        const blockFright = 500; // Added blockFright as in the original FS calculation
+ 
+        let blockArea = 0;
+        
+        let blockCost = 0;
+        if (blockMaterialDetails) {
+          blockArea = (parseFloat(blockDimensions.length) + 2) * (parseFloat(blockDimensions.breadth) + 2); // cm² with margins
+          blockCost = blockArea * parseFloat(blockMaterialDetails.rate || 0) + blockFright;
+        } else {
+          console.warn(`No material details found for block type: ${foil.blockType}`);
+        }
+ 
+        let blockCostPerUnit = blockCost / totalCards;
+        
+        // Step 2: Calculate foil cost
         const foilMaterialDetails = await fetchMaterialDetails(foil.foilType);
-        console.log(foil.foilType);
         
         let foilCost = 0;
         if (foilMaterialDetails) {
-          const foilArea = parseFloat(blockDimensions.length) * parseFloat(blockDimensions.breadth); // cm²
-          foilCost = foilArea * parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
+          foilCost = blockArea * parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
         } else {
           console.warn(`No material details found for foil type: ${foil.foilType}`);
         }
  
-        // Step 2: Calculate MR cost
+        // Step 3: Calculate MR cost
         const mrDetails = mrDetailsArraySandwich[i];
         
         let totalMRRate = 0;
@@ -543,18 +445,20 @@ const calculateSandwichCosts = async (sandwichDetails, totalCards) => {
           console.warn(`No MR details found for foil index ${i}`);
         }
  
-        fsCostForEachIteration = foilCost + totalMRRate;
+        let mrCostPerCard = totalMRRate / totalCards; // Calculate per card MR cost
+ 
+        fsCostForEachIteration = blockCostPerUnit + foilCost + mrCostPerCard + impressionCostPerCard;
         
         totalFSCostSandwich = totalFSCostSandwich + fsCostForEachIteration;
       }
     }
  
-    // EMB Details Calculations for Sandwich
+    // EMB Details Calculations for Sandwich - using same logic as calculateEMBCosts
     if (embDetailsSandwich?.isEMBUsed) {
-      // Calculate plate area
+      // Calculate plate area with the +2 margin as in the original EMB function
       const plateArea = 
-        parseFloat(embDetailsSandwich.plateDimensions.length || 0) *
-        parseFloat(embDetailsSandwich.plateDimensions.breadth || 0);
+        (parseFloat(embDetailsSandwich.plateDimensions?.length || 0) + 2) *
+        (parseFloat(embDetailsSandwich.plateDimensions?.breadth || 0) + 2);
       
       // Step 1: Calculate Male Plate Cost
       const malePlateMaterialDetails = await fetchMaterialDetails(embDetailsSandwich.plateTypeMale);

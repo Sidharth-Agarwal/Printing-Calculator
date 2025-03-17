@@ -609,7 +609,7 @@ const ReviewAndSubmit = ({
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
-                        <span className="font-medium text-gray-700">Base with Misc:</span>
+                        <span className="font-medium text-gray-700">Base Cost per card with Misc:</span>
                         <span className="text-gray-900">
                           ₹ {costs.baseWithMisc.toFixed(2)}
                         </span>
