@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
+import { collection, getDocs } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
 
 const ReviewAndSubmit = ({ 
   state, 
@@ -9,7 +11,33 @@ const ReviewAndSubmit = ({
   isEditMode = false,
   isSaving = false 
 }) => {
-  const [markupPercentage, setMarkupPercentage] = useState();
+  const [markupPercentage, setMarkupPercentage] = useState(0); // Set initial value to 0
+  const [markupRates, setMarkupRates] = useState([]);
+  const [isLoadingMarkups, setIsLoadingMarkups] = useState(false);
+  
+  // Fetch markup rates from standard_rates collection
+  useEffect(() => {
+    const fetchMarkupRates = async () => {
+      setIsLoadingMarkups(true);
+      try {
+        const ratesCollection = collection(db, "standard_rates");
+        const querySnapshot = await getDocs(ratesCollection);
+        
+        // Filter for entries where group is "MARKUP"
+        const markupData = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(rate => rate.group && rate.group.toUpperCase() === "MARKUP");
+        
+        setMarkupRates(markupData);
+      } catch (error) {
+        console.error("Error fetching markup rates:", error);
+      } finally {
+        setIsLoadingMarkups(false);
+      }
+    };
+    
+    fetchMarkupRates();
+  }, []);
 
   const fieldLabels = {
     clientName: "Name of the Client",
@@ -57,10 +85,16 @@ const ReviewAndSubmit = ({
     fsCostPerCardSandwich: "Cost of FS in Sandwich",
     embCostPerCardSandwich: "Cost of EMB in Sandwich",
     digiCostPerCard: "Digital Print Cost per Unit",
+    dieCuttingCostPerCard: "Die Cutting Cost per Unit",
+    dcImpressionCost: "Die Cutting Impression Rate",
+    dcMrCost: "Die Cutting MR Cost",
     pastingCostPerCard: "Pasting Cost per Unit",
     pastingType: "Type of Pasting",
     totalPastingCost: "Total Pasting Cost",
     markupPercentage: "Markup Percentage",
+    difficulty: "Die Cut",
+    pdc: "Pre Die Cut",
+    dcMR: "Die Cutting MR Type"
   };
 
   const costFieldsOrder = [
@@ -74,6 +108,7 @@ const ReviewAndSubmit = ({
     'fsCostPerCardSandwich',
     'embCostPerCardSandwich',
     'digiCostPerCard',
+    'dieCuttingCostPerCard',
     'pastingCostPerCard',
   ];
 
@@ -93,6 +128,26 @@ const ReviewAndSubmit = ({
   const handleMarkupChange = (e) => {
     const value = parseFloat(e.target.value) || 0;
     setMarkupPercentage(Math.max(0, value)); // Only ensure it's not negative
+  };
+  
+  const handleMarkupSelection = (e) => {
+    const selectedValue = e.target.value;
+    
+    if (selectedValue === "custom") {
+      // Just enable the input field but don't change the current value
+      return;
+    }
+    
+    // Find the selected markup rate from the fetched data
+    const selectedRate = markupRates.find(rate => 
+      rate.type && rate.type.toLowerCase() === selectedValue.toLowerCase()
+    );
+    
+    if (selectedRate && selectedRate.finalRate) {
+      setMarkupPercentage(parseFloat(selectedRate.finalRate));
+    } else {
+      console.warn(`Markup rate for "${selectedValue}" not found in database`);
+    }
   };
 
   const renderValue = (key, value) => {
@@ -232,9 +287,11 @@ const ReviewAndSubmit = ({
     );
   };
 
+  // Handle die cutting section display with basic information
   const calculateTotalCostPerCard = (calculations) => {
     const WASTAGE_PERCENTAGE = 5; // 5% wastage
     const OVERHEAD_PERCENTAGE = 35; // 35% overhead
+    const MISC_CHARGE_PER_CARD = 5; // 5 rupees miscellaneous charge per card
 
     const relevantFields = [
       'paperAndCuttingCostPerCard',
@@ -245,6 +302,7 @@ const ReviewAndSubmit = ({
       'fsCostPerCardSandwich',
       'embCostPerCardSandwich',
       'digiCostPerCard',
+      'dieCuttingCostPerCard',
       'pastingCostPerCard'
     ];
 
@@ -254,14 +312,17 @@ const ReviewAndSubmit = ({
       return acc + (value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0);
     }, 0);
 
+    // Add miscellaneous charge to base cost
+    const baseWithMisc = baseCost + MISC_CHARGE_PER_CARD;
+    
     // Calculate wastage cost
-    const wastageCost = baseCost * (WASTAGE_PERCENTAGE / 100);
+    const wastageCost = baseWithMisc * (WASTAGE_PERCENTAGE / 100);
     
     // Calculate overhead cost
-    const overheadCost = baseCost * (OVERHEAD_PERCENTAGE / 100);
+    const overheadCost = baseWithMisc * (OVERHEAD_PERCENTAGE / 100);
     
     // Calculate cost with wastage and overhead
-    const costWithOverhead = baseCost + wastageCost + overheadCost;
+    const costWithOverhead = baseWithMisc + wastageCost + overheadCost;
     
     // Calculate markup cost
     const markupCost = costWithOverhead * (markupPercentage / 100);
@@ -269,6 +330,8 @@ const ReviewAndSubmit = ({
     // Return total cost including wastage, overhead, and markup
     return {
       baseCost,
+      miscCharge: MISC_CHARGE_PER_CARD,
+      baseWithMisc,
       wastageCost,
       overheadCost,
       markupCost,
@@ -291,6 +354,8 @@ const ReviewAndSubmit = ({
       const costs = calculateTotalCostPerCard(calculations);
       console.log("Calculated costs with wastage, overhead, and markup:");
       console.log(`Base cost: ${costs.baseCost.toFixed(2)}`);
+      console.log(`Misc charge: ${costs.miscCharge.toFixed(2)}`);
+      console.log(`Base with misc: ${costs.baseWithMisc.toFixed(2)}`);
       console.log(`Wastage (5%): ${costs.wastageCost.toFixed(2)}`);
       console.log(`Overhead (35%): ${costs.overheadCost.toFixed(2)}`);
       console.log(`Markup (${markupPercentage}%): ${costs.markupCost.toFixed(2)}`);
@@ -311,6 +376,8 @@ const ReviewAndSubmit = ({
         ...calculations,
         // Standard cost components
         baseCost: costs.baseCost.toFixed(2),
+        miscChargePerCard: costs.miscCharge.toFixed(2),
+        baseWithMisc: costs.baseWithMisc.toFixed(2),
         wastagePercentage: 5, // Store the actual percentages used
         wastageAmount: costs.wastageCost.toFixed(2),
         overheadPercentage: 35,
@@ -321,7 +388,7 @@ const ReviewAndSubmit = ({
         markupAmount: costs.markupCost.toFixed(2),
         
         // Totals
-        subtotalPerCard: (costs.baseCost + costs.wastageCost + costs.overheadCost).toFixed(2),
+        subtotalPerCard: (costs.baseWithMisc + costs.wastageCost + costs.overheadCost).toFixed(2),
         totalCostPerCard: costs.totalCost.toFixed(2),
         totalCost: (costs.totalCost * (state.orderAndPaper?.quantity || 0)).toFixed(2)
       };
@@ -339,10 +406,19 @@ const ReviewAndSubmit = ({
       console.log("=========================");
       
       // Pass the enhanced calculations to the parent component
-      onCreateEstimate(enhancedCalculations);
+      onCreateEstimate(fullPayload);
     } else {
       onCreateEstimate();
     }
+  };
+
+  // Special render function for die cutting details
+  const renderDieCuttingDetails = () => {
+    if (!state.dieCutting?.isDieCuttingUsed || !calculations) {
+      return null;
+    }
+
+    return null; // Removing the detailed breakdown as requested
   };
 
   return (
@@ -373,8 +449,29 @@ const ReviewAndSubmit = ({
             renderSectionInFlex("EMB Details", state.embDetails, ["isEMBUsed"])}
           {state.digiDetails?.isDigiUsed &&
             renderSectionInFlex("Digi Details", state.digiDetails, ["isDigiUsed"])}
-          {state.dieCutting?.isDieCuttingUsed &&
-            renderSectionInFlex("Die Cutting", state.dieCutting, ["isDieCuttingUsed"])}
+          
+          {/* Die Cutting Details */}
+          {state.dieCutting?.isDieCuttingUsed && (
+            <div className="mb-6">
+              <h3 className="text-lg font-semibold text-gray-600 mb-2">Die Cutting:</h3>
+              <div className="space-y-4 bg-gray-100 p-4 rounded-md">
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-gray-600">Die Cut:</span>
+                  <span className="text-gray-800">{state.dieCutting.difficulty}</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <span className="font-medium text-gray-600">Pre Die Cut (PDC):</span>
+                  <span className="text-gray-800">{state.dieCutting.pdc}</span>
+                </div>
+                {state.dieCutting.difficulty === "Yes" && (
+                  <div className="flex items-center gap-1">
+                    <span className="font-medium text-gray-600">MR Type:</span>
+                    <span className="text-gray-800">{state.dieCutting.dcMR}</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* Sandwich Component */}
           {state.sandwich?.isSandwichComponentUsed && (
@@ -445,23 +542,46 @@ const ReviewAndSubmit = ({
               )}
             </div>
 
-            {/* Markup Input Field */}
+            {/* Markup Selection Field */}
             <div className="mt-6 bg-blue-50 p-4 rounded-md border border-blue-200">
-              <label htmlFor="markupPercentage" className="block text-md font-semibold text-gray-700 mb-2">
-                Markup Percentage (%)
+              <label htmlFor="markupSelection" className="block text-md font-semibold text-gray-700 mb-2">
+                Markup Selection
               </label>
-              <div className="flex gap-4 items-center">
-                <input
-                  id="markupPercentage"
-                  type="number"
-                  step="1"
-                  value={markupPercentage}
-                  onChange={handleMarkupChange}
-                  className="border rounded-md p-2 w-1/4 text-lg font-bold"
-                  placeholder="Enter markup %"
-                />
+              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                <div className="w-full md:w-1/3">
+                  <select
+                    id="markupSelection"
+                    onChange={handleMarkupSelection}
+                    className="border rounded-md p-2 w-full text-md"
+                    disabled={isLoadingMarkups}
+                  >
+                    <option value="">Select Markup Type</option>
+                    <option value="custom">Custom</option>
+                    {isLoadingMarkups ? (
+                      <option disabled>Loading markups...</option>
+                    ) : (
+                      markupRates.map(rate => (
+                        <option key={rate.id} value={rate.type}>
+                          {rate.type} ({rate.finalRate}%)
+                        </option>
+                      ))
+                    )}
+                  </select>
+                </div>
+                <div className="w-full md:w-1/3 flex items-center gap-2">
+                  <input
+                    id="markupPercentage"
+                    type="number"
+                    step="1"
+                    value={markupPercentage}
+                    onChange={handleMarkupChange}
+                    className="border rounded-md p-2 w-full text-lg font-bold"
+                    placeholder="Enter markup %"
+                  />
+                  <span className="text-lg font-bold">%</span>
+                </div>
                 <span className="text-md text-gray-600">
-                  Add a percentage markup to the final price as profit
+                  Markup percentage to add to the final price as profit
                 </span>
               </div>
             </div>
@@ -483,6 +603,18 @@ const ReviewAndSubmit = ({
                         </span>
                       </div>
                       <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700">Miscellaneous Charge:</span>
+                        <span className="text-gray-900">
+                          ₹ {costs.miscCharge.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span className="font-medium text-gray-700">Base with Misc:</span>
+                        <span className="text-gray-900">
+                          ₹ {costs.baseWithMisc.toFixed(2)}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center">
                         <span className="font-medium text-gray-700">Wastage (5%):</span>
                         <span className="text-gray-900">
                           ₹ {costs.wastageCost.toFixed(2)}
@@ -497,7 +629,7 @@ const ReviewAndSubmit = ({
                       <div className="flex justify-between items-center">
                         <span className="font-medium text-gray-700">Subtotal per Card:</span>
                         <span className="text-gray-900">
-                          ₹ {(costs.baseCost + costs.wastageCost + costs.overheadCost).toFixed(2)}
+                          ₹ {(costs.baseWithMisc + costs.wastageCost + costs.overheadCost).toFixed(2)}
                         </span>
                       </div>
                       

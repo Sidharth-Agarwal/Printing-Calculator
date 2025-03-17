@@ -1,15 +1,44 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 
 const DieCutting = ({ state, dispatch, onNext, onPrevious }) => {
-  const { isDieCuttingUsed = false, difficulty = "", pdc = "", dcMR = "" } = state.dieCutting || {};
+  const { 
+    isDieCuttingUsed = false, 
+    difficulty = "No", 
+    pdc = "No", 
+    dcMR = "Simple",
+    dcImpression = 0.25 // Added default impression cost
+  } = state.dieCutting || {};
+  
   const [errors, setErrors] = useState({});
+
+  // When DC is changed to No, automatically set PDC to No
+  useEffect(() => {
+    if (difficulty === "No" && pdc === "Yes") {
+      dispatch({
+        type: "UPDATE_DIE_CUTTING",
+        payload: { pdc: "No" }
+      });
+    }
+  }, [difficulty, pdc, dispatch]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    dispatch({
-      type: "UPDATE_DIE_CUTTING",
-      payload: { [name]: type === "checkbox" ? checked : value },
-    });
+    
+    // Special case for difficulty - if changed to No, reset PDC
+    if (name === "difficulty" && value === "No") {
+      dispatch({
+        type: "UPDATE_DIE_CUTTING",
+        payload: { 
+          [name]: value,
+          pdc: "No" 
+        }
+      });
+    } else {
+      dispatch({
+        type: "UPDATE_DIE_CUTTING",
+        payload: { [name]: type === "checkbox" ? checked : value }
+      });
+    }
 
     // Clear errors on input change
     setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
@@ -20,9 +49,15 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious }) => {
 
     const newErrors = {};
     if (isDieCuttingUsed) {
-      if (!difficulty) newErrors.difficulty = "Please select Difficulty.";
-      if (!pdc) newErrors.pdc = "Please select PDC.";
-      if ((difficulty === "Yes" || pdc === "Yes") && !dcMR) {
+      if (!difficulty) newErrors.difficulty = "Please select Die Cut option.";
+      
+      // Only validate PDC when Die Cut is Yes
+      if (difficulty === "Yes" && !pdc) {
+        newErrors.pdc = "Please select PDC option.";
+      }
+      
+      // Only validate MR when Die Cut is Yes
+      if (difficulty === "Yes" && !dcMR) {
         newErrors.dcMR = "Please select DC MR.";
       }
     }
@@ -46,7 +81,13 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious }) => {
           onClick={() =>
             dispatch({
               type: "UPDATE_DIE_CUTTING",
-              payload: { isDieCuttingUsed: !isDieCuttingUsed },
+              payload: { 
+                isDieCuttingUsed: !isDieCuttingUsed,
+                // Reset values when toggling off
+                difficulty: !isDieCuttingUsed ? "No" : "",
+                pdc: !isDieCuttingUsed ? "No" : "",
+                dcMR: !isDieCuttingUsed ? "Simple" : ""
+              }
             })
           }
         >
@@ -54,47 +95,47 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious }) => {
           <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
             {isDieCuttingUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
           </div>
-          <span className="text-gray-700 font-semibold">Is Die Cutting being used?</span>
+          <span className="text-gray-700 font-semibold text-sm">Is Die Cutting being used?</span>
         </label>
       </div>
 
       {/* Conditional Fields */}
       {isDieCuttingUsed && (
         <>
-          {/* Difficulty Dropdown */}
+          {/* Die Cut Dropdown */}
           <div className="text-sm">
-            <label className="block font-medium mb-2">Difficulty:</label>
+            <label className="block font-medium mb-2">DIE CUT:</label>
             <select
               name="difficulty"
               value={difficulty}
               onChange={handleChange}
               className={`border rounded-md p-2 w-full ${errors.difficulty ? "border-red-500" : ""}`}
             >
-              <option value="">Select Difficulty</option>
-              <option value="Yes">Yes</option>
               <option value="No">No</option>
+              <option value="Yes">Yes</option>
             </select>
             {errors.difficulty && <p className="text-red-500 text-sm">{errors.difficulty}</p>}
           </div>
 
-          {/* PDC Dropdown */}
+          {/* PDC Dropdown - Only enabled when Die Cut is Yes */}
           <div className="text-sm">
-            <label className="block font-medium mb-2">PDC:</label>
+            <label className="block font-medium mb-2">PRE DIE CUT:</label>
             <select
               name="pdc"
               value={pdc}
               onChange={handleChange}
-              className={`border rounded-md p-2 w-full ${errors.pdc ? "border-red-500" : ""}`}
+              className={`border rounded-md p-2 w-full ${errors.pdc ? "border-red-500" : ""}
+                ${difficulty === "No" ? "bg-gray-100" : ""}`}
+              disabled={difficulty === "No"}
             >
-              <option value="">Select PDC</option>
-              <option value="Yes">Yes</option>
               <option value="No">No</option>
+              <option value="Yes">Yes</option>
             </select>
             {errors.pdc && <p className="text-red-500 text-sm">{errors.pdc}</p>}
           </div>
 
-          {/* DC MR Dropdown (Conditional) */}
-          {(difficulty === "Yes" || pdc === "Yes") && (
+          {/* DC MR Dropdown - Only visible when Die Cut is Yes */}
+          {difficulty === "Yes" && (
             <div className="text-sm">
               <label className="block font-medium mb-2">DC MR:</label>
               <select
@@ -103,7 +144,6 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious }) => {
                 onChange={handleChange}
                 className={`border rounded-md p-2 w-full ${errors.dcMR ? "border-red-500" : ""}`}
               >
-                <option value="">Select MR Type</option>
                 <option value="Simple">Simple</option>
                 <option value="Complex">Complex</option>
                 <option value="Super Complex">Super Complex</option>

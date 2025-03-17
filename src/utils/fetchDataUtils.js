@@ -214,3 +214,50 @@ export const fetchPaperDetailsByDimensions = async (length, breadth, paperName) 
     throw new Error("Failed to fetch paper details based on dimensions.");
   }
 };
+
+/**
+ * Fetch MR details for Die Cutting from Firebase Firestore.
+ * @param {string} mrType - The MR type for die cutting (e.g., "Simple", "Complex", "Super Complex").
+ * @returns {Promise<Object|null>} - The MR details or null if not found.
+ */
+export const fetchMRDetailsForDieCutting = async (mrType) => {
+  try {
+    if (!mrType) {
+      console.warn("Die Cutting MR type is missing.");
+      return null;
+    }
+
+    const standardRatesCollection = collection(db, "standard_rates");
+    
+    // First try with exact concatenate format
+    const dcMRConcatenate = `DC MR ${mrType.toUpperCase()}`;
+    const queryByConcat = query(
+      standardRatesCollection, 
+      where("concatenate", "==", dcMRConcatenate)
+    );
+    const concatSnapshot = await getDocs(queryByConcat);
+    
+    if (!concatSnapshot.empty) {
+      return concatSnapshot.docs[0].data();
+    }
+    
+    // Try by group and type if concatenate fails
+    const queryByGroupAndType = query(
+      standardRatesCollection, 
+      where("group", "==", "DC MR"),
+      where("type", "==", mrType)
+    );
+    const typeSnapshot = await getDocs(queryByGroupAndType);
+    
+    if (!typeSnapshot.empty) {
+      return typeSnapshot.docs[0].data();
+    }
+    
+    // If we still haven't found it, log a warning and return null
+    console.warn(`No Die Cutting MR details found for type: ${mrType}`);
+    return null;
+  } catch (error) {
+    console.error("Error fetching Die Cutting MR details:", error);
+    throw new Error("Failed to fetch Die Cutting MR details");
+  }
+};
