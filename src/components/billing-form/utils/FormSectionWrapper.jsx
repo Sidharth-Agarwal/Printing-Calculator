@@ -1,5 +1,5 @@
 // components/billing-form/utils/FormSectionWrapper.jsx
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import FormToggle from '../fields/FormToggle';
 
 /**
@@ -41,16 +41,32 @@ const FormSectionWrapper = (WrappedComponent, options = {}) => {
       ...otherProps 
     } = props;
 
-    // Whether the section is currently enabled
-    const isEnabled = data?.[actualToggleName] || false;
+    // Create local state to track toggle status
+    const [isEnabled, setIsEnabled] = useState(Boolean(data?.[actualToggleName]));
+
+    // Sync with incoming data prop
+    useEffect(() => {
+      if (typeof data?.[actualToggleName] === 'boolean') {
+        setIsEnabled(data[actualToggleName]);
+      }
+    }, [data, actualToggleName]);
 
     // Handler for toggling the section on/off
     const handleToggle = () => {
+      console.log("Toggle clicked:", actualToggleName, "current value:", isEnabled);
+      
+      // Update local state immediately for responsive UI
+      setIsEnabled(!isEnabled);
+      
+      // Update the global state via the appropriate method
       if (toggleField) {
         toggleField(actualToggleName);
       } else if (updateField) {
         updateField(actualToggleName, !isEnabled);
       }
+
+      // Debug: log the updated data after toggle
+      console.log("After toggle update, data:", {...data, [actualToggleName]: !isEnabled});
     };
 
     return (

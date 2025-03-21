@@ -33,6 +33,7 @@ const OrderAndPaperSection = () => {
   // Set first paper as default if none selected
   useEffect(() => {
     if (papers.length > 0 && !data.paperName) {
+      console.log("Setting default paper name:", papers[0].paperName);
       updateField("paperName", papers[0].paperName);
     }
   }, [papers, data.paperName, updateField]);
@@ -44,6 +45,7 @@ const OrderAndPaperSection = () => {
 
   // Handle die selection
   const handleDieSelect = (die) => {
+    console.log("Die selected:", die);
     updateField("dieSelection", die.dieName || "");
     updateField("dieCode", die.dieCode || "");
     updateField("dieSize", { 
@@ -77,8 +79,16 @@ const OrderAndPaperSection = () => {
 
   // Handle input change with validation
   const handleInputChange = (name, value) => {
+    console.log(`Updating field ${name} to:`, value);
     updateField(name, value);
     validateField(name, value);
+  };
+
+  // Handle paper selection explicitly
+  const handlePaperSelect = (e) => {
+    const paperName = e.target.value;
+    console.log("Paper selected:", paperName);
+    updateField("paperName", paperName);
   };
 
   return (
@@ -220,7 +230,7 @@ const OrderAndPaperSection = () => {
             id="paperName"
             name="paperName"
             value={data.paperName || ""}
-            onChange={(e) => handleInputChange("paperName", e.target.value)}
+            onChange={handlePaperSelect}
             options={papers.map(paper => paper.paperName)}
             placeholder={isLoading ? "Loading papers..." : "Select paper"}
             disabled={isLoading}

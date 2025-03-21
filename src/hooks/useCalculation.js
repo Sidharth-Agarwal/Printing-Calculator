@@ -3,15 +3,15 @@ import { useState, useCallback, useRef } from 'react';
 import { useBillingForm } from '../context/BillingFormContext';
 import { calculateEstimateCosts } from '../services/calculations';
 import { ACTION_TYPES } from '../context/BillingFormContext';
+import { fetchPaperByName } from '../services/firebase/papers';
 
 /**
  * Custom hook for handling calculations in the billing form
- * Improved version that prevents calculation-related freezing
  */
 const useCalculation = () => {
   const { state, dispatch } = useBillingForm();
   
-  // Local state for calculation status (don't use context for UI state)
+  // Local state for calculation status
   const [isCalculating, setIsCalculating] = useState(false);
   const [calculationError, setCalculationError] = useState(null);
   const [lastCalculatedAt, setLastCalculatedAt] = useState(null);
@@ -21,7 +21,32 @@ const useCalculation = () => {
   const abortControllerRef = useRef(null);
   
   /**
-   * Calculate costs manually with improved error handling
+   * Validate form data before calculation
+   */
+  const validateFormData = useCallback(() => {
+    const { orderAndPaper } = state;
+    
+    if (!orderAndPaper) {
+      return "Order and paper details are missing";
+    }
+    
+    if (!orderAndPaper.paperName) {
+      return "Paper name is required for calculations";
+    }
+    
+    if (!orderAndPaper.quantity) {
+      return "Quantity is required for calculations";
+    }
+    
+    if (!orderAndPaper.dieSize || !orderAndPaper.dieSize.length || !orderAndPaper.dieSize.breadth) {
+      return "Die size is required for calculations";
+    }
+    
+    return null;
+  }, [state]);
+  
+  /**
+   * Calculate costs manually
    */
   const calculateCosts = useCallback(async () => {
     // Don't start a new calculation if one is already in progress
@@ -46,29 +71,32 @@ const useCalculation = () => {
     setCalculationError(null);
     
     try {
-      // Add a small delay to ensure the UI doesn't freeze
-      await new Promise(resolve => setTimeout(resolve, 10));
+      // Validate form data first
+      const validationError = validateFormData();
+      if (validationError) {
+        setCalculationError(validationError);
+        return null;
+      }
       
-      // Check if the calculation was aborted
-      if (signal.aborted) return null;
+      console.log("Starting calculation with state:", state);
       
-      // Perform the calculation
+      // Perform the calculation using the external service
       const result = await calculateEstimateCosts(state);
       
       // Check if the calculation was aborted
       if (signal.aborted) return null;
       
-      // Handle calculation result
+      // Handle calculation error
       if (result && result.error) {
         console.error("Calculation error:", result.error);
         setCalculationError(result.error);
         return null;
       }
       
+      console.log("Calculation completed successfully:", result);
+      
       // Update the form context with the calculation results
-      if (result) {
-        dispatch({ type: ACTION_TYPES.UPDATE_CALCULATIONS, payload: result });
-      }
+      dispatch({ type: ACTION_TYPES.UPDATE_CALCULATIONS, payload: result });
       
       // Update last calculation time
       setLastCalculatedAt(new Date());
@@ -85,17 +113,16 @@ const useCalculation = () => {
       setCalculationError(error.message || "An error occurred during calculation");
       return null;
     } finally {
-      // Only reset calculating state if this is still the current calculation
+      // Reset calculating state if this is still the current calculation
       if (abortControllerRef.current && abortControllerRef.current.signal === signal) {
         setIsCalculating(false);
         abortControllerRef.current = null;
       }
     }
-  }, [state, dispatch, isCalculating]);
+  }, [state, dispatch, isCalculating, validateFormData]);
   
   /**
    * Schedule a debounced calculation
-   * This allows multiple state changes before triggering a calculation
    */
   const scheduleCalculation = useCallback((delay = 1000) => {
     // Clear any existing timeout
@@ -122,7 +149,7 @@ const useCalculation = () => {
   }, [calculateCosts]);
   
   /**
-   * Calculate totals with markup, including wastage, overhead, etc.
+   * Calculate totals with markup
    */
   const calculateTotals = useCallback((calculations, markupPercentage = 0) => {
     if (!calculations) return {};
@@ -222,7 +249,6 @@ const useCalculation = () => {
   }, []);
   
   // Return the calculation-related methods and state
-  // At the return statement in useCalculation.js
   return {
     // Methods
     calculateCosts,
@@ -230,7 +256,7 @@ const useCalculation = () => {
     calculateTotals,
     needsRecalculation,
     cancelCalculation,
-    // Add this alias for backward compatibility
+    // Alias for backward compatibility
     cancelScheduledCalculation: cancelCalculation,
     
     // State

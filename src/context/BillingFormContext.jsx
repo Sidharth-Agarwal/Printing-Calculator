@@ -5,14 +5,14 @@ import { initialFormState } from '../constants/defaultValues';
 // Create context
 const BillingFormContext = createContext();
 
-// Action types as constants for better code quality and debugging
+// Action types as constants
 export const ACTION_TYPES = {
-  UPDATE_ORDER_AND_PAPER: "UPDATE_ORDER_AND_PAPER",
-  UPDATE_LP_DETAILS: "UPDATE_LP_DETAILS",
-  UPDATE_FS_DETAILS: "UPDATE_FS_DETAILS",
-  UPDATE_EMB_DETAILS: "UPDATE_EMB_DETAILS",
-  UPDATE_DIGI_DETAILS: "UPDATE_DIGI_DETAILS",
-  UPDATE_DIE_CUTTING: "UPDATE_DIE_CUTTING",
+  UPDATE_ORDERANDPAPER: "UPDATE_ORDERANDPAPER",
+  UPDATE_LPDETAILS: "UPDATE_LPDETAILS",
+  UPDATE_FSDETAILS: "UPDATE_FSDETAILS",
+  UPDATE_EMBDETAILS: "UPDATE_EMBDETAILS",
+  UPDATE_DIGIDETAILS: "UPDATE_DIGIDETAILS",
+  UPDATE_DIECUTTING: "UPDATE_DIECUTTING",
   UPDATE_SANDWICH: "UPDATE_SANDWICH",
   UPDATE_PASTING: "UPDATE_PASTING",
   UPDATE_CALCULATIONS: "UPDATE_CALCULATIONS",
@@ -22,59 +22,61 @@ export const ACTION_TYPES = {
   INITIALIZE_FORM: "INITIALIZE_FORM"
 };
 
-// Reducer with improved performance by avoiding unnecessary object spread operations
+// Reducer function
 const reducer = (state, action) => {
+  console.log('Reducer action:', action.type, action.payload);
+  
   switch (action.type) {
-    case ACTION_TYPES.UPDATE_ORDER_AND_PAPER:
+    case ACTION_TYPES.UPDATE_ORDERANDPAPER:
       return { 
         ...state, 
         orderAndPaper: { 
-          ...state.orderAndPaper, 
+          ...state.orderAndPaper || {}, 
           ...action.payload 
         } 
       };
       
-    case ACTION_TYPES.UPDATE_LP_DETAILS:
+    case ACTION_TYPES.UPDATE_LPDETAILS:
       return { 
         ...state, 
         lpDetails: { 
-          ...state.lpDetails, 
+          ...state.lpDetails || {}, 
           ...action.payload 
         } 
       };
       
-    case ACTION_TYPES.UPDATE_FS_DETAILS:
+    case ACTION_TYPES.UPDATE_FSDETAILS:
       return { 
         ...state, 
         fsDetails: { 
-          ...state.fsDetails, 
+          ...state.fsDetails || {}, 
           ...action.payload 
         } 
       };
       
-    case ACTION_TYPES.UPDATE_EMB_DETAILS:
+    case ACTION_TYPES.UPDATE_EMBDETAILS:
       return { 
         ...state, 
         embDetails: { 
-          ...state.embDetails, 
+          ...state.embDetails || {}, 
           ...action.payload 
         } 
       };
       
-    case ACTION_TYPES.UPDATE_DIGI_DETAILS:
+    case ACTION_TYPES.UPDATE_DIGIDETAILS:
       return { 
         ...state, 
         digiDetails: { 
-          ...state.digiDetails, 
+          ...state.digiDetails || {}, 
           ...action.payload 
         } 
       };
       
-    case ACTION_TYPES.UPDATE_DIE_CUTTING:
+    case ACTION_TYPES.UPDATE_DIECUTTING:
       return { 
         ...state, 
         dieCutting: { 
-          ...state.dieCutting, 
+          ...state.dieCutting || {}, 
           ...action.payload 
         } 
       };
@@ -83,7 +85,7 @@ const reducer = (state, action) => {
       return { 
         ...state, 
         sandwich: { 
-          ...state.sandwich, 
+          ...state.sandwich || {}, 
           ...action.payload 
         } 
       };
@@ -92,7 +94,7 @@ const reducer = (state, action) => {
       return { 
         ...state, 
         pasting: { 
-          ...state.pasting, 
+          ...state.pasting || {}, 
           ...action.payload 
         } 
       };
@@ -104,7 +106,6 @@ const reducer = (state, action) => {
       };
       
     case ACTION_TYPES.SET_CALCULATING:
-      // Only update if the value actually changes
       if (state.isCalculating === action.payload) return state;
       return { 
         ...state, 
@@ -112,7 +113,6 @@ const reducer = (state, action) => {
       };
       
     case ACTION_TYPES.SET_CALCULATION_ERROR:
-      // Only update if the value actually changes
       if (state.calculationError === action.payload) return state;
       return { 
         ...state, 
@@ -134,7 +134,12 @@ const reducer = (state, action) => {
 export const BillingFormProvider = ({ children, initialState = initialFormState }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   
-  // Memoize the context value to prevent unnecessary re-renders
+  // Add some debugging in dev mode
+  if (process.env.NODE_ENV !== 'production') {
+    console.log('Current form state:', state);
+  }
+  
+  // Memoize the context value
   const contextValue = useMemo(() => ({ state, dispatch }), [state]);
 
   return (
