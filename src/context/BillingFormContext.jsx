@@ -1,12 +1,12 @@
-// BillingFormContext.jsx
+// context/BillingFormContext.jsx
 import React, { createContext, useContext, useReducer, useMemo } from 'react';
 import { initialFormState } from '../constants/defaultValues';
 
 // Create context
 const BillingFormContext = createContext();
 
-// Create action types for better consistency and readability
-const ACTION_TYPES = {
+// Action types as constants for better code quality and debugging
+export const ACTION_TYPES = {
   UPDATE_ORDER_AND_PAPER: "UPDATE_ORDER_AND_PAPER",
   UPDATE_LP_DETAILS: "UPDATE_LP_DETAILS",
   UPDATE_FS_DETAILS: "UPDATE_FS_DETAILS",
@@ -16,11 +16,13 @@ const ACTION_TYPES = {
   UPDATE_SANDWICH: "UPDATE_SANDWICH",
   UPDATE_PASTING: "UPDATE_PASTING",
   UPDATE_CALCULATIONS: "UPDATE_CALCULATIONS",
+  SET_CALCULATING: "SET_CALCULATING",
+  SET_CALCULATION_ERROR: "SET_CALCULATION_ERROR",
   RESET_FORM: "RESET_FORM",
   INITIALIZE_FORM: "INITIALIZE_FORM"
 };
 
-// Improved reducer function to handle updates to the state
+// Reducer with improved performance by avoiding unnecessary object spread operations
 const reducer = (state, action) => {
   switch (action.type) {
     case ACTION_TYPES.UPDATE_ORDER_AND_PAPER:
@@ -101,6 +103,22 @@ const reducer = (state, action) => {
         calculations: action.payload 
       };
       
+    case ACTION_TYPES.SET_CALCULATING:
+      // Only update if the value actually changes
+      if (state.isCalculating === action.payload) return state;
+      return { 
+        ...state, 
+        isCalculating: action.payload 
+      };
+      
+    case ACTION_TYPES.SET_CALCULATION_ERROR:
+      // Only update if the value actually changes
+      if (state.calculationError === action.payload) return state;
+      return { 
+        ...state, 
+        calculationError: action.payload 
+      };
+      
     case ACTION_TYPES.RESET_FORM:
       return { ...initialFormState };
       
@@ -116,7 +134,7 @@ const reducer = (state, action) => {
 export const BillingFormProvider = ({ children, initialState = initialFormState }) => {
   const [state, dispatch] = useReducer(reducer, initialState);
   
-  // Memoize the context value to prevent unnecessary rerenders
+  // Memoize the context value to prevent unnecessary re-renders
   const contextValue = useMemo(() => ({ state, dispatch }), [state]);
 
   return (
@@ -134,6 +152,3 @@ export const useBillingForm = () => {
   }
   return context;
 };
-
-// Export action types for components to use
-export { ACTION_TYPES };

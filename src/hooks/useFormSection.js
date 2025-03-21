@@ -4,7 +4,7 @@ import { useBillingForm } from '../context/BillingFormContext';
 
 /**
  * Custom hook for managing section-level state in the billing form
- * This is the key hook that will solve input field and toggle issues
+ * This hook replaces useFormState.js with a non-blocking implementation
  * 
  * @param {string} sectionId - The ID of the section (e.g., "lpDetails", "fsDetails")
  * @returns {Object} - Methods and state for the section
@@ -117,13 +117,32 @@ const useFormSection = (sectionId) => {
   }, [localData, updateField]);
   
   /**
-   * Validate section data
+   * Update multiple fields at once
    */
-  const validate = useCallback((rules = {}) => {
-    // Implement your validation logic here
-    // Return true if valid, false otherwise
-    return true;
-  }, [localData]);
+  const updateMultipleFields = useCallback((fieldsObject) => {
+    // Update local state immediately
+    setLocalData(prev => ({
+      ...prev,
+      ...fieldsObject
+    }));
+    setIsDirty(true);
+    
+    // Clear any pending timeout
+    if (updateTimeoutRef.current) {
+      clearTimeout(updateTimeoutRef.current);
+    }
+    
+    // Schedule an update to global state
+    updateTimeoutRef.current = setTimeout(() => {
+      if (isMountedRef.current) {
+        dispatch({
+          type: `UPDATE_${sectionId.toUpperCase()}`,
+          payload: fieldsObject
+        });
+        setIsDirty(false);
+      }
+    }, 100);
+  }, [dispatch, sectionId]);
   
   /**
    * Reset section to default values
@@ -154,7 +173,7 @@ const useFormSection = (sectionId) => {
     updateField,
     updateNestedField,
     toggleField,
-    validate,
+    updateMultipleFields,
     resetSection,
     // State info
     isDirty

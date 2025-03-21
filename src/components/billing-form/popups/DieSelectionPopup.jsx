@@ -1,4 +1,3 @@
-// DieSelectionPopup.jsx
 import React, { useState, useEffect } from "react";
 import { fetchDies, searchDiesByDimensions } from "../../../services/firebase/dies";
 import FormField from "../../common/FormField";
@@ -84,12 +83,14 @@ const DieSelectionPopup = ({ onClose, onSelectDie, onAddNewDie }) => {
         {/* Search and Add New Die Buttons */}
         <div className="flex justify-between items-center mb-6 text-sm">
           <button
+            type="button" // Added to prevent form submission
             onClick={handleSearch}
             className="bg-blue-500 text-white px-3 py-2 rounded-md"
           >
             Search
           </button>
           <button
+            type="button" // Added to prevent form submission
             onClick={onAddNewDie}
             className="bg-gray-500 text-white px-3 py-2 rounded-md"
           >
@@ -133,6 +134,7 @@ const DieSelectionPopup = ({ onClose, onSelectDie, onAddNewDie }) => {
         {/* Close Button */}
         <div className="flex justify-end mt-4">
           <button
+            type="button" // Added to prevent form submission
             onClick={onClose}
             className="bg-gray-500 text-sm text-white px-3 py-2 rounded-md"
           >

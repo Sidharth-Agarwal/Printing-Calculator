@@ -1,8 +1,9 @@
-// CostSummarySection.jsx
 import React from "react";
+import useCalculation from "../../../hooks/useCalculation";
 import { MARKUP_TYPE_OPTIONS } from "../../../constants/dropdownOptions";
 import { formatCurrency } from "../../../utils/formatters";
 import { FIELD_LABELS } from "../../../constants/fieldLabels";
+
 import SelectField from "../fields/SelectField";
 import NumberField from "../fields/NumberField";
 
@@ -13,99 +14,9 @@ const CostSummarySection = ({
   markupPercentage,
   setMarkupPercentage 
 }) => {
-  if (isCalculating) {
-    return (
-      <div className="bg-white p-4 rounded-md border border-gray-200 mb-6">
-        <div className="flex items-center justify-center space-x-2 py-4">
-          <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-          </svg>
-          <span className="text-gray-600">Calculating costs...</span>
-        </div>
-      </div>
-    );
-  }
-
-  if (calculationError) {
-    return (
-      <div className="bg-red-50 p-4 rounded-md border border-red-200 mb-6">
-        <p className="text-red-600 text-center">
-          {calculationError}
-        </p>
-      </div>
-    );
-  }
-
-  if (!calculations) {
-    return (
-      <div className="bg-white p-4 rounded-md border border-gray-200 mb-6">
-        <p className="text-gray-600 text-center">
-          Enter order details to see cost calculations
-        </p>
-      </div>
-    );
-  }
-
-  // Calculate totals with the current markup percentage
-  const calculateTotals = () => {
-    // Constants
-    const WASTAGE_PERCENTAGE = 5; // 5% wastage
-    const OVERHEAD_PERCENTAGE = 35; // 35% overhead
-    const MISC_CHARGE_PER_CARD = 5; // 5 rupees miscellaneous charge per card
-
-    // Define all cost fields that should be included
-    const relevantFields = [
-      'paperAndCuttingCostPerCard',
-      'lpCostPerCard',
-      'fsCostPerCard',
-      'embCostPerCard',
-      'lpCostPerCardSandwich',
-      'fsCostPerCardSandwich',
-      'embCostPerCardSandwich',
-      'digiCostPerCard',
-      'dieCuttingCostPerCard',
-      'pastingCostPerCard'
-    ];
-
-    // Calculate base cost per card
-    const baseCost = relevantFields.reduce((acc, key) => {
-      const value = calculations[key];
-      return acc + (value !== null && value !== undefined ? parseFloat(value) || 0 : 0);
-    }, 0);
-
-    // Add miscellaneous charge to base cost
-    const baseWithMisc = baseCost + MISC_CHARGE_PER_CARD;
-    
-    // Calculate wastage cost
-    const wastageCost = baseWithMisc * (WASTAGE_PERCENTAGE / 100);
-    
-    // Calculate overhead cost
-    const overheadCost = baseWithMisc * (OVERHEAD_PERCENTAGE / 100);
-    
-    // Calculate cost with wastage and overhead
-    const subtotal = baseWithMisc + wastageCost + overheadCost;
-    
-    // Calculate markup cost
-    const markupCost = subtotal * (markupPercentage / 100);
-    
-    // Calculate total cost per card
-    const totalCostPerCard = subtotal + markupCost;
-
-    return {
-      baseCost,
-      miscCharge: MISC_CHARGE_PER_CARD,
-      baseWithMisc,
-      wastageCost,
-      overheadCost,
-      subtotal,
-      markupCost,
-      totalCostPerCard
-    };
-  };
-
-  const totals = calculateTotals();
-
+  const { calculateTotals } = useCalculation();
+  
+  // Handle markup type selection
   const handleMarkupTypeChange = (e) => {
     const selectedType = e.target.value;
     
@@ -129,6 +40,46 @@ const CostSummarySection = ({
         setMarkupPercentage(0);
     }
   };
+
+  // Display loading state while calculating
+  if (isCalculating) {
+    return (
+      <div className="bg-white p-4 rounded-md border border-gray-200 mb-6">
+        <div className="flex items-center justify-center space-x-2 py-4">
+          <svg className="animate-spin h-5 w-5 text-blue-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+            <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+            <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+          </svg>
+          <span className="text-gray-600">Calculating costs...</span>
+        </div>
+      </div>
+    );
+  }
+
+  // Display error state
+  if (calculationError) {
+    return (
+      <div className="bg-red-50 p-4 rounded-md border border-red-200 mb-6">
+        <p className="text-red-600 text-center">
+          {calculationError}
+        </p>
+      </div>
+    );
+  }
+
+  // No calculations yet
+  if (!calculations) {
+    return (
+      <div className="bg-white p-4 rounded-md border border-gray-200 mb-6">
+        <p className="text-gray-600 text-center">
+          Enter order details and click "Calculate" to see cost calculations
+        </p>
+      </div>
+    );
+  }
+
+  // Calculate totals with the current markup percentage
+  const totals = calculateTotals(calculations, markupPercentage);
 
   return (
     <div className="bg-white p-4 rounded-md border border-gray-200 mb-6">
@@ -202,6 +153,12 @@ const CostSummarySection = ({
           <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
             <span className="text-lg font-bold text-gray-700">{FIELD_LABELS.TOTAL_COST_PER_CARD}:</span>
             <span className="text-lg font-bold text-gray-900">{formatCurrency(totals.totalCostPerCard)}</span>
+          </div>
+          
+          {/* Total Cost */}
+          <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2 bg-blue-50 p-2 rounded">
+            <span className="text-lg font-bold text-gray-700">{FIELD_LABELS.TOTAL_COST}:</span>
+            <span className="text-lg font-bold text-blue-800">{formatCurrency(totals.totalCost)}</span>
           </div>
         </div>
       </div>

@@ -1,113 +1,42 @@
-// // PastingSection.jsx
-// import React from "react";
-// import { useBillingForm } from "../../../context/BillingFormContext";
-// import useFormState from "../../../hooks/useFormState";
-// import { PASTING_TYPE_OPTIONS } from "../../../constants/dropdownOptions";
-
-// import FormField from "../../common/FormField";
-// import FormToggle from "../fields/FormToggle";
-// import SelectField from "../fields/SelectField";
-
-// const PastingSection = () => {
-//   const { data, updateField, toggleField } = useFormState("pasting");
-
-//   // Initialize with defaults when toggling on
-//   const handleTogglePasting = () => {
-//     if (!data.isPastingUsed) {
-//       toggleField("isPastingUsed");
-//       updateField("pastingType", "");
-//     } else {
-//       toggleField("isPastingUsed");
-//       updateField("pastingType", "");
-//     }
-//   };
-
-//   if (!data.isPastingUsed) {
-//     return (
-//       <FormToggle
-//         label="Use Pasting Component?"
-//         isChecked={data.isPastingUsed}
-//         onChange={handleTogglePasting}
-//       />
-//     );
-//   }
-
-//   return (
-//     <div className="space-y-6">
-//       <FormToggle
-//         label="Use Pasting Component?"
-//         isChecked={data.isPastingUsed}
-//         onChange={handleTogglePasting}
-//       />
-
-//       <FormField label="Pasting Type">
-//         <SelectField
-//           id="pastingType"
-//           name="pastingType"
-//           value={data.pastingType || ""}
-//           onChange={(e) => updateField("pastingType", e.target.value)}
-//           options={PASTING_TYPE_OPTIONS}
-//           placeholder="Select Pasting Type"
-//         />
-//       </FormField>
-//     </div>
-//   );
-// };
-
-// export default PastingSection;
-
-import React, { useState } from "react";
-import { useBillingForm } from "../../../context/BillingFormContext";
-import useFormState from "../../../hooks/useFormState";
+import React from "react";
+import useFormSection from "../../../hooks/useFormSection";
+import FormSectionWrapper from "../utils/FormSectionWrapper";
 import { PASTING_TYPE_OPTIONS } from "../../../constants/dropdownOptions";
 
 import FormField from "../../common/FormField";
-import FormToggle from "../fields/FormToggle";
 import SelectField from "../fields/SelectField";
 
-const PastingSection = () => {
-  const { data, updateField } = useFormState("pasting");
-  const [errors, setErrors] = useState({});
-
-  const handleTogglePastingUsed = () => {
-    const updatedIsPastingUsed = !data.isPastingUsed;
-    
-    if (updatedIsPastingUsed) {
-      // Initialize with default values when enabling Pasting
-      updateField("isPastingUsed", true);
-      updateField("pastingType", "");
-    } else {
-      // Reset when disabling Pasting
-      updateField("isPastingUsed", false);
-      updateField("pastingType", "");
-    }
-  };
-
+const PastingSectionContent = ({ data, updateField }) => {
   return (
-    <div className="space-y-6">
-      {/* Pasting Toggle */}
-      <FormToggle
-        label="Use Pasting Component?"
-        isChecked={data.isPastingUsed}
-        onChange={handleTogglePastingUsed}
-      />
-
-      {data.isPastingUsed && (
-        <FormField label="Pasting Type">
-          <SelectField
-            id="pastingType"
-            name="pastingType"
-            value={data.pastingType || ""}
-            onChange={(e) => updateField("pastingType", e.target.value)}
-            options={PASTING_TYPE_OPTIONS}
-            placeholder="Select Pasting Type"
-            required={data.isPastingUsed}
-          />
-          {errors.pastingType && <p className="text-red-500 text-sm mt-1">{errors.pastingType}</p>}
-        </FormField>
-      )}
+    <div className="space-y-4">
+      <FormField label="Pasting Type">
+        <SelectField
+          id="pastingType"
+          name="pastingType"
+          value={data.pastingType || ""}
+          onChange={(e) => updateField("pastingType", e.target.value)}
+          options={PASTING_TYPE_OPTIONS}
+          placeholder="Select Pasting Type"
+        />
+      </FormField>
     </div>
   );
 };
 
-export default PastingSection;
+// Main component
+const PastingSection = () => {
+  const { data, updateField } = useFormSection("pasting");
+  
+  return (
+    <PastingSectionContent
+      data={data}
+      updateField={updateField}
+    />
+  );
+};
+
+// Wrap the component with the section wrapper
+export default FormSectionWrapper(PastingSection, {
+  sectionId: "pasting",
+  toggleLabel: "Use Pasting Component?"
+});
