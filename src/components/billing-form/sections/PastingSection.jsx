@@ -1,67 +1,55 @@
-import React, { useState } from "react";
-import FormGroup from "../containers/FormGroup";
+// PastingSection.jsx
+import React from "react";
+import { useBillingForm } from "../../../context/BillingFormContext";
+import useFormState from "../../../hooks/useFormState";
+import { PASTING_TYPE_OPTIONS } from "../../../constants/dropdownOptions";
+
+import FormField from "../../common/FormField";
 import FormToggle from "../fields/FormToggle";
 import SelectField from "../fields/SelectField";
 
-const PastingSection = ({ state, dispatch }) => {
-  const { isPastingUsed = false, pastingType = "" } = state.pasting || {};
-  const [errors, setErrors] = useState({});
+const PastingSection = () => {
+  const { data, updateField, toggleField } = useFormState("pasting");
 
-  const togglePastingUsed = () => {
-    dispatch({
-      type: "UPDATE_PASTING",
-      payload: { 
-        isPastingUsed: !isPastingUsed,
-        pastingType: !isPastingUsed ? "" : pastingType
-      }
-    });
+  // Initialize with defaults when toggling on
+  const handleTogglePasting = () => {
+    if (!data.isPastingUsed) {
+      toggleField("isPastingUsed");
+      updateField("pastingType", "");
+    } else {
+      toggleField("isPastingUsed");
+      updateField("pastingType", "");
+    }
   };
 
-  const handleChange = (field, value) => {
-    dispatch({
-      type: "UPDATE_PASTING",
-      payload: { [field]: value },
-    });
-
-    // Clear errors on input change
-    setErrors((prevErrors) => ({ ...prevErrors, [field]: "" }));
-  };
-
-  const PASTING_TYPES = [
-    "DST - Double Sided Tape",
-    "Fold",
-    "Paste",
-    "Fold & Paste",
-    "Sandwich"
-  ];
+  if (!data.isPastingUsed) {
+    return (
+      <FormToggle
+        label="Use Pasting Component?"
+        isChecked={data.isPastingUsed}
+        onChange={handleTogglePasting}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
       <FormToggle
         label="Use Pasting Component?"
-        isChecked={isPastingUsed}
-        onChange={togglePastingUsed}
+        isChecked={data.isPastingUsed}
+        onChange={handleTogglePasting}
       />
 
-      {/* Conditional Pasting Type Dropdown */}
-      {isPastingUsed && (
-        <FormGroup
-          label="Pasting Type"
-          htmlFor="pastingType"
-          error={errors.pastingType}
-          required={isPastingUsed}
-        >
-          <SelectField
-            id="pastingType"
-            name="pastingType"
-            value={pastingType}
-            onChange={(e) => handleChange("pastingType", e.target.value)}
-            options={PASTING_TYPES}
-            placeholder="Select Pasting Type"
-            required={isPastingUsed}
-          />
-        </FormGroup>
-      )}
+      <FormField label="Pasting Type">
+        <SelectField
+          id="pastingType"
+          name="pastingType"
+          value={data.pastingType || ""}
+          onChange={(e) => updateField("pastingType", e.target.value)}
+          options={PASTING_TYPE_OPTIONS}
+          placeholder="Select Pasting Type"
+        />
+      </FormField>
     </div>
   );
 };

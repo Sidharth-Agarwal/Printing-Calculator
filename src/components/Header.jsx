@@ -1,8 +1,96 @@
+// import React from "react";
+
+// const Header = () => {
+//   const navigateToNewTab = (path) => {
+//     window.open(path, '_blank', 'noopener noreferrer');
+//   };
+
+//   return (
+//     <header className="bg-blue-600 text-white shadow">
+//       <div className="w-full px-6 py-3 flex items-center justify-between">
+//         <h1 className="text-lg font-bold whitespace-nowrap">FAMOUS LETTER PRESS</h1>
+//         <nav className="flex items-center space-x-8">
+//           {/* New Bill */}
+//           <button 
+//             onClick={() => navigateToNewTab('/new-bill')} 
+//             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
+//           >
+//             NEW BILL
+//           </button>
+
+//           {/* Material and Stock Dropdown */}
+//           <div className="group inline-block relative">
+//             <button className="hover:underline hover:text-blue-300 transition whitespace-nowrap">
+//               MATERIAL & STOCK
+//             </button>
+//             <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10 left-0 min-w-max">
+//               <button 
+//                 onClick={() => navigateToNewTab('/material-stock/paper-db')}
+//                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
+//               >
+//                 PAPER MANAGEMENT
+//               </button>
+//               <button 
+//                 onClick={() => navigateToNewTab('/material-stock/material-db')}
+//                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
+//               >
+//                 MATERIAL MANAGEMENT
+//               </button>
+//               <button 
+//                 onClick={() => navigateToNewTab('/material-stock/dies-db')}
+//                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
+//               >
+//                 DIE MANAGEMENT
+//               </button>
+//               <button 
+//                 onClick={() => navigateToNewTab('/material-stock/standard-rates-db')}
+//                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
+//               >
+//                 STANDARD RATES MANAGEMENT
+//               </button>
+//             </div>
+//           </div>
+
+//           {/* Estimates */}
+//           <button 
+//             onClick={() => navigateToNewTab('/material-stock/estimates-db')} 
+//             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
+//           >
+//             ESTIMATES
+//           </button>
+
+//           {/* Orders */}
+//           <button 
+//             onClick={() => navigateToNewTab('/orders')} 
+//             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
+//           >
+//             ORDERS
+//           </button>
+
+//           {/* Transactions */}
+//           <button 
+//             onClick={() => navigateToNewTab('/transactions')} 
+//             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
+//           >
+//             TRANSACTIONS
+//           </button>
+//         </nav>
+//       </div>
+//     </header>
+//   );
+// };
+
+// export default Header;
+
 import React from "react";
+import { Link, useNavigate } from "react-router-dom";
 
 const Header = () => {
-  const navigateToNewTab = (path) => {
-    window.open(path, '_blank', 'noopener noreferrer');
+  const navigate = useNavigate();
+  
+  // For dropdown items that need JS navigation
+  const handleNavigation = (path) => {
+    navigate(path);
   };
 
   return (
@@ -11,12 +99,12 @@ const Header = () => {
         <h1 className="text-lg font-bold whitespace-nowrap">FAMOUS LETTER PRESS</h1>
         <nav className="flex items-center space-x-8">
           {/* New Bill */}
-          <button 
-            onClick={() => navigateToNewTab('/new-bill')} 
+          <Link 
+            to="/new-bill" 
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
             NEW BILL
-          </button>
+          </Link>
 
           {/* Material and Stock Dropdown */}
           <div className="group inline-block relative">
@@ -24,56 +112,56 @@ const Header = () => {
               MATERIAL & STOCK
             </button>
             <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10 left-0 min-w-max">
-              <button 
-                onClick={() => navigateToNewTab('/material-stock/paper-db')}
+              <Link 
+                to="/material-stock/paper-db"
                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
               >
                 PAPER MANAGEMENT
-              </button>
-              <button 
-                onClick={() => navigateToNewTab('/material-stock/material-db')}
+              </Link>
+              <Link 
+                to="/material-stock/material-db"
                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
               >
                 MATERIAL MANAGEMENT
-              </button>
-              <button 
-                onClick={() => navigateToNewTab('/material-stock/dies-db')}
+              </Link>
+              <Link 
+                to="/material-stock/dies-db"
                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
               >
                 DIE MANAGEMENT
-              </button>
-              <button 
-                onClick={() => navigateToNewTab('/material-stock/standard-rates-db')}
+              </Link>
+              <Link 
+                to="/material-stock/standard-rates-db"
                 className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
               >
                 STANDARD RATES MANAGEMENT
-              </button>
+              </Link>
             </div>
           </div>
 
           {/* Estimates */}
-          <button 
-            onClick={() => navigateToNewTab('/material-stock/estimates-db')} 
+          <Link 
+            to="/material-stock/estimates-db" 
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
             ESTIMATES
-          </button>
+          </Link>
 
           {/* Orders */}
-          <button 
-            onClick={() => navigateToNewTab('/orders')} 
+          <Link 
+            to="/orders" 
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
             ORDERS
-          </button>
+          </Link>
 
           {/* Transactions */}
-          <button 
-            onClick={() => navigateToNewTab('/transactions')} 
+          <Link 
+            to="/transactions" 
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
             TRANSACTIONS
-          </button>
+          </Link>
         </nav>
       </div>
     </header>

@@ -1,103 +1,73 @@
-import React, { useEffect, useState } from "react";
-import FormGroup from "../containers/FormGroup";
+// DigiDetailsSection.jsx
+import React from "react";
+import { useBillingForm } from "../../../context/BillingFormContext";
+import useFormState from "../../../hooks/useFormState";
+import { DIGI_DIE_OPTIONS } from "../../../constants/dropdownOptions";
+import { formatDimensions } from "../../../utils/formatters";
+
+import FormField from "../../common/FormField";
 import FormToggle from "../fields/FormToggle";
 import SelectField from "../fields/SelectField";
 
-const DigiDetailsSection = ({ state, dispatch }) => {
-  const { isDigiUsed = false, digiDie = "", digiDimensions = {} } = state.digiDetails || {};
-  const [errors, setErrors] = useState({});
+const DigiDetailsSection = () => {
+  const { data, updateField, toggleField } = useFormState("digiDetails");
 
-  const DIGI_DIE_OPTIONS = {
-    "12x18": { length: "12", breadth: "18" },
-    "13x19": { length: "13", breadth: "19" },
-  };
-
-  const toggleDigiUsed = () => {
-    const updatedIsDigiUsed = !isDigiUsed;
-    dispatch({
-      type: "UPDATE_DIGI_DETAILS",
-      payload: {
-        isDigiUsed: updatedIsDigiUsed,
-        digiDie: updatedIsDigiUsed ? "" : "",
-        digiDimensions: updatedIsDigiUsed ? {} : {},
-      },
-    });
-    setErrors({});
-  };
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name === "digiDie") {
-      const selectedDimensions = DIGI_DIE_OPTIONS[value] || {};
-      dispatch({
-        type: "UPDATE_DIGI_DETAILS",
-        payload: {
-          digiDie: value,
-          digiDimensions: selectedDimensions,
-        },
-      });
+  const handleDigiDieChange = (e) => {
+    const digiDie = e.target.value;
+    updateField("digiDie", digiDie);
+    
+    // Update dimensions based on selected die
+    if (digiDie && DIGI_DIE_OPTIONS[digiDie]) {
+      updateField("digiDimensions", DIGI_DIE_OPTIONS[digiDie]);
     } else {
-      dispatch({
-        type: "UPDATE_DIGI_DETAILS",
-        payload: { [name]: value },
-      });
+      updateField("digiDimensions", { length: "", breadth: "" });
     }
   };
 
-  useEffect(() => {
-    if (!isDigiUsed) {
-      // Clear digiDie and digiDimensions fields when Digi is not used
-      dispatch({
-        type: "UPDATE_DIGI_DETAILS",
-        payload: { digiDie: "", digiDimensions: {} },
-      });
-      setErrors({});
+  // Initialize with defaults when toggling on
+  const handleToggleDigi = () => {
+    if (!data.isDigiUsed) {
+      toggleField("isDigiUsed");
+    } else {
+      toggleField("isDigiUsed");
+      updateField("digiDie", "");
+      updateField("digiDimensions", { length: "", breadth: "" });
     }
-  }, [isDigiUsed, dispatch]);
+  };
+
+  if (!data.isDigiUsed) {
+    return (
+      <FormToggle
+        label="Is Digital Printing being used?"
+        isChecked={data.isDigiUsed}
+        onChange={handleToggleDigi}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
       <FormToggle
-        label="Is Digi being used?"
-        isChecked={isDigiUsed}
-        onChange={toggleDigiUsed}
+        label="Is Digital Printing being used?"
+        isChecked={data.isDigiUsed}
+        onChange={handleToggleDigi}
       />
 
-      {isDigiUsed && (
-        <div className="space-y-4">
-          <FormGroup
-            label="Select Digital Printing Die"
-            htmlFor="digiDie"
-            error={errors.digiDie}
-            required={isDigiUsed}
-          >
-            <SelectField
-              id="digiDie"
-              name="digiDie"
-              value={digiDie}
-              onChange={handleChange}
-              options={Object.keys(DIGI_DIE_OPTIONS)}
-              placeholder="Select Digi Die"
-              required={isDigiUsed}
-            />
-          </FormGroup>
+      <FormField label="Digital Printing Die">
+        <SelectField
+          id="digiDie"
+          name="digiDie"
+          value={data.digiDie || ""}
+          onChange={handleDigiDieChange}
+          options={Object.keys(DIGI_DIE_OPTIONS)}
+          placeholder="Select Digital Die"
+        />
+      </FormField>
 
-          {isDigiUsed && digiDie && (
-            <div className="mt-2 text-sm">
-              <p className="text-gray-700">
-                <strong>Dimensions:</strong>
-              </p>
-              <div className="grid grid-cols-2 gap-4 mt-2">
-                <div className="bg-gray-100 p-2 rounded">
-                  <span className="font-medium">Length:</span> {digiDimensions.length || "N/A"}
-                </div>
-                <div className="bg-gray-100 p-2 rounded">
-                  <span className="font-medium">Breadth:</span> {digiDimensions.breadth || "N/A"}
-                </div>
-              </div>
-            </div>
-          )}
+      {data.digiDie && data.digiDimensions && (
+        <div className="mt-4 p-3 bg-gray-50 rounded border">
+          <h4 className="font-medium mb-2">Selected Dimensions:</h4>
+          <p>{formatDimensions(data.digiDimensions, "in")}</p>
         </div>
       )}
     </div>

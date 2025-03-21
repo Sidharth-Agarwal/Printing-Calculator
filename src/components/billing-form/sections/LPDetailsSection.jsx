@@ -1,338 +1,197 @@
-import React, { useState, useEffect } from "react";
-import FormGroup from "../containers/FormGroup";
+// LPDetailsSection.jsx
+import React, { useState } from "react";
+import { useBillingForm } from "../../../context/BillingFormContext";
+import useFormState from "../../../hooks/useFormState";
+import { inchesToCm } from "../../../utils/calculationHelpers";
+import { MR_TYPE_OPTIONS, PLATE_TYPE_OPTIONS } from "../../../constants/dropdownOptions";
+
+import FormField from "../../common/FormField";
 import FormToggle from "../fields/FormToggle";
 import NumberField from "../fields/NumberField";
 import SelectField from "../fields/SelectField";
-import DimensionInput from "../fields/DimensionInput";
+import { DEFAULT_LP_COLOR } from "../../../constants/defaultValues";
 
-const LPDetailsSection = ({ state, dispatch }) => {
-  const lpDetails = state.lpDetails || {
-    isLPUsed: false,
-    noOfColors: 0,
-    colorDetails: [],
-  };
+const LPDetailsSection = () => {
+  const { state } = useBillingForm();
+  const { data, updateField, toggleField } = useFormState("lpDetails");
+  const [colorErrors, setColorErrors] = useState([]);
 
-  const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
-  const [errors, setErrors] = useState({});
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-
-    if (name === "noOfColors") {
-      dispatch({
-        type: "UPDATE_LP_DETAILS",
-        payload: { [name]: value },
-      });
-      generateColorDetails(value);
+  const handleNoOfColorsChange = (e) => {
+    const noOfColors = parseInt(e.target.value, 10) || 0;
+    
+    // Generate color details based on the number of colors
+    let colorDetails = [...(data.colorDetails || [])];
+    
+    // If we need more colors than we have, add new ones
+    if (noOfColors > colorDetails.length) {
+      const newColors = Array(noOfColors - colorDetails.length)
+        .fill(null)
+        .map(() => ({ ...DEFAULT_LP_COLOR }));
+      
+      colorDetails = [...colorDetails, ...newColors];
     }
+    // If we need fewer colors, remove the extra ones
+    else if (noOfColors < colorDetails.length) {
+      colorDetails = colorDetails.slice(0, noOfColors);
+    }
+    
+    updateField("noOfColors", noOfColors);
+    updateField("colorDetails", colorDetails);
   };
 
-  const toggleLPUsed = () => {
-    const updatedIsLPUsed = !lpDetails.isLPUsed;
-    dispatch({
-      type: "UPDATE_LP_DETAILS",
-      payload: {
-        isLPUsed: updatedIsLPUsed,
-        noOfColors: updatedIsLPUsed ? 1 : 0,
-        colorDetails: updatedIsLPUsed
-          ? [
-              {
-                plateSizeType: "Auto", // Default to "Auto"
-                plateDimensions: { 
-                  length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "", 
-                  breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "" 
-                },
-                pantoneType: "",
-                plateType: "Polymer Plate", // Default to "Polymer Plate"
-                mrType: "Simple", // Default to "Simple"
-              },
-            ]
-          : [],
-      },
-    });
-  };
-
-  const handleColorDetailsChange = (index, field, value) => {
-    const updatedDetails = [...lpDetails.colorDetails];
-
+  const handleColorDetailChange = (index, field, value) => {
+    const updatedDetails = [...(data.colorDetails || [])];
+    
     if (field === "plateSizeType") {
-      updatedDetails[index].plateSizeType = value;
-
-      // Reset plate dimensions when switching to Manual
-      if (value === "Manual") {
-        updatedDetails[index].plateDimensions = { length: "", breadth: "" };
-      }
-
-      // Populate dimensions when switching to Auto
-      if (value === "Auto") {
-        updatedDetails[index].plateDimensions = {
-          length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-          breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
-        };
-      }
-    } else if (field === "plateDimensions") {
-      updatedDetails[index].plateDimensions = {
-        ...updatedDetails[index].plateDimensions,
-        ...value,
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        plateSizeType: value,
+        plateDimensions: value === "Auto"
+          ? {
+              length: state.orderAndPaper.dieSize.length 
+                ? inchesToCm(state.orderAndPaper.dieSize.length) 
+                : "",
+              breadth: state.orderAndPaper.dieSize.breadth 
+                ? inchesToCm(state.orderAndPaper.dieSize.breadth) 
+                : ""
+            }
+          : { length: "", breadth: "" }
+      };
+    } else if (field.startsWith("plateDimensions.")) {
+      const dimensionField = field.split(".")[1]; // "length" or "breadth"
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        plateDimensions: {
+          ...updatedDetails[index].plateDimensions,
+          [dimensionField]: value
+        }
       };
     } else {
-      updatedDetails[index][field] = value;
+      updatedDetails[index] = {
+        ...updatedDetails[index],
+        [field]: value
+      };
     }
-
-    dispatch({
-      type: "UPDATE_LP_DETAILS",
-      payload: { colorDetails: updatedDetails },
-    });
+    
+    updateField("colorDetails", updatedDetails);
   };
 
-  const generateColorDetails = (noOfColors) => {
-    const details = Array.from({ length: noOfColors }, (_, index) => ({
-      plateSizeType: lpDetails.colorDetails[index]?.plateSizeType || "Auto", // Default to "Auto"
-      plateDimensions: lpDetails.colorDetails[index]?.plateDimensions || {
-        length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-        breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
-      },
-      pantoneType: lpDetails.colorDetails[index]?.pantoneType || "",
-      plateType: lpDetails.colorDetails[index]?.plateType || "Polymer Plate", // Default to "Polymer Plate"
-      mrType: lpDetails.colorDetails[index]?.mrType || "Simple", // Default to "Simple"
-    }));
-    dispatch({
-      type: "UPDATE_LP_DETAILS",
-      payload: { colorDetails: details },
-    });
-  };
-
-  const inchesToCm = (inches) => parseFloat(inches) * 2.54;
-
-  useEffect(() => {
-    if (lpDetails.isLPUsed) {
-      const updatedDetails = lpDetails.colorDetails.map((color) => {
-        if (color.plateSizeType === "Auto") {
-          return {
-            ...color,
-            plateDimensions: {
-              length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-              breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
-            },
-          };
-        }
-        return color;
-      });
-
-      const needsUpdate = JSON.stringify(lpDetails.colorDetails) !== JSON.stringify(updatedDetails);
-
-      if (needsUpdate) {
-        dispatch({
-          type: "UPDATE_LP_DETAILS",
-          payload: { colorDetails: updatedDetails },
-        });
-      }
-    }
-  }, [lpDetails.isLPUsed, dieSize, dispatch]);
+  if (!data.isLPUsed) {
+    return (
+      <FormToggle
+        label="Is LP being used?"
+        isChecked={data.isLPUsed}
+        onChange={() => toggleField("isLPUsed")}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
       <FormToggle
         label="Is LP being used?"
-        isChecked={lpDetails.isLPUsed}
-        onChange={toggleLPUsed}
+        isChecked={data.isLPUsed}
+        onChange={() => toggleField("isLPUsed")}
       />
 
-      {lpDetails.isLPUsed && (
-        <>
-          <FormGroup
-            label="No of Colors"
-            htmlFor="noOfColors"
-          >
-            <NumberField
-              id="noOfColors"
-              name="noOfColors"
-              value={lpDetails.noOfColors}
-              onChange={handleChange}
-              min={1}
-              max={10}
-              required={lpDetails.isLPUsed}
-            />
-            {errors.noOfColors && (
-              <p className="text-red-500 text-sm">{errors.noOfColors}</p>
-            )}
-          </FormGroup>
+      <FormField
+        label="Number of Colors"
+        name="noOfColors"
+      >
+        <NumberField
+          id="noOfColors"
+          name="noOfColors"
+          value={data.noOfColors}
+          onChange={handleNoOfColorsChange}
+          min="0"
+          max="10"
+        />
+      </FormField>
 
-          {lpDetails.noOfColors > 0 && (
-            <div>
-              <h3 className="text-md font-semibold mt-4 mb-2">Color Details</h3>
-              {Array.from({ length: lpDetails.noOfColors }, (_, index) => (
-                <ColorDetailsCard
-                  key={index}
-                  index={index}
-                  color={lpDetails.colorDetails[index] || {}}
-                  handleColorDetailsChange={handleColorDetailsChange}
-                  errors={errors}
-                />
-              ))}
-            </div>
-          )}
-        </>
+      {data.noOfColors > 0 && (
+        <div className="space-y-4">
+          <h3 className="text-md font-semibold">Color Details</h3>
+          
+          {Array.from({ length: data.noOfColors }, (_, index) => {
+            const color = data.colorDetails[index] || {};
+            return (
+              <div key={index} className="p-4 border rounded-md bg-gray-50 space-y-4">
+                <h4 className="font-semibold text-sm">Color {index + 1}</h4>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Plate Size Type */}
+                  <FormField label="Plate Size Type">
+                    <SelectField
+                      id={`plateSizeType-${index}`}
+                      value={color.plateSizeType || "Auto"}
+                      onChange={(e) => handleColorDetailChange(index, "plateSizeType", e.target.value)}
+                      options={["Auto", "Manual"]}
+                    />
+                  </FormField>
+
+                  {/* Pantone Type */}
+                  <FormField label="Pantone Type">
+                    <input
+                      type="text"
+                      value={color.pantoneType || ""}
+                      onChange={(e) => handleColorDetailChange(index, "pantoneType", e.target.value)}
+                      placeholder="Enter Pantone Type"
+                      className="border rounded-md p-2 w-full text-xs"
+                    />
+                  </FormField>
+                </div>
+
+                {color.plateSizeType && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Plate Dimensions */}
+                    <FormField label="Length (cm)">
+                      <NumberField
+                        id={`plateLength-${index}`}
+                        value={color.plateDimensions?.length || ""}
+                        onChange={(e) => handleColorDetailChange(index, "plateDimensions.length", e.target.value)}
+                        placeholder="Length"
+                        disabled={color.plateSizeType === "Auto"}
+                      />
+                    </FormField>
+
+                    <FormField label="Breadth (cm)">
+                      <NumberField
+                        id={`plateBreadth-${index}`}
+                        value={color.plateDimensions?.breadth || ""}
+                        onChange={(e) => handleColorDetailChange(index, "plateDimensions.breadth", e.target.value)}
+                        placeholder="Breadth"
+                        disabled={color.plateSizeType === "Auto"}
+                      />
+                    </FormField>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {/* Plate Type */}
+                  <FormField label="Plate Type">
+                    <SelectField
+                      id={`plateType-${index}`}
+                      value={color.plateType || "Polymer Plate"}
+                      onChange={(e) => handleColorDetailChange(index, "plateType", e.target.value)}
+                      options={PLATE_TYPE_OPTIONS}
+                    />
+                  </FormField>
+
+                  {/* MR Type */}
+                  <FormField label="MR Type">
+                    <SelectField
+                      id={`mrType-${index}`}
+                      value={color.mrType || "Simple"}
+                      onChange={(e) => handleColorDetailChange(index, "mrType", e.target.value)}
+                      options={MR_TYPE_OPTIONS}
+                    />
+                  </FormField>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       )}
-    </div>
-  );
-};
-
-// Color Details Card Component to reduce complexity
-const ColorDetailsCard = ({ index, color, handleColorDetailsChange, errors }) => {
-  return (
-    <div
-      className="mb-4 p-4 border rounded-md bg-gray-50"
-    >
-      <h4 className="text-sm font-semibold mb-2">Color {index + 1}</h4>
-
-      <div className="flex flex-wrap gap-4 text-sm">
-        {/* Plate Size Type */}
-        <div className="flex-1">
-          <div className="mb-1">Plate Size (cm):</div>
-          <SelectField
-            value={color.plateSizeType || "Auto"}
-            onChange={(e) =>
-              handleColorDetailsChange(index, "plateSizeType", e.target.value)
-            }
-            options={["Auto", "Manual"]}
-            placeholder="Select plate size type"
-          />
-          {errors[`plateSizeType_${index}`] && (
-            <p className="text-red-500 text-sm">
-              {errors[`plateSizeType_${index}`]}
-            </p>
-          )}
-        </div>
-
-        {/* Plate Dimensions */}
-        {color.plateSizeType && (
-          <div className="flex flex-wrap gap-4 flex-1">
-            <div className="flex-1">
-              <label htmlFor={`length_${index}`} className="block mb-1">
-                Length:
-              </label>
-              <input
-                id={`length_${index}`}
-                type="number"
-                name="length"
-                placeholder="(cm)"
-                value={
-                  color.plateDimensions?.length || ""
-                }
-                onChange={(e) =>
-                  handleColorDetailsChange(index, "plateDimensions", {
-                    length: e.target.value,
-                  })
-                }
-                className={`border rounded-md p-2 w-full ${
-                  color.plateSizeType === "Auto"
-                    ? "bg-gray-100"
-                    : ""
-                }`}
-                readOnly={
-                  color.plateSizeType === "Auto"
-                }
-              />
-              {errors[`plateLength_${index}`] && (
-                <p className="text-red-500 text-sm">
-                  {errors[`plateLength_${index}`]}
-                </p>
-              )}
-            </div>
-
-            <div className="flex-1">
-              <label htmlFor={`breadth_${index}`} className="block mb-1">
-                Breadth:
-              </label>
-              <input
-                id={`breadth_${index}`}
-                type="number"
-                name="breadth"
-                placeholder="(cm)"
-                value={
-                  color.plateDimensions?.breadth || ""
-                }
-                onChange={(e) =>
-                  handleColorDetailsChange(index, "plateDimensions", {
-                    breadth: e.target.value,
-                  })
-                }
-                className={`border rounded-md p-2 w-full ${
-                  color.plateSizeType === "Auto"
-                    ? "bg-gray-100"
-                    : ""
-                }`}
-                readOnly={
-                  color.plateSizeType === "Auto"
-                }
-              />
-              {errors[`plateBreadth_${index}`] && (
-                <p className="text-red-500 text-sm">
-                  {errors[`plateBreadth_${index}`]}
-                </p>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Pantone Type */}
-        <div className="flex-1">
-          <div className="mb-1">Pantone Type:</div>
-          <input
-            type="text"
-            value={color.pantoneType || ""}
-            onChange={(e) =>
-              handleColorDetailsChange(
-                index,
-                "pantoneType",
-                e.target.value
-              )
-            }
-            className="border rounded-md p-2 w-full"
-            placeholder="Enter Pantone Type"
-          />
-          {errors[`pantoneType_${index}`] && (
-            <p className="text-red-500 text-sm">
-              {errors[`pantoneType_${index}`]}
-            </p>
-          )}
-        </div>
-
-        {/* Plate Type */}
-        <div className="flex-1">
-          <div className="mb-1">Plate Type:</div>
-          <SelectField
-            value={color.plateType || "Polymer Plate"}
-            onChange={(e) =>
-              handleColorDetailsChange(index, "plateType", e.target.value)
-            }
-            options={["Polymer Plate"]}
-          />
-          {errors[`plateType_${index}`] && (
-            <p className="text-red-500 text-sm">
-              {errors[`plateType_${index}`]}
-            </p>
-          )}
-        </div>
-
-        {/* MR Type */}
-        <div className="flex-1">
-          <div className="mb-1">MR Type:</div>
-          <SelectField
-            value={color.mrType || "Simple"}
-            onChange={(e) =>
-              handleColorDetailsChange(index, "mrType", e.target.value)
-            }
-            options={["Simple", "Complex", "Super Complex"]}
-          />
-          {errors[`mrType_${index}`] && (
-            <p className="text-red-500 text-sm">
-              {errors[`mrType_${index}`]}
-            </p>
-          )}
-        </div>
-      </div>
     </div>
   );
 };

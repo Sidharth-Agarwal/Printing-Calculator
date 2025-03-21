@@ -1,128 +1,90 @@
-import React, { useState, useEffect } from "react";
-import FormGroup from "../containers/FormGroup";
+// DieCuttingSection.jsx
+import React, { useEffect } from "react";
+import { useBillingForm } from "../../../context/BillingFormContext";
+import useFormState from "../../../hooks/useFormState";
+import { DIE_CUT_OPTIONS, MR_TYPE_OPTIONS } from "../../../constants/dropdownOptions";
+
+import FormField from "../../common/FormField";
 import FormToggle from "../fields/FormToggle";
 import SelectField from "../fields/SelectField";
 
-const DieCuttingSection = ({ state, dispatch }) => {
-  const { 
-    isDieCuttingUsed = false, 
-    difficulty = "No", 
-    pdc = "No", 
-    dcMR = "Simple",
-    dcImpression = 0.25 // Default impression cost
-  } = state.dieCutting || {};
-  
-  const [errors, setErrors] = useState({});
+const DieCuttingSection = () => {
+  const { data, updateField, toggleField } = useFormState("dieCutting");
 
-  // When DC is changed to No, automatically set PDC to No
+  // Reset PDC to "No" when difficulty is "No"
   useEffect(() => {
-    if (difficulty === "No" && pdc === "Yes") {
-      dispatch({
-        type: "UPDATE_DIE_CUTTING",
-        payload: { pdc: "No" }
-      });
+    if (data.difficulty === "No" && data.pdc === "Yes") {
+      updateField("pdc", "No");
     }
-  }, [difficulty, pdc, dispatch]);
+  }, [data.difficulty, data.pdc, updateField]);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    
-    // Special case for difficulty - if changed to No, reset PDC
-    if (name === "difficulty" && value === "No") {
-      dispatch({
-        type: "UPDATE_DIE_CUTTING",
-        payload: { 
-          [name]: value,
-          pdc: "No" 
-        }
-      });
+  // Initialize with defaults when toggling on/off
+  const handleToggleDieCutting = () => {
+    if (!data.isDieCuttingUsed) {
+      toggleField("isDieCuttingUsed");
+      updateField("difficulty", "No");
+      updateField("pdc", "No");
+      updateField("dcMR", "Simple");
+      updateField("dcImpression", 0.25); // Default impression cost
     } else {
-      dispatch({
-        type: "UPDATE_DIE_CUTTING",
-        payload: { [name]: type === "checkbox" ? checked : value }
-      });
+      toggleField("isDieCuttingUsed");
     }
-
-    // Clear errors on input change
-    setErrors((prevErrors) => ({ ...prevErrors, [name]: "" }));
   };
 
-  const toggleDieCuttingUsed = () => {
-    dispatch({
-      type: "UPDATE_DIE_CUTTING",
-      payload: { 
-        isDieCuttingUsed: !isDieCuttingUsed,
-        // Reset values when toggling off
-        difficulty: !isDieCuttingUsed ? "No" : "",
-        pdc: !isDieCuttingUsed ? "No" : "",
-        dcMR: !isDieCuttingUsed ? "Simple" : ""
-      }
-    });
-  };
+  if (!data.isDieCuttingUsed) {
+    return (
+      <FormToggle
+        label="Is Die Cutting being used?"
+        isChecked={data.isDieCuttingUsed}
+        onChange={handleToggleDieCutting}
+      />
+    );
+  }
 
   return (
     <div className="space-y-6">
       <FormToggle
         label="Is Die Cutting being used?"
-        isChecked={isDieCuttingUsed}
-        onChange={toggleDieCuttingUsed}
+        isChecked={data.isDieCuttingUsed}
+        onChange={handleToggleDieCutting}
       />
 
-      {/* Conditional Fields */}
-      {isDieCuttingUsed && (
-        <div className="space-y-4">
-          {/* Die Cut Dropdown */}
-          <FormGroup
-            label="DIE CUT"
-            htmlFor="difficulty"
-            error={errors.difficulty}
-          >
-            <SelectField
-              id="difficulty"
-              name="difficulty"
-              value={difficulty}
-              onChange={handleChange}
-              options={["No", "Yes"]}
-              required={isDieCuttingUsed}
-            />
-          </FormGroup>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Die Cut Dropdown */}
+        <FormField label="DIE CUT">
+          <SelectField
+            id="difficulty"
+            name="difficulty"
+            value={data.difficulty || "No"}
+            onChange={(e) => updateField("difficulty", e.target.value)}
+            options={DIE_CUT_OPTIONS}
+          />
+        </FormField>
 
-          {/* PDC Dropdown - Only enabled when Die Cut is Yes */}
-          <FormGroup
-            label="PRE DIE CUT"
-            htmlFor="pdc"
-            error={errors.pdc}
-          >
-            <SelectField
-              id="pdc"
-              name="pdc"
-              value={pdc}
-              onChange={handleChange}
-              options={["No", "Yes"]}
-              disabled={difficulty === "No"}
-              className={difficulty === "No" ? "bg-gray-100" : ""}
-              required={isDieCuttingUsed && difficulty === "Yes"}
-            />
-          </FormGroup>
+        {/* PDC Dropdown */}
+        <FormField label="PRE DIE CUT">
+          <SelectField
+            id="pdc"
+            name="pdc"
+            value={data.pdc || "No"}
+            onChange={(e) => updateField("pdc", e.target.value)}
+            options={DIE_CUT_OPTIONS}
+            disabled={data.difficulty === "No"}
+          />
+        </FormField>
+      </div>
 
-          {/* DC MR Dropdown - Only visible when Die Cut is Yes */}
-          {difficulty === "Yes" && (
-            <FormGroup
-              label="DC MR"
-              htmlFor="dcMR"
-              error={errors.dcMR}
-            >
-              <SelectField
-                id="dcMR"
-                name="dcMR"
-                value={dcMR}
-                onChange={handleChange}
-                options={["Simple", "Complex", "Super Complex"]}
-                required={isDieCuttingUsed && difficulty === "Yes"}
-              />
-            </FormGroup>
-          )}
-        </div>
+      {/* DC MR Dropdown - Only visible when Die Cut is Yes */}
+      {data.difficulty === "Yes" && (
+        <FormField label="DC MR">
+          <SelectField
+            id="dcMR"
+            name="dcMR"
+            value={data.dcMR || "Simple"}
+            onChange={(e) => updateField("dcMR", e.target.value)}
+            options={MR_TYPE_OPTIONS}
+          />
+        </FormField>
       )}
     </div>
   );
