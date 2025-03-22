@@ -9,7 +9,7 @@ const firebaseConfig = {
   apiKey: "AIzaSyBZ-ejPIrPBS23wJVFupsqFPxSHKci5CnE",
   authDomain: "famous-letterpress.firebaseapp.com",
   projectId: "famous-letterpress",
-  storageBucket: "famous-letterpress.firebasestorage.app",
+  storageBucket: "famous-letterpress.appspot.com", // Updated to standard format
   messagingSenderId: "737262161611",
   appId: "1:737262161611:web:9c8aba77848fc0b338954e",
 };
