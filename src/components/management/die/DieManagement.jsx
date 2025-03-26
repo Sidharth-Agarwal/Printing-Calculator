@@ -1,217 +1,341 @@
-import React, { useState, useEffect } from "react";
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, orderBy } from "firebase/firestore";
-import { db, storage } from "../../../firebaseConfig";
-import { Die } from "../../../models/Die";
-import AddDieForm from "./AddDieForm";
-import DieTable from "./DieTable";
-import DieSearch from "./DieSearch";
-import CollapsibleSection from "../../shared/CollapsibleSection";
-import Spinner from "../../shared/Spinner";
-import Toast from "../../shared/Toast";
+import React, { useEffect, useState } from "react";
+import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { TextInput, SelectInput, NumberInput } from "../../shared/FormFields";
+import Button from "../../shared/Button";
 
-const DieManagement = () => {
-  const [dies, setDies] = useState([]);
-  const [filteredDies, setFilteredDies] = useState([]);
-  const [editingDie, setEditingDie] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [searchParams, setSearchParams] = useState({
-    term: "",
-    filters: {
-      jobType: "",
-      type: ""
-    }
-  });
-  const [notification, setNotification] = useState({ show: false, message: "", type: "" });
+const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage }) => {
+  const initialFormState = {
+    jobType: "",
+    type: "",
+    dieCode: "",
+    frags: "",
+    productSizeL: "",
+    productSizeB: "",
+    dieSizeL: "",
+    dieSizeB: "",
+    price: "",
+    imageUrl: "",
+    inStock: true,
+    location: ""
+  };
 
-  // Real-time listener for dies
+  const [formData, setFormData] = useState(initialFormState);
+  const [image, setImage] = useState(null);
+  const [errors, setErrors] = useState({});
+  const [uploading, setUploading] = useState(false);
+  
+  // Job type options
+  const jobTypeOptions = [
+    { value: "Card", label: "Card" },
+    { value: "Biz Card", label: "Business Card" },
+    { value: "Magnet", label: "Magnet" },
+    { value: "Envelope", label: "Envelope" },
+    { value: "Tag", label: "Tag" },
+    { value: "Folder", label: "Folder" },
+    { value: "Box", label: "Box" }
+  ];
+
+  // Populate form when editingDie changes
   useEffect(() => {
-    const diesCollection = collection(db, "dies");
-    const diesQuery = query(diesCollection, orderBy("timestamp", "desc"));
+    if (editingDie) {
+      setFormData(editingDie);
+      setImage(null); // Reset the selected image when editing
+    } else {
+      setFormData(initialFormState);
+      setImage(null);
+    }
+  }, [editingDie]);
+
+  const validateForm = () => {
+    const newErrors = {};
     
-    const unsubscribe = onSnapshot(diesQuery, (snapshot) => {
-      const diesData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-      
-      setDies(diesData);
-      setFilteredDies(diesData);
-      setLoading(false);
-    }, (error) => {
-      console.error("Error fetching dies:", error);
-      setNotification({
-        show: true,
-        message: "Failed to load dies. Please try again.",
-        type: "error"
-      });
-      setLoading(false);
-    });
-
-    return () => unsubscribe(); // Cleanup listener on unmount
-  }, []);
-
-  // Filter dies based on search parameters
-  useEffect(() => {
-    if (dies.length > 0) {
-      let results = [...dies];
-      
-      // Apply text search
-      if (searchParams.term) {
-        const term = searchParams.term.toLowerCase();
-        results = results.filter(die => 
-          die.dieCode?.toLowerCase().includes(term) || 
-          die.type?.toLowerCase().includes(term)
-        );
-      }
-      
-      // Apply filters
-      if (searchParams.filters.jobType) {
-        results = results.filter(die => 
-          die.jobType === searchParams.filters.jobType
-        );
-      }
-      
-      if (searchParams.filters.type) {
-        results = results.filter(die => 
-          die.type === searchParams.filters.type
-        );
-      }
-      
-      setFilteredDies(results);
-    }
-  }, [searchParams, dies]);
-
-  // Add die to Firestore
-  const addDie = async (newDieData) => {
-    try {
-      const newDie = new Die({
-        ...newDieData,
-        timestamp: new Date()
-      });
-      
-      const diesCollection = collection(db, "dies");
-      await addDoc(diesCollection, newDie);
-      
-      setNotification({
-        show: true,
-        message: "Die added successfully!",
-        type: "success"
-      });
-    } catch (error) {
-      console.error("Error adding die:", error);
-      setNotification({
-        show: true,
-        message: "Failed to add die. Please try again.",
-        type: "error"
-      });
-    }
-  };
-
-  // Update die in Firestore
-  const updateDie = async (id, updatedData) => {
-    try {
-      const dieDoc = doc(db, "dies", id);
-      await updateDoc(dieDoc, updatedData);
-      
-      setEditingDie(null); // Clear the editing state
-      setNotification({
-        show: true,
-        message: "Die updated successfully!",
-        type: "success"
-      });
-    } catch (error) {
-      console.error("Error updating die:", error);
-      setNotification({
-        show: true,
-        message: "Failed to update die. Please try again.",
-        type: "error"
-      });
-    }
-  };
-
-  // Delete die from Firestore
-  const deleteDie = async (id) => {
-    try {
-      if (window.confirm("Are you sure you want to delete this die?")) {
-        await deleteDoc(doc(db, "dies", id));
-        setNotification({
-          show: true,
-          message: "Die deleted successfully!",
-          type: "success"
-        });
-      }
-    } catch (error) {
-      console.error("Error deleting die:", error);
-      setNotification({
-        show: true,
-        message: "Failed to delete die. Please try again.",
-        type: "error"
-      });
-    }
-  };
-
-  const clearNotification = () => {
-    setNotification({ show: false, message: "", type: "" });
-  };
-
-  // Get unique job types and die types for filters
-  const getFilterOptions = () => {
-    const jobTypes = [...new Set(dies.map(die => die.jobType))].filter(Boolean);
-    const dieTypes = [...new Set(dies.map(die => die.type))].filter(Boolean);
+    if (!formData.jobType.trim()) newErrors.jobType = "Job type is required";
+    if (!formData.dieCode.trim()) newErrors.dieCode = "Die code is required";
+    if (!formData.frags) newErrors.frags = "Number of frags is required";
+    if (!formData.productSizeL) newErrors.productSizeL = "Product length is required";
+    if (!formData.productSizeB) newErrors.productSizeB = "Product breadth is required";
+    if (!formData.dieSizeL) newErrors.dieSizeL = "Die length is required";
+    if (!formData.dieSizeB) newErrors.dieSizeB = "Die breadth is required";
+    if (!formData.price) newErrors.price = "Price is required";
     
-    return { jobTypes, dieTypes };
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
-  const filterOptions = getFilterOptions();
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+    }));
+    
+    // Clear error for this field if it exists
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
+  };
+
+  const handleImageChange = (e) => {
+    if (e.target.files[0]) {
+      setImage(e.target.files[0]);
+    }
+  };
+
+  const handleRemoveImage = () => {
+    setImage(null); // Clear the selected image
+    setFormData((prev) => ({ ...prev, imageUrl: "" })); // Remove the image URL from form data
+
+    // Reset the input file field
+    const fileInput = document.querySelector("input[type='file']");
+    if (fileInput) {
+      fileInput.value = null; // Reset the file input
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) return;
+    
+    let imageUrl = formData.imageUrl;
+    setUploading(true);
+
+    try {
+      // Upload image if a new one is selected
+      if (image && storage) {
+        const imageRef = ref(storage, `dieImages/${Date.now()}_${image.name}`);
+        const snapshot = await uploadBytes(imageRef, image);
+        imageUrl = await getDownloadURL(snapshot.ref);
+      }
+
+      const dieData = {
+        ...formData,
+        imageUrl,
+        frags: Number(formData.frags),
+        productSizeL: Number(formData.productSizeL),
+        productSizeB: Number(formData.productSizeB),
+        dieSizeL: Number(formData.dieSizeL),
+        dieSizeB: Number(formData.dieSizeB),
+        price: Number(formData.price)
+      };
+
+      if (editingDie) {
+        await onUpdateDie(editingDie.id, dieData);
+      } else {
+        await onAddDie(dieData);
+        setFormData(initialFormState);
+        setImage(null);
+      }
+      
+      setUploading(false);
+    } catch (error) {
+      console.error("Error adding/updating die:", error);
+      setUploading(false);
+    }
+  };
+
+  const handleCancel = () => {
+    setEditingDie(null);
+    setFormData(initialFormState);
+    setImage(null);
+    setErrors({});
+  };
 
   return (
-    <div className="p-6 bg-gray-100 rounded shadow">
-      <h1 className="text-xl font-bold mb-6">DIE MANAGEMENT</h1>
-      
-      {/* Notification Toast */}
-      {notification.show && (
-        <Toast 
-          message={notification.message} 
-          type={notification.type} 
-          onClose={clearNotification}
-        />
-      )}
-      
-      {/* Search and Filters */}
-      <CollapsibleSection title="Search & Filters" initiallyExpanded={false}>
-        <DieSearch 
-          searchParams={searchParams}
-          setSearchParams={setSearchParams}
-          filterOptions={filterOptions}
-        />
-      </CollapsibleSection>
-      
-      {/* Add/Edit Die Form */}
-      <CollapsibleSection title={editingDie ? "EDIT DIE" : "ADD NEW DIE"} initiallyExpanded={true}>
-        <AddDieForm
-          onAddDie={addDie}
-          onUpdateDie={updateDie}
-          editingDie={editingDie}
-          setEditingDie={setEditingDie}
-          storage={storage}
-        />
-      </CollapsibleSection>
-      
-      {/* Die Table */}
-      {loading ? (
-        <div className="text-center py-10">
-          <Spinner size="lg" />
-          <p className="mt-2 text-gray-600">Loading dies...</p>
+    <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {/* Die Details Section */}
+        <div className="md:col-span-3">
+          <h3 className="text-md font-medium mb-2 text-gray-700">Die Details</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <SelectInput
+              label="Job Type"
+              name="jobType"
+              value={formData.jobType}
+              onChange={handleChange}
+              options={jobTypeOptions}
+              placeholder="Select job type"
+              error={errors.jobType}
+              required
+            />
+            
+            <TextInput
+              label="Type"
+              name="type"
+              value={formData.type}
+              onChange={handleChange}
+              placeholder="Enter die type"
+              error={errors.type}
+            />
+            
+            <TextInput
+              label="Die Code"
+              name="dieCode"
+              value={formData.dieCode}
+              onChange={handleChange}
+              placeholder="Enter die code"
+              error={errors.dieCode}
+              required
+            />
+          </div>
         </div>
-      ) : (
-        <DieTable
-          dies={filteredDies}
-          onEditDie={setEditingDie}
-          onDeleteDie={deleteDie}
-        />
-      )}
-    </div>
+        
+        {/* Specifications Section */}
+        <div className="md:col-span-3">
+          <h3 className="text-md font-medium mb-2 text-gray-700">Specifications</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <NumberInput
+              label="Frags"
+              name="frags"
+              value={formData.frags}
+              onChange={handleChange}
+              placeholder="Enter number of frags"
+              error={errors.frags}
+              required
+              min={0}
+            />
+            
+            <NumberInput
+              label="Product Size L (in)"
+              name="productSizeL"
+              value={formData.productSizeL}
+              onChange={handleChange}
+              placeholder="Enter product length"
+              error={errors.productSizeL}
+              required
+              min={0}
+              step={0.01}
+            />
+            
+            <NumberInput
+              label="Product Size B (in)"
+              name="productSizeB"
+              value={formData.productSizeB}
+              onChange={handleChange}
+              placeholder="Enter product breadth"
+              error={errors.productSizeB}
+              required
+              min={0}
+              step={0.01}
+            />
+            
+            <NumberInput
+              label="Die Size L (in)"
+              name="dieSizeL"
+              value={formData.dieSizeL}
+              onChange={handleChange}
+              placeholder="Enter die length"
+              error={errors.dieSizeL}
+              required
+              min={0}
+              step={0.01}
+            />
+            
+            <NumberInput
+              label="Die Size B (in)"
+              name="dieSizeB"
+              value={formData.dieSizeB}
+              onChange={handleChange}
+              placeholder="Enter die breadth"
+              error={errors.dieSizeB}
+              required
+              min={0}
+              step={0.01}
+            />
+            
+            <NumberInput
+              label="Price (INR)"
+              name="price"
+              value={formData.price}
+              onChange={handleChange}
+              placeholder="Enter die price"
+              error={errors.price}
+              required
+              min={0}
+              step={0.01}
+            />
+            
+            <TextInput
+              label="Location"
+              name="location"
+              value={formData.location}
+              onChange={handleChange}
+              placeholder="Enter die location"
+            />
+          </div>
+        </div>
+        
+        {/* Image Upload Section */}
+        <div className="md:col-span-3">
+          <h3 className="text-md font-medium mb-2 text-gray-700">Die Image</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Upload Image:</label>
+              <input 
+                type="file" 
+                accept="image/*" 
+                onChange={handleImageChange} 
+                className="mt-1 block w-full text-sm text-gray-500
+                  file:mr-4 file:py-2 file:px-4
+                  file:rounded-md file:border-0
+                  file:text-sm file:font-semibold
+                  file:bg-blue-50 file:text-blue-700
+                  hover:file:bg-blue-100"
+              />
+              <p className="mt-1 text-sm text-gray-500">Upload an image of the die (optional)</p>
+            </div>
+            
+            {/* Image Preview */}
+            {(image || formData.imageUrl) && (
+              <div className="flex items-center space-x-4">
+                <div className="border rounded-md overflow-hidden w-24 h-24">
+                  <img
+                    src={image ? URL.createObjectURL(image) : formData.imageUrl}
+                    alt="Die Preview"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <Button
+                  type="button"
+                  variant="danger"
+                  size="sm"
+                  onClick={handleRemoveImage}
+                >
+                  Remove Image
+                </Button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+      
+      {/* Form Actions */}
+      <div className="flex justify-end space-x-2 mt-6">
+        {editingDie && (
+          <Button
+            type="button"
+            variant="outline"
+            onClick={handleCancel}
+          >
+            Cancel
+          </Button>
+        )}
+        
+        <Button
+          type="submit"
+          variant="primary"
+          disabled={uploading}
+        >
+          {uploading ? "Uploading..." : editingDie ? "Save Changes" : "Add Die"}
+        </Button>
+      </div>
+    </form>
   );
 };
 
-export default DieManagement;
+export default AddDieForm;
