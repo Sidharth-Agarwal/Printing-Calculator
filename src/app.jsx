@@ -1,5 +1,6 @@
 import React from "react";
 import PaperManagement from "./components/Management/Paper/PaperManagement";
+import "./styles/tailwind.css";
 
 function App() {
   return (
