@@ -708,117 +708,111 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           </div>
 
           {/* Processing Options in Collapsible Sections */}
-          <div className="grid grid-cols-1 md:grid-cols-1 gap-4">
-            {/* Left Column */}
-            <div className="space-y-4">
-              <FormSection 
-                title="LETTER PRESS (LP) DETAILS" 
-                id="lp"
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-              >
-                <LPDetails 
-                  state={state} 
-                  dispatch={dispatch} 
-                  onNext={() => {}} 
-                  onPrevious={() => {}} 
-                  singlePageMode={true}
-                />
-              </FormSection>
+          <div>
+            <FormSection 
+              title="LETTER PRESS (LP) DETAILS" 
+              id="lp"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            >
+              <LPDetails 
+                state={state} 
+                dispatch={dispatch} 
+                onNext={() => {}} 
+                onPrevious={() => {}} 
+                singlePageMode={true}
+              />
+            </FormSection>
 
-              <FormSection 
-                title="EMBOSSING (EMB) DETAILS" 
-                id="emb"
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-              >
-                <EMBDetails 
-                  state={state} 
-                  dispatch={dispatch} 
-                  onNext={() => {}} 
-                  onPrevious={() => {}} 
-                  singlePageMode={true}
-                />
-              </FormSection>
+            <FormSection 
+              title="FOIL STAMPING (FS) DETAILS" 
+              id="fs"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            >
+              <FSDetails 
+                state={state} 
+                dispatch={dispatch} 
+                onNext={() => {}} 
+                onPrevious={() => {}} 
+                singlePageMode={true}
+              />
+            </FormSection>
 
-              <FormSection 
-                title="DIE CUTTING DETAILS" 
-                id="dieCutting"
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-              >
-                <DieCutting 
-                  state={state} 
-                  dispatch={dispatch} 
-                  onNext={() => {}} 
-                  onPrevious={() => {}} 
-                  singlePageMode={true}
-                />
-              </FormSection>
+            <FormSection 
+              title="EMBOSSING (EMB) DETAILS" 
+              id="emb"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            >
+              <EMBDetails 
+                state={state} 
+                dispatch={dispatch} 
+                onNext={() => {}} 
+                onPrevious={() => {}} 
+                singlePageMode={true}
+              />
+            </FormSection>
 
-              <FormSection 
-                title="PASTING DETAILS" 
-                id="pasting"
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-              >
-                <Pasting 
-                  state={state} 
-                  dispatch={dispatch} 
-                  onNext={() => {}} 
-                  onPrevious={() => {}} 
-                  singlePageMode={true}
-                />
-              </FormSection>
-            </div>
+            <FormSection 
+              title="DIGITAL PRINTING DETAILS" 
+              id="digi"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            >
+              <DigiDetails 
+                state={state} 
+                dispatch={dispatch} 
+                onNext={() => {}} 
+                onPrevious={() => {}} 
+                singlePageMode={true}
+              />
+            </FormSection>
 
-            {/* Right Column */}
-            <div className="space-y-4">
-              <FormSection 
-                title="FOIL STAMPING (FS) DETAILS" 
-                id="fs"
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-              >
-                <FSDetails 
-                  state={state} 
-                  dispatch={dispatch} 
-                  onNext={() => {}} 
-                  onPrevious={() => {}} 
-                  singlePageMode={true}
-                />
-              </FormSection>
+            <FormSection 
+              title="DIE CUTTING DETAILS" 
+              id="dieCutting"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            >
+              <DieCutting 
+                state={state} 
+                dispatch={dispatch} 
+                onNext={() => {}} 
+                onPrevious={() => {}} 
+                singlePageMode={true}
+              />
+            </FormSection>
 
-              <FormSection 
-                title="DIGITAL PRINTING DETAILS" 
-                id="digi"
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-              >
-                <DigiDetails 
-                  state={state} 
-                  dispatch={dispatch} 
-                  onNext={() => {}} 
-                  onPrevious={() => {}} 
-                  singlePageMode={true}
-                />
-              </FormSection>
+            <FormSection 
+              title="SANDWICH DETAILS" 
+              id="sandwich"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            >
+              <Sandwich 
+                state={state} 
+                dispatch={dispatch} 
+                onNext={() => {}} 
+                onPrevious={() => {}} 
+                singlePageMode={true}
+              />
+            </FormSection>
 
-              <FormSection 
-                title="SANDWICH DETAILS" 
-                id="sandwich"
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-              >
-                <Sandwich 
-                  state={state} 
-                  dispatch={dispatch} 
-                  onNext={() => {}} 
-                  onPrevious={() => {}} 
-                  singlePageMode={true}
-                />
-              </FormSection>
-            </div>
+            <FormSection 
+              title="PASTING DETAILS" 
+              id="pasting"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+            >
+              <Pasting 
+                state={state} 
+                dispatch={dispatch} 
+                onNext={() => {}} 
+                onPrevious={() => {}} 
+                singlePageMode={true}
+              />
+            </FormSection>
           </div>
 
           {/* Cost Calculation & Review Section - Always visible */}
