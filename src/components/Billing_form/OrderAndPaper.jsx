@@ -1,3 +1,423 @@
+// import React, { useEffect, useRef, useState } from "react";
+// import DatePicker from "react-datepicker";
+// import "react-datepicker/dist/react-datepicker.css";
+// import DieSelectionPopup from "./DieSelectionPopup";
+// import AddDieFormForPopup from "./AddDieFormForPopup";
+// import { collection, onSnapshot } from "firebase/firestore";
+// import { db } from "../../firebaseConfig";
+
+// const OrderAndPaper = ({ state, dispatch, onNext }) => {
+//   const { orderAndPaper } = state;
+
+//   const [papers, setPapers] = useState([]);
+//   const [showDiePopup, setShowDiePopup] = useState(false);
+//   const [showAddDiePopup, setShowAddDiePopup] = useState(false);
+
+//   const firstInputRef = useRef(null);
+
+//   // Focus on the first input field when the component loads
+//   useEffect(() => {
+//     if (firstInputRef.current) {
+//       firstInputRef.current.focus();
+//     }
+//   }, []);
+
+//   // Fetch papers from Firestore and set the first paper if none is selected
+//   useEffect(() => {
+//     const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
+//       const paperData = snapshot.docs.map((doc) => ({
+//         id: doc.id,
+//         ...doc.data(),
+//       }));
+//       setPapers(paperData);
+      
+//       // If papers are loaded and no paper name is selected yet, set the first paper
+//       if (paperData.length > 0 && !orderAndPaper.paperName) {
+//         dispatch({
+//           type: "UPDATE_ORDER_AND_PAPER",
+//           payload: {
+//             paperName: paperData[0].paperName
+//           },
+//         });
+//       }
+//     });
+
+//     return () => unsubscribe();
+//   }, [dispatch, orderAndPaper.paperName]);
+
+//   // Set today's date for both date fields if they're not already set
+//   useEffect(() => {
+//     if (!orderAndPaper.date) {
+//       const today = new Date();
+//       dispatch({
+//         type: "UPDATE_ORDER_AND_PAPER",
+//         payload: {
+//           date: today
+//         },
+//       });
+//     }
+    
+//     if (!orderAndPaper.deliveryDate) {
+//       const today = new Date();
+//       // Set delivery date to 7 days from today by default
+//       const deliveryDate = new Date();
+//       deliveryDate.setDate(today.getDate() + 7);
+//       dispatch({
+//         type: "UPDATE_ORDER_AND_PAPER",
+//         payload: {
+//           deliveryDate: deliveryDate
+//         },
+//       });
+//     }
+//   }, [dispatch, orderAndPaper.date, orderAndPaper.deliveryDate]);
+
+//   const handleChange = (e) => {
+//     const { name, value } = e.target;
+//     dispatch({
+//       type: "UPDATE_ORDER_AND_PAPER",
+//       payload: {
+//         [name]: name === "quantity" ? Math.max(0, value) : value,
+//       },
+//     });
+//   };
+
+//   const handleNestedChange = (e) => {
+//     const { name, value } = e.target;
+//     dispatch({
+//       type: "UPDATE_ORDER_AND_PAPER",
+//       payload: {
+//         dieSize: {
+//           ...orderAndPaper.dieSize,
+//           [name]: value,
+//         },
+//       },
+//     });
+//   };
+
+//   const handleDieSelect = (die) => {
+//     dispatch({
+//       type: "UPDATE_ORDER_AND_PAPER",
+//       payload: {
+//         dieSelection: die.dieName || "",
+//         dieCode: die.dieCode || "",
+//         dieSize: { length: die.dieSizeL || "", breadth: die.dieSizeB || "" },
+//         image: die.imageUrl || "",
+//       },
+//     });
+//     setShowDiePopup(false);
+//   };
+
+//   const handleAddDieSuccess = (newDie) => {
+//     handleDieSelect(newDie);
+//     setShowAddDiePopup(false);
+//   };
+
+//   const handleDateChange = (field, date) => {
+//     dispatch({
+//       type: "UPDATE_ORDER_AND_PAPER",
+//       payload: {
+//         [field]: date,
+//       },
+//     });
+//   };
+
+//   const handleSubmit = (e) => {
+//     e.preventDefault();
+//     onNext();
+//   };
+
+//   // Custom styles for the datepicker to make it smaller
+//   const customDatePickerStyles = `
+//     .react-datepicker {
+//       font-size: 0.8rem;
+//       width: 200px;
+//     }
+//     .react-datepicker__month-container {
+//       width: 200px;
+//     }
+//     .react-datepicker__day {
+//       width: 1.5rem;
+//       line-height: 1.5rem;
+//       margin: 0.1rem;
+//     }
+//     .react-datepicker__day-name {
+//       width: 1.5rem;
+//       line-height: 1.5rem;
+//       margin: 0.1rem;
+//     }
+//     .react-datepicker__header {
+//       padding-top: 0.5rem;
+//     }
+//     .react-datepicker__current-month {
+//       font-size: 0.9rem;
+//     }
+//   `;
+
+//   return (
+//     <div>
+//       <style>{customDatePickerStyles}</style>
+//       <div>
+//         <h1 className="text-lg font-bold text-gray-700 mb-4">ORDER & PAPER DETAILS</h1>
+//         <form onSubmit={handleSubmit} className="space-y-6">
+//           {/* Form Fields Grid */}
+//           <div className="grid grid-cols-1 md:grid-cols-6  gap-3 text-sm">
+//             {/* Client Name */}
+//             <div>
+//               <label htmlFor="clientName" className="block mb-1">
+//                 Client Name
+//               </label>
+//               <input
+//                 id="clientName"
+//                 ref={firstInputRef}
+//                 type="text"
+//                 name="clientName"
+//                 placeholder="Enter the client name"
+//                 value={orderAndPaper.clientName || ""}
+//                 onChange={handleChange}
+//                 className="border rounded-md p-2 w-full text-xs"
+//                 required
+//               />
+//             </div>
+
+//             {/* Project Name */}
+//             <div>
+//               <label htmlFor="projectName" className="block mb-1">
+//                 Project Name
+//               </label>
+//               <input
+//                 id="projectName"
+//                 type="text"
+//                 name="projectName"
+//                 placeholder="Enter the project name"
+//                 value={orderAndPaper.projectName || ""}
+//                 onChange={handleChange}
+//                 className="border rounded-md p-2 w-full text-xs"
+//                 required
+//               />
+//             </div>
+
+//             {/* Date */}
+//             <div>
+//               <label htmlFor="date" className="block mb-1">
+//                 Date
+//               </label>
+//               <DatePicker
+//                 id="date"
+//                 selected={orderAndPaper.date}
+//                 onChange={(date) => handleDateChange("date", date)}
+//                 dateFormat="dd/MM/yyyy"
+//                 placeholderText="DD/MM/YYYY"
+//                 className="border rounded-md p-2 w-full text-xs"
+//                 required
+//                 popperClassName="small-calendar"
+//                 calendarClassName="small-calendar"
+//               />
+//             </div>
+
+//             {/* Delivery Date */}
+//             <div>
+//               <label htmlFor="deliveryDate" className="block mb-1">
+//                 Estimated Delivery Date
+//               </label>
+//               <DatePicker
+//                 id="deliveryDate"
+//                 selected={orderAndPaper.deliveryDate}
+//                 onChange={(date) => handleDateChange("deliveryDate", date)}
+//                 dateFormat="dd/MM/yyyy"
+//                 placeholderText="DD/MM/YYYY"
+//                 className="border rounded-md p-2 w-full text-xs"
+//                 required
+//                 popperClassName="small-calendar"
+//                 calendarClassName="small-calendar"
+//               />
+//             </div>
+
+//             {/* Job Type */}
+//             <div>
+//               <label htmlFor="jobType" className="block mb-1">
+//                 Job Type
+//               </label>
+//               <select
+//                 id="jobType"
+//                 name="jobType"
+//                 value={orderAndPaper.jobType || "Card"}
+//                 onChange={handleChange}
+//                 className="border rounded-md p-2 w-full text-xs"
+//                 required
+//               >
+//                 <option value="Card">Card</option>
+//                 <option value="Biz Card">Biz Card</option>
+//                 <option value="Vellum Jacket">Vellum Jacket</option>
+//                 <option value="Envelope">Envelope</option>
+//                 <option value="Tag">Tag</option>
+//                 <option value="Magnet">Magnet</option>
+//               </select>
+//             </div>
+
+//             {/* Quantity */}
+//             <div>
+//               <label htmlFor="quantity" className="block mb-1">
+//                 Quantity
+//               </label>
+//               <input
+//                 id="quantity"
+//                 type="number"
+//                 name="quantity"
+//                 placeholder="Enter the required quantity"
+//                 value={orderAndPaper.quantity || ""}
+//                 onChange={handleChange}
+//                 className="border rounded-md p-2 w-full text-xs"
+//                 required
+//               />
+//             </div>
+
+//             {/* Paper Provided */}
+//             <div>
+//               <label htmlFor="paperProvided" className="block mb-1">
+//                 Paper Provided
+//               </label>
+//               <select
+//                 id="paperProvided"
+//                 name="paperProvided"
+//                 value={orderAndPaper.paperProvided || "Yes"}
+//                 onChange={handleChange}
+//                 className="border rounded-md p-2 w-full text-xs"
+//                 required
+//               >
+//                 <option value="Yes">Yes</option>
+//                 <option value="No">No</option>
+//               </select>
+//             </div>
+
+//             {/* Paper Name */}
+//             <div>
+//               <label htmlFor="paperName" className="block mb-1">
+//                 Paper Name
+//               </label>
+//               <select
+//                 id="paperName"
+//                 name="paperName"
+//                 value={orderAndPaper.paperName || (papers.length > 0 ? papers[0].paperName : "")}
+//                 onChange={handleChange}
+//                 className="border rounded-md p-2 w-full text-xs"
+//                 required
+//               >
+//                 {papers.map((paper) => (
+//                   <option key={paper.id} value={paper.paperName}>
+//                     {paper.paperName}
+//                   </option>
+//                 ))}
+//               </select>
+//             </div>
+
+//             {/* Die Selection */}
+//             <div>
+//               <label htmlFor="dieSelection" className="block mb-1">
+//                 Die Selection
+//               </label>
+//               <button
+//                 id="dieSelection"
+//                 type="button"
+//                 onClick={() => setShowDiePopup(true)}
+//                 className="border rounded-md p-2 bg-gray-100 w-full text-xs"
+//               >
+//                 {orderAndPaper.dieSelection || "Select Die"}
+//               </button>
+//             </div>
+
+//             {/* Die Code */}
+//             <div>
+//               <label htmlFor="dieCode" className="block mb-1">
+//                 Die Code
+//               </label>
+//               <input
+//                 id="dieCode"
+//                 type="text"
+//                 name="dieCode"
+//                 value={orderAndPaper.dieCode || ""}
+//                 readOnly
+//                 className="border rounded-md p-2 w-full bg-gray-200 text-xs"
+//               />
+//             </div>
+
+//             {/* Die Size */}
+//             <div className="grid grid-cols-2 gap-4">
+//               <div>
+//                 <label htmlFor="length" className="block mb-1">
+//                   Die Size (L)
+//                 </label>
+//                 <input
+//                   id="length"
+//                   type="number"
+//                   name="length"
+//                   placeholder="Die (L)"
+//                   value={orderAndPaper.dieSize?.length || ""}
+//                   onChange={handleNestedChange}
+//                   className="border rounded-md p-2 w-full text-xs"
+//                   readOnly
+//                 />
+//               </div>
+//               <div>
+//                 <label htmlFor="breadth" className="block mb-1">
+//                   Die Size (B)
+//                 </label>
+//                 <input
+//                   id="breadth"
+//                   type="number"
+//                   name="breadth"
+//                   placeholder="Die (B)"
+//                   value={orderAndPaper.dieSize?.breadth || ""}
+//                   onChange={handleNestedChange}
+//                   className="border rounded-md p-2 w-full text-xs"
+//                   readOnly
+//                 />
+//               </div>
+//             </div>
+
+//             {/* Die Image */}
+//             <div>
+//               <label htmlFor="image" className="block mb-1">
+//                 Die Image
+//               </label>
+//               <img
+//                 id="image"
+//                 src={orderAndPaper.image || "https://via.placeholder.com/100"}
+//                 alt="Die"
+//                 className="w-[100px] h-[100px] object-contain border"
+//               />
+//             </div>
+//           </div>
+
+//           <div className="flex justify-end mt-6">
+//             <button type="submit" className="mt-2 px-3 py-2 bg-blue-500 text-white rounded text-sm">
+//               Next
+//             </button>
+//           </div>
+//         </form>
+
+//         {/* Die Selection Popup */}
+//         {showDiePopup && (
+//           <DieSelectionPopup
+//             dispatch={dispatch}
+//             onClose={() => setShowDiePopup(false)}
+//             onAddNewDie={() => setShowAddDiePopup(true)}
+//           />
+//         )}
+
+//         {/* Add Die Popup */}
+//         {showAddDiePopup && (
+//           <AddDieFormForPopup
+//             onAddDie={handleAddDieSuccess}
+//             onClose={() => setShowAddDiePopup(false)}
+//           />
+//         )}
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default OrderAndPaper;
+
 import React, { useEffect, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
@@ -6,7 +426,7 @@ import AddDieFormForPopup from "./AddDieFormForPopup";
 import { collection, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 
-const OrderAndPaper = ({ state, dispatch, onNext }) => {
+const OrderAndPaper = ({ state, dispatch, onNext, validationErrors = {}, singlePageMode = false }) => {
   const { orderAndPaper } = state;
 
   const [papers, setPapers] = useState([]);
@@ -17,10 +437,10 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
 
   // Focus on the first input field when the component loads
   useEffect(() => {
-    if (firstInputRef.current) {
+    if (firstInputRef.current && !singlePageMode) {
       firstInputRef.current.focus();
     }
-  }, []);
+  }, [singlePageMode]);
 
   // Fetch papers from Firestore and set the first paper if none is selected
   useEffect(() => {
@@ -123,7 +543,9 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onNext();
+    if (!singlePageMode) {
+      onNext();
+    }
   };
 
   // Custom styles for the datepicker to make it smaller
@@ -157,14 +579,16 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
     <div>
       <style>{customDatePickerStyles}</style>
       <div>
-        <h1 className="text-lg font-bold text-gray-700 mb-4">ORDER & PAPER DETAILS</h1>
+        {!singlePageMode && (
+          <h1 className="text-lg font-bold text-gray-700 mb-4">ORDER & PAPER DETAILS</h1>
+        )}
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Form Fields Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-6  gap-3 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
             {/* Client Name */}
             <div>
               <label htmlFor="clientName" className="block mb-1">
-                Client Name
+                Client Name <span className="text-red-500">*</span>
               </label>
               <input
                 id="clientName"
@@ -174,15 +598,20 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 placeholder="Enter the client name"
                 value={orderAndPaper.clientName || ""}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full text-xs"
+                className={`border rounded-md p-2 w-full text-sm ${
+                  validationErrors.clientName ? "border-red-500" : ""
+                }`}
                 required
               />
+              {validationErrors.clientName && (
+                <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.clientName}</p>
+              )}
             </div>
 
             {/* Project Name */}
             <div>
               <label htmlFor="projectName" className="block mb-1">
-                Project Name
+                Project Name <span className="text-red-500">*</span>
               </label>
               <input
                 id="projectName"
@@ -191,15 +620,20 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 placeholder="Enter the project name"
                 value={orderAndPaper.projectName || ""}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full text-xs"
+                className={`border rounded-md p-2 w-full text-sm ${
+                  validationErrors.projectName ? "border-red-500" : ""
+                }`}
                 required
               />
+              {validationErrors.projectName && (
+                <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.projectName}</p>
+              )}
             </div>
 
             {/* Date */}
             <div>
               <label htmlFor="date" className="block mb-1">
-                Date
+                Date <span className="text-red-500">*</span>
               </label>
               <DatePicker
                 id="date"
@@ -207,7 +641,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 onChange={(date) => handleDateChange("date", date)}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full text-xs"
+                className="border rounded-md p-2 w-full text-sm"
                 required
                 popperClassName="small-calendar"
                 calendarClassName="small-calendar"
@@ -217,7 +651,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
             {/* Delivery Date */}
             <div>
               <label htmlFor="deliveryDate" className="block mb-1">
-                Estimated Delivery Date
+                Estimated Delivery Date <span className="text-red-500">*</span>
               </label>
               <DatePicker
                 id="deliveryDate"
@@ -225,7 +659,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 onChange={(date) => handleDateChange("deliveryDate", date)}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full text-xs"
+                className="border rounded-md p-2 w-full text-sm"
                 required
                 popperClassName="small-calendar"
                 calendarClassName="small-calendar"
@@ -235,14 +669,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
             {/* Job Type */}
             <div>
               <label htmlFor="jobType" className="block mb-1">
-                Job Type
+                Job Type <span className="text-red-500">*</span>
               </label>
               <select
                 id="jobType"
                 name="jobType"
                 value={orderAndPaper.jobType || "Card"}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full text-xs"
+                className="border rounded-md p-2 w-full text-sm"
                 required
               >
                 <option value="Card">Card</option>
@@ -257,7 +691,7 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
             {/* Quantity */}
             <div>
               <label htmlFor="quantity" className="block mb-1">
-                Quantity
+                Quantity <span className="text-red-500">*</span>
               </label>
               <input
                 id="quantity"
@@ -266,22 +700,27 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 placeholder="Enter the required quantity"
                 value={orderAndPaper.quantity || ""}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full text-xs"
+                className={`border rounded-md p-2 w-full text-sm ${
+                  validationErrors.quantity ? "border-red-500" : ""
+                }`}
                 required
               />
+              {validationErrors.quantity && (
+                <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.quantity}</p>
+              )}
             </div>
 
             {/* Paper Provided */}
             <div>
               <label htmlFor="paperProvided" className="block mb-1">
-                Paper Provided
+                Paper Provided <span className="text-red-500">*</span>
               </label>
               <select
                 id="paperProvided"
                 name="paperProvided"
                 value={orderAndPaper.paperProvided || "Yes"}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full text-xs"
+                className="border rounded-md p-2 w-full text-sm"
                 required
               >
                 <option value="Yes">Yes</option>
@@ -292,14 +731,14 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
             {/* Paper Name */}
             <div>
               <label htmlFor="paperName" className="block mb-1">
-                Paper Name
+                Paper Name <span className="text-red-500">*</span>
               </label>
               <select
                 id="paperName"
                 name="paperName"
                 value={orderAndPaper.paperName || (papers.length > 0 ? papers[0].paperName : "")}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full text-xs"
+                className="border rounded-md p-2 w-full text-sm"
                 required
               >
                 {papers.map((paper) => (
@@ -313,16 +752,21 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
             {/* Die Selection */}
             <div>
               <label htmlFor="dieSelection" className="block mb-1">
-                Die Selection
+                Die Selection <span className="text-red-500">*</span>
               </label>
               <button
                 id="dieSelection"
                 type="button"
                 onClick={() => setShowDiePopup(true)}
-                className="border rounded-md p-2 bg-gray-100 w-full text-xs"
+                className={`border rounded-md p-2 bg-gray-100 w-full text-sm ${
+                  validationErrors.dieCode ? "border-red-500" : ""
+                }`}
               >
                 {orderAndPaper.dieSelection || "Select Die"}
               </button>
+              {validationErrors.dieCode && (
+                <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.dieCode}</p>
+              )}
             </div>
 
             {/* Die Code */}
@@ -336,39 +780,35 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
                 name="dieCode"
                 value={orderAndPaper.dieCode || ""}
                 readOnly
-                className="border rounded-md p-2 w-full bg-gray-200 text-xs"
+                className="border rounded-md p-2 w-full bg-gray-100 text-sm"
               />
             </div>
 
             {/* Die Size */}
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label htmlFor="length" className="block mb-1">
-                  Die Size (L)
-                </label>
+            <div>
+              <label htmlFor="dieSize" className="block mb-1">
+                Die Size (inch)
+              </label>
+              <div className="flex items-center gap-2">
                 <input
                   id="length"
                   type="number"
                   name="length"
-                  placeholder="Die (L)"
+                  placeholder="Length"
                   value={orderAndPaper.dieSize?.length || ""}
                   onChange={handleNestedChange}
-                  className="border rounded-md p-2 w-full text-xs"
+                  className="border rounded-md p-2 w-full text-sm bg-gray-100"
                   readOnly
                 />
-              </div>
-              <div>
-                <label htmlFor="breadth" className="block mb-1">
-                  Die Size (B)
-                </label>
+                <span>×</span>
                 <input
                   id="breadth"
                   type="number"
                   name="breadth"
-                  placeholder="Die (B)"
+                  placeholder="Breadth"
                   value={orderAndPaper.dieSize?.breadth || ""}
                   onChange={handleNestedChange}
-                  className="border rounded-md p-2 w-full text-xs"
+                  className="border rounded-md p-2 w-full text-sm bg-gray-100"
                   readOnly
                 />
               </div>
@@ -379,20 +819,30 @@ const OrderAndPaper = ({ state, dispatch, onNext }) => {
               <label htmlFor="image" className="block mb-1">
                 Die Image
               </label>
-              <img
-                id="image"
-                src={orderAndPaper.image || "https://via.placeholder.com/100"}
-                alt="Die"
-                className="w-[100px] h-[100px] object-contain border"
-              />
+              {orderAndPaper.image ? (
+                <div className="relative h-24 w-24 border rounded overflow-hidden">
+                  <img
+                    id="image"
+                    src={orderAndPaper.image}
+                    alt="Die"
+                    className="h-full w-full object-contain"
+                  />
+                </div>
+              ) : (
+                <div className="h-24 w-24 border rounded flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
+                  No image
+                </div>
+              )}
             </div>
           </div>
 
-          <div className="flex justify-end mt-6">
-            <button type="submit" className="mt-2 px-3 py-2 bg-blue-500 text-white rounded text-sm">
-              Next
-            </button>
-          </div>
+          {!singlePageMode && (
+            <div className="flex justify-end mt-6">
+              <button type="submit" className="mt-2 px-3 py-2 bg-blue-500 text-white rounded text-sm">
+                Next
+              </button>
+            </div>
+          )}
         </form>
 
         {/* Die Selection Popup */}

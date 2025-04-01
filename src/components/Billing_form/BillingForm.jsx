@@ -1,5 +1,421 @@
-import React, { useReducer, useEffect, useState } from "react";
+// import React, { useReducer, useEffect, useState } from "react";
+// import { useNavigate } from "react-router-dom";
+// import OrderAndPaper from "./OrderAndPaper";
+// import LPDetails from "./LPDetails";
+// import FSDetails from "./FSDetails";
+// import EMBDetails from "./EMBDetails";
+// import DigiDetails from "./DigiDetails";
+// import DieCutting from "./DieCutting";
+// import Sandwich from "./Sandwich";
+// import Pasting from "./Pasting";
+// import ReviewAndSubmit from "./ReviewAndSubmit";
+// import { calculateEstimateCosts } from "./calculations";
+// import { db } from "../../firebaseConfig";
+// import { collection, addDoc } from "firebase/firestore";
+
+// // Initial state for all steps
+// const initialFormState = {
+//   orderAndPaper: {
+//     clientName: "",
+//     projectName: "",
+//     date: null,
+//     deliveryDate: null,
+//     jobType: "Card",
+//     quantity: "",
+//     paperProvided: "Yes",
+//     paperName: "",
+//     dieSelection: "",
+//     dieCode: "",
+//     dieSize: { length: "", breadth: "" },
+//     image: "",
+//   },
+//   lpDetails: {
+//     isLPUsed: false,
+//     noOfColors: 0,
+//     colorDetails: [],
+//   },
+//   fsDetails: {
+//     isFSUsed: false,
+//     fsType: "",
+//     foilDetails: [],
+//   },
+//   embDetails: {
+//     isEMBUsed: false,
+//     plateSizeType: "",
+//     plateDimensions: { length: "", breadth: "" },
+//     plateTypeMale: "",
+//     plateTypeFemale: "",
+//     embMR: "",
+//   },
+//   digiDetails: {
+//     isDigiUsed: false,
+//     digiDie: "",
+//     digiDimensions: { length: "", breadth: "" },
+//   },
+//   dieCutting: {
+//     isDieCuttingUsed: false,
+//     difficulty: "",
+//     pdc: "",
+//     dcMR: "",
+//   },
+//   sandwich: {
+//     isSandwichComponentUsed: false,
+//     lpDetailsSandwich: {
+//       isLPUsed: false,
+//       noOfColors: 0,
+//       colorDetails: [],
+//     },
+//     fsDetailsSandwich: {
+//       isFSUsed: false,
+//       fsType: "",
+//       foilDetails: [],
+//     },
+//     embDetailsSandwich: {
+//       isEMBUsed: false,
+//       plateSizeType: "",
+//       plateDimensions: { length: "", breadth: "" },
+//       plateTypeMale: "",
+//       plateTypeFemale: "",
+//       embMR: "",
+//     },
+//   },
+//   pasting: {
+//     isPastingUsed: false,
+//     pastingType: "",
+//   },
+// };
+
+// // Reducer function to handle updates to the state
+// const reducer = (state, action) => {
+//   switch (action.type) {
+//     case "UPDATE_ORDER_AND_PAPER":
+//       return { ...state, orderAndPaper: { ...state.orderAndPaper, ...action.payload } };
+//     case "UPDATE_LP_DETAILS":
+//       return { ...state, lpDetails: { ...state.lpDetails, ...action.payload } };
+//     case "UPDATE_FS_DETAILS":
+//       return { ...state, fsDetails: { ...state.fsDetails, ...action.payload } };
+//     case "UPDATE_EMB_DETAILS":
+//       return { ...state, embDetails: { ...state.embDetails, ...action.payload } };
+//     case "UPDATE_DIGI_DETAILS":
+//       return { ...state, digiDetails: { ...state.digiDetails, ...action.payload } };
+//     case "UPDATE_DIE_CUTTING":
+//       return { ...state, dieCutting: { ...state.dieCutting, ...action.payload } };
+//     case "UPDATE_SANDWICH":
+//       return { ...state, sandwich: { ...state.sandwich, ...action.payload } };
+//     case "UPDATE_PASTING":
+//       return { ...state, pasting: { ...state.pasting, ...action.payload } };
+//     case "RESET_FORM":
+//       return initialFormState;
+//     case "INITIALIZE_FORM":
+//       return { ...action.payload };
+//     default:
+//       return state;
+//   }
+// };
+
+// // Map state to Firebase structure
+// const mapStateToFirebaseStructure = (state, calculations) => {
+//   const { orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich, pasting } = state;
+
+//   return {
+//     clientName: orderAndPaper.clientName,
+//     projectName: orderAndPaper.projectName,
+//     date: orderAndPaper.date?.toISOString() || null,
+//     deliveryDate: orderAndPaper.deliveryDate?.toISOString() || null,
+//     jobDetails: {
+//       jobType: orderAndPaper.jobType,
+//       quantity: orderAndPaper.quantity,
+//       paperProvided: orderAndPaper.paperProvided,
+//       paperName: orderAndPaper.paperName,
+//     },
+//     dieDetails: {
+//       dieSelection: orderAndPaper.dieSelection,
+//       dieCode: orderAndPaper.dieCode,
+//       dieSize: orderAndPaper.dieSize,
+//       image: orderAndPaper.image,
+//     },
+//     lpDetails: lpDetails.isLPUsed ? lpDetails : null,
+//     fsDetails: fsDetails.isFSUsed ? fsDetails : null,
+//     embDetails: embDetails.isEMBUsed ? embDetails : null,
+//     digiDetails: digiDetails.isDigiUsed ? digiDetails : null,
+//     dieCutting: dieCutting.isDieCuttingUsed ? dieCutting : null,
+//     sandwich: sandwich.isSandwichComponentUsed ? sandwich : null,
+//     pasting: pasting.isPastingUsed ? pasting : null,
+//     calculations,
+//   };
+// };
+
+// const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess = null, onClose = null }) => {
+//   const navigate = useNavigate();
+//   const [state, dispatch] = useReducer(reducer, initialState || initialFormState);
+//   const [calculations, setCalculations] = useState(null);
+//   const [isCalculating, setIsCalculating] = useState(false);
+//   const [isSubmitting, setIsSubmitting] = useState(false);
+//   const [activeSection, setActiveSection] = useState(null);
+//   const [validationErrors, setValidationErrors] = useState({});
+
+//   // Initialize form with data if in edit mode
+//   useEffect(() => {
+//     if (initialState && isEditMode) {
+//       dispatch({ type: "INITIALIZE_FORM", payload: initialState });
+//     }
+//   }, [initialState, isEditMode]);
+
+//   // Calculate costs when form data changes
+//   useEffect(() => {
+//     const debounceTimer = setTimeout(() => {
+//       performCalculations();
+//     }, 1000); // 1 second debounce
+    
+//     return () => clearTimeout(debounceTimer);
+//   }, [state]);
+
+//   const performCalculations = async () => {
+//     // Check if order and paper fields are filled
+//     const { clientName, projectName, quantity, paperName, dieCode, dieSize } = state.orderAndPaper;
+//     if (!clientName || !projectName || !quantity || !paperName || !dieCode || 
+//         !dieSize.length || !dieSize.breadth) {
+//       return; // Don't calculate if essential fields are missing
+//     }
+    
+//     setIsCalculating(true);
+//     try {
+//       const result = await calculateEstimateCosts(state);
+//       if (result.error) {
+//         console.error("Error during calculations:", result.error);
+//       } else {
+//         setCalculations(result);
+//       }
+//     } catch (error) {
+//       console.error("Unexpected error during calculations:", error);
+//     } finally {
+//       setIsCalculating(false);
+//     }
+//   };
+
+//   const validateForm = () => {
+//     const errors = {};
+//     const { orderAndPaper } = state;
+    
+//     // Validate Order & Paper section
+//     if (!orderAndPaper.clientName) errors.clientName = "Client name is required";
+//     if (!orderAndPaper.projectName) errors.projectName = "Project name is required";
+//     if (!orderAndPaper.quantity) errors.quantity = "Quantity is required";
+//     if (!orderAndPaper.dieCode) errors.dieCode = "Please select a die";
+    
+//     setValidationErrors(errors);
+//     return Object.keys(errors).length === 0;
+//   };
+
+//   const handleSubmit = async (e) => {
+//     e.preventDefault();
+    
+//     if (!validateForm()) {
+//       // Scroll to the first error
+//       const firstError = document.querySelector(".error-message");
+//       if (firstError) {
+//         firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+//       }
+//       return;
+//     }
+    
+//     setIsSubmitting(true);
+//     try {
+//       const formattedData = mapStateToFirebaseStructure(state, calculations);
+//       if (isEditMode && onSubmitSuccess) {
+//         await onSubmitSuccess(formattedData);
+//         if (onClose) onClose();
+//       } else {
+//         await addDoc(collection(db, "estimates"), formattedData);
+//         alert("Estimate created successfully!");
+//         dispatch({ type: "RESET_FORM" });
+//         // Navigate to estimates page
+//         navigate('/material-stock/estimates-db');
+//       }
+//     } catch (error) {
+//       console.error("Error handling estimate:", error);
+//       alert("Failed to handle estimate.");
+//     } finally {
+//       setIsSubmitting(false);
+//     }
+//   };
+
+//   const toggleSection = (section) => {
+//     setActiveSection(activeSection === section ? null : section);
+//   };
+
+//   // Custom form section component
+//   const FormSection = ({ title, children, id }) => {
+//     const isActive = activeSection === id;
+    
+//     return (
+//       <div className="mb-6 border rounded-lg overflow-hidden">
+//         <div 
+//           className={`p-3 flex justify-between items-center cursor-pointer ${isActive ? 'bg-blue-50' : 'bg-gray-50'}`}
+//           onClick={() => toggleSection(id)}
+//         >
+//           <h2 className="text-lg font-semibold">{title}</h2>
+//           <span className="text-gray-500">
+//             {isActive ? '-' : '+'}
+//           </span>
+//         </div>
+//         <div className={`transition-all duration-300 ${isActive ? 'block p-4' : 'hidden'}`}>
+//           {children}
+//         </div>
+//       </div>
+//     );
+//   };
+
+//   return (
+//     <div className="bg-white rounded-lg">
+//       <div className="max-w-screen-xl mx-auto p-4">
+//         <h1 className="text-2xl font-bold text-gray-700 mb-4">
+//           {isEditMode ? "EDIT ESTIMATE" : "CREATE NEW BILL"}
+//         </h1>
+
+//         <form onSubmit={handleSubmit} className="space-y-4">
+//           {/* Order & Paper Section - Always visible */}
+//           <div className="bg-gray-50 p-4 rounded-lg">
+//             <h2 className="text-lg font-semibold mb-4">ORDER & PAPER DETAILS</h2>
+//             <OrderAndPaper 
+//               state={state} 
+//               dispatch={dispatch} 
+//               onNext={() => {}} 
+//               validationErrors={validationErrors}
+//               singlePageMode={true}
+//             />
+//           </div>
+
+//           {/* Processing Options */}
+//           <FormSection title="LETTER PRESS (LP) DETAILS" id="lp">
+//             <LPDetails 
+//               state={state} 
+//               dispatch={dispatch} 
+//               onNext={() => {}} 
+//               onPrevious={() => {}} 
+//               singlePageMode={true}
+//             />
+//           </FormSection>
+
+//           <FormSection title="FOIL STAMPING (FS) DETAILS" id="fs">
+//             <FSDetails 
+//               state={state} 
+//               dispatch={dispatch} 
+//               onNext={() => {}} 
+//               onPrevious={() => {}} 
+//               singlePageMode={true}
+//             />
+//           </FormSection>
+
+//           <FormSection title="EMBOSSING (EMB) DETAILS" id="emb">
+//             <EMBDetails 
+//               state={state} 
+//               dispatch={dispatch} 
+//               onNext={() => {}} 
+//               onPrevious={() => {}} 
+//               singlePageMode={true}
+//             />
+//           </FormSection>
+
+//           <FormSection title="DIGITAL PRINTING DETAILS" id="digi">
+//             <DigiDetails 
+//               state={state} 
+//               dispatch={dispatch} 
+//               onNext={() => {}} 
+//               onPrevious={() => {}} 
+//               singlePageMode={true}
+//             />
+//           </FormSection>
+
+//           <FormSection title="DIE CUTTING DETAILS" id="dieCutting">
+//             <DieCutting 
+//               state={state} 
+//               dispatch={dispatch} 
+//               onNext={() => {}} 
+//               onPrevious={() => {}} 
+//               singlePageMode={true}
+//             />
+//           </FormSection>
+
+//           <FormSection title="SANDWICH DETAILS" id="sandwich">
+//             <Sandwich 
+//               state={state} 
+//               dispatch={dispatch} 
+//               onNext={() => {}} 
+//               onPrevious={() => {}} 
+//               singlePageMode={true}
+//             />
+//           </FormSection>
+
+//           <FormSection title="PASTING DETAILS" id="pasting">
+//             <Pasting 
+//               state={state} 
+//               dispatch={dispatch} 
+//               onNext={() => {}} 
+//               onPrevious={() => {}} 
+//               singlePageMode={true}
+//             />
+//           </FormSection>
+
+//           {/* Cost Calculation & Review Section - Always visible */}
+//           <div className="bg-gray-50 p-4 rounded-lg mt-6">
+//             <h2 className="text-lg font-semibold mb-4">COST CALCULATION & REVIEW</h2>
+//             <ReviewAndSubmit 
+//               state={state} 
+//               calculations={calculations} 
+//               isCalculating={isCalculating} 
+//               onPrevious={() => {}} 
+//               onCreateEstimate={() => {}} // We'll handle submission in this component
+//               isEditMode={isEditMode}
+//               isSaving={isSubmitting}
+//               singlePageMode={true}
+//             />
+//           </div>
+
+//           <div className="flex justify-end mt-4">
+//             {onClose && (
+//               <button
+//                 type="button"
+//                 onClick={onClose}
+//                 className="mr-3 px-4 py-2 bg-gray-500 text-white rounded-md"
+//                 disabled={isSubmitting}
+//               >
+//                 Cancel
+//               </button>
+//             )}
+//             <button
+//               type="submit"
+//               className="px-4 py-2 bg-blue-500 text-white rounded-md flex items-center"
+//               disabled={isSubmitting}
+//             >
+//               {isSubmitting ? (
+//                 <>
+//                   <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+//                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+//                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+//                   </svg>
+//                   Saving...
+//                 </>
+//               ) : (
+//                 isEditMode ? "Save Changes" : "Create Estimate"
+//               )}
+//             </button>
+//           </div>
+//         </form>
+//       </div>
+//     </div>
+//   );
+// };
+
+// export default BillingForm;
+
+import React, { useReducer, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { collection, addDoc } from "firebase/firestore";
+import { db } from "../../firebaseConfig";
+import { calculateEstimateCosts } from "./calculations";
+
+// Import components
 import OrderAndPaper from "./OrderAndPaper";
 import LPDetails from "./LPDetails";
 import FSDetails from "./FSDetails";
@@ -9,13 +425,9 @@ import DieCutting from "./DieCutting";
 import Sandwich from "./Sandwich";
 import Pasting from "./Pasting";
 import ReviewAndSubmit from "./ReviewAndSubmit";
-import { calculateEstimateCosts } from "./calculations";
-import { db } from "../../firebaseConfig";
-import { collection, addDoc } from "firebase/firestore";
 
 // Initial state for all steps
 const initialFormState = {
-  currentStep: 1,
   orderAndPaper: {
     clientName: "",
     projectName: "",
@@ -105,12 +517,10 @@ const reducer = (state, action) => {
       return { ...state, sandwich: { ...state.sandwich, ...action.payload } };
     case "UPDATE_PASTING":
       return { ...state, pasting: { ...state.pasting, ...action.payload } };
-    case "SET_STEP":
-      return { ...state, currentStep: action.payload };
     case "RESET_FORM":
       return initialFormState;
     case "INITIALIZE_FORM":
-      return { ...action.payload, currentStep: 1 };
+      return { ...action.payload };
     default:
       return state;
   }
@@ -148,11 +558,42 @@ const mapStateToFirebaseStructure = (state, calculations) => {
   };
 };
 
+// FormSection component - this is the component that wasn't working properly before
+const FormSection = ({ title, children, id, activeSection, setActiveSection }) => {
+  const isActive = activeSection === id;
+  
+  const toggleSection = () => {
+    setActiveSection(isActive ? null : id);
+  };
+  
+  return (
+    <div className="mb-6 border rounded-lg overflow-hidden shadow-sm">
+      <div 
+        className={`p-3 flex justify-between items-center cursor-pointer ${isActive ? 'bg-blue-50' : 'bg-gray-50'}`}
+        onClick={toggleSection}
+      >
+        <h2 className="text-lg font-semibold">{title}</h2>
+        <span className="text-gray-500 text-xl">
+          {isActive ? '−' : '+'}
+        </span>
+      </div>
+      <div className={`transition-all duration-300 ${isActive ? 'block p-4' : 'hidden'}`}>
+        {children}
+      </div>
+    </div>
+  );
+};
+
 const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess = null, onClose = null }) => {
   const navigate = useNavigate();
   const [state, dispatch] = useReducer(reducer, initialState || initialFormState);
   const [calculations, setCalculations] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeSection, setActiveSection] = useState(null); // State for tracking active/open section
+  const [validationErrors, setValidationErrors] = useState({});
+
+  const formRef = useRef(null);
 
   // Initialize form with data if in edit mode
   useEffect(() => {
@@ -161,44 +602,65 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   }, [initialState, isEditMode]);
 
-  // Calculate costs when reaching the review step
+  // Calculate costs when form data changes
   useEffect(() => {
-    const performCalculations = async () => {
-      if (state.currentStep >= 8) {
-        setIsCalculating(true);
-        try {
-          const result = await calculateEstimateCosts(state);
-          if (result.error) {
-            console.error("Error during calculations:", result.error);
-            alert(result.error);
-          } else {
-            setCalculations(result);
-          }
-        } catch (error) {
-          console.error("Unexpected error during calculations:", error);
-          alert("Unexpected error during calculations. Please try again.");
-        } finally {
-          setIsCalculating(false);
-        }
+    const debounceTimer = setTimeout(() => {
+      performCalculations();
+    }, 1000); // 1 second debounce
+    
+    return () => clearTimeout(debounceTimer);
+  }, [state]);
+
+  const performCalculations = async () => {
+    // Check if order and paper fields are filled
+    const { clientName, projectName, quantity, paperName, dieCode, dieSize } = state.orderAndPaper;
+    if (!clientName || !projectName || !quantity || !paperName || !dieCode || 
+        !dieSize.length || !dieSize.breadth) {
+      return; // Don't calculate if essential fields are missing
+    }
+    
+    setIsCalculating(true);
+    try {
+      const result = await calculateEstimateCosts(state);
+      if (result.error) {
+        console.error("Error during calculations:", result.error);
+      } else {
+        setCalculations(result);
       }
-    };
-
-    performCalculations();
-  }, [state.currentStep]);
-
-  const handleNext = () => {
-    if (state.currentStep < 9) {
-      dispatch({ type: "SET_STEP", payload: state.currentStep + 1 });
+    } catch (error) {
+      console.error("Unexpected error during calculations:", error);
+    } finally {
+      setIsCalculating(false);
     }
   };
 
-  const handlePrevious = () => {
-    if (state.currentStep > 1) {
-      dispatch({ type: "SET_STEP", payload: state.currentStep - 1 });
-    }
+  const validateForm = () => {
+    const errors = {};
+    const { orderAndPaper } = state;
+    
+    // Validate Order & Paper section
+    if (!orderAndPaper.clientName) errors.clientName = "Client name is required";
+    if (!orderAndPaper.projectName) errors.projectName = "Project name is required";
+    if (!orderAndPaper.quantity) errors.quantity = "Quantity is required";
+    if (!orderAndPaper.dieCode) errors.dieCode = "Please select a die";
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      // Scroll to the first error
+      const firstError = document.querySelector(".error-message");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+    
+    setIsSubmitting(true);
     try {
       const formattedData = mapStateToFirebaseStructure(state, calculations);
       if (isEditMode && onSubmitSuccess) {
@@ -214,43 +676,196 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     } catch (error) {
       console.error("Error handling estimate:", error);
       alert("Failed to handle estimate.");
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
-  const steps = [
-    <OrderAndPaper state={state} dispatch={dispatch} onNext={handleNext} key="step1" />,
-    <LPDetails state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step2" />,
-    <FSDetails state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step3" />,
-    <EMBDetails state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step4" />,
-    <DigiDetails state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step5" />,
-    <DieCutting state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step6" />,
-    <Sandwich state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step7" />,
-    <Pasting state={state} dispatch={dispatch} onNext={handleNext} onPrevious={handlePrevious} key="step8" />,
-    <ReviewAndSubmit state={state} calculations={calculations} isCalculating={isCalculating} onPrevious={handlePrevious} onCreateEstimate={handleSubmit} isEditMode={isEditMode} key="step9" />,
-  ];
+  // Handler for Review and Submit when calculations are ready
+  const handleCreateEstimate = (enhancedCalculations) => {
+    // For single page mode, we're just submitting the form
+    handleSubmit(new Event('submit'));
+  };
 
   return (
     <div className="bg-white rounded-lg">
       <div className="max-w-screen-xl mx-auto p-4">
         <h1 className="text-2xl font-bold text-gray-700 mb-4">
-          {isEditMode ? "EDIT EDTIMATE" : "CREATE NEW BILL"}
+          {isEditMode ? "EDIT ESTIMATE" : "CREATE NEW BILL"}
         </h1>
-        
-        {/* Progress Bar */}
-        <div className="text-sm text-gray-600 mb-6">
-          <p>Step {state.currentStep} of {steps.length}</p>
-          <div className="h-2 bg-gray-200 rounded-full mt-1">
-            <div
-              className="h-2 bg-blue-500 rounded-full transition-all duration-300"
-              style={{ width: `${(state.currentStep / steps.length) * 100}%` }}
+
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+          {/* Order & Paper Section - Always visible */}
+          <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
+            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">ORDER & PAPER DETAILS</h2>
+            <OrderAndPaper 
+              state={state} 
+              dispatch={dispatch} 
+              onNext={() => {}} 
+              validationErrors={validationErrors}
+              singlePageMode={true}
             />
           </div>
-        </div>
 
-        {/* Current Step */}
-        <div className="bg-white rounded-lg">
-          {steps[state.currentStep - 1]}
-        </div>
+          {/* Processing Options in Collapsible Sections */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Left Column */}
+            <div className="space-y-4">
+              <FormSection 
+                title="LETTER PRESS (LP) DETAILS" 
+                id="lp"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+              >
+                <LPDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+
+              <FormSection 
+                title="EMBOSSING (EMB) DETAILS" 
+                id="emb"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+              >
+                <EMBDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+
+              <FormSection 
+                title="DIE CUTTING DETAILS" 
+                id="dieCutting"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+              >
+                <DieCutting 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+
+              <FormSection 
+                title="PASTING DETAILS" 
+                id="pasting"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+              >
+                <Pasting 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            </div>
+
+            {/* Right Column */}
+            <div className="space-y-4">
+              <FormSection 
+                title="FOIL STAMPING (FS) DETAILS" 
+                id="fs"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+              >
+                <FSDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+
+              <FormSection 
+                title="DIGITAL PRINTING DETAILS" 
+                id="digi"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+              >
+                <DigiDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+
+              <FormSection 
+                title="SANDWICH DETAILS" 
+                id="sandwich"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+              >
+                <Sandwich 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            </div>
+          </div>
+
+          {/* Cost Calculation & Review Section - Always visible */}
+          <div className="bg-gray-50 p-5 rounded-lg shadow-sm mt-6">
+            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">COST CALCULATION & REVIEW</h2>
+            <ReviewAndSubmit 
+              state={state} 
+              calculations={calculations} 
+              isCalculating={isCalculating} 
+              onPrevious={() => {}} 
+              onCreateEstimate={handleCreateEstimate} 
+              isEditMode={isEditMode}
+              isSaving={isSubmitting}
+              singlePageMode={true}
+            />
+          </div>
+
+          <div className="flex justify-end mt-8 border-t pt-6">
+            {onClose && (
+              <button
+                type="button"
+                onClick={onClose}
+                className="mr-3 px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                disabled={isSubmitting}
+              >
+                Cancel
+              </button>
+            )}
+            <button
+              type="submit"
+              className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? (
+                <>
+                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  Saving...
+                </>
+              ) : (
+                isEditMode ? "Save Changes" : "Create Estimate"
+              )}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
