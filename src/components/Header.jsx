@@ -48,6 +48,12 @@ const Header = () => {
               >
                 STANDARD RATES MANAGEMENT
               </button>
+              <button 
+                onClick={() => navigateToNewTab('/material-stock/overheads')}
+                className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
+              >
+                OVERHEADS MANAGEMENT
+              </button>
             </div>
           </div>
 
