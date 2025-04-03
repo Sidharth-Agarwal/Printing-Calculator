@@ -138,29 +138,6 @@ const OrderAndPaper = ({ state, dispatch, onNext, validationErrors = {}, singleP
         <form onSubmit={handleSubmit} className="space-y-6">
           {/* Form Fields Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-            {/* Client Name */}
-            <div>
-              <label htmlFor="clientName" className="block mb-1">
-                Client Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="clientName"
-                ref={firstInputRef}
-                type="text"
-                name="clientName"
-                placeholder="Enter the client name"
-                value={orderAndPaper.clientName || ""}
-                onChange={handleChange}
-                className={`border rounded-md p-2 w-full text-sm ${
-                  validationErrors.clientName ? "border-red-500" : ""
-                }`}
-                required
-              />
-              {validationErrors.clientName && (
-                <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.clientName}</p>
-              )}
-            </div>
-
             {/* Project Name */}
             <div>
               <label htmlFor="projectName" className="block mb-1">
@@ -168,6 +145,7 @@ const OrderAndPaper = ({ state, dispatch, onNext, validationErrors = {}, singleP
               </label>
               <input
                 id="projectName"
+                ref={firstInputRef}
                 type="text"
                 name="projectName"
                 placeholder="Enter the project name"

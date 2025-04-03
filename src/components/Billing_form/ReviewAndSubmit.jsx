@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import { ESTIMATE_STATUS } from "../../constants/statusConstants";
 
 const ReviewAndSubmit = ({ 
   state, 
@@ -10,7 +11,8 @@ const ReviewAndSubmit = ({
   onCreateEstimate, 
   isEditMode = false,
   isSaving = false,
-  singlePageMode = false
+  singlePageMode = false,
+  isModified = false
 }) => {
   const [markupPercentage, setMarkupPercentage] = useState(0);
   const [markupRates, setMarkupRates] = useState([]);
@@ -61,6 +63,13 @@ const ReviewAndSubmit = ({
     
     fetchMarkupRates();
   }, []);
+
+  // Initialize markup from client's default markup if available
+  // useEffect(() => {
+  //   if (state.clientInfo.defaultMarkup) {
+  //     setMarkupPercentage(state.clientInfo.defaultMarkup);
+  //   }
+  // }, [state.clientInfo.defaultMarkup]);
 
   const fieldLabels = {
     clientName: "Name of the Client",
@@ -354,8 +363,54 @@ const ReviewAndSubmit = ({
     }
   };
 
+  // Function to format status for display
+  const getStatusBadge = (status) => {
+    const statusColors = {
+      [ESTIMATE_STATUS.DRAFT]: 'bg-gray-200 text-gray-800',
+      [ESTIMATE_STATUS.SENT]: 'bg-blue-100 text-blue-800',
+      [ESTIMATE_STATUS.APPROVED]: 'bg-green-100 text-green-800',
+      [ESTIMATE_STATUS.REJECTED]: 'bg-red-100 text-red-800',
+      [ESTIMATE_STATUS.REVISED]: 'bg-purple-100 text-purple-800',
+      [ESTIMATE_STATUS.CONVERTED]: 'bg-yellow-100 text-yellow-800',
+      [ESTIMATE_STATUS.EXPIRED]: 'bg-gray-200 text-gray-800'
+    };
+    
+    const colorClass = statusColors[status] || 'bg-gray-200 text-gray-800';
+    
+    return (
+      <span className={`${colorClass} px-2 py-1 text-xs rounded-full`}>
+        {status}
+      </span>
+    );
+  };
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Summary of client and estimate info at the top */}
+      {state.clientInfo && state.clientInfo.clientId && (
+        <div className="bg-gray-50 p-4 rounded-md border border-gray-200 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <h3 className="font-bold mb-2">Client Information</h3>
+              <div className="text-sm">
+                <div><span className="font-medium">Name:</span> {state.clientInfo.clientName}</div>
+                <div><span className="font-medium">Code:</span> {state.clientInfo.clientCode}</div>
+                <div><span className="font-medium">Contact:</span> {state.clientInfo.contactPerson || 'N/A'}</div>
+              </div>
+            </div>
+            
+            <div>
+              <h3 className="font-bold mb-2">Estimate Information</h3>
+              <div className="text-sm">
+                <div><span className="font-medium">Project:</span> {state.orderAndPaper.projectName}</div>
+                <div><span className="font-medium">Job Type:</span> {state.orderAndPaper.jobType}</div>
+                <div><span className="font-medium">Status:</span> {getStatusBadge(state.versionInfo.status || ESTIMATE_STATUS.DRAFT)}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
       {/* Cost Calculations Section */}
       {isCalculating ? (
         <div className="bg-white p-4 rounded-md">
@@ -692,6 +747,8 @@ const ReviewAndSubmit = ({
               </>
             ) : isCalculating ? (
               'Calculating...'
+            ) : isEditMode && isModified ? (
+              'Save as New Version'
             ) : isEditMode ? (
               'Save Changes'
             ) : (
