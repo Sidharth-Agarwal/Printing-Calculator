@@ -72,7 +72,7 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient }) 
       )}
       
       {!selectedClient && !isLoading && (
-        <div className="bg-gray-50 p-4 rounded-md text-center">
+        <div className="bg-gray-50 rounded-md text-center">
           <p className="text-gray-600">Please select a client to continue</p>
         </div>
       )}
