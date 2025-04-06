@@ -6,6 +6,7 @@ import { calculateEstimateCosts } from "./calculations";
 
 // Import components
 import ClientSelection from "./ClientSelection";
+import VersionSelection from "./VersionSelection";
 import OrderAndPaper from "./OrderAndPaper";
 import LPDetails from "./LPDetails";
 import FSDetails from "./FSDetails";
@@ -23,6 +24,8 @@ const initialFormState = {
     clientId: null,
     clientInfo: null
   },
+  // Version information
+  versionId: "",
   orderAndPaper: {
     projectName: "",
     date: null,
@@ -97,6 +100,8 @@ const reducer = (state, action) => {
   switch (action.type) {
     case "UPDATE_CLIENT":
       return { ...state, client: { ...state.client, ...action.payload } };
+    case "UPDATE_VERSION":
+      return { ...state, versionId: action.payload };
     case "UPDATE_ORDER_AND_PAPER":
       return { ...state, orderAndPaper: { ...state.orderAndPaper, ...action.payload } };
     case "UPDATE_LP_DETAILS":
@@ -124,12 +129,15 @@ const reducer = (state, action) => {
 
 // Map state to Firebase structure
 const mapStateToFirebaseStructure = (state, calculations) => {
-  const { client, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich, pasting } = state;
+  const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich, pasting } = state;
 
   return {
     // Client reference information
     clientId: client.clientId,
     clientInfo: client.clientInfo,
+    
+    // Version information
+    versionId: versionId || "1", // Default to version 1 if not specified
     
     // Project specific information
     projectName: orderAndPaper.projectName,
@@ -232,6 +240,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [validationErrors, setValidationErrors] = useState({});
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedVersion, setSelectedVersion] = useState("");
 
   const formRef = useRef(null);
   
@@ -262,6 +271,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         };
         
         fetchClient();
+      }
+      
+      // Set selected version if it exists in initialState
+      if (initialState.versionId) {
+        setSelectedVersion(initialState.versionId);
       }
     }
   }, [initialState, isEditMode]);
@@ -302,10 +316,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
   const validateForm = () => {
     const errors = {};
-    const { orderAndPaper, client } = state;
+    const { orderAndPaper, client, versionId } = state;
     
     // Validate Client selection
     if (!client.clientId) errors.clientId = "Client selection is required";
+    
+    // Validate Version selection
+    if (!versionId) errors.versionId = "Version selection is required";
     
     // Validate Order & Paper section
     if (!orderAndPaper.projectName) errors.projectName = "Project name is required";
@@ -344,6 +361,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         alert("Estimate created successfully!");
         dispatch({ type: "RESET_FORM" });
         setSelectedClient(null);
+        setSelectedVersion("");
         // Navigate to estimates page
         navigate('/material-stock/estimates-db');
       }
@@ -376,7 +394,23 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           clientInfo: null
         }
       });
+      
+      // Reset version when client is cleared
+      setSelectedVersion("");
+      dispatch({
+        type: "UPDATE_VERSION",
+        payload: ""
+      });
     }
+  };
+  
+  // Handle version selection
+  const handleVersionSelect = (versionId) => {
+    setSelectedVersion(versionId);
+    dispatch({
+      type: "UPDATE_VERSION",
+      payload: versionId
+    });
   };
   
   // Generate client code function - needed for when creating new clients
@@ -602,6 +636,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     setValidationErrors({});
     setCalculations(null);
     setSelectedClient(null);
+    setSelectedVersion("");
     
     // Scroll to top of form
     if (formRef.current) {
@@ -667,6 +702,18 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.clientId}</p>
             )}
           </div>
+
+          {/* Version Selection - Add after client selection */}
+          {state.client.clientId && (
+            <VersionSelection 
+              clientId={state.client.clientId}
+              selectedVersion={selectedVersion}
+              onVersionSelect={handleVersionSelect}
+            />
+          )}
+          {validationErrors.versionId && (
+            <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.versionId}</p>
+          )}
 
           {/* Order & Paper Section - Now Project Details */}
           <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
