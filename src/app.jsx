@@ -49,7 +49,7 @@ import OverheadManagement from "./components/Overhead_expenses/OverheadManagemen
 import ClientManagement from "./components/Client_management/ClientManagement";
 import Header from "./components/Header";
 import Login from "./components/Login/login";
-import EstimatesPage from "./components/Estimates/EstimatePage";
+import EstimatesPage from "./components/Estimates/EstimatesPage";
 import OrderPage from "./components/Orders/OrderPage";
 import TransactionsDashboard from "./components/Transactions/TransactionsDashboard";
 import "./styles/tailwind.css";
