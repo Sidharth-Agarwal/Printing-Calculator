@@ -18,7 +18,9 @@ const ExistingEstimates = ({ estimates }) => {
     });
   };
 
+  // NOTE: Cost display is commented out for now
   // Format currency
+  /*
   const formatCurrency = (amount) => {
     if (!amount || isNaN(amount)) return "N/A";
     
@@ -28,6 +30,7 @@ const ExistingEstimates = ({ estimates }) => {
       maximumFractionDigits: 0,
     }).format(amount);
   };
+  */
 
   return (
     <div className="border rounded-lg p-4 bg-white">
@@ -36,12 +39,15 @@ const ExistingEstimates = ({ estimates }) => {
       {estimates.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
           {estimates.map(estimate => {
+            // NOTE: Cost calculation is commented out for now
+            /*
             // Extract the total cost if available
             const totalCost = 
               (estimate.calculations?.totalCost) || 
               (estimate.calculations?.totalCostPerCard && estimate.jobDetails?.quantity 
                 ? estimate.calculations.totalCostPerCard * estimate.jobDetails.quantity 
                 : null);
+            */
             
             return (
               <div key={estimate.id} className="p-3 bg-gray-50 hover:bg-gray-100 rounded border transition-colors">
@@ -49,9 +55,7 @@ const ExistingEstimates = ({ estimates }) => {
                   <h4 className="font-medium text-blue-700 text-sm truncate" title={estimate.projectName}>
                     {estimate.projectName}
                   </h4>
-                  <div className="font-bold text-gray-700 text-sm whitespace-nowrap ml-2">
-                    {formatCurrency(totalCost)}
-                  </div>
+                  {/* Cost display removed */}
                 </div>
                 
                 <div className="text-xs text-gray-600 mt-1 truncate">
