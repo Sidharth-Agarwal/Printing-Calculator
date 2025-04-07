@@ -142,12 +142,12 @@ const PreviewModal = ({ isOpen, onClose, onDownload, isGeneratingPDF, error, chi
           </div>
           
           {/* Print instruction note */}
-          <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm">
+          {/* <div className="mt-4 p-3 bg-blue-50 rounded-md text-sm">
             <p className="text-blue-700">
               <strong>Tip:</strong> If download doesn't work, you can also use your browser's print function 
               (Ctrl+P / Cmd+P) to save as PDF.
             </p>
-          </div>
+          </div> */}
         </div>
       </div>
     </div>
