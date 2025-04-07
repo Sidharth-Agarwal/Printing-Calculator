@@ -1106,7 +1106,7 @@ const FormSection = ({ title, children, id, activeSection, setActiveSection, isU
             <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
               {isUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
             </div>
-            <span className="text-sm font-medium text-gray-600">Use</span>
+            {/* <span className="text-sm font-medium text-gray-600">Use</span> */}
           </div>
           
           {/* Section title */}
@@ -1650,7 +1650,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           {/* Processing Options in Collapsible Sections with direct toggles */}
           <div>
             <FormSection 
-              title="LETTER PRESS (LP) DETAILS" 
+              title="LETTER PRESS (LP)" 
               id="lp"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -1667,7 +1667,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="FOIL STAMPING (FS) DETAILS" 
+              title="FOIL STAMPING (FS)" 
               id="fs"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -1684,7 +1684,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="EMBOSSING (EMB) DETAILS" 
+              title="EMBOSSING (EMB)" 
               id="emb"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -1701,7 +1701,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="DIGITAL PRINTING DETAILS" 
+              title="DIGITAL PRINTING" 
               id="digi"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -1718,7 +1718,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="DIE CUTTING DETAILS" 
+              title="DIE CUTTING" 
               id="dieCutting"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -1735,7 +1735,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="SANDWICH DETAILS" 
+              title="SANDWICH" 
               id="sandwich"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -1752,7 +1752,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="PASTING DETAILS" 
+              title="PASTING" 
               id="pasting"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
