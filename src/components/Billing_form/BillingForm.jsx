@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { calculateEstimateCosts } from "./calculations";
+import { safeNumber, format, calculateEnhancedValues } from "../../utils/calculationUtils";
 
 // Import components
 import ClientSelection from "./ClientSelection";
@@ -125,57 +126,6 @@ const reducer = (state, action) => {
     default:
       return state;
   }
-};
-
-// Map state to Firebase structure
-const mapStateToFirebaseStructure = (state, calculations) => {
-  const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich, pasting } = state;
-
-  return {
-    // Client reference information
-    clientId: client.clientId,
-    clientInfo: client.clientInfo,
-    
-    // Version information
-    versionId: versionId || "1", // Default to version 1 if not specified
-    
-    // Project specific information
-    projectName: orderAndPaper.projectName,
-    date: orderAndPaper.date?.toISOString() || null,
-    deliveryDate: orderAndPaper.deliveryDate?.toISOString() || null,
-    
-    // Job details
-    jobDetails: {
-      jobType: orderAndPaper.jobType,
-      quantity: orderAndPaper.quantity,
-      paperProvided: orderAndPaper.paperProvided,
-      paperName: orderAndPaper.paperName,
-    },
-    
-    // Die details
-    dieDetails: {
-      dieSelection: orderAndPaper.dieSelection,
-      dieCode: orderAndPaper.dieCode,
-      dieSize: orderAndPaper.dieSize,
-      image: orderAndPaper.image,
-    },
-    
-    // Processing options (only included when selected)
-    lpDetails: lpDetails.isLPUsed ? lpDetails : null,
-    fsDetails: fsDetails.isFSUsed ? fsDetails : null,
-    embDetails: embDetails.isEMBUsed ? embDetails : null,
-    digiDetails: digiDetails.isDigiUsed ? digiDetails : null,
-    dieCutting: dieCutting.isDieCuttingUsed ? dieCutting : null,
-    sandwich: sandwich.isSandwichComponentUsed ? sandwich : null,
-    pasting: pasting.isPastingUsed ? pasting : null,
-    
-    // Calculations
-    calculations,
-    
-    // Metadata
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
 };
 
 // FormSection component with toggle in header
@@ -334,9 +284,271 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     return Object.keys(errors).length === 0;
   };
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Handler for Review and Submit when calculations are ready
+  const handleCreateEstimate = (enhancedCalcs) => {
+    console.log("BillingForm received enhancedCalculations:", enhancedCalcs);
     
+    // Verification step - calculate locally to ensure consistency
+    if (calculations && enhancedCalcs) {
+      const localCalcs = calculateEnhancedValues(
+        calculations,
+        parseInt(state.orderAndPaper?.quantity) || 0,
+        safeNumber(enhancedCalcs.miscChargePerCard) || 5,
+        safeNumber(enhancedCalcs.markupPercentage) || 20
+      );
+      
+      console.log("Verification - local calculations totalCostPerCard:", localCalcs.totalCostPerCard);
+      console.log("Received enhancedCalcs totalCostPerCard:", enhancedCalcs.totalCostPerCard);
+      
+      const isConsistent = localCalcs.totalCostPerCard === enhancedCalcs.totalCostPerCard;
+      console.log("Calculations are consistent:", isConsistent);
+      
+      if (!isConsistent) {
+        console.warn("Calculation inconsistency detected - using local calculations for safety");
+        // Use locally calculated values if there's an inconsistency
+        handleFormSubmit(localCalcs);
+        return;
+      }
+    }
+    
+    // Proceed with the received calculations
+    handleFormSubmit(enhancedCalcs);
+  };
+  
+  const generateRobustEnhancedCalculations = (calculations, quantity, miscCharge = 5, markupPercentage = 20) => {
+    // Safety check - if no calculations provided, return basic structure
+    if (!calculations) {
+      return {
+        baseCost: "0.00",
+        miscChargePerCard: miscCharge.toString(),
+        baseWithMisc: miscCharge.toString(),
+        wastagePercentage: 5,
+        wastageAmount: "0.00",
+        overheadPercentage: 35,
+        overheadAmount: "0.00",
+        markupPercentage: markupPercentage,
+        markupType: "STANDARD",
+        markupAmount: "0.00",
+        subtotalPerCard: "0.00",
+        totalCostPerCard: "0.00",
+        totalCost: "0.00",
+        quantity: parseInt(quantity) || 0,
+        calculatedAt: new Date().toISOString()
+      };
+    }
+    
+    // IMPORTANT: Safe number conversion that handles all input types
+    const safeNumber = (value) => {
+      if (value === null || value === undefined) return 0;
+      if (typeof value === 'number') return isNaN(value) ? 0 : value;
+      if (typeof value === 'string') {
+        const parsed = parseFloat(value);
+        return isNaN(parsed) ? 0 : parsed;
+      }
+      return 0;
+    };
+    
+    // Format to 2 decimal places as string
+    const format = (num) => {
+      const value = safeNumber(num);
+      return value.toFixed(2);
+    };
+    
+    // Create a copy of calculations with all values as numbers
+    const numericCalculations = {};
+    
+    // Convert all calculation values to numbers
+    Object.keys(calculations).forEach(key => {
+      numericCalculations[key] = safeNumber(calculations[key]);
+    });
+    
+    // Extract important values with safe conversion
+    const paperCostPerCard = safeNumber(calculations.paperCostPerCard);
+    const cuttingCostPerCard = safeNumber(calculations.cuttingCostPerCard);
+    const gilCutCostPerCard = safeNumber(calculations.gilCutCostPerCard);
+    const paperAndCuttingCostPerCard = safeNumber(calculations.paperAndCuttingCostPerCard);
+    
+    const lpPlateCostPerCard = safeNumber(calculations.lpPlateCostPerCard);
+    const lpMRCostPerCard = safeNumber(calculations.lpMRCostPerCard);
+    const lpImpressionAndLaborCostPerCard = safeNumber(calculations.lpImpressionAndLaborCostPerCard);
+    const lpCostPerCard = safeNumber(calculations.lpCostPerCard);
+    
+    const fsBlockCostPerCard = safeNumber(calculations.fsBlockCostPerCard);
+    const fsFoilCostPerCard = safeNumber(calculations.fsFoilCostPerCard);
+    const fsMRCostPerCard = safeNumber(calculations.fsMRCostPerCard);
+    const fsImpressionCostPerCard = safeNumber(calculations.fsImpressionCostPerCard);
+    const fsCostPerCard = safeNumber(calculations.fsCostPerCard);
+    
+    const embPlateCostPerCard = safeNumber(calculations.embPlateCostPerCard);
+    const embMRCostPerCard = safeNumber(calculations.embMRCostPerCard);
+    const embCostPerCard = safeNumber(calculations.embCostPerCard);
+    
+    const dieCuttingCostPerCard = safeNumber(calculations.dieCuttingCostPerCard);
+    const dcImpressionCostPerCard = safeNumber(calculations.dcImpressionCostPerCard);
+    const dcMRCostPerCard = safeNumber(calculations.dcMRCostPerCard);
+    const pdcCostPerCard = safeNumber(calculations.pdcCostPerCard);
+    
+    const digiCostPerCard = safeNumber(calculations.digiCostPerCard);
+    
+    const lpCostPerCardSandwich = safeNumber(calculations.lpCostPerCardSandwich);
+    const fsCostPerCardSandwich = safeNumber(calculations.fsCostPerCardSandwich);
+    const embCostPerCardSandwich = safeNumber(calculations.embCostPerCardSandwich);
+    
+    const pastingCostPerCard = safeNumber(calculations.pastingCostPerCard);
+    
+    // Calculate base cost - Sum of all processing costs
+    const baseCost = 
+      paperAndCuttingCostPerCard + 
+      lpCostPerCard + 
+      fsCostPerCard + 
+      embCostPerCard + 
+      digiCostPerCard + 
+      dieCuttingCostPerCard + 
+      lpCostPerCardSandwich + 
+      fsCostPerCardSandwich + 
+      embCostPerCardSandwich + 
+      pastingCostPerCard;
+    
+    // Convert quantity, misc charge and markup to numbers
+    const numQuantity = parseInt(quantity) || 0;
+    const numMiscCharge = safeNumber(miscCharge);
+    const numMarkupPercentage = safeNumber(markupPercentage);
+    
+    // Add miscellaneous charge
+    const baseWithMisc = baseCost + numMiscCharge;
+    
+    // Calculate wastage (5%)
+    const wastageAmount = baseWithMisc * 0.05;
+    
+    // Calculate overhead (35%)
+    const overheadAmount = baseWithMisc * 0.35;
+    
+    // Calculate subtotal
+    const subtotal = baseWithMisc + wastageAmount + overheadAmount;
+    
+    // Calculate markup
+    const markupAmount = subtotal * (numMarkupPercentage / 100);
+    
+    // Calculate total per card
+    const totalPerCard = subtotal + markupAmount;
+    
+    // Calculate total for order
+    const totalCost = totalPerCard * numQuantity;
+    
+    // Log all calculations for debugging
+    console.log("CALCULATION VALUES:");
+    console.log("Base Cost Components:", {
+      paperAndCuttingCostPerCard,
+      lpCostPerCard,
+      fsCostPerCard,
+      embCostPerCard,
+      digiCostPerCard,
+      dieCuttingCostPerCard,
+      lpCostPerCardSandwich,
+      fsCostPerCardSandwich,
+      embCostPerCardSandwich,
+      pastingCostPerCard
+    });
+    console.log("Key Calculation Values:", {
+      baseCost,
+      numMiscCharge,
+      baseWithMisc,
+      wastageAmount,
+      overheadAmount,
+      subtotal,
+      markupAmount,
+      totalPerCard,
+      totalCost
+    });
+    
+    // Return comprehensive enhanced calculations object
+    return {
+      // Main calculation components
+      baseCost: format(baseCost),
+      miscChargePerCard: format(numMiscCharge),
+      baseWithMisc: format(baseWithMisc),
+      
+      // Wastage
+      wastagePercentage: 5,
+      wastageAmount: format(wastageAmount),
+      
+      // Overhead
+      overheadPercentage: 35,
+      overheadAmount: format(overheadAmount),
+      
+      // Markup
+      markupPercentage: numMarkupPercentage,
+      markupType: "STANDARD",
+      markupAmount: format(markupAmount),
+      
+      // Totals
+      subtotalPerCard: format(subtotal),
+      totalCostPerCard: format(totalPerCard),
+      totalCost: format(totalCost),
+      
+      // Order quantity
+      quantity: numQuantity,
+      
+      // COMPONENT COSTS - all safely converted and formatted
+      // Paper & Cutting details
+      paperCostPerCard: format(paperCostPerCard),
+      cuttingCostPerCard: format(cuttingCostPerCard),
+      gilCutCostPerCard: format(gilCutCostPerCard),
+      paperAndCuttingCostPerCard: format(paperAndCuttingCostPerCard),
+      
+      // Letter Press details
+      lpPlateCostPerCard: format(lpPlateCostPerCard),
+      lpMRCostPerCard: format(lpMRCostPerCard),
+      lpImpressionAndLaborCostPerCard: format(lpImpressionAndLaborCostPerCard),
+      lpCostPerCard: format(lpCostPerCard),
+      
+      // Foil Stamping details
+      fsBlockCostPerCard: format(fsBlockCostPerCard),
+      fsFoilCostPerCard: format(fsFoilCostPerCard),
+      fsMRCostPerCard: format(fsMRCostPerCard),
+      fsImpressionCostPerCard: format(fsImpressionCostPerCard),
+      fsCostPerCard: format(fsCostPerCard),
+      
+      // Embossing details
+      embPlateCostPerCard: format(embPlateCostPerCard),
+      embMRCostPerCard: format(embMRCostPerCard),
+      embCostPerCard: format(embCostPerCard),
+      
+      // Die Cutting details
+      dcImpressionCostPerCard: format(dcImpressionCostPerCard),
+      dcMRCostPerCard: format(dcMRCostPerCard), 
+      pdcCostPerCard: format(pdcCostPerCard),
+      dieCuttingCostPerCard: format(dieCuttingCostPerCard),
+      
+      // Digital Printing details
+      digiCostPerCard: format(digiCostPerCard),
+      
+      // Sandwich component details
+      lpCostPerCardSandwich: format(lpCostPerCardSandwich),
+      lpPlateCostPerCardSandwich: format(calculations.lpPlateCostPerCardSandwich),
+      lpMRCostPerCardSandwich: format(calculations.lpMRCostPerCardSandwich),
+      lpImpressionAndLaborCostPerCardSandwich: format(calculations.lpImpressionAndLaborCostPerCardSandwich),
+      
+      fsCostPerCardSandwich: format(fsCostPerCardSandwich),
+      fsBlockCostPerCardSandwich: format(calculations.fsBlockCostPerCardSandwich),
+      fsFoilCostPerCardSandwich: format(calculations.fsFoilCostPerCardSandwich),
+      fsMRCostPerCardSandwich: format(calculations.fsMRCostPerCardSandwich),
+      fsImpressionCostPerCardSandwich: format(calculations.fsImpressionCostPerCardSandwich),
+      
+      embCostPerCardSandwich: format(embCostPerCardSandwich),
+      embPlateCostPerCardSandwich: format(calculations.embPlateCostPerCardSandwich),
+      embMRCostPerCardSandwich: format(calculations.embMRCostPerCardSandwich),
+      
+      // Pasting details
+      pastingCostPerCard: format(pastingCostPerCard),
+      
+      // Add timestamp
+      calculatedAt: new Date().toISOString()
+    };
+  };
+
+  // Replace your current handleFormSubmit with this updated version
+  const handleFormSubmit = async (enhancedCalcs) => {
     if (!validateForm()) {
       // Scroll to the first error
       const firstError = document.querySelector(".error-message");
@@ -348,16 +560,84 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     setIsSubmitting(true);
     try {
-      const formattedData = mapStateToFirebaseStructure(state, calculations);
+      // Get values for calculations
+      const quantity = parseInt(state.orderAndPaper?.quantity) || 0;
+      
+      // Get values from enhancedCalcs or use defaults
+      let markupPercentage = 20;
+      let miscCharge = 5;
+      
+      if (enhancedCalcs) {
+        markupPercentage = safeNumber(enhancedCalcs.markupPercentage) || 20;
+        miscCharge = safeNumber(enhancedCalcs.miscChargePerCard) || 5;
+      }
+      
+      // Ensure we have consistent calculations using the shared function
+      const finalCalculations = calculateEnhancedValues(
+        calculations,
+        quantity,
+        miscCharge,
+        markupPercentage
+      );
+      
+      console.log("Final enhanced calculations being saved to Firebase:", finalCalculations);
+      
+      // Create the Firebase document
+      const docData = {
+        // Client reference information
+        clientId: state.client.clientId,
+        clientInfo: state.client.clientInfo,
+        
+        // Version information
+        versionId: state.versionId || "1",
+        
+        // Project specific information
+        projectName: state.orderAndPaper.projectName,
+        date: state.orderAndPaper.date?.toISOString() || null,
+        deliveryDate: state.orderAndPaper.deliveryDate?.toISOString() || null,
+        
+        // Job details
+        jobDetails: {
+          jobType: state.orderAndPaper.jobType,
+          quantity: state.orderAndPaper.quantity,
+          paperProvided: state.orderAndPaper.paperProvided,
+          paperName: state.orderAndPaper.paperName,
+        },
+        
+        // Die details
+        dieDetails: {
+          dieSelection: state.orderAndPaper.dieSelection,
+          dieCode: state.orderAndPaper.dieCode,
+          dieSize: state.orderAndPaper.dieSize,
+          image: state.orderAndPaper.image,
+        },
+        
+        // Processing options (only included when selected)
+        lpDetails: state.lpDetails.isLPUsed ? state.lpDetails : null,
+        fsDetails: state.fsDetails.isFSUsed ? state.fsDetails : null,
+        embDetails: state.embDetails.isEMBUsed ? state.embDetails : null,
+        digiDetails: state.digiDetails.isDigiUsed ? state.digiDetails : null,
+        dieCutting: state.dieCutting.isDieCuttingUsed ? state.dieCutting : null,
+        sandwich: state.sandwich.isSandwichComponentUsed ? state.sandwich : null,
+        pasting: state.pasting.isPastingUsed ? state.pasting : null,
+        
+        // Base calculations
+        calculations: calculations,
+        
+        // Enhanced calculations from the shared utility
+        enhancedCalculations: finalCalculations,
+        
+        // Metadata
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+      
       if (isEditMode && onSubmitSuccess) {
-        await onSubmitSuccess(formattedData);
+        await onSubmitSuccess(docData);
         if (onClose) onClose();
       } else {
-        await addDoc(collection(db, "estimates"), formattedData);
-        
-        // Optionally update client with estimate reference
-        // This creates a bi-directional relationship
-        // You could implement this if needed
+        const docRef = await addDoc(collection(db, "estimates"), docData);
+        console.log("Document written with ID:", docRef.id);
         
         alert("Estimate created successfully!");
         dispatch({ type: "RESET_FORM" });
@@ -368,16 +648,20 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       }
     } catch (error) {
       console.error("Error handling estimate:", error);
-      alert("Failed to handle estimate.");
+      alert("Failed to handle estimate: " + error.message);
     } finally {
       setIsSubmitting(false);
     }
-  };
+  };  
 
-  // Handler for Review and Submit when calculations are ready
-  const handleCreateEstimate = (enhancedCalculations) => {
-    // For single page mode, we're just submitting the form
-    handleSubmit(new Event('submit'));
+  // Update the handleSubmit function
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // We're now directly calling handleFormSubmit with null
+    // The enhanced calculations will come from ReviewAndSubmit component
+    // through the handleCreateEstimate function
+    handleFormSubmit(null);
   };
 
   // Handle client selection from ClientSelection component
@@ -879,11 +1163,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                   <span className="text-xl">×</span> Close Preview
                 </button>
               </div>
-              {/* <div className="bg-blue-50 p-3 rounded-md mb-4">
-                <p className="text-sm text-blue-800">
-                  <strong>Note:</strong> This is a preview of the cost calculation. The final calculation will be applied when the estimate is created.
-                </p>
-              </div> */}
               <ReviewAndSubmit 
                 state={state} 
                 calculations={calculations} 
@@ -893,7 +1172,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 isEditMode={isEditMode}
                 isSaving={isSubmitting}
                 singlePageMode={true}
-                previewMode={true} // New prop to indicate preview mode
+                previewMode={true}
               />
             </div>
           )}

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import { safeNumber, format, calculateEnhancedValues } from "../../utils/calculationUtils";
 
 const ReviewAndSubmit = ({ 
   state, 
@@ -11,7 +12,7 @@ const ReviewAndSubmit = ({
   isEditMode = false,
   isSaving = false,
   singlePageMode = false,
-  previewMode = false // New prop to indicate preview mode
+  previewMode = false
 }) => {
   const [markupPercentage, setMarkupPercentage] = useState(0);
   const [markupRates, setMarkupRates] = useState([]);
@@ -263,97 +264,82 @@ const ReviewAndSubmit = ({
       </div>
     );
   };
-
-  // Calculate total cost per card with wastage, overhead, and markup
+  
   const calculateTotalCostPerCard = (calculations) => {
     if (!calculations) return { totalCost: 0 };
     
-    const WASTAGE_PERCENTAGE = 5; // 5% wastage
-    const OVERHEAD_PERCENTAGE = 35; // 35% overhead
-
-    // Define all cost fields that should be included
-    const relevantFields = [
-      'paperAndCuttingCostPerCard',
-      'lpCostPerCard',
-      'fsCostPerCard',
-      'embCostPerCard',
-      'lpCostPerCardSandwich',
-      'fsCostPerCardSandwich',
-      'embCostPerCardSandwich',
-      'digiCostPerCard',
-      'dieCuttingCostPerCard',
-      'pastingCostPerCard'
-    ];
-
-    // Calculate base cost per card
-    const baseCost = relevantFields.reduce((acc, key) => {
-      const value = calculations[key];
-      return acc + (value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0);
-    }, 0);
-
-    // Add miscellaneous charge to base cost
-    const baseWithMisc = baseCost + miscCharge;
+    // Use the shared calculation function to ensure consistency
+    const enhancedValues = calculateEnhancedValues(
+      calculations,
+      state.orderAndPaper?.quantity || 0,
+      miscCharge,
+      markupPercentage
+    );
     
-    // Calculate wastage cost
-    const wastageCost = baseWithMisc * (WASTAGE_PERCENTAGE / 100);
-    
-    // Calculate overhead cost
-    const overheadCost = baseWithMisc * (OVERHEAD_PERCENTAGE / 100);
-    
-    // Calculate cost with wastage and overhead
-    const costWithOverhead = baseWithMisc + wastageCost + overheadCost;
-    
-    // Calculate markup cost
-    const markupCost = costWithOverhead * (markupPercentage / 100);
-    
-    // Return total cost including wastage, overhead, and markup
+    // Return the same structure expected by the UI
     return {
-      baseCost,
-      miscCharge: miscCharge,
-      baseWithMisc,
-      wastageCost,
-      overheadCost,
-      markupCost,
-      totalCost: costWithOverhead + markupCost
+      // Base costs
+      baseCost: safeNumber(enhancedValues.baseCost),
+      miscCharge: safeNumber(enhancedValues.miscChargePerCard),
+      baseWithMisc: safeNumber(enhancedValues.baseWithMisc),
+      
+      // Percentages used
+      wastagePercentage: enhancedValues.wastagePercentage,
+      overheadPercentage: enhancedValues.overheadPercentage,
+      markupPercentage: enhancedValues.markupPercentage,
+      
+      // Calculated amounts
+      wastageCost: safeNumber(enhancedValues.wastageAmount),
+      overheadCost: safeNumber(enhancedValues.overheadAmount),
+      markupCost: safeNumber(enhancedValues.markupAmount),
+      
+      // Final totals
+      subtotalPerCard: safeNumber(enhancedValues.subtotalPerCard),
+      totalCost: safeNumber(enhancedValues.totalCostPerCard),
+      
+      // Additional values for reference
+      componentCosts: {
+        paperAndCuttingCostPerCard: safeNumber(enhancedValues.paperAndCuttingCostPerCard),
+        lpCostPerCard: safeNumber(enhancedValues.lpCostPerCard),
+        fsCostPerCard: safeNumber(enhancedValues.fsCostPerCard),
+        embCostPerCard: safeNumber(enhancedValues.embCostPerCard),
+        digiCostPerCard: safeNumber(enhancedValues.digiCostPerCard),
+        dieCuttingCostPerCard: safeNumber(enhancedValues.dieCuttingCostPerCard),
+        lpCostPerCardSandwich: safeNumber(enhancedValues.lpCostPerCardSandwich),
+        fsCostPerCardSandwich: safeNumber(enhancedValues.fsCostPerCardSandwich),
+        embCostPerCardSandwich: safeNumber(enhancedValues.embCostPerCardSandwich),
+        pastingCostPerCard: safeNumber(enhancedValues.pastingCostPerCard),
+      }
     };
-  };
+  };  
 
-  const handleSubmit = (e) => {
+  // Direct fix for the handleSubmit function
+  const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Include the markup percentage and other calculated values in the estimate data
     if (calculations) {
-      const costs = calculateTotalCostPerCard(calculations);
-      
-      // Create an enhanced calculations object with all the cost details
-      const enhancedCalculations = {
-        ...calculations,
-        // Standard cost components
-        baseCost: costs.baseCost.toFixed(2),
-        miscChargePerCard: costs.miscCharge.toFixed(2),
-        baseWithMisc: costs.baseWithMisc.toFixed(2),
-        wastagePercentage: 5, // Store the actual percentages used
-        wastageAmount: costs.wastageCost.toFixed(2),
-        overheadPercentage: 35,
-        overheadAmount: costs.overheadCost.toFixed(2),
+      try {
+        // Calculate all costs using the shared function
+        const enhancedCalculations = calculateEnhancedValues(
+          calculations,
+          parseInt(state.orderAndPaper?.quantity) || 0,
+          miscCharge,
+          markupPercentage
+        );
         
-        // Markup information
-        markupPercentage: markupPercentage,
-        markupType: selectedMarkupType,
-        markupAmount: costs.markupCost.toFixed(2),
+        console.log("ReviewAndSubmit - Generated enhanced calculations:", enhancedCalculations);
         
-        // Totals
-        subtotalPerCard: (costs.baseWithMisc + costs.wastageCost + costs.overheadCost).toFixed(2),
-        totalCostPerCard: costs.totalCost.toFixed(2),
-        totalCost: (costs.totalCost * (state.orderAndPaper?.quantity || 0)).toFixed(2)
-      };
-      
-      // If using single page mode, handle the submission through the parent component
-      onCreateEstimate(enhancedCalculations);
+        // Pass the calculated values to BillingForm
+        onCreateEstimate(enhancedCalculations);
+      } catch (error) {
+        console.error("Error generating enhanced calculations:", error);
+        alert("There was an error processing the calculations. Please try again.");
+      }
     } else {
-      onCreateEstimate();
+      console.warn("No calculations available to enhance");
+      onCreateEstimate(null);
     }
-  };
+  };  
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
