@@ -9,7 +9,7 @@ import OverheadManagement from "./components/Overhead_expenses/OverheadManagemen
 import ClientManagement from "./components/Client_management/ClientManagement";
 import Header from "./components/Header";
 import Login from "./components/Login/login";
-import ChangePassword from "./components/Login/changePassword";
+import ChangePassword from "./components/Login/ChangePassword";
 import AdminUser from "./components/Login/AdminUser";
 import UserManagement from "./components/Login/UserManagement";
 import EstimatesPage from "./components/Estimates/EstimatesPage";
