@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
-import { collection, query, where, getDocs } from "firebase/firestore";
+import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 
 const Login = () => {
@@ -51,7 +51,28 @@ const Login = () => {
   // Redirect if user is already logged in
   useEffect(() => {
     if (currentUser) {
-      navigate("/transactions"); // Changed from /material-stock/paper-db to /transactions
+      // When user is already logged in, fetch their role and redirect accordingly
+      const fetchUserRoleAndRedirect = async () => {
+        try {
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            if (userData.role === "admin") {
+              navigate("/transactions");
+            } else {
+              navigate("/new-bill");
+            }
+          } else {
+            // If user document doesn't exist, fallback to transactions
+            navigate("/new-bill");
+          }
+        } catch (error) {
+          console.error("Error fetching user role:", error);
+          navigate("/new-bill"); // Fallback
+        }
+      };
+      
+      fetchUserRoleAndRedirect();
     }
   }, [currentUser, navigate]);
 
@@ -61,8 +82,23 @@ const Login = () => {
     setLoading(true);
     
     try {
-      await login(email, password);
-      navigate("/transactions"); // Changed from /material-stock/paper-db to /transactions
+      const userCredential = await login(email, password);
+      
+      // After login is successful, fetch the user's role from Firestore
+      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
+      
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        // Redirect based on role
+        if (userData.role === "admin") {
+          navigate("/transactions");
+        } else {
+          navigate("/new-bill");
+        }
+      } else {
+        // If user document doesn't exist in Firestore, fallback to transactions
+        navigate("/transactions");
+      }
     } catch (error) {
       console.error("Login error:", error.message);
       setError(

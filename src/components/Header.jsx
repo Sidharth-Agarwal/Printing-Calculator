@@ -81,14 +81,14 @@ const Header = () => {
     <header className="bg-blue-600 text-white shadow">
       <div className="w-full px-6 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold whitespace-nowrap">FAMOUS LETTER PRESS</h1>
-        <nav className="flex items-center space-x-8">
+        <nav className="flex items-center space-x-6">
           {/* New Bill */}
           {canAccess("staff") && (
             <button
               onClick={() => navigateToNewTab('/new-bill')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
-              NEW BILL
+              New Bill
             </button>
           )}
 
@@ -96,26 +96,26 @@ const Header = () => {
           {canAccess("production") && (
             <div className="group inline-block relative">
               <button className="hover:underline hover:text-blue-300 transition whitespace-nowrap">
-                MATERIAL & STOCK
+                Material & Stock
               </button>
               <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10 left-0 min-w-max">
                 <button
                   onClick={() => navigateToNewTab('/material-stock/paper-db')}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                 >
-                  PAPER MANAGEMENT
+                  Paper Management
                 </button>
                 <button
                   onClick={() => navigateToNewTab('/material-stock/material-db')}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                 >
-                  MATERIAL MANAGEMENT
+                  Material Management
                 </button>
                 <button
                   onClick={() => navigateToNewTab('/material-stock/dies-db')}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                 >
-                  DIE MANAGEMENT
+                  Die Management
                 </button>
                
                 {/* Only admin can access these */}
@@ -125,13 +125,13 @@ const Header = () => {
                       onClick={() => navigateToNewTab('/material-stock/standard-rates-db')}
                       className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                     >
-                      STANDARD RATES MANAGEMENT
+                      Standard Rate Management
                     </button>
                     <button
                       onClick={() => navigateToNewTab('/material-stock/overheads')}
                       className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                     >
-                      OVERHEADS MANAGEMENT
+                      Overheads Management
                     </button>
                   </>
                 )}
@@ -144,7 +144,7 @@ const Header = () => {
             onClick={() => navigateToNewTab('/clients')}
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
-            CLIENTS
+            Clients
           </button>
 
           {/* Estimates */}
@@ -152,7 +152,7 @@ const Header = () => {
             onClick={() => navigateToNewTab('/material-stock/estimates-db')}
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
-            ESTIMATES
+            Estimates
           </button>
 
           {/* Orders */}
@@ -160,7 +160,7 @@ const Header = () => {
             onClick={() => navigateToNewTab('/orders')}
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
-            ORDERS
+            Orders
           </button>
 
           {/* Orders */}
@@ -168,7 +168,7 @@ const Header = () => {
             onClick={() => navigateToNewTab('/invoices')}
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
-            INVOICES
+            Invoices
           </button>
 
           {/* Transactions - Staff and admin can access */}
@@ -177,7 +177,7 @@ const Header = () => {
               onClick={() => navigateToNewTab('/transactions')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
-              TRANSACTIONS
+              Transactions
             </button>
           )}
          
