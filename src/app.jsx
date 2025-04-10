@@ -16,7 +16,7 @@ import EstimatesPage from "./components/Estimates/EstimatesPage";
 import OrdersPage from "./components/Orders/OrderPage";
 import InvoicesPage from "./components/Invoices/InvoicePage";
 import TransactionsDashboard from "./components/Transactions/TransactionsDashboard";
-import Unauthorized from "./components/Login/unauthorized"
+import Unauthorized from "./components/Login/Unauthorized";
 import ProtectedRoute from "./components/Login/ProtectedRoute";
 import { AuthProvider } from "./components/Login/AuthContext";
 import "./styles/tailwind.css";
