@@ -1,45 +1,5 @@
-// import React from "react";
-// import { BrowserRouter, Route, Routes } from "react-router-dom";
-// import BillingForm from "./components/Billing_form/BillingForm";
-// import PaperManagement from "./components/Paper_management/PaperManagement";
-// import MaterialManagement from "./components/Material_management/MaterialManagement";
-// import DieManagement from "./components/Die_management/DieManagement";
-// import StandardRateManagement from "./components/Standard_rates_management/StandardRateManagement";
-// import OverheadManagement from "./components/Overhead_expenses/OverheadManagement";
-// import Header from "./components/Header";
-// import Login from "./components/Login/login";
-// import EstimatesPage from "./components/Estimates/EstimatePage";
-// import OrderPage from "./components/Orders/OrderPage";
-// import TransactionsDashboard from "./components/Transactions/TransactionsDashboard";
-// import "./styles/tailwind.css";
-
-// function App() {
-//   return (
-//     <div>
-//       <Header />
-//       <main className="container mx-auto p-6">
-//         <Routes>
-//           <Route path="/" element={<Login />} />
-//           <Route path="/new-bill" element={<BillingForm />} />
-//           <Route path="/material-stock/paper-db" element={<PaperManagement />} />
-//           <Route path="/material-stock/material-db" element={<MaterialManagement />} />
-//           <Route path="/material-stock/dies-db" element={<DieManagement />} />
-//           <Route path="/material-stock/standard-rates-db" element={<StandardRateManagement />} />
-//           <Route path="/material-stock/overheads" element={<OverheadManagement />} />
-//           <Route path="/material-stock/estimates-db" element={<EstimatesPage />} />
-//           <Route path="/orders" element={<OrderPage />} />
-//           <Route path="/transactions" element={<TransactionsDashboard />} />
-//         </Routes>
-//       </main>
-//     </div>
-//   );
-// }
-
-// export default App;
-
-
 import React from "react";
-import { BrowserRouter, Route, Routes } from "react-router-dom";
+import { Route, Routes } from "react-router-dom";
 import BillingForm from "./components/Billing_form/BillingForm";
 import PaperManagement from "./components/Paper_management/PaperManagement";
 import MaterialManagement from "./components/Material_management/MaterialManagement";
@@ -48,32 +8,145 @@ import StandardRateManagement from "./components/Standard_rates_management/Stand
 import OverheadManagement from "./components/Overhead_expenses/OverheadManagement";
 import ClientManagement from "./components/Client_management/ClientManagement";
 import Header from "./components/Header";
-import Login from "./components/Login/login";
+import Login from "./components/Login/Login";
+import ChangePassword from "./components/Login/changePassword";
+import AdminUser from "./components/Login/AdminUser";
+import UserManagement from "./components/Login/UserManagement";
 import EstimatesPage from "./components/Estimates/EstimatesPage";
 import OrderPage from "./components/Orders/OrderPage";
 import TransactionsDashboard from "./components/Transactions/TransactionsDashboard";
+import Unauthorized from "./components/Login/Unauthorized";
+import ProtectedRoute from "./components/Login/ProtectedRoute";
+import { AuthProvider } from "./components/Login/AuthContext";
 import "./styles/tailwind.css";
 
 function App() {
   return (
-    <div>
-      <Header />
-      <main className="container mx-auto p-6">
-        <Routes>
-          <Route path="/" element={<Login />} />
-          <Route path="/new-bill" element={<BillingForm />} />
-          <Route path="/material-stock/paper-db" element={<PaperManagement />} />
-          <Route path="/material-stock/material-db" element={<MaterialManagement />} />
-          <Route path="/material-stock/dies-db" element={<DieManagement />} />
-          <Route path="/material-stock/standard-rates-db" element={<StandardRateManagement />} />
-          <Route path="/material-stock/overheads" element={<OverheadManagement />} />
-          <Route path="/clients" element={<ClientManagement />} />
-          <Route path="/material-stock/estimates-db" element={<EstimatesPage />} />
-          <Route path="/orders" element={<OrderPage />} />
-          <Route path="/transactions" element={<TransactionsDashboard />} />
-        </Routes>
-      </main>
-    </div>
+    <AuthProvider>
+      <div>
+        <Header />
+        <main className="container mx-auto p-6">
+          <Routes>
+            {/* Public routes - these don't require authentication */}
+            <Route path="/" element={<Login />} />
+            <Route path="/setup-admin" element={<AdminUser />} />
+            <Route path="/unauthorized" element={<Unauthorized />} />
+            
+            {/* Protected routes - accessible to all authenticated users */}
+            <Route 
+              path="/change-password" 
+              element={
+                <ProtectedRoute>
+                  <ChangePassword />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/transactions" 
+              element={
+                <ProtectedRoute>
+                  <TransactionsDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/orders" 
+              element={
+                <ProtectedRoute>
+                  <OrderPage />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/clients" 
+              element={
+                <ProtectedRoute>
+                  <ClientManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/material-stock/estimates-db" 
+              element={
+                <ProtectedRoute>
+                  <EstimatesPage />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Staff role routes */}
+            <Route 
+              path="/new-bill" 
+              element={
+                <ProtectedRoute requiredRole="staff">
+                  <BillingForm />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Production role routes */}
+            <Route 
+              path="/material-stock/paper-db" 
+              element={
+                <ProtectedRoute requiredRole="production">
+                  <PaperManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/material-stock/material-db" 
+              element={
+                <ProtectedRoute requiredRole="production">
+                  <MaterialManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/material-stock/dies-db" 
+              element={
+                <ProtectedRoute requiredRole="production">
+                  <DieManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Admin role routes */}
+            <Route 
+              path="/user-management" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <UserManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/material-stock/standard-rates-db" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <StandardRateManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            <Route 
+              path="/material-stock/overheads" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <OverheadManagement />
+                </ProtectedRoute>
+              } 
+            />
+          </Routes>
+        </main>
+      </div>
+    </AuthProvider>
   );
 }
 
