@@ -72,7 +72,7 @@ const OrderCard = ({
 
   return (
     <div 
-      className={`border rounded-md p-3 transition cursor-pointer shadow-sm hover:shadow-md relative
+      className={`border rounded-md p-2 transition cursor-pointer shadow-sm hover:shadow-md relative
         ${isCompleted ? 'bg-green-50' : 'bg-white'}
         ${isSelected ? 'ring-2 ring-blue-500' : ''}`}
       onClick={onClick}
@@ -122,7 +122,7 @@ const OrderCard = ({
       )}
 
       {/* Header Section */}
-      <div className="flex justify-between items-center mb-2">
+      <div className="flex justify-between items-center mb-1">
         <div className="flex items-center gap-2">
           <input
             type="checkbox"
@@ -141,39 +141,39 @@ const OrderCard = ({
       </div>
 
       {/* Brief Details */}
-      <div className="text-xs text-gray-600 mb-3">
+      <div className="text-xs text-gray-600 mb-2">
         <div className="flex justify-between">
           <span>Qty: {order.jobDetails?.quantity || "N/A"}</span>
           <span>Due: {formatDate(order.deliveryDate)}</span>
         </div>
-        <div>{order.projectName || "No Project"}</div>
-        <div>{order.jobDetails?.paperName || "No Paper Specified"}</div>
+        <div className="truncate">{order.projectName || "No Project"}</div>
+        <div className="truncate">{order.jobDetails?.paperName || "No Paper"}</div>
       </div>
 
       {/* Processing Types */}
-      <div className="flex flex-wrap gap-1 mb-3">
+      <div className="flex flex-wrap gap-1 mb-2">
         {order.lpDetails?.isLPUsed && 
-          <span className="bg-blue-100 text-blue-800 text-xs px-2 py-0.5 rounded-full">LP</span>}
+          <span className="bg-blue-100 text-blue-800 text-xs px-1.5 py-0.5 rounded-full">LP</span>}
         {order.fsDetails?.isFSUsed && 
-          <span className="bg-yellow-100 text-yellow-800 text-xs px-2 py-0.5 rounded-full">FS</span>}
+          <span className="bg-yellow-100 text-yellow-800 text-xs px-1.5 py-0.5 rounded-full">FS</span>}
         {order.embDetails?.isEMBUsed && 
-          <span className="bg-purple-100 text-purple-800 text-xs px-2 py-0.5 rounded-full">EMB</span>}
+          <span className="bg-purple-100 text-purple-800 text-xs px-1.5 py-0.5 rounded-full">EMB</span>}
         {order.digiDetails?.isDigiUsed && 
-          <span className="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">DIGI</span>}
+          <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded-full">DIGI</span>}
         {order.pasting?.isPastingUsed && 
-          <span className="bg-pink-100 text-pink-800 text-xs px-2 py-0.5 rounded-full">Pasting</span>}
+          <span className="bg-pink-100 text-pink-800 text-xs px-1.5 py-0.5 rounded-full">Pasting</span>}
       </div>
 
       {/* Progress Bar */}
-      <div className="h-1.5 w-full bg-gray-200 rounded-full mb-3">
+      <div className="h-1 w-full bg-gray-200 rounded-full mb-2">
         <div 
-          className={`h-1.5 rounded-full ${stageColors[order.stage]?.color || 'bg-blue-500'}`}
+          className={`h-1 rounded-full ${stageColors[order.stage]?.color || 'bg-blue-500'}`}
           style={{ width: `${progressPercent}%` }}
         ></div>
       </div>
 
-      {/* Stage Tracking */}
-      <div className="flex justify-between items-center mb-3">
+      {/* Stage Tracking - Smaller dots, more compact */}
+      <div className="flex justify-between items-center mb-2">
         {stages.map((stage, index) => {
           const stageComplete = index <= currentStageIndex;
           const isCurrentStage = index === currentStageIndex;
@@ -182,42 +182,42 @@ const OrderCard = ({
             <div 
               key={stage}
               onClick={(e) => promptStageUpdate(e, stage)}
-              className={`w-6 h-6 rounded-full cursor-pointer flex items-center justify-center
-                ${isCurrentStage ? 'ring-2 ring-blue-300' : ''}
+              className={`w-4 h-4 rounded-full cursor-pointer flex items-center justify-center
+                ${isCurrentStage ? 'ring-1 ring-blue-300' : ''}
                 ${stageComplete ? stageColors[stage]?.color || 'bg-blue-500' : 'bg-gray-200'}
                 ${stageComplete ? 'text-white' : 'text-gray-500'}
                 transition-all hover:opacity-80`}
               title={stage}
             >
               {isUpdating && isCurrentStage ? (
-                <div className="animate-spin h-3 w-3 border-2 border-white rounded-full border-t-transparent"></div>
+                <div className="animate-spin h-2 w-2 border-2 border-white rounded-full border-t-transparent"></div>
               ) : stageComplete ? (
-                <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                <svg className="w-2 h-2" fill="currentColor" viewBox="0 0 20 20">
                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                 </svg>
               ) : (
-                <span className="text-[10px]">{index + 1}</span>
+                <span className="text-[8px]">{index + 1}</span>
               )}
             </div>
           );
         })}
       </div>
 
-      {/* Action Buttons */}
-      <div className="space-y-1.5">
+      {/* Action Buttons - Horizontal Layout */}
+      <div className="flex gap-1">
         {/* View Details Button */}
         <button
           onClick={(e) => {
             e.stopPropagation();
             onClick(order);
           }}
-          className="text-xs w-full px-2 py-1.5 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center justify-center"
+          className="text-xs flex-1 px-1 py-1 rounded-md bg-gray-100 hover:bg-gray-200 text-gray-800 flex items-center justify-center"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
             <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
           </svg>
-          View Details
+          View
         </button>
 
         {/* Mark as Completed Button - only shown if not already completed */}
@@ -225,13 +225,13 @@ const OrderCard = ({
           <button
             onClick={(e) => promptStageUpdate(e, 'Completed')}
             disabled={isUpdating}
-            className={`text-xs w-full px-2 py-1.5 rounded-md flex items-center justify-center
+            className={`text-xs flex-1 px-1 py-1 rounded-md flex items-center justify-center
               ${isUpdating ? 'bg-green-300' : 'bg-green-500 hover:bg-green-600'} text-white`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
-            Mark Completed
+            Complete
           </button>
         )}
 
@@ -240,21 +240,21 @@ const OrderCard = ({
           <button
             onClick={(e) => promptStageUpdate(e, 'Delivery')}
             disabled={isUpdating}
-            className={`text-xs w-full px-2 py-1.5 rounded-md flex items-center justify-center
+            className={`text-xs flex-1 px-1 py-1 rounded-md flex items-center justify-center
               ${isUpdating ? 'bg-yellow-300' : 'bg-yellow-500 hover:bg-yellow-600'} text-white`}
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M4 2a1 1 0 011 1v2.101a7.002 7.002 0 0111.601 2.566 1 1 0 11-1.885.666A5.002 5.002 0 005.999 7H9a1 1 0 010 2H4a1 1 0 01-1-1V3a1 1 0 011-1zm.008 9.057a1 1 0 011.276.61A5.002 5.002 0 0014.001 13H11a1 1 0 110-2h5a1 1 0 011 1v5a1 1 0 11-2 0v-2.101a7.002 7.002 0 01-11.601-2.566 1 1 0 01.61-1.276z" clipRule="evenodd" />
             </svg>
-            Reopen Order
+            Reopen
           </button>
         )}
       </div>
 
-      {/* Completion Date - only shown if completed */}
+      {/* Completion Date - only shown if completed, more compact */}
       {isCompleted && order.completedAt && (
-        <div className="mt-2 text-xs text-gray-500 italic text-center">
-          Completed on: {formatDate(order.completedAt)}
+        <div className="mt-1 text-xs text-gray-500 italic text-center">
+          Completed: {formatDate(order.completedAt)}
         </div>
       )}
     </div>

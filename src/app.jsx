@@ -8,14 +8,15 @@ import StandardRateManagement from "./components/Standard_rates_management/Stand
 import OverheadManagement from "./components/Overhead_expenses/OverheadManagement";
 import ClientManagement from "./components/Client_management/ClientManagement";
 import Header from "./components/Header";
-import Login from "./components/Login/Login";
+import Login from "./components/Login/login";
 import ChangePassword from "./components/Login/changePassword";
 import AdminUser from "./components/Login/AdminUser";
 import UserManagement from "./components/Login/UserManagement";
 import EstimatesPage from "./components/Estimates/EstimatesPage";
-import OrderPage from "./components/Orders/OrderPage";
+import OrdersPage from "./components/Orders/OrderPage";
+import InvoicesPage from "./components/Invoices/InvoicePage";
 import TransactionsDashboard from "./components/Transactions/TransactionsDashboard";
-import Unauthorized from "./components/Login/Unauthorized";
+import Unauthorized from "./components/Login/unauthorized"
 import ProtectedRoute from "./components/Login/ProtectedRoute";
 import { AuthProvider } from "./components/Login/AuthContext";
 import "./styles/tailwind.css";
@@ -55,7 +56,16 @@ function App() {
               path="/orders" 
               element={
                 <ProtectedRoute>
-                  <OrderPage />
+                  <OrdersPage />
+                </ProtectedRoute>
+              } 
+            />
+
+            <Route 
+              path="/invoices" 
+              element={
+                <ProtectedRoute>
+                  <InvoicesPage />
                 </ProtectedRoute>
               } 
             />

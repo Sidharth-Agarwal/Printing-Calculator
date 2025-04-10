@@ -10,15 +10,16 @@ const Header = () => {
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [displayName, setDisplayName] = useState("");
-  
+
   const navigateToNewTab = (path) => {
     window.open(path, '_blank', 'noopener noreferrer');
   };
-  
+
   const handleLogout = async () => {
     try {
       await logout();
       navigate("/");
+
     } catch (error) {
       console.error("Logout error:", error);
     }
@@ -41,7 +42,6 @@ const Header = () => {
         }
       }
     };
-
     fetchUserData();
   }, [currentUser]);
 
@@ -84,8 +84,8 @@ const Header = () => {
         <nav className="flex items-center space-x-8">
           {/* New Bill */}
           {canAccess("staff") && (
-            <button 
-              onClick={() => navigateToNewTab('/new-bill')} 
+            <button
+              onClick={() => navigateToNewTab('/new-bill')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               NEW BILL
@@ -99,35 +99,35 @@ const Header = () => {
                 MATERIAL & STOCK
               </button>
               <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10 left-0 min-w-max">
-                <button 
+                <button
                   onClick={() => navigateToNewTab('/material-stock/paper-db')}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                 >
                   PAPER MANAGEMENT
                 </button>
-                <button 
+                <button
                   onClick={() => navigateToNewTab('/material-stock/material-db')}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                 >
                   MATERIAL MANAGEMENT
                 </button>
-                <button 
+                <button
                   onClick={() => navigateToNewTab('/material-stock/dies-db')}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                 >
                   DIE MANAGEMENT
                 </button>
-                
+               
                 {/* Only admin can access these */}
                 {userRole === "admin" && (
                   <>
-                    <button 
+                    <button
                       onClick={() => navigateToNewTab('/material-stock/standard-rates-db')}
                       className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                     >
                       STANDARD RATES MANAGEMENT
                     </button>
-                    <button 
+                    <button
                       onClick={() => navigateToNewTab('/material-stock/overheads')}
                       className="block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap"
                     >
@@ -140,69 +140,77 @@ const Header = () => {
           )}
 
           {/* Clients */}
-          <button 
-            onClick={() => navigateToNewTab('/clients')} 
+          <button
+            onClick={() => navigateToNewTab('/clients')}
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
             CLIENTS
           </button>
 
           {/* Estimates */}
-          <button 
-            onClick={() => navigateToNewTab('/material-stock/estimates-db')} 
+          <button
+            onClick={() => navigateToNewTab('/material-stock/estimates-db')}
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
             ESTIMATES
           </button>
 
           {/* Orders */}
-          <button 
-            onClick={() => navigateToNewTab('/orders')} 
+          <button
+            onClick={() => navigateToNewTab('/orders')}
             className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
           >
             ORDERS
           </button>
 
+          {/* Orders */}
+          <button
+            onClick={() => navigateToNewTab('/invoices')}
+            className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
+          >
+            INVOICES
+          </button>
+
           {/* Transactions - Staff and admin can access */}
           {canAccess("staff") && (
-            <button 
-              onClick={() => navigateToNewTab('/transactions')} 
+            <button
+              onClick={() => navigateToNewTab('/transactions')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               TRANSACTIONS
             </button>
           )}
-          
+         
           {/* Profile Dropdown */}
           <div className="relative">
-            <button 
+            <button
               onClick={() => setShowProfileMenu(!showProfileMenu)}
               className="flex items-center hover:text-blue-300 transition"
             >
               <span className="mr-2">{userDisplayText}</span>
-              <svg 
-                className="h-4 w-4" 
-                fill="none" 
-                viewBox="0 0 24 24" 
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                viewBox="0 0 24 24"
                 stroke="currentColor"
               >
-                <path 
-                  strokeLinecap="round" 
-                  strokeLinejoin="round" 
-                  strokeWidth={2} 
-                  d={showProfileMenu ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"} 
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d={showProfileMenu ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}
                 />
               </svg>
             </button>
-            
+
             {showProfileMenu && (
               <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded shadow-md z-10">
                 <div className="p-2 border-b text-sm text-gray-500">
                   Logged in as <span className="font-semibold">{userRole}</span>
                 </div>
-                
+
                 {userRole === 'admin' && (
-                  <button 
+                  <button
                     onClick={() => {
                       setShowProfileMenu(false);
                       navigateToNewTab('/user-management');
@@ -212,8 +220,8 @@ const Header = () => {
                     User Management
                   </button>
                 )}
-                
-                <button 
+               
+                <button
                   onClick={() => {
                     setShowProfileMenu(false);
                     navigateToNewTab('/change-password');
@@ -222,8 +230,8 @@ const Header = () => {
                 >
                   Change Password
                 </button>
-                
-                <button 
+               
+                <button
                   onClick={() => {
                     setShowProfileMenu(false);
                     handleLogout();

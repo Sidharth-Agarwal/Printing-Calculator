@@ -1,68 +1,95 @@
 import React, { useState, useRef } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import OrderJobTicket from './OrderJobTicket';
-import TaxInvoice from './TaxInvoice';
+import InvoiceTemplate from './InvoiceTemplate';
 
 const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   const [activeView, setActiveView] = useState('details');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
   const contentRef = useRef(null);
+  
+  // Invoice data state
+  const [invoiceData, setInvoiceData] = useState({
+    invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    date: new Date().toISOString().split('T')[0],
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+    notes: '',
+    additionalInfo: '',
+    discount: 0,
+    taxRate: 12, // Default to 12% (6% CGST + 6% SGST)
+    showTax: true
+  });
+  
+  // Available stages for orders
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
 
-  const fieldLabels = {
-    clientName: "Name of the Client ",
-    projectName: "Name of the Project ",
-    date: "Order Date ",
-    deliveryDate: "Expected Delivery Date ",
-    jobType: "Job Type ",
-    quantity: "Quantity ",
-    paperProvided: "Paper Provided ",
-    dieCode: "Die Code ",
-    dieSize: "Die Size ",
-    dieSelection: "Die Selection ",
-    image: "Image ",
-    breadth: "Breadth ",
-    length: "Length ",
-    paperName: "Paper Name ",
-    plateSizeType: "Type of Plate Size ",
-    noOfColors: "Total number of colors ",
-    colorDetails: "Color Details of LP ",
-    mrType: "Type of MR ",
-    pantoneType: "Type of Pantone ",
-    plateDimensions: "Dimensions of Plate ",
-    plateType: "Type of Plate ",
-    fsType: "Type of FS ",
-    foilDetails: "Foil Details of FS ",
-    blockSizeType: "Block size Type ",
-    blockDimension: "Block Dimensions ",
-    foilType: "Type of Foil ",
-    blockType: "Type of Block ",
-    plateTypeMale: "Male Plate Type ",
-    plateTypeFemale: "Female Plate Type ",
-    embMR: "Type of MR ",
-    digiDie: "Digital Die Selected ",
-    digiDimensions: "Digital Die Dimensions ",
-    lpDetailsSandwich: "LP Details in Sandwich ",
-    fsDetailsSandwich: "FS Details in Sandwich ",
-    embDetailsSandwich: "EMB Details in Sandwich ",
-    paperCostPerCard: "Cost of Paper ",
-    cuttingCostPerCard: "Cost of Cutting ",
-    paperAndCuttingCostPerCard: "Total Paper and Cutting Cost ",
-    lpCostPerCard: "Cost of LP ",
-    fsCostPerCard: "Cost of FS ",
-    embCostPerCard: "Cost of EMB ",
-    lpCostPerCardSandwich: "Cost of LP in Sandwich ",
-    fsCostPerCardSandwich: "Cost of FS in Sandwich ",
-    embCostPerCardSandwich: "Cost of EMB in Sandwich ",
-    digiCostPerCard: "Digital Print Cost per Unit ",
-    pastingCostPerCard: "Pasting Cost per Unit ",
-    pastingType: "Pasting Type ",
-    totalPastingCost: "Total Pasting Cost "
+  // Stage colors for visual representation
+  const stageColors = {
+    'Not started yet': { bg: 'bg-gray-100', text: 'text-gray-800' },
+    'Design': { bg: 'bg-indigo-100', text: 'text-indigo-800' },
+    'Positives': { bg: 'bg-cyan-100', text: 'text-cyan-800' },
+    'Printing': { bg: 'bg-orange-100', text: 'text-orange-800' },
+    'Quality Check': { bg: 'bg-pink-100', text: 'text-pink-800' },
+    'Delivery': { bg: 'bg-green-100', text: 'text-green-800' }
   };
 
+  // Field labels for order details
+  const fieldLabels = {
+    clientName: "Name of the Client",
+    projectName: "Name of the Project",
+    date: "Order Date",
+    deliveryDate: "Expected Delivery Date",
+    jobType: "Job Type",
+    quantity: "Quantity",
+    paperProvided: "Paper Provided",
+    dieCode: "Die Code",
+    dieSize: "Die Size",
+    dieSelection: "Die Selection",
+    image: "Image",
+    breadth: "Breadth",
+    length: "Length",
+    paperName: "Paper Name",
+    plateSizeType: "Type of Plate Size",
+    noOfColors: "Total number of colors",
+    colorDetails: "Color Details of LP",
+    mrType: "Type of MR",
+    pantoneType: "Type of Pantone",
+    plateDimensions: "Dimensions of Plate",
+    plateType: "Type of Plate",
+    fsType: "Type of FS",
+    foilDetails: "Foil Details of FS",
+    blockSizeType: "Block size Type",
+    blockDimension: "Block Dimensions",
+    foilType: "Type of Foil",
+    blockType: "Type of Block",
+    plateTypeMale: "Male Plate Type",
+    plateTypeFemale: "Female Plate Type",
+    embMR: "Type of MR",
+    digiDie: "Digital Die Selected",
+    digiDimensions: "Digital Die Dimensions",
+    lpDetailsSandwich: "LP Details in Sandwich",
+    fsDetailsSandwich: "FS Details in Sandwich",
+    embDetailsSandwich: "EMB Details in Sandwich",
+    paperCostPerCard: "Cost of Paper",
+    cuttingCostPerCard: "Cost of Cutting",
+    paperAndCuttingCostPerCard: "Total Paper and Cutting Cost",
+    lpCostPerCard: "Cost of LP",
+    fsCostPerCard: "Cost of FS",
+    embCostPerCard: "Cost of EMB",
+    lpCostPerCardSandwich: "Cost of LP in Sandwich",
+    fsCostPerCardSandwich: "Cost of FS in Sandwich",
+    embCostPerCardSandwich: "Cost of EMB in Sandwich",
+    digiCostPerCard: "Digital Print Cost per Unit",
+    pastingCostPerCard: "Pasting Cost per Unit",
+    pastingType: "Type of Pasting",
+    totalPastingCost: "Total Pasting Cost"
+  };
+
+  // Cost fields order for display
   const costFieldsOrder = [
     'paperCostPerCard',
     'cuttingCostPerCard',
@@ -77,6 +104,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     'pastingCostPerCard'
   ];
 
+  // Format field label
   const getLabel = (key) => {
     if (fieldLabels[key]) {
       return fieldLabels[key];
@@ -90,6 +118,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       .trim();
   };
 
+  // Render value based on field type
   const renderValue = (key, value) => {
     if (value === null || value === undefined || value === "") {
       return "Not Provided";
@@ -135,6 +164,10 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     }
 
     if (typeof value === "object" && value !== null) {
+      if ('length' in value && 'breadth' in value) {
+        return `${value.length || 'N/A'} x ${value.breadth || 'N/A'}`;
+      }
+
       return (
         <table className="w-full border-collapse border border-gray-300 rounded-md">
           <tbody>
@@ -159,6 +192,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     return value.toString();
   };
 
+  // Render multiple tables in a row
   const renderMultipleTablesInRow = (dataArray) => {
     return (
       <div className="grid grid-cols-3 gap-4">
@@ -171,6 +205,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
+  // Render section in flex layout
   const renderSectionInFlex = (heading, sectionData, excludedFields = []) => {
     if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
       return null;
@@ -203,6 +238,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
+  // Render section in grid layout
   const renderSectionInGrid = (heading, sectionData, excludedFields = []) => {
     if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
       return null;
@@ -225,17 +261,20 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
+  // Handle stage update
   const handleStageUpdate = async (newStage) => {
     try {
-      const orderRef = doc(db, "orders", order.id);
-      await updateDoc(orderRef, { stage: newStage });
-      onStageUpdate(newStage);
+      setIsUpdatingStage(true);
+      await onStageUpdate(newStage);
     } catch (error) {
       console.error("Error updating stage:", error);
       alert("Failed to update stage");
+    } finally {
+      setIsUpdatingStage(false);
     }
   };
 
+  // Calculate total costs
   const calculateTotalCosts = () => {
     const WASTAGE_PERCENTAGE = 5; // 5% wastage
     const OVERHEAD_PERCENTAGE = 35; // 35% overhead
@@ -279,11 +318,43 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     };
   };
 
+  // Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 2
+    }).format(amount);
+  };
+
+  // Calculate totals for invoice
+  const calculateInvoiceTotals = () => {
+    const costs = calculateTotalCosts();
+    const quantity = parseInt(order.jobDetails?.quantity) || 0;
+    
+    const subtotal = costs.totalCostPerCard * quantity;
+    const discount = subtotal * (invoiceData.discount / 100);
+    const taxableAmount = subtotal - discount;
+    const tax = invoiceData.showTax ? (taxableAmount * (invoiceData.taxRate / 100)) : 0;
+    const total = taxableAmount + tax;
+    
+    return {
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      discount: parseFloat(discount.toFixed(2)),
+      taxableAmount: parseFloat(taxableAmount.toFixed(2)),
+      tax: parseFloat(tax.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
+      totalQuantity: quantity
+    };
+  };
+
+  // Generate PDF
   const generatePDF = async () => {
     if (!contentRef.current) return;
     
     setIsDownloading(true);
     try {
+      // Wait for any images to load
       const images = contentRef.current.getElementsByTagName('img');
       const imagePromises = Array.from(images).map(img => {
         if (img.complete) return Promise.resolve();
@@ -315,7 +386,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       const imgHeight = canvas.height * imgWidth / canvas.width;
       
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      pdf.save(`${order.clientName}_${activeView === 'invoice' ? 'Invoice' : 'Job_Ticket'}_${new Date().toISOString().split('T')[0]}.pdf`);
+      pdf.save(`${activeView === 'invoice' ? 'Invoice' : 'Job_Ticket'}_${order.clientName}_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("Failed to generate PDF. Please try again.");
@@ -324,15 +395,24 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     }
   };
 
+  // Get invoice totals
+  const invoiceTotals = calculateInvoiceTotals();
+  
+  // Get client info for invoice
+  const clientInfo = {
+    name: order.clientName,
+    id: order.clientId || 'unknown'
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-bold text-gray-800">
               {activeView === 'details' ? 'Order Details' : 
-               activeView === 'invoice' ? 'Tax Invoice' : 'Job Ticket'}
+               activeView === 'invoice' ? 'Invoice' : 'Job Ticket'}
             </h2>
             <div className="flex gap-2">
               <button
@@ -394,6 +474,61 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
+          </div>
+        </div>
+
+        {/* Stage Progression */}
+        <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center mb-2 md:mb-0">
+              <span className="mr-2 font-medium">Current Stage:</span>
+              <span className={`px-3 py-1 rounded-full ${stageColors[order.stage]?.bg || 'bg-gray-100'} ${stageColors[order.stage]?.text || 'text-gray-800'}`}>
+                {order.stage}
+              </span>
+            </div>
+            
+            <div className="flex gap-2">
+              {/* Stage progression stepper */}
+              <div className="flex items-center">
+                {stages.map((stage, index) => {
+                  const currentStageIndex = stages.indexOf(order.stage);
+                  const isCompletedStage = index <= currentStageIndex;
+                  const isCurrentStage = index === currentStageIndex;
+                  
+                  return (
+                    <div key={stage} className="flex items-center">
+                      <div 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer
+                          ${isCompletedStage 
+                            ? stageColors[stage]?.bg || 'bg-gray-200' 
+                            : 'bg-gray-200'} 
+                          ${isCompletedStage 
+                            ? stageColors[stage]?.text || 'text-gray-700' 
+                            : 'text-gray-500'}
+                          ${isCurrentStage ? 'ring-2 ring-blue-400' : ''}
+                        `}
+                        onClick={() => handleStageUpdate(stage)}
+                      >
+                        {isCompletedStage ? (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <span className="text-xs">{index + 1}</span>
+                        )}
+                      </div>
+                      {index < stages.length - 1 && (
+                        <div className={`w-8 h-1 ${
+                          index < currentStageIndex 
+                            ? 'bg-blue-500' 
+                            : 'bg-gray-300'
+                        }`}></div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -540,7 +675,12 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
           ) : (
             <div ref={contentRef} className="p-6">
               {activeView === 'invoice' ? (
-                <TaxInvoice order={order} />
+                <InvoiceTemplate
+                  invoiceData={invoiceData}
+                  orders={[order]}
+                  clientInfo={clientInfo}
+                  totals={invoiceTotals}
+                />
               ) : (
                 <OrderJobTicket order={order} />
               )}

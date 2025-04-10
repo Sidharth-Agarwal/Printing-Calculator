@@ -42,9 +42,9 @@ const ClientOrderGroup = ({
 
   return (
     <div className="bg-white rounded-lg shadow overflow-hidden">
-      {/* Client Header */}
+      {/* Client Header - More compact */}
       <div 
-        className={`p-4 ${isExpanded ? 'bg-blue-50' : 'bg-gray-50'} cursor-pointer border-b border-gray-200 transition-colors duration-150`}
+        className={`p-3 ${isExpanded ? 'bg-blue-50' : 'bg-gray-50'} cursor-pointer border-b border-gray-200 transition-colors duration-150`}
         onClick={onToggle}
       >
         <div className="flex justify-between items-center">
@@ -60,8 +60,8 @@ const ClientOrderGroup = ({
               />
             </div>
             <div>
-              <h2 className="text-lg font-semibold">{client.name}</h2>
-              <p className="text-sm text-gray-500">
+              <h2 className="text-base font-semibold">{client.name}</h2>
+              <p className="text-xs text-gray-500">
                 {client.totalOrders} Order{client.totalOrders !== 1 ? 's' : ''} • 
                 {client.completedOrders} Completed • 
                 {client.totalQuantity.toLocaleString()} Total Quantity
@@ -69,12 +69,12 @@ const ClientOrderGroup = ({
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <div className="flex -space-x-2">
-              {/* Display first 3 orders as avatar circles - optional visual touch */}
+            <div className="flex -space-x-1">
+              {/* Display first 3 orders as avatar circles - smaller for compact design */}
               {client.orders.slice(0, 3).map((order) => (
                 <div 
                   key={order.id} 
-                  className={`w-8 h-8 rounded-full border-2 border-white flex items-center justify-center text-xs ${
+                  className={`w-6 h-6 rounded-full border-2 border-white flex items-center justify-center text-xs ${
                     order.stage === 'Delivery' 
                       ? 'bg-green-100 text-green-800' 
                       : 'bg-blue-100 text-blue-800'
@@ -85,14 +85,14 @@ const ClientOrderGroup = ({
                 </div>
               ))}
               {client.orders.length > 3 && (
-                <div className="w-8 h-8 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs text-gray-800">
+                <div className="w-6 h-6 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center text-xs text-gray-800">
                   +{client.orders.length - 3}
                 </div>
               )}
             </div>
             <svg 
               xmlns="http://www.w3.org/2000/svg" 
-              className={`h-5 w-5 text-gray-500 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
+              className={`h-4 w-4 text-gray-500 transform transition-transform ${isExpanded ? 'rotate-180' : ''}`} 
               fill="none" 
               viewBox="0 0 24 24" 
               stroke="currentColor"
@@ -103,10 +103,10 @@ const ClientOrderGroup = ({
         </div>
       </div>
       
-      {/* Expanded Content */}
+      {/* Expanded Content - More compact grid with smaller gaps */}
       {isExpanded && (
-        <div className="p-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        <div className="p-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
             {client.orders.map((order) => (
               <OrderCard
                 key={order.id}
