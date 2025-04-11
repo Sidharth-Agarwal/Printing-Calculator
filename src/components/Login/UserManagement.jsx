@@ -215,8 +215,8 @@ const UserManagement = () => {
   }
 
   return (
-    <div className="p-6 bg-gray-50">
-      <h2 className="text-2xl font-bold mb-6">User Management</h2>
+    <div>
+      <h2 className="text-2xl font-bold mb-4">User Management</h2>
       
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
@@ -285,10 +285,10 @@ const UserManagement = () => {
       )}
       
       {/* Add New User Form */}
-      <div className="bg-white p-6 rounded shadow-md mb-8">
+      <div className="bg-white p-4 rounded shadow-md mb-4">
         <h3 className="text-lg font-semibold mb-4">Add New User</h3>
         <form onSubmit={initiateAddUser}>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">
                 Email
@@ -310,7 +310,6 @@ const UserManagement = () => {
                 type="text"
                 value={newDisplayName}
                 onChange={(e) => setNewDisplayName(e.target.value)}
-                placeholder="Leave blank to use email username"
                 className="w-full px-3 py-2 border rounded"
               />
             </div>
@@ -348,7 +347,7 @@ const UserManagement = () => {
           <button
             type="submit"
             disabled={isAddingUser}
-            className="mt-4 bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-blue-300"
+            className="mt-4 bg-blue-600 text-white py-2 px-3 rounded hover:bg-blue-700 disabled:bg-blue-300"
           >
             {isAddingUser ? "Adding User..." : "Add User"}
           </button>

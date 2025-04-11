@@ -155,9 +155,9 @@ const AddOverheadForm = ({ onSubmit, selectedOverhead, onUpdate, setSelectedOver
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-      <h2 className="text-lg font-medium mb-6">
-        {selectedOverhead ? "EDIT OVERHEAD" : "ADD NEW OVERHEAD"}
+    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
+      <h2 className="text-lg font-medium mb-4">
+        {selectedOverhead ? "Edit Overhead" : "Add New Overhead"}
       </h2>
       
       {error && (

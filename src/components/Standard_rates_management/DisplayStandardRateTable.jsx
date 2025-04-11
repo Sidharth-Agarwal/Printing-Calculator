@@ -2,8 +2,8 @@ import React from "react";
 
 const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
   return (
-    <div className="bg-white p-6 rounded shadow">
-      <h2 className="text-lg font-medium mb-6">STANDARD RATES</h2>
+    <div className="bg-white p-4 rounded shadow">
+      <h2 className="text-lg font-medium mb-4">Standard Rates</h2>
       <div className="overflow-x-auto">
         <table className="w-full border-collapse text-sm">
           <thead className="bg-gray-100">

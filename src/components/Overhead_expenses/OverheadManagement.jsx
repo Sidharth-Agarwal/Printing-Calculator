@@ -51,8 +51,8 @@ const OverheadManagement = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 rounded shadow">
-      <h1 className="text-xl font-bold mb-6">OVERHEAD MANAGEMENT</h1>
+    <div>
+      <h1 className="text-xl font-bold mb-4">Overhead Management</h1>
       <AddOverheadForm
         onSubmit={addOverhead}
         selectedOverhead={selectedOverhead}

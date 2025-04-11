@@ -201,9 +201,9 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-      <h2 className="text-lg font-bold mb-6">
-        {selectedClient ? "EDIT CLIENT" : "ADD NEW CLIENT"}
+    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
+      <h2 className="text-lg font-medium mb-4">
+        {selectedClient ? "Edit Client" : "Add New Client"}
       </h2>
       
       {/* Basic Information */}

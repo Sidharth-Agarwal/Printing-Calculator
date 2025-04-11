@@ -53,8 +53,8 @@ const DieManagement = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 rounded shadow">
-      <h1 className="text-xl font-bold mb-6">DIE MANAGEMENT</h1>
+    <div>
+      <h1 className="text-xl font-bold mb-4">Die Management</h1>
       <AddDieForm
         onAddDie={addDie}
         onUpdateDie={updateDie}

@@ -84,9 +84,9 @@ const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, setSelectedMate
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-      <h2 className="text-lg font-bold mb-6">
-        {selectedMaterial ? "EDIT MATERIAL" : "ADD NEW MATERIAL"}
+    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
+      <h2 className="text-lg font-medium mb-4">
+        {selectedMaterial ? "Edit Material" : "Add New Material"}
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm">
         {[

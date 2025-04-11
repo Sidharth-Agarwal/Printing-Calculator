@@ -100,8 +100,8 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-      <h2 className="text-lg font-medium mb-4">{editingPaper ? "EDIT PAPER" : "ADD NEW PAPER"}</h2>
+    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
+      <h2 className="text-lg font-medium mb-4">{editingPaper ? "Edit Paper" : "Add New Paper"}</h2>
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 text-sm">
         {[
           { label: "Paper Name", placeholder: "Enter the name of the paper", name: "paperName", type: "text" },
@@ -134,7 +134,7 @@ const AddPaperForm = ({ onAddPaper, onUpdatePaper, editingPaper, setEditingPaper
         ))}
       </div>
       <button type="submit" className="mt-6 px-3 py-2 bg-blue-500 text-white rounded text-sm">
-        {editingPaper ? "Save Changes" : "Submit"}
+        {editingPaper ? "Save Changes" : "Add Paper"}
       </button>
     </form>
   );

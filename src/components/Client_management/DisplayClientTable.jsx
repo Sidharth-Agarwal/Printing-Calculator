@@ -36,11 +36,11 @@ const DisplayClientTable = ({ clients, onDelete, onEdit }) => {
   };
 
   return (
-    <div className="bg-white p-6 rounded shadow">
-      <h2 className="text-lg font-bold mb-6">CLIENTS</h2>
+    <div className="bg-white p-4 rounded shadow">
+      <h2 className="text-lg font-semibold mb-4">Clients</h2>
       
       {/* Search and Filter */}
-      <div className="flex flex-col md:flex-row gap-4 mb-6">
+      <div className="flex flex-col md:flex-row gap-4 mb-4">
         <div className="flex-1">
           <input
             type="text"

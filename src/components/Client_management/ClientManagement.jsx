@@ -150,9 +150,8 @@ const ClientManagement = () => {
   };
 
   return (
-    <div className="p-6 bg-gray-100 rounded shadow">
-      <h1 className="text-xl font-bold mb-6">CLIENT MANAGEMENT</h1>
-      
+    <div>
+      <h1 className="text-xl font-bold mb-6">Client Management</h1>
       <AddClientForm
         onSubmit={addClient}
         selectedClient={selectedClient}
