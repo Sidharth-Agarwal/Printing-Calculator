@@ -4,6 +4,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
   const [formData, setFormData] = useState({
     clientCode: "",
     name: "",
+    clientType: "Direct", // Default to Direct
     contactPerson: "",
     email: "",
     phone: "",
@@ -24,21 +25,19 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
       postalCode: "",
       country: "",
     },
-    category: "",
-    tags: [],
-    defaultMarkup: "",
-    paymentTerms: "",
-    creditLimit: "",
     notes: "",
   });
 
   const [sameAsAddress, setSameAsAddress] = useState(true);
-  const [tagInput, setTagInput] = useState("");
   const [submitLoading, setSubmitLoading] = useState(false);
 
   useEffect(() => {
     if (selectedClient) {
-      setFormData(selectedClient);
+      setFormData({
+        ...selectedClient,
+        // Set default clientType if it doesn't exist in the selected client
+        clientType: selectedClient.clientType || "Direct"
+      });
       // Check if billing address is the same as primary address
       const isSameAddress = 
         selectedClient.address.line1 === selectedClient.billingAddress.line1 &&
@@ -74,6 +73,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
     setFormData({
       clientCode: "",
       name: "",
+      clientType: "Direct",
       contactPerson: "",
       email: "",
       phone: "",
@@ -94,15 +94,9 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
         postalCode: "",
         country: "",
       },
-      category: "",
-      tags: [],
-      defaultMarkup: "",
-      paymentTerms: "",
-      creditLimit: "",
       notes: "",
     });
     setSameAsAddress(true);
-    setTagInput("");
   };
 
   const handleChange = (e) => {
@@ -154,43 +148,15 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
     }
   };
 
-  const handleTagInputChange = (e) => {
-    setTagInput(e.target.value);
-  };
-
-  const handleAddTag = () => {
-    if (tagInput.trim() !== "" && !formData.tags.includes(tagInput.trim())) {
-      setFormData((prev) => ({
-        ...prev,
-        tags: [...prev.tags, tagInput.trim()],
-      }));
-      setTagInput("");
-    }
-  };
-
-  const handleRemoveTag = (tagToRemove) => {
-    setFormData((prev) => ({
-      ...prev,
-      tags: prev.tags.filter((tag) => tag !== tagToRemove),
-    }));
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitLoading(true);
 
-    // Ensure numeric fields are stored as numbers
-    const processedData = {
-      ...formData,
-      defaultMarkup: parseFloat(formData.defaultMarkup) || 0,
-      creditLimit: parseFloat(formData.creditLimit) || 0,
-    };
-
     let success = false;
     if (selectedClient) {
-      success = await onUpdate(selectedClient.id, processedData);
+      success = await onUpdate(selectedClient.id, formData);
     } else {
-      success = await onSubmit(processedData);
+      success = await onSubmit(formData);
     }
 
     if (success) {
@@ -235,6 +201,19 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
               required
             />
+          </div>
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Client Type</label>
+            <select
+              name="clientType"
+              value={formData.clientType}
+              onChange={handleChange}
+              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              required
+            >
+              <option value="Direct">Direct Client</option>
+              <option value="B2B">B2B</option>
+            </select>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700">Contact Person</label>
@@ -446,98 +425,6 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
             </div>
           </div>
         )}
-      </div>
-      
-      {/* Client Classification */}
-      <div className="mb-6">
-        <h3 className="text-md font-medium mb-4 text-gray-700">Client Classification</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Category</label>
-            <select
-              name="category"
-              value={formData.category}
-              onChange={handleChange}
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
-            >
-              <option value="">Select Category</option>
-              <option value="Regular">Regular</option>
-              <option value="Premium">Premium</option>
-              <option value="Enterprise">Enterprise</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Default Markup (%)</label>
-            <input
-              type="number"
-              name="defaultMarkup"
-              value={formData.defaultMarkup}
-              onChange={handleChange}
-              placeholder="Enter default markup percentage"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Credit Limit (INR)</label>
-            <input
-              type="number"
-              name="creditLimit"
-              value={formData.creditLimit}
-              onChange={handleChange}
-              placeholder="Enter credit limit"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Payment Terms</label>
-            <select
-              name="paymentTerms"
-              value={formData.paymentTerms}
-              onChange={handleChange}
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
-            >
-              <option value="">Select Payment Terms</option>
-              <option value="Net 15">Net 15</option>
-              <option value="Net 30">Net 30</option>
-              <option value="Net 45">Net 45</option>
-              <option value="Net 60">Net 60</option>
-              <option value="Due on Receipt">Due on Receipt</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Tags</label>
-            <div className="flex gap-2 mt-1">
-              <input
-                type="text"
-                value={tagInput}
-                onChange={handleTagInputChange}
-                placeholder="Add a tag"
-                className="text-md block w-full border-gray-300 rounded-sm shadow-sm"
-              />
-              <button
-                type="button"
-                onClick={handleAddTag}
-                className="px-3 py-2 bg-blue-500 text-white rounded text-sm"
-              >
-                Add
-              </button>
-            </div>
-            <div className="mt-2 flex flex-wrap gap-2">
-              {formData.tags.map((tag, index) => (
-                <div key={index} className="flex items-center bg-gray-100 px-2 py-1 rounded">
-                  <span className="text-sm">{tag}</span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveTag(tag)}
-                    className="ml-1 text-gray-500 hover:text-red-500"
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
       </div>
       
       {/* Notes */}

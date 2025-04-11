@@ -15,6 +15,8 @@ const ClientManagement = () => {
       const clientsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
+        // Ensure clientType exists for all clients and is uppercase
+        clientType: (doc.data().clientType || "DIRECT").toUpperCase()
       }));
       setClients(clientsData);
       setIsLoading(false);
