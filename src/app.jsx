@@ -12,6 +12,7 @@ import Login from "./components/Login/login";
 import ChangePassword from "./components/Login/ChangePassword";
 import AdminUser from "./components/Login/AdminUser";
 import UserManagement from "./components/Login/UserManagement";
+import UserCreatedSuccess from "./components/Login/UserCreatedSuccess";
 import EstimatesPage from "./components/Estimates/EstimatesPage";
 import OrdersPage from "./components/Orders/OrderPage";
 import InvoicesPage from "./components/Invoices/InvoicePage";
@@ -32,6 +33,7 @@ function App() {
             <Route path="/" element={<Login />} />
             <Route path="/setup-admin" element={<AdminUser />} />
             <Route path="/unauthorized" element={<Unauthorized />} />
+            <Route path="/user-created-success" element={<UserCreatedSuccess />} />
             
             {/* Protected routes - accessible to all authenticated users */}
             <Route 

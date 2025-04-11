@@ -5,6 +5,9 @@ import { useAuth } from "./AuthContext";
 // This component wraps protected routes and redirects to login if not authenticated
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { currentUser, userRole, loading } = useAuth();
+  
+  // Check if we're in the middle of user creation
+  const userCreationInProgress = localStorage.getItem('userCreationInProgress') === 'true';
 
   // If still loading auth state, show a loading spinner
   if (loading) {
@@ -16,12 +19,14 @@ const ProtectedRoute = ({ children, requiredRole }) => {
   }
 
   // If not logged in, redirect to login page
-  if (!currentUser) {
+  // But skip if we're in the middle of user creation process
+  if (!currentUser && !userCreationInProgress) {
     return <Navigate to="/" replace />;
   }
 
   // If role is required but user doesn't have it (and is not admin), redirect to unauthorized
-  if (requiredRole && userRole !== requiredRole && userRole !== "admin") {
+  // But skip this check during user creation process
+  if (requiredRole && userRole !== requiredRole && userRole !== "admin" && !userCreationInProgress) {
     console.log(`Access denied: User role ${userRole} doesn't match required role ${requiredRole}`);
     return <Navigate to="/unauthorized" replace />;
   }

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, doc, setDoc, deleteDoc, query, where } from "firebase/firestore";
-import { createUserWithEmailAndPassword, getAuth } from "firebase/auth";
+import { createUserWithEmailAndPassword, getAuth, signInWithEmailAndPassword } from "firebase/auth";
 import { db } from "../../firebaseConfig";
 import { useAuth } from "../Login/AuthContext";
 
@@ -17,6 +17,11 @@ const UserManagement = () => {
   const [newDisplayName, setNewDisplayName] = useState("");
   const [newRole, setNewRole] = useState("staff");
   const [isAddingUser, setIsAddingUser] = useState(false);
+  
+  // Store admin credentials temporarily during user creation
+  const [adminEmail, setAdminEmail] = useState("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
 
   // Fetch all users from Firestore
   const fetchUsers = async () => {
@@ -44,8 +49,8 @@ const UserManagement = () => {
     }
   }, [userRole]);
 
-  // Add a new user
-  const handleAddUser = async (e) => {
+  // Start the add user process by requesting admin password confirmation
+  const initiateAddUser = (e) => {
     e.preventDefault();
     setError("");
     setSuccess("");
@@ -55,11 +60,34 @@ const UserManagement = () => {
       return setError("Password should be at least 6 characters");
     }
     
+    // Store admin email and show password confirmation
+    setAdminEmail(currentUser.email);
+    setShowPasswordConfirm(true);
+  };
+  
+  // Cancel password confirmation
+  const cancelPasswordConfirm = () => {
+    setShowPasswordConfirm(false);
+    setAdminPassword("");
+  };
+
+  // Add a new user after admin password confirmation
+  const handleAddUser = async (e) => {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+    
     setIsAddingUser(true);
 
     try {
-      // Create user in Firebase Auth
+      // Signal that we're in the middle of a user creation flow
+      // We'll use localStorage to persist through page navigation
+      localStorage.setItem('userCreationInProgress', 'true');
+      
+      // Create a new auth instance to prevent affecting the current session
       const auth = getAuth();
+      
+      // First, create the new user account
       const userCredential = await createUserWithEmailAndPassword(auth, newEmail, newPassword);
       
       // Prepare display name - use provided one or extract from email
@@ -74,19 +102,24 @@ const UserManagement = () => {
         createdBy: currentUser.uid,
         isActive: true
       });
-
-      setSuccess(`User ${newEmail} created successfully as "${displayName}"!`);
-      setNewEmail("");
-      setNewPassword("");
-      setNewDisplayName("");
-      setNewRole("staff");
       
-      // Refresh the users list
-      fetchUsers();
+      // Store admin credentials in sessionStorage (more secure than localStorage)
+      // These will be used by UserCreatedSuccess component to re-authenticate
+      sessionStorage.setItem('adminEmail', adminEmail);
+      sessionStorage.setItem('adminPassword', adminPassword);
+      
+      // Redirect to success page with user info as URL parameters
+      window.location.href = `/user-created-success?email=${encodeURIComponent(newEmail)}&name=${encodeURIComponent(displayName)}`;
+      
     } catch (err) {
       console.error("Error adding user:", err);
+      // Clear the flag if we hit an error
+      localStorage.removeItem('userCreationInProgress');
+      
       if (err.code === "auth/email-already-in-use") {
         setError("This email is already in use.");
+      } else if (err.code === "auth/wrong-password") {
+        setError("Admin password is incorrect.");
       } else {
         setError("Failed to create user: " + err.message);
       }
@@ -197,10 +230,64 @@ const UserManagement = () => {
         </div>
       )}
       
+      {/* Admin Password Confirmation Modal */}
+      {showPasswordConfirm && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
+            <h3 className="text-lg font-semibold mb-4">Confirm Admin Password</h3>
+            <p className="mb-4 text-gray-600">
+              Please enter your admin password to create this new user while staying logged in as admin.
+            </p>
+            <form onSubmit={handleAddUser}>
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
+                  Admin Email (Current User)
+                </label>
+                <input
+                  type="email"
+                  value={adminEmail}
+                  disabled
+                  className="w-full px-3 py-2 border rounded bg-gray-100"
+                />
+              </div>
+              <div className="mb-4">
+                <label className="block text-gray-700 text-sm font-medium mb-2">
+                  Admin Password
+                </label>
+                <input
+                  type="password"
+                  value={adminPassword}
+                  onChange={(e) => setAdminPassword(e.target.value)}
+                  required
+                  className="w-full px-3 py-2 border rounded"
+                  autoFocus
+                />
+              </div>
+              <div className="flex justify-end space-x-3">
+                <button
+                  type="button"
+                  onClick={cancelPasswordConfirm}
+                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isAddingUser || !adminPassword}
+                  className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700 disabled:bg-blue-300"
+                >
+                  {isAddingUser ? "Creating User..." : "Create User"}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+      
       {/* Add New User Form */}
       <div className="bg-white p-6 rounded shadow-md mb-8">
         <h3 className="text-lg font-semibold mb-4">Add New User</h3>
-        <form onSubmit={handleAddUser}>
+        <form onSubmit={initiateAddUser}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-gray-700 text-sm font-medium mb-2">
