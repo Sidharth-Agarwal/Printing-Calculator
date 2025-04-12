@@ -30,6 +30,12 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/unauthorized" replace />;
   }
 
+  // Special case for New Bill - explicitly allow B2B users to access it
+  if (location.pathname === "/new-bill" && userRole === "b2b") {
+    console.log("B2B user accessing New Bill - allowed");
+    return children;
+  }
+
   // If role is required but user doesn't have it (and is not admin), redirect to unauthorized
   // But skip this check during user creation process
   if (requiredRole && userRole !== requiredRole && userRole !== "admin" && !userCreationInProgress) {
