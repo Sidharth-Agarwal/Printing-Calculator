@@ -28,7 +28,9 @@ const UserManagement = () => {
     try {
       setLoading(true);
       const usersCollection = collection(db, "users");
-      const usersSnapshot = await getDocs(usersCollection);
+      // Get all users except those with the b2b role
+      const usersQuery = query(usersCollection, where("role", "!=", "b2b"));
+      const usersSnapshot = await getDocs(usersQuery);
       const usersList = usersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
@@ -339,7 +341,6 @@ const UserManagement = () => {
                 <option value="admin">Admin</option>
                 <option value="staff">Staff</option>
                 <option value="production">Production</option>
-                <option value="b2b">B2B Client</option>
               </select>
             </div>
           </div>
@@ -422,7 +423,6 @@ const UserManagement = () => {
                       <option value="admin">Admin</option>
                       <option value="staff">Staff</option>
                       <option value="production">Production</option>
-                      <option value="b2b">B2B Client</option>
                     </select>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
