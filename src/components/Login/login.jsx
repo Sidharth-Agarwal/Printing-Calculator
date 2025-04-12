@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -11,6 +12,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [adminExists, setAdminExists] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   const { login, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -179,7 +181,22 @@ const Login = () => {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+        
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            className="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            Forgot Password?
+          </button>
+        </div>
       </form>
+      
+      <ForgotPasswordModal 
+        isOpen={showForgotPassword} 
+        onClose={() => setShowForgotPassword(false)} 
+      />
     </div>
   );
 };
