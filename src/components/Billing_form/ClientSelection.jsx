@@ -39,12 +39,12 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient }) 
         clientInfo: {
           name: client.name,
           clientCode: client.clientCode,
+          clientType: client.clientType,
           contactPerson: client.contactPerson,
           email: client.email,
           phone: client.phone,
           address: client.address,
           billingAddress: client.billingAddress,
-          category: client.category,
           gstin: client.gstin
         }
       });
