@@ -6,6 +6,7 @@ import DisplayClientTable from "./DisplayClientTable";
 import { useAuth } from "../Login/AuthContext";
 import B2BCredentialsManager from "./B2BCredentialsManager";
 import AdminPasswordModal from "./AdminPasswordModal";
+import ActivateClientModal from "./ActivateClientModal";
 
 const ClientManagement = () => {
   const [clients, setClients] = useState([]);
@@ -18,6 +19,7 @@ const ClientManagement = () => {
   // Modal state for admin password
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [pendingClient, setPendingClient] = useState(null);
+  const [clientToActivate, setClientToActivate] = useState(null);
 
   useEffect(() => {
     const clientsCollection = collection(db, "clients");
@@ -180,6 +182,19 @@ const ClientManagement = () => {
     }
   };
 
+  const handleActivateClient = (client) => {
+    setClientToActivate(client);
+  };
+
+  const handleActivationClose = () => {
+    setClientToActivate(null);
+  };
+
+  const handleActivationSuccess = (updatedClient) => {
+    // This will trigger the onSnapshot listener to refresh the client list
+    // The page will be reloaded by the ActivateClientModal
+  };
+
   const handleManageCredentials = (client) => {
     // Store the client and show the password modal
     setPendingClient(client);
@@ -190,6 +205,9 @@ const ClientManagement = () => {
     setSelectedClientForAuth(null);
     // Clear admin credentials for security
     setAdminCredentials(null);
+    
+    // Make sure we stay on the clients page
+    window.history.pushState({}, "", "/clients");
   };
 
   const deleteClient = async (id) => {
@@ -253,6 +271,7 @@ const ClientManagement = () => {
           onDelete={deleteClient}
           onEdit={setSelectedClient}
           onManageCredentials={handleManageCredentials}
+          onActivateClient={handleActivateClient}
           isAdmin={isAdmin}
         />
       )}
@@ -272,7 +291,18 @@ const ClientManagement = () => {
         isOpen={showPasswordModal}
         onConfirm={handleAdminPasswordConfirm}
         onCancel={handleAdminPasswordCancel}
+        adminEmail={currentUser?.email || ""}
       />
+
+      {/* Activate Client Modal */}
+      {clientToActivate && (
+        <ActivateClientModal
+          client={clientToActivate}
+          onClose={handleActivationClose}
+          onSuccess={handleActivationSuccess}
+          adminEmail={currentUser?.email || ""}
+        />
+      )}
     </div>
   );
 };

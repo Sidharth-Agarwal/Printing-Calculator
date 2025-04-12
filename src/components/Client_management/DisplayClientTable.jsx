@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, isAdmin }) => {
+const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, onActivateClient, isAdmin }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClientType, setFilterClientType] = useState("");
 
@@ -133,16 +133,25 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, is
                         Delete
                       </button>
 
-                      {/* Only show the Credentials button for B2B clients */}
+                      {/* Only show the Credentials and Activate buttons for B2B clients */}
                       {isAdmin && (client.clientType === "B2B" || client.clientType === "b2b") && (
                         <>
                           <span className="text-gray-300">|</span>
-                          <button
-                            onClick={() => onManageCredentials(client)}
-                            className="text-purple-600 hover:text-purple-800"
-                          >
-                            Credentials
-                          </button>
+                          {client.hasAccount ? (
+                            <button
+                              onClick={() => onManageCredentials(client)}
+                              className="text-purple-600 hover:text-purple-800"
+                            >
+                              Credentials
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => onActivateClient(client)}
+                              className="text-green-600 hover:text-green-800"
+                            >
+                              Activate
+                            </button>
+                          )}
                         </>
                       )}
                     </div>
