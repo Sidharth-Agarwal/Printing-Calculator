@@ -364,7 +364,7 @@
 // //         setSelectedClient(null);
 // //         setSelectedVersion("");
 // //         // Navigate to estimates page
-// //         navigate('/material-stock/estimates-db');
+// //         navigate('/estimates');
 // //       }
 // //     } catch (error) {
 // //       console.error("Error handling estimate:", error);
@@ -1390,7 +1390,7 @@
 //         setSelectedClient(null);
 //         setSelectedVersion("");
 //         // Navigate to estimates page
-//         navigate('/material-stock/estimates-db');
+//         navigate('/estimates');
 //       }
 //     } catch (error) {
 //       console.error("Error handling estimate:", error);
@@ -2437,7 +2437,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         setSelectedClient(null);
         setSelectedVersion("");
         // Navigate to estimates page
-        navigate('/material-stock/estimates-db');
+        navigate('/estimates');
       }
     } catch (error) {
       console.error("Error handling estimate:", error);

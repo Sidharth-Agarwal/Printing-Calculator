@@ -175,7 +175,7 @@ const Header = () => {
           {/* Estimates - Admin, Staff, B2B */}
           {canAccessEstimates && (
             <button
-              onClick={() => isB2B ? navigate('/material-stock/estimates-db') : navigateToNewTab('/material-stock/estimates-db')}
+              onClick={() => isB2B ? navigate('/estimates') : navigateToNewTab('/estimates')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Estimates

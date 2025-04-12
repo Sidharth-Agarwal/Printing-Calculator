@@ -237,7 +237,7 @@ const B2BClientDashboard = () => {
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold">Active Estimates</h2>
-            <Link to="/material-stock/estimates-db" className="text-blue-600 hover:text-blue-800 text-sm">
+            <Link to="/estimates" className="text-blue-600 hover:text-blue-800 text-sm">
               View All
             </Link>
           </div>

@@ -49,62 +49,22 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     dieCode: "Die Code",
     dieSize: "Die Size",
     dieSelection: "Die Selection",
-    image: "Image",
-    breadth: "Breadth",
-    length: "Length",
     paperName: "Paper Name",
-    plateSizeType: "Type of Plate Size",
-    noOfColors: "Total number of colors",
-    colorDetails: "Color Details of LP",
-    mrType: "Type of MR",
-    pantoneType: "Type of Pantone",
-    plateDimensions: "Dimensions of Plate",
-    plateType: "Type of Plate",
-    fsType: "Type of FS",
-    foilDetails: "Foil Details of FS",
-    blockSizeType: "Block size Type",
-    blockDimension: "Block Dimensions",
-    foilType: "Type of Foil",
-    blockType: "Type of Block",
-    plateTypeMale: "Male Plate Type",
-    plateTypeFemale: "Female Plate Type",
-    embMR: "Type of MR",
-    digiDie: "Digital Die Selected",
-    digiDimensions: "Digital Die Dimensions",
-    lpDetailsSandwich: "LP Details in Sandwich",
-    fsDetailsSandwich: "FS Details in Sandwich",
-    embDetailsSandwich: "EMB Details in Sandwich",
-    paperCostPerCard: "Cost of Paper",
-    cuttingCostPerCard: "Cost of Cutting",
-    paperAndCuttingCostPerCard: "Total Paper and Cutting Cost",
-    lpCostPerCard: "Cost of LP",
-    fsCostPerCard: "Cost of FS",
-    embCostPerCard: "Cost of EMB",
-    lpCostPerCardSandwich: "Cost of LP in Sandwich",
-    fsCostPerCardSandwich: "Cost of FS in Sandwich",
-    embCostPerCardSandwich: "Cost of EMB in Sandwich",
-    digiCostPerCard: "Digital Print Cost per Unit",
-    pastingCostPerCard: "Pasting Cost per Unit",
-    pastingType: "Type of Pasting",
-    totalPastingCost: "Total Pasting Cost"
+    // Cost calculation fields
+    baseCost: "Base Cost per Card",
+    miscChargePerCard: "Misc. Charge",
+    baseWithMisc: "Base with Misc",
+    wastageAmount: "Wastage Cost",
+    overheadAmount: "Overhead Cost",
+    markupPercentage: "Markup Percentage",
+    markupType: "Markup Type",
+    markupAmount: "Markup Cost",
+    subtotalPerCard: "Subtotal per Card",
+    totalCostPerCard: "Total Cost per Card",
+    totalCost: "Total Cost (All Units)"
   };
 
-  // Cost fields order for display
-  const costFieldsOrder = [
-    'paperCostPerCard',
-    'cuttingCostPerCard',
-    'paperAndCuttingCostPerCard',
-    'lpCostPerCard',
-    'fsCostPerCard',
-    'embCostPerCard',
-    'lpCostPerCardSandwich',
-    'fsCostPerCardSandwich',
-    'embCostPerCardSandwich',
-    'digiCostPerCard',
-    'pastingCostPerCard'
-  ];
-
-  // Format field label
+  // Get label for field
   const getLabel = (key) => {
     if (fieldLabels[key]) {
       return fieldLabels[key];
@@ -146,96 +106,12 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
         <img
           src={value}
           alt="Die"
-          className="max-w-full max-h-20 object-contain border rounded-md"
+          className="max-w-full max-h-36 object-contain border rounded-md"
         />
       );
     }
 
-    if (Array.isArray(value)) {
-      return (
-        <div className="space-y-2">
-          {value.map((item, index) => (
-            <div key={index} className="flex justify-between items-center gap-4 bg-gray-100 p-2 rounded-md">
-              {renderValue("item", item)}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (typeof value === "object" && value !== null) {
-      if ('length' in value && 'breadth' in value) {
-        return `${value.length || 'N/A'} x ${value.breadth || 'N/A'}`;
-      }
-
-      return (
-        <table className="w-full border-collapse border border-gray-300 rounded-md">
-          <tbody>
-            {Object.entries(value)
-              .filter(([key]) => !key.startsWith('is'))
-              .map(([subKey, subValue], index) => (
-                <tr
-                  key={subKey}
-                  className={`${
-                    index % 2 === 0 ? "bg-gray-100" : "bg-white"
-                  } border border-gray-300`}
-                >
-                  <td className="p-2 font-medium text-gray-600">{getLabel(subKey)}:</td>
-                  <td className="p-2 text-gray-800">{renderValue(subKey, subValue)}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
-      );
-    }
-
     return value.toString();
-  };
-
-  // Render multiple tables in a row
-  const renderMultipleTablesInRow = (dataArray) => {
-    return (
-      <div className="grid grid-cols-3 gap-4">
-        {dataArray.map((item, index) => (
-          <div key={index} className="bg-white p-2 rounded-md border">
-            {renderValue("table", item)}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  // Render section in flex layout
-  const renderSectionInFlex = (heading, sectionData, excludedFields = []) => {
-    if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
-      return null;
-    }
-
-    return (
-      <div key={heading} className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}:</h3>
-        <div className="space-y-4 bg-gray-100 p-4 rounded-md">
-          {Object.entries(sectionData)
-            .filter(([key]) => !excludedFields.includes(key))
-            .map(([key, value]) => {
-              if (Array.isArray(value)) {
-                return (
-                  <div key={key}>
-                    <h4 className="font-medium text-gray-600 mb-2">{getLabel(key)}:</h4>
-                    {renderMultipleTablesInRow(value)}
-                  </div>
-                );
-              }
-              return (
-                <div key={key} className="flex items-center gap-1">
-                  <span className="font-medium text-gray-600">{getLabel(key)}:</span>
-                  <span className="text-gray-800">{renderValue(key, value)}</span>
-                </div>
-              );
-            })}
-        </div>
-      </div>
-    );
   };
 
   // Render section in grid layout
@@ -244,19 +120,36 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       return null;
     }
 
+    // Extract image if it exists for special handling
+    const imageData = sectionData.image;
+    const filteredData = {...sectionData};
+    if (imageData) {
+      delete filteredData.image;
+    }
+    
     return (
       <div key={heading} className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}:</h3>
+        <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}</h3>
         <div className="grid grid-cols-2 gap-3 bg-white">
-          {Object.entries(sectionData)
+          {Object.entries(filteredData)
             .filter(([key]) => !excludedFields.includes(key))
             .map(([key, value]) => (
-              <div key={key} className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
+              <div key={key} className="flex justify-between items-center bg-gray-100 p-3 rounded-md">
                 <span className="font-medium text-gray-600">{getLabel(key)}:</span>
                 <span className="text-gray-800">{renderValue(key, value)}</span>
               </div>
             ))}
         </div>
+        
+        {/* Display die image if present */}
+        {imageData && (
+          <div className="mt-4 p-4 bg-gray-100 rounded-md">
+            <h4 className="font-medium text-gray-600 mb-2">Die Image:</h4>
+            <div className="flex justify-center">
+              {renderValue("image", imageData)}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
@@ -274,78 +167,148 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     }
   };
 
-  // Calculate total costs
-  const calculateTotalCosts = () => {
-    const WASTAGE_PERCENTAGE = 5; // 5% wastage
-    const OVERHEAD_PERCENTAGE = 35; // 35% overhead
+  // Render the main cost components section
+  const renderMainCostComponents = (calculations) => {
+    if (!calculations) return null;
 
-    const relevantFields = [
-      'paperAndCuttingCostPerCard',
-      'lpCostPerCard',
-      'fsCostPerCard',
-      'embCostPerCard',
-      'lpCostPerCardSandwich',
-      'fsCostPerCardSandwich',
-      'embCostPerCardSandwich',
-      'digiCostPerCard',
-      'pastingCostPerCard' // Include pasting cost in total calculation
+    const mainCostComponents = [
+      { key: 'paperAndCuttingCostPerCard', label: 'Paper & Cutting' },
+      { key: 'lpCostPerCard', label: 'Letter Press', condition: order.lpDetails?.isLPUsed },
+      { key: 'fsCostPerCard', label: 'Foil Stamping', condition: order.fsDetails?.isFSUsed },
+      { key: 'embCostPerCard', label: 'Embossing', condition: order.embDetails?.isEMBUsed },
+      { key: 'digiCostPerCard', label: 'Digital Printing', condition: order.digiDetails?.isDigiUsed },
+      { key: 'dieCuttingCostPerCard', label: 'Die Cutting', condition: order.dieCutting?.isDieCuttingUsed },
+      { key: 'pastingCostPerCard', label: 'Pasting', condition: order.pasting?.isPastingUsed },
     ];
 
-    // Calculate base cost per card
-    const baseCost = relevantFields.reduce((acc, key) => {
-      const value = order.calculations?.[key];
-      return acc + (value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0);
-    }, 0);
-
-    // Calculate wastage cost
-    const wastageCost = baseCost * (WASTAGE_PERCENTAGE / 100);
-    
-    // Calculate overhead cost
-    const overheadCost = baseCost * (OVERHEAD_PERCENTAGE / 100);
-    
-    // Total cost per card including wastage and overhead
-    const totalCostPerCard = baseCost + wastageCost + overheadCost;
-    
-    // Total cost for all cards
-    const totalCost = totalCostPerCard * (order.jobDetails?.quantity || 0);
-
-    return {
-      baseCost,
-      wastageCost,
-      overheadCost,
-      totalCostPerCard,
-      totalCost
-    };
+    return (
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-600 mb-2">Main Cost Components</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {mainCostComponents.map(({ key, label, condition }) => {
+            // Only show components that are used and have a value > 0
+            if (condition !== false && calculations[key] && parseFloat(calculations[key]) > 0) {
+              return (
+                <div key={key} className="flex justify-between items-center bg-gray-100 p-3 rounded-md">
+                  <span className="font-medium text-gray-600">{label}:</span>
+                  <span className="text-gray-800 font-bold">₹ {parseFloat(calculations[key]).toFixed(2)}</span>
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      </div>
+    );
   };
 
-  // Format currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
+  // Render the total cost calculation section with streamlined display
+  const renderTotalCostCalculation = (calculations) => {
+    if (!calculations) return null;
 
-  // Calculate totals for invoice
-  const calculateInvoiceTotals = () => {
-    const costs = calculateTotalCosts();
-    const quantity = parseInt(order.jobDetails?.quantity) || 0;
+    // Create an array for the calculation breakdown
+    const costCalculationSteps = [];
     
-    const subtotal = costs.totalCostPerCard * quantity;
-    const discount = subtotal * (invoiceData.discount / 100);
-    const taxableAmount = subtotal - discount;
-    const tax = invoiceData.showTax ? (taxableAmount * (invoiceData.taxRate / 100)) : 0;
-    const total = taxableAmount + tax;
+    // Add base cost if available
+    if (calculations.baseCost !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'baseCost', 
+        label: 'Base Cost per Card'
+      });
+    }
     
-    return {
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      discount: parseFloat(discount.toFixed(2)),
-      taxableAmount: parseFloat(taxableAmount.toFixed(2)),
-      tax: parseFloat(tax.toFixed(2)),
-      total: parseFloat(total.toFixed(2)),
-      totalQuantity: quantity
-    };
+    // Add misc charge if available
+    if (calculations.miscChargePerCard !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'miscChargePerCard', 
+        label: 'Miscellaneous Charge'
+      });
+    }
+    
+    // Add base with misc if available
+    if (calculations.baseWithMisc !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'baseWithMisc', 
+        label: 'Base Cost with Misc',
+        isSeparator: true
+      });
+    }
+    
+    // Add wastage
+    costCalculationSteps.push({ 
+      key: calculations.wastageAmount !== undefined ? 'wastageAmount' : 'wastageCost', 
+      label: 'Wastage (5%)'
+    });
+    
+    // Add overhead
+    costCalculationSteps.push({ 
+      key: calculations.overheadAmount !== undefined ? 'overheadAmount' : 'overheadCost', 
+      label: 'Overheads (35%)'
+    });
+    
+    // Add subtotal if available
+    if (calculations.subtotalPerCard !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'subtotalPerCard', 
+        label: 'Subtotal per Card',
+        isSeparator: true
+      });
+    }
+    
+    // Add markup if available
+    if (calculations.markupAmount !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'markupAmount',
+        label: `Markup (${calculations.markupType || 'Standard'}: ${calculations.markupPercentage || 0}%)`,
+        isHighlighted: true
+      });
+    }
+    
+    // Add total cost per card
+    costCalculationSteps.push({ 
+      key: 'totalCostPerCard', 
+      label: 'Total Cost per Card',
+      isSeparator: true,
+      isTotal: true
+    });
+
+    const quantity = parseInt(order.jobDetails?.quantity || 0);
+    const totalCost = calculations.totalCost || 
+      (parseFloat(calculations.totalCostPerCard || 0) * quantity).toFixed(2);
+    
+    return (
+      <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 mb-6">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">Cost Summary</h3>
+        
+        <div className="space-y-2 mb-4">
+          {costCalculationSteps.map(({ key, label, isSeparator, isHighlighted, isTotal }) => {
+            // Handle both types of calculation objects (old and new)
+            const value = calculations[key] !== undefined ? 
+              parseFloat(calculations[key] || 0).toFixed(2) : "0.00";
+              
+            return (
+              <div key={key} className={`flex justify-between items-center ${isSeparator ? 'border-t border-gray-300 pt-2 mt-2' : ''}`}>
+                <span className={`${isTotal ? 'text-lg font-bold' : 'font-medium'} ${isHighlighted ? 'text-blue-700' : 'text-gray-700'}`}>
+                  {label}:
+                </span>
+                <span className={`${isTotal ? 'text-lg font-bold' : ''} ${isHighlighted ? 'text-blue-700 font-medium' : 'text-gray-900'}`}>
+                  ₹ {value}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="flex justify-between items-center pt-4 border-t-2 border-gray-300 mt-4">
+          <span className="text-xl font-bold text-gray-800">
+            Total Cost ({quantity} pcs):
+          </span>
+          <span className="text-xl font-bold text-blue-600">
+            ₹ {parseFloat(totalCost).toFixed(2)}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   // Generate PDF
@@ -393,6 +356,27 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     } finally {
       setIsDownloading(false);
     }
+  };
+
+  // Calculate invoice totals
+  const calculateInvoiceTotals = () => {
+    const totalCostPerCard = parseFloat(order.calculations?.totalCostPerCard || 0);
+    const quantity = parseInt(order.jobDetails?.quantity) || 0;
+    
+    const subtotal = totalCostPerCard * quantity;
+    const discount = subtotal * (invoiceData.discount / 100);
+    const taxableAmount = subtotal - discount;
+    const tax = invoiceData.showTax ? (taxableAmount * (invoiceData.taxRate / 100)) : 0;
+    const total = taxableAmount + tax;
+    
+    return {
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      discount: parseFloat(discount.toFixed(2)),
+      taxableAmount: parseFloat(taxableAmount.toFixed(2)),
+      tax: parseFloat(tax.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
+      totalQuantity: quantity
+    };
   };
 
   // Get invoice totals
@@ -536,141 +520,25 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
         <div className="flex-1 overflow-y-auto">
           {activeView === 'details' ? (
             <div className="p-6" id="order-content">
-              {/* Order and Paper Details */}
-              {renderSectionInGrid("Order and Paper", {
+              {/* Basic Order Information */}
+              {renderSectionInGrid("Order and Client Information", {
                 clientName: order.clientName,
                 projectName: order.projectName,
                 date: order.date,
                 deliveryDate: order.deliveryDate,
                 jobType: order.jobDetails?.jobType,
                 quantity: order.jobDetails?.quantity,
-                paperProvided: order.jobDetails?.paperProvided,
                 paperName: order.jobDetails?.paperName,
                 dieCode: order.dieDetails?.dieCode,
                 dieSize: `${order.dieDetails?.dieSize?.length || ''} x ${order.dieDetails?.dieSize?.breadth || ''}`,
                 image: order.dieDetails?.image
               })}
 
-              {/* Process Details */}
-              <div className="space-y-4 bg-white">
-                {order.lpDetails?.isLPUsed && 
-                  renderSectionInFlex("LP Details", order.lpDetails, ["isLPUsed"])}
-                {order.fsDetails?.isFSUsed &&
-                  renderSectionInFlex("FS Details", order.fsDetails, ["isFSUsed"])}
-                {order.embDetails?.isEMBUsed &&
-                  renderSectionInFlex("EMB Details", order.embDetails, ["isEMBUsed"])}
-                {order.digiDetails?.isDigiUsed &&
-                  renderSectionInFlex("Digi Details", order.digiDetails, ["isDigiUsed"])}
-                {order.dieCutting?.isDieCuttingUsed &&
-                  renderSectionInFlex("Die Cutting", order.dieCutting, ["isDieCuttingUsed"])}
-                {order.sandwich?.isSandwichComponentUsed && (
-                  <div>
-                    {order.sandwich.lpDetailsSandwich?.isLPUsed &&
-                      renderSectionInFlex("Sandwich LP Details", order.sandwich.lpDetailsSandwich, ["isLPUsed"])}
-                    {order.sandwich.fsDetailsSandwich?.isFSUsed &&
-                      renderSectionInFlex("Sandwich FS Details", order.sandwich.fsDetailsSandwich, ["isFSUsed"])}
-                    {order.sandwich.embDetailsSandwich?.isEMBUsed &&
-                      renderSectionInFlex("Sandwich EMB Details", order.sandwich.embDetailsSandwich, ["isEMBUsed"])}
-                  </div>
-                )}
-                {order.pasting?.isPastingUsed &&
-                  renderSectionInFlex("Pasting Details", order.pasting, ["isPastingUsed"])}
-              </div>
+              {/* Main Cost Components */}
+              {order.calculations && renderMainCostComponents(order.calculations)}
 
-              {/* Cost Information */}
-              {order.calculations && (
-                <div className="space-y-4 mt-6">
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">Cost Calculations (per card)</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {costFieldsOrder
-                      .filter(key => 
-                        key !== 'pastingCostPerCard' && // Handle pasting cost separately
-                        order.calculations[key] !== null && 
-                        order.calculations[key] !== undefined &&
-                        order.calculations[key] !== "" &&
-                        order.calculations[key] !== "Not Provided" && 
-                        parseFloat(order.calculations[key]) > 0
-                      )
-                      .map((key) => (
-                        <div
-                          key={key}
-                          className="flex justify-between items-center bg-gray-100 p-2 rounded-md"
-                        >
-                          <span className="font-medium text-gray-600">{getLabel(key)}:</span>
-                          <span className="text-gray-800">₹ {parseFloat(order.calculations[key]).toFixed(2)}</span>
-                        </div>
-                      ))}
-                      
-                    {/* Special handling for pasting cost */}
-                    {order.pasting?.isPastingUsed && (
-                      <div 
-                        className={`flex justify-between items-center bg-gray-100 p-2 rounded-md ${
-                          parseFloat(order.calculations.pastingCostPerCard || 0) === 0 && order.calculations.totalPastingCost && parseFloat(order.calculations.totalPastingCost) > 0 
-                            ? "border border-blue-300" : ""
-                        }`}
-                      >
-                        <span className="font-medium text-gray-600">Pasting Cost:</span>
-                        <div className="text-right">
-                          <div className="text-gray-800">₹ {parseFloat(order.calculations.pastingCostPerCard || 0).toFixed(2)} per card</div>
-                          {order.calculations.totalPastingCost && parseFloat(order.calculations.totalPastingCost) > 0 && (
-                            <div className="text-xs text-gray-600">
-                              (Total: ₹ {order.calculations.totalPastingCost} for all cards)
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Total Cost Summary with Wastage and Overhead */}
-                  <div className="mt-6 bg-gray-100 p-4 rounded-md">
-                    {(() => {
-                      const costs = calculateTotalCosts();
-                      const quantity = order.jobDetails?.quantity || 0;
-                      
-                      return (
-                        <>
-                          <div className="space-y-2 mb-4">
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-gray-700">Base Cost per Card:</span>
-                              <span className="text-gray-900">
-                                ₹ {costs.baseCost.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-gray-700">Wastage (5%):</span>
-                              <span className="text-gray-900">
-                                ₹ {costs.wastageCost.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-gray-700">Overheads (35%):</span>
-                              <span className="text-gray-900">
-                                ₹ {costs.overheadCost.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-                              <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
-                              <span className="text-lg font-bold text-gray-900">
-                                ₹ {costs.totalCostPerCard.toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center pt-3 border-t border-gray-300">
-                            <span className="text-lg font-bold text-gray-700">
-                              Total Cost ({quantity} pcs):
-                            </span>
-                            <span className="text-xl font-bold text-blue-600">
-                              ₹ {costs.totalCost.toFixed(2)}
-                            </span>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
+              {/* Total Cost Calculation */}
+              {order.calculations && renderTotalCostCalculation(order.calculations)}
             </div>
           ) : (
             <div ref={contentRef} className="p-6">
