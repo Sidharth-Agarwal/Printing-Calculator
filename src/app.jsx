@@ -20,6 +20,7 @@ import TransactionsDashboard from "./components/Transactions/TransactionsDashboa
 import Unauthorized from "./components/Login/Unauthorized";
 import ProtectedRoute from "./components/Login/ProtectedRoute";
 import { AuthProvider } from "./components/Login/AuthContext";
+import B2BClientDashboard from "./components/Client_management/B2BClientDashboard";
 import "./styles/tailwind.css";
 
 function App() {
@@ -86,6 +87,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <EstimatesPage />
+                </ProtectedRoute>
+              } 
+            />
+
+            {/* B2B Dashboard - for B2B clients */}
+            <Route 
+              path="/b2b-dashboard" 
+              element={
+                <ProtectedRoute requiredRole="b2b">
+                  <B2BClientDashboard />
                 </ProtectedRoute>
               } 
             />

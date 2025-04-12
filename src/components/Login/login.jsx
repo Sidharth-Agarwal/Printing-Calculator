@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import ForgotPasswordModal from "./ForgotPasswordModal";
 
 const Login = () => {
   const [email, setEmail] = useState("");
@@ -11,6 +12,7 @@ const Login = () => {
   const [loading, setLoading] = useState(false);
   const [checkingAdmin, setCheckingAdmin] = useState(true);
   const [adminExists, setAdminExists] = useState(true);
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   
   const { login, currentUser } = useAuth();
   const navigate = useNavigate();
@@ -57,13 +59,23 @@ const Login = () => {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            
+            // Redirect based on role
             if (userData.role === "admin") {
+              // Admin users go to transactions dashboard
               navigate("/transactions");
+            } else if (userData.role === "b2b") {
+              // B2B users go to their dashboard
+              navigate("/b2b-dashboard");
+            } else if (userData.role === "staff" || userData.role === "production") {
+              // Staff and production users go to the billing form
+              navigate("/new-bill");
             } else {
+              // Default fallback
               navigate("/new-bill");
             }
           } else {
-            // If user document doesn't exist, fallback to transactions
+            // If user document doesn't exist, fallback to new bill
             navigate("/new-bill");
           }
         } catch (error) {
@@ -92,12 +104,14 @@ const Login = () => {
         // Redirect based on role
         if (userData.role === "admin") {
           navigate("/transactions");
+        } else if (userData.role === "b2b") {
+          navigate("/b2b-dashboard");
         } else {
           navigate("/new-bill");
         }
       } else {
-        // If user document doesn't exist in Firestore, fallback to transactions
-        navigate("/transactions");
+        // If user document doesn't exist in Firestore, fallback to new bill
+        navigate("/new-bill");
       }
     } catch (error) {
       console.error("Login error:", error.message);
@@ -167,7 +181,22 @@ const Login = () => {
         >
           {loading ? "Logging in..." : "Login"}
         </button>
+        
+        <div className="mt-4 text-center">
+          <button
+            type="button"
+            onClick={() => setShowForgotPassword(true)}
+            className="text-blue-600 hover:text-blue-800 text-sm"
+          >
+            Forgot Password?
+          </button>
+        </div>
       </form>
+      
+      <ForgotPasswordModal 
+        isOpen={showForgotPassword} 
+        onClose={() => setShowForgotPassword(false)} 
+      />
     </div>
   );
 };
