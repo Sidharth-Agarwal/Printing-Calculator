@@ -10,6 +10,7 @@ const Header = () => {
   const location = useLocation();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [displayName, setDisplayName] = useState("");
+  const [clientData, setClientData] = useState(null);
 
   const navigateToNewTab = (path) => {
     window.open(path, '_blank', 'noopener noreferrer');
@@ -24,7 +25,7 @@ const Header = () => {
     }
   };
 
-  // Fetch the user's display name when component mounts
+  // Fetch the user's display name and client data (if B2B) when component mounts
   useEffect(() => {
     const fetchUserData = async () => {
       if (currentUser) {
@@ -34,6 +35,17 @@ const Header = () => {
             const userData = userDoc.data();
             if (userData.displayName) {
               setDisplayName(userData.displayName);
+            }
+            
+            // If this is a B2B user, fetch linked client data
+            if (userData.role === "b2b" && userData.clientId) {
+              const clientDoc = await getDoc(doc(db, "clients", userData.clientId));
+              if (clientDoc.exists()) {
+                setClientData({
+                  id: clientDoc.id,
+                  ...clientDoc.data()
+                });
+              }
             }
           }
         } catch (error) {
@@ -66,8 +78,11 @@ const Header = () => {
     );
   }
 
-  // Get display text - either display name or email
-  const userDisplayText = displayName || currentUser.email;
+  // Get display text - either display name or email or client name for B2B users
+  let userDisplayText = displayName || currentUser.email;
+  if (userRole === "b2b" && clientData) {
+    userDisplayText = `${clientData.name} (${displayName || currentUser.email})`;
+  }
 
   // Role-based menu access
   const canAccessNewBill = ['admin', 'staff', 'b2b'].includes(userRole);
@@ -77,12 +92,24 @@ const Header = () => {
   const canAccessOrders = ['admin', 'staff', 'production', 'b2b'].includes(userRole);
   const canAccessInvoices = ['admin', 'staff', 'production', 'b2b'].includes(userRole);
   const canAccessTransactions = ['admin'].includes(userRole); // Only admin can access transactions
-  const isAdmin = userRole === 'admin';
+  const isAdmin = userRole === "admin";
+  const isB2B = userRole === "b2b";
 
   return (
     <header className="bg-blue-600 text-white shadow">
       <div className="w-full px-6 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold whitespace-nowrap">FAMOUS LETTER PRESS</h1>
+        <h1 className="text-lg font-bold whitespace-nowrap">
+          {isB2B ? (
+            <button 
+              onClick={() => navigate("/b2b-dashboard")} 
+              className="hover:text-blue-300 transition"
+            >
+              FAMOUS LETTER PRESS
+            </button>
+          ) : (
+            "FAMOUS LETTER PRESS"
+          )}
+        </h1>
         <nav className="flex items-center space-x-6">
           {/* New Bill - Admin, Staff, B2B */}
           {canAccessNewBill && (
@@ -148,7 +175,7 @@ const Header = () => {
           {/* Estimates - Admin, Staff, B2B */}
           {canAccessEstimates && (
             <button
-              onClick={() => navigateToNewTab('/material-stock/estimates-db')}
+              onClick={() => isB2B ? navigate('/material-stock/estimates-db') : navigateToNewTab('/material-stock/estimates-db')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Estimates
@@ -158,7 +185,7 @@ const Header = () => {
           {/* Orders - Admin, Staff, Production, B2B */}
           {canAccessOrders && (
             <button
-              onClick={() => navigateToNewTab('/orders')}
+              onClick={() => isB2B ? navigate('/orders') : navigateToNewTab('/orders')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Orders
@@ -168,10 +195,22 @@ const Header = () => {
           {/* Invoices - Admin, Staff, Production, B2B */}
           {canAccessInvoices && (
             <button
-              onClick={() => navigateToNewTab('/invoices')}
+              onClick={() => isB2B ? navigate('/invoices') : navigateToNewTab('/invoices')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Invoices
+            </button>
+          )}
+
+          {/* B2B Dashboard - B2B users only */}
+          {isB2B && (
+            <button
+              onClick={() => navigate("/b2b-dashboard")}
+              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
+                location.pathname === "/b2b-dashboard" ? "underline text-blue-300" : ""
+              }`}
+            >
+              Dashboard
             </button>
           )}
 
@@ -228,7 +267,7 @@ const Header = () => {
                 <button
                   onClick={() => {
                     setShowProfileMenu(false);
-                    navigateToNewTab('/change-password');
+                    navigate('/change-password');
                   }}
                   className="block w-full text-left px-4 py-2 hover:bg-gray-200"
                 >

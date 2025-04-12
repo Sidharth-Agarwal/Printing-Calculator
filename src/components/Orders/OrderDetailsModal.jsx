@@ -12,71 +12,31 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   const contentRef = useRef(null);
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
 
-  const fieldLabels = {
-    clientName: "Name of the Client ",
-    projectName: "Name of the Project ",
-    date: "Order Date ",
-    deliveryDate: "Expected Delivery Date ",
-    jobType: "Job Type ",
-    quantity: "Quantity ",
-    paperProvided: "Paper Provided ",
-    dieCode: "Die Code ",
-    dieSize: "Die Size ",
-    dieSelection: "Die Selection ",
-    image: "Image ",
-    breadth: "Breadth ",
-    length: "Length ",
-    paperName: "Paper Name ",
-    plateSizeType: "Type of Plate Size ",
-    noOfColors: "Total number of colors ",
-    colorDetails: "Color Details of LP ",
-    mrType: "Type of MR ",
-    pantoneType: "Type of Pantone ",
-    plateDimensions: "Dimensions of Plate ",
-    plateType: "Type of Plate ",
-    fsType: "Type of FS ",
-    foilDetails: "Foil Details of FS ",
-    blockSizeType: "Block size Type ",
-    blockDimension: "Block Dimensions ",
-    foilType: "Type of Foil ",
-    blockType: "Type of Block ",
-    plateTypeMale: "Male Plate Type ",
-    plateTypeFemale: "Female Plate Type ",
-    embMR: "Type of MR ",
-    digiDie: "Digital Die Selected ",
-    digiDimensions: "Digital Die Dimensions ",
-    lpDetailsSandwich: "LP Details in Sandwich ",
-    fsDetailsSandwich: "FS Details in Sandwich ",
-    embDetailsSandwich: "EMB Details in Sandwich ",
-    paperCostPerCard: "Cost of Paper ",
-    cuttingCostPerCard: "Cost of Cutting ",
-    paperAndCuttingCostPerCard: "Total Paper and Cutting Cost ",
-    lpCostPerCard: "Cost of LP ",
-    fsCostPerCard: "Cost of FS ",
-    embCostPerCard: "Cost of EMB ",
-    lpCostPerCardSandwich: "Cost of LP in Sandwich ",
-    fsCostPerCardSandwich: "Cost of FS in Sandwich ",
-    embCostPerCardSandwich: "Cost of EMB in Sandwich ",
-    digiCostPerCard: "Digital Print Cost per Unit ",
-    pastingCostPerCard: "Pasting Cost per Unit ",
-    pastingType: "Pasting Type ",
-    totalPastingCost: "Total Pasting Cost "
+  // Stage colors for visual representation
+  const stageColors = {
+    'Not started yet': { bg: 'bg-gray-100', text: 'text-gray-800' },
+    'Design': { bg: 'bg-indigo-100', text: 'text-indigo-800' },
+    'Positives': { bg: 'bg-cyan-100', text: 'text-cyan-800' },
+    'Printing': { bg: 'bg-orange-100', text: 'text-orange-800' },
+    'Quality Check': { bg: 'bg-pink-100', text: 'text-pink-800' },
+    'Delivery': { bg: 'bg-green-100', text: 'text-green-800' }
   };
 
-  const costFieldsOrder = [
-    'paperCostPerCard',
-    'cuttingCostPerCard',
-    'paperAndCuttingCostPerCard',
-    'lpCostPerCard',
-    'fsCostPerCard',
-    'embCostPerCard',
-    'lpCostPerCardSandwich',
-    'fsCostPerCardSandwich',
-    'embCostPerCardSandwich',
-    'digiCostPerCard',
-    'pastingCostPerCard'
-  ];
+  const fieldLabels = {
+    clientName: "Name of the Client",
+    projectName: "Name of the Project",
+    date: "Order Date",
+    deliveryDate: "Expected Delivery Date",
+    jobType: "Job Type",
+    quantity: "Quantity",
+    paperProvided: "Paper Provided",
+    dieCode: "Die Code",
+    dieSize: "Die Size",
+    dieSelection: "Die Selection",
+    paperName: "Paper Name"
+  };
 
+  // Get label for field
   const getLabel = (key) => {
     if (fieldLabels[key]) {
       return fieldLabels[key];
@@ -90,6 +50,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       .trim();
   };
 
+  // Render value based on field type
   const renderValue = (key, value) => {
     if (value === null || value === undefined || value === "") {
       return "Not Provided";
@@ -117,114 +78,55 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
         <img
           src={value}
           alt="Die"
-          className="max-w-full max-h-20 object-contain border rounded-md"
+          className="max-w-full max-h-36 object-contain border rounded-md"
         />
-      );
-    }
-
-    if (Array.isArray(value)) {
-      return (
-        <div className="space-y-2">
-          {value.map((item, index) => (
-            <div key={index} className="flex justify-between items-center gap-4 bg-gray-100 p-2 rounded-md">
-              {renderValue("item", item)}
-            </div>
-          ))}
-        </div>
-      );
-    }
-
-    if (typeof value === "object" && value !== null) {
-      return (
-        <table className="w-full border-collapse border border-gray-300 rounded-md">
-          <tbody>
-            {Object.entries(value)
-              .filter(([key]) => !key.startsWith('is'))
-              .map(([subKey, subValue], index) => (
-                <tr
-                  key={subKey}
-                  className={`${
-                    index % 2 === 0 ? "bg-gray-100" : "bg-white"
-                  } border border-gray-300`}
-                >
-                  <td className="p-2 font-medium text-gray-600">{getLabel(subKey)}:</td>
-                  <td className="p-2 text-gray-800">{renderValue(subKey, subValue)}</td>
-                </tr>
-              ))}
-          </tbody>
-        </table>
       );
     }
 
     return value.toString();
   };
 
-  const renderMultipleTablesInRow = (dataArray) => {
-    return (
-      <div className="grid grid-cols-3 gap-4">
-        {dataArray.map((item, index) => (
-          <div key={index} className="bg-white p-2 rounded-md border">
-            {renderValue("table", item)}
-          </div>
-        ))}
-      </div>
-    );
-  };
-
-  const renderSectionInFlex = (heading, sectionData, excludedFields = []) => {
-    if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
-      return null;
-    }
-
-    return (
-      <div key={heading} className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}:</h3>
-        <div className="space-y-4 bg-gray-100 p-4 rounded-md">
-          {Object.entries(sectionData)
-            .filter(([key]) => !excludedFields.includes(key))
-            .map(([key, value]) => {
-              if (Array.isArray(value)) {
-                return (
-                  <div key={key}>
-                    <h4 className="font-medium text-gray-600 mb-2">{getLabel(key)}:</h4>
-                    {renderMultipleTablesInRow(value)}
-                  </div>
-                );
-              }
-              return (
-                <div key={key} className="flex items-center gap-1">
-                  <span className="font-medium text-gray-600">{getLabel(key)}:</span>
-                  <span className="text-gray-800">{renderValue(key, value)}</span>
-                </div>
-              );
-            })}
-        </div>
-      </div>
-    );
-  };
-
+  // Render section in grid layout
   const renderSectionInGrid = (heading, sectionData, excludedFields = []) => {
     if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
       return null;
     }
 
+    // Extract image if it exists for special handling
+    const imageData = sectionData.image;
+    const filteredData = {...sectionData};
+    if (imageData) {
+      delete filteredData.image;
+    }
+    
     return (
       <div key={heading} className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}:</h3>
+        <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}</h3>
         <div className="grid grid-cols-2 gap-3 bg-white">
-          {Object.entries(sectionData)
+          {Object.entries(filteredData)
             .filter(([key]) => !excludedFields.includes(key))
             .map(([key, value]) => (
-              <div key={key} className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
+              <div key={key} className="flex justify-between items-center bg-gray-100 p-3 rounded-md">
                 <span className="font-medium text-gray-600">{getLabel(key)}:</span>
                 <span className="text-gray-800">{renderValue(key, value)}</span>
               </div>
             ))}
         </div>
+        
+        {/* Display die image if present */}
+        {imageData && (
+          <div className="mt-4 p-4 bg-gray-100 rounded-md">
+            <h4 className="font-medium text-gray-600 mb-2">Die Image:</h4>
+            <div className="flex justify-center">
+              {renderValue("image", imageData)}
+            </div>
+          </div>
+        )}
       </div>
     );
   };
 
+  // Handle stage update
   const handleStageUpdate = async (newStage) => {
     try {
       const orderRef = doc(db, "orders", order.id);
@@ -236,6 +138,178 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     }
   };
 
+  // Render the main cost components section
+  const renderMainCostComponents = (calculations) => {
+    if (!calculations) return null;
+
+    const mainCostComponents = [
+      { key: 'paperAndCuttingCostPerCard', label: 'Paper & Cutting' },
+      { key: 'lpCostPerCard', label: 'Letter Press', condition: order.lpDetails?.isLPUsed },
+      { key: 'fsCostPerCard', label: 'Foil Stamping', condition: order.fsDetails?.isFSUsed },
+      { key: 'embCostPerCard', label: 'Embossing', condition: order.embDetails?.isEMBUsed },
+      { key: 'digiCostPerCard', label: 'Digital Printing', condition: order.digiDetails?.isDigiUsed },
+      { key: 'dieCuttingCostPerCard', label: 'Die Cutting', condition: order.dieCutting?.isDieCuttingUsed },
+      { key: 'pastingCostPerCard', label: 'Pasting', condition: order.pasting?.isPastingUsed },
+    ];
+
+    return (
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-gray-600 mb-2">Main Cost Components</h3>
+        <div className="grid grid-cols-3 gap-3">
+          {mainCostComponents.map(({ key, label, condition }) => {
+            // Only show components that are used and have a value > 0
+            if (condition !== false && calculations[key] && parseFloat(calculations[key]) > 0) {
+              return (
+                <div key={key} className="flex justify-between items-center bg-gray-100 p-3 rounded-md">
+                  <span className="font-medium text-gray-600">{label}:</span>
+                  <span className="text-gray-800 font-bold">₹ {parseFloat(calculations[key]).toFixed(2)}</span>
+                </div>
+              );
+            }
+            return null;
+          })}
+        </div>
+      </div>
+    );
+  };
+
+  // Render the total cost calculation section
+  const renderTotalCostCalculation = (calculations) => {
+    if (!calculations) return null;
+
+    // Create an array for the calculation breakdown
+    const costCalculationSteps = [];
+    
+    // Add base cost if available
+    if (calculations.baseCost !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'baseCost', 
+        label: 'Base Cost per Card'
+      });
+    } else {
+      // For compatibility with old format
+      costCalculationSteps.push({ 
+        key: 'baseCost', 
+        label: 'Base Cost per Card',
+        value: calculateTotalCosts().baseCost.toFixed(2)
+      });
+    }
+    
+    // Add misc charge if available
+    if (calculations.miscChargePerCard !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'miscChargePerCard', 
+        label: 'Miscellaneous Charge'
+      });
+    }
+    
+    // Add base with misc if available
+    if (calculations.baseWithMisc !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'baseWithMisc', 
+        label: 'Base Cost with Misc',
+        isSeparator: true
+      });
+    }
+    
+    // Add wastage
+    if (calculations.wastageAmount !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'wastageAmount', 
+        label: 'Wastage (5%)'
+      });
+    } else {
+      // For compatibility with old format
+      costCalculationSteps.push({ 
+        key: 'wastageCost', 
+        label: 'Wastage (5%)',
+        value: calculateTotalCosts().wastageCost.toFixed(2)
+      });
+    }
+    
+    // Add overhead
+    if (calculations.overheadAmount !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'overheadAmount', 
+        label: 'Overheads (35%)'
+      });
+    } else {
+      // For compatibility with old format
+      costCalculationSteps.push({ 
+        key: 'overheadCost', 
+        label: 'Overheads (35%)',
+        value: calculateTotalCosts().overheadCost.toFixed(2)
+      });
+    }
+    
+    // Add subtotal if available
+    if (calculations.subtotalPerCard !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'subtotalPerCard', 
+        label: 'Subtotal per Card',
+        isSeparator: true
+      });
+    }
+    
+    // Add markup if available
+    if (calculations.markupAmount !== undefined) {
+      costCalculationSteps.push({ 
+        key: 'markupAmount',
+        label: `Markup (${calculations.markupType || 'Standard'}: ${calculations.markupPercentage || 0}%)`,
+        isHighlighted: true
+      });
+    }
+    
+    // Add total cost per card
+    costCalculationSteps.push({ 
+      key: 'totalCostPerCard', 
+      label: 'Total Cost per Card',
+      isSeparator: true,
+      isTotal: true,
+      value: calculations.totalCostPerCard || calculateTotalCosts().totalCostPerCard.toFixed(2)
+    });
+
+    const quantity = parseInt(order.jobDetails?.quantity || 0);
+    const totalCost = calculations.totalCost || 
+      (parseFloat(calculations.totalCostPerCard || calculateTotalCosts().totalCostPerCard || 0) * quantity).toFixed(2);
+    
+    return (
+      <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 mb-6">
+        <h3 className="text-lg font-semibold text-gray-700 mb-4">Cost Summary</h3>
+        
+        <div className="space-y-2 mb-4">
+          {costCalculationSteps.map(({ key, label, value, isSeparator, isHighlighted, isTotal }) => {
+            // Use provided value or get from calculations
+            const displayValue = value !== undefined ? 
+              value : 
+              (calculations[key] !== undefined ? parseFloat(calculations[key] || 0).toFixed(2) : "0.00");
+              
+            return (
+              <div key={key} className={`flex justify-between items-center ${isSeparator ? 'border-t border-gray-300 pt-2 mt-2' : ''}`}>
+                <span className={`${isTotal ? 'text-lg font-bold' : 'font-medium'} ${isHighlighted ? 'text-blue-700' : 'text-gray-700'}`}>
+                  {label}:
+                </span>
+                <span className={`${isTotal ? 'text-lg font-bold' : ''} ${isHighlighted ? 'text-blue-700 font-medium' : 'text-gray-900'}`}>
+                  ₹ {displayValue}
+                </span>
+              </div>
+            );
+          })}
+        </div>
+        
+        <div className="flex justify-between items-center pt-4 border-t-2 border-gray-300 mt-4">
+          <span className="text-xl font-bold text-gray-800">
+            Total Cost ({quantity} pcs):
+          </span>
+          <span className="text-xl font-bold text-blue-600">
+            ₹ {parseFloat(totalCost).toFixed(2)}
+          </span>
+        </div>
+      </div>
+    );
+  };
+
+  // Calculate total costs (for backwards compatibility)
   const calculateTotalCosts = () => {
     const WASTAGE_PERCENTAGE = 5; // 5% wastage
     const OVERHEAD_PERCENTAGE = 35; // 35% overhead
@@ -249,7 +323,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       'fsCostPerCardSandwich',
       'embCostPerCardSandwich',
       'digiCostPerCard',
-      'pastingCostPerCard' // Include pasting cost in total calculation
+      'pastingCostPerCard'
     ];
 
     // Calculate base cost per card
@@ -279,6 +353,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     };
   };
 
+  // Generate PDF
   const generatePDF = async () => {
     if (!contentRef.current) return;
     
@@ -397,145 +472,84 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
           </div>
         </div>
 
+        {/* Stage Progress (making this section visible unlike the previous example) */}
+        <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
+          <div className="flex flex-col md:flex-row justify-between items-center">
+            <div className="flex items-center mb-2 md:mb-0">
+              <span className="mr-2 font-medium">Current Stage:</span>
+              <span className={`px-3 py-1 rounded-full ${stageColors[order.stage]?.bg || 'bg-gray-100'} ${stageColors[order.stage]?.text || 'text-gray-800'}`}>
+                {order.stage}
+              </span>
+            </div>
+            
+            <div className="flex gap-2">
+              {/* Stage progression stepper */}
+              <div className="flex items-center">
+                {stages.map((stage, index) => {
+                  const currentStageIndex = stages.indexOf(order.stage);
+                  const isCompletedStage = index <= currentStageIndex;
+                  const isCurrentStage = index === currentStageIndex;
+                  
+                  return (
+                    <div key={stage} className="flex items-center">
+                      <div 
+                        className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer
+                          ${isCompletedStage 
+                            ? stageColors[stage]?.bg || 'bg-gray-200' 
+                            : 'bg-gray-200'} 
+                          ${isCompletedStage 
+                            ? stageColors[stage]?.text || 'text-gray-700' 
+                            : 'text-gray-500'}
+                          ${isCurrentStage ? 'ring-2 ring-blue-400' : ''}
+                        `}
+                        onClick={() => handleStageUpdate(stage)}
+                      >
+                        {isCompletedStage ? (
+                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                          </svg>
+                        ) : (
+                          <span className="text-xs">{index + 1}</span>
+                        )}
+                      </div>
+                      {index < stages.length - 1 && (
+                        <div className={`w-8 h-1 ${
+                          index < currentStageIndex 
+                            ? 'bg-blue-500' 
+                            : 'bg-gray-300'
+                        }`}></div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto">
           {activeView === 'details' ? (
             <div className="p-6" id="order-content">
-              {/* Order and Paper Details */}
-              {renderSectionInGrid("Order and Paper", {
+              {/* Basic Order Information */}
+              {renderSectionInGrid("Order and Client Information", {
                 clientName: order.clientName,
                 projectName: order.projectName,
                 date: order.date,
                 deliveryDate: order.deliveryDate,
                 jobType: order.jobDetails?.jobType,
                 quantity: order.jobDetails?.quantity,
-                paperProvided: order.jobDetails?.paperProvided,
                 paperName: order.jobDetails?.paperName,
                 dieCode: order.dieDetails?.dieCode,
                 dieSize: `${order.dieDetails?.dieSize?.length || ''} x ${order.dieDetails?.dieSize?.breadth || ''}`,
                 image: order.dieDetails?.image
               })}
 
-              {/* Process Details */}
-              <div className="space-y-4 bg-white">
-                {order.lpDetails?.isLPUsed && 
-                  renderSectionInFlex("LP Details", order.lpDetails, ["isLPUsed"])}
-                {order.fsDetails?.isFSUsed &&
-                  renderSectionInFlex("FS Details", order.fsDetails, ["isFSUsed"])}
-                {order.embDetails?.isEMBUsed &&
-                  renderSectionInFlex("EMB Details", order.embDetails, ["isEMBUsed"])}
-                {order.digiDetails?.isDigiUsed &&
-                  renderSectionInFlex("Digi Details", order.digiDetails, ["isDigiUsed"])}
-                {order.dieCutting?.isDieCuttingUsed &&
-                  renderSectionInFlex("Die Cutting", order.dieCutting, ["isDieCuttingUsed"])}
-                {order.sandwich?.isSandwichComponentUsed && (
-                  <div>
-                    {order.sandwich.lpDetailsSandwich?.isLPUsed &&
-                      renderSectionInFlex("Sandwich LP Details", order.sandwich.lpDetailsSandwich, ["isLPUsed"])}
-                    {order.sandwich.fsDetailsSandwich?.isFSUsed &&
-                      renderSectionInFlex("Sandwich FS Details", order.sandwich.fsDetailsSandwich, ["isFSUsed"])}
-                    {order.sandwich.embDetailsSandwich?.isEMBUsed &&
-                      renderSectionInFlex("Sandwich EMB Details", order.sandwich.embDetailsSandwich, ["isEMBUsed"])}
-                  </div>
-                )}
-                {order.pasting?.isPastingUsed &&
-                  renderSectionInFlex("Pasting Details", order.pasting, ["isPastingUsed"])}
-              </div>
+              {/* Main Cost Components */}
+              {order.calculations && renderMainCostComponents(order.calculations)}
 
-              {/* Cost Information */}
-              {order.calculations && (
-                <div className="space-y-4 mt-6">
-                  <h3 className="text-lg font-semibold text-gray-600 mb-2">Cost Calculations (per card)</h3>
-                  <div className="grid grid-cols-3 gap-3">
-                    {costFieldsOrder
-                      .filter(key => 
-                        key !== 'pastingCostPerCard' && // Handle pasting cost separately
-                        order.calculations[key] !== null && 
-                        order.calculations[key] !== undefined &&
-                        order.calculations[key] !== "" &&
-                        order.calculations[key] !== "Not Provided" && 
-                        parseFloat(order.calculations[key]) > 0
-                      )
-                      .map((key) => (
-                        <div
-                          key={key}
-                          className="flex justify-between items-center bg-gray-100 p-2 rounded-md"
-                        >
-                          <span className="font-medium text-gray-600">{getLabel(key)}:</span>
-                          <span className="text-gray-800">₹ {parseFloat(order.calculations[key]).toFixed(2)}</span>
-                        </div>
-                      ))}
-                      
-                    {/* Special handling for pasting cost */}
-                    {order.pasting?.isPastingUsed && (
-                      <div 
-                        className={`flex justify-between items-center bg-gray-100 p-2 rounded-md ${
-                          parseFloat(order.calculations.pastingCostPerCard || 0) === 0 && order.calculations.totalPastingCost && parseFloat(order.calculations.totalPastingCost) > 0 
-                            ? "border border-blue-300" : ""
-                        }`}
-                      >
-                        <span className="font-medium text-gray-600">Pasting Cost:</span>
-                        <div className="text-right">
-                          <div className="text-gray-800">₹ {parseFloat(order.calculations.pastingCostPerCard || 0).toFixed(2)} per card</div>
-                          {order.calculations.totalPastingCost && parseFloat(order.calculations.totalPastingCost) > 0 && (
-                            <div className="text-xs text-gray-600">
-                              (Total: ₹ {order.calculations.totalPastingCost} for all cards)
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Total Cost Summary with Wastage and Overhead */}
-                  <div className="mt-6 bg-gray-100 p-4 rounded-md">
-                    {(() => {
-                      const costs = calculateTotalCosts();
-                      const quantity = order.jobDetails?.quantity || 0;
-                      
-                      return (
-                        <>
-                          <div className="space-y-2 mb-4">
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-gray-700">Base Cost per Card:</span>
-                              <span className="text-gray-900">
-                                ₹ {costs.baseCost.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-gray-700">Wastage (5%):</span>
-                              <span className="text-gray-900">
-                                ₹ {costs.wastageCost.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium text-gray-700">Overheads (35%):</span>
-                              <span className="text-gray-900">
-                                ₹ {costs.overheadCost.toFixed(2)}
-                              </span>
-                            </div>
-                            <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-                              <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
-                              <span className="text-lg font-bold text-gray-900">
-                                ₹ {costs.totalCostPerCard.toFixed(2)}
-                              </span>
-                            </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center pt-3 border-t border-gray-300">
-                            <span className="text-lg font-bold text-gray-700">
-                              Total Cost ({quantity} pcs):
-                            </span>
-                            <span className="text-xl font-bold text-blue-600">
-                              ₹ {costs.totalCost.toFixed(2)}
-                            </span>
-                          </div>
-                        </>
-                      );
-                    })()}
-                  </div>
-                </div>
-              )}
+              {/* Total Cost Calculation */}
+              {order.calculations && renderTotalCostCalculation(order.calculations)}
             </div>
           ) : (
             <div ref={contentRef} className="p-6">
