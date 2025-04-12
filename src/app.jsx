@@ -83,7 +83,7 @@ function App() {
             />
             
             <Route 
-              path="/estimates" 
+              path="/material-stock/estimates-db" 
               element={
                 <ProtectedRoute>
                   <EstimatesPage />
