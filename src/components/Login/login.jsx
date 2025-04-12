@@ -57,13 +57,23 @@ const Login = () => {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
+            
+            // Redirect based on role
             if (userData.role === "admin") {
+              // Admin users go to transactions dashboard
               navigate("/transactions");
+            } else if (userData.role === "b2b") {
+              // B2B users go to their dashboard
+              navigate("/b2b-dashboard");
+            } else if (userData.role === "staff" || userData.role === "production") {
+              // Staff and production users go to the billing form
+              navigate("/new-bill");
             } else {
+              // Default fallback
               navigate("/new-bill");
             }
           } else {
-            // If user document doesn't exist, fallback to transactions
+            // If user document doesn't exist, fallback to new bill
             navigate("/new-bill");
           }
         } catch (error) {
@@ -92,12 +102,14 @@ const Login = () => {
         // Redirect based on role
         if (userData.role === "admin") {
           navigate("/transactions");
+        } else if (userData.role === "b2b") {
+          navigate("/b2b-dashboard");
         } else {
           navigate("/new-bill");
         }
       } else {
-        // If user document doesn't exist in Firestore, fallback to transactions
-        navigate("/transactions");
+        // If user document doesn't exist in Firestore, fallback to new bill
+        navigate("/new-bill");
       }
     } catch (error) {
       console.error("Login error:", error.message);
