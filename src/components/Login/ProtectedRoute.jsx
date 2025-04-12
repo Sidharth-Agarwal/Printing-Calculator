@@ -1,10 +1,11 @@
 import React from "react";
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 
 // This component wraps protected routes and redirects to login if not authenticated
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { currentUser, userRole, loading } = useAuth();
+  const location = useLocation();
   
   // Check if we're in the middle of user creation
   const userCreationInProgress = localStorage.getItem('userCreationInProgress') === 'true';
@@ -24,16 +25,29 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     return <Navigate to="/" replace />;
   }
 
+  // Specifically prevent B2B users from accessing client management page
+  if (userRole === "b2b" && location.pathname === "/clients") {
+    return <Navigate to="/unauthorized" replace />;
+  }
+
   // If role is required but user doesn't have it (and is not admin), redirect to unauthorized
   // But skip this check during user creation process
   if (requiredRole && userRole !== requiredRole && userRole !== "admin" && !userCreationInProgress) {
-    console.log(`Access denied: User role ${userRole} doesn't match required role ${requiredRole}`);
-    return <Navigate to="/unauthorized" replace />;
+    // Special case for B2B users - they can only access routes specifically marked for b2b
+    if (userRole === "b2b") {
+      if (requiredRole !== "b2b") {
+        console.log(`Access denied: B2B user attempting to access ${requiredRole} route`);
+        return <Navigate to="/unauthorized" replace />;
+      }
+    } else {
+      console.log(`Access denied: User role ${userRole} doesn't match required role ${requiredRole}`);
+      return <Navigate to="/unauthorized" replace />;
+    }
   }
 
   // Special debug for admin users - they should have access to everything
   if (userRole === "admin" && requiredRole) {
-    console.log(`Admin user accessing ${requiredRole} restricted route - should be allowed`);
+    console.log(`Admin user accessing ${requiredRole} restricted route - allowed`);
   }
 
   // If authenticated and has the required role (or no role is required or is admin), render the children

@@ -3,11 +3,23 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs, que
 import { db } from "../../firebaseConfig";
 import AddClientForm from "./AddClientForm";
 import DisplayClientTable from "./DisplayClientTable";
+import { useAuth } from "../Login/AuthContext";
+import B2BCredentialsManager from "./B2BCredentialsManager";
+import AdminPasswordModal from "./AdminPasswordModal";
+import ActivateClientModal from "./ActivateClientModal";
 
 const ClientManagement = () => {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedClientForAuth, setSelectedClientForAuth] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const { userRole, currentUser } = useAuth();
+  const [adminCredentials, setAdminCredentials] = useState(null);
+  
+  // Modal state for admin password
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [pendingClient, setPendingClient] = useState(null);
+  const [clientToActivate, setClientToActivate] = useState(null);
 
   useEffect(() => {
     const clientsCollection = collection(db, "clients");
@@ -24,6 +36,25 @@ const ClientManagement = () => {
 
     return () => unsubscribe();
   }, []);
+
+  // Store admin credentials for re-authentication
+  const handleAdminPasswordConfirm = (password) => {
+    if (currentUser && currentUser.email && password) {
+      setAdminCredentials({
+        email: currentUser.email,
+        password: password
+      });
+      setShowPasswordModal(false);
+      
+      // Now that we have the credentials, open the B2B credentials modal
+      setSelectedClientForAuth(pendingClient);
+    }
+  };
+
+  const handleAdminPasswordCancel = () => {
+    setShowPasswordModal(false);
+    setPendingClient(null);
+  };
 
   const checkClientCodeExists = async (code) => {
     const clientsCollection = collection(db, "clients");
@@ -101,6 +132,10 @@ const ClientManagement = () => {
         recentOrders: [],
         createdAt: new Date(),
         updatedAt: new Date(),
+        hasAccount: false, // Flag for B2B client login account
+        userId: null, // Reference to Firebase Auth user ID if B2B client
+        temporaryPassword: null, // To store the temporary password
+        passwordCreatedAt: null // When the password was created
       });
       
       alert("Client added successfully!");
@@ -139,9 +174,60 @@ const ClientManagement = () => {
     }
   };
 
+  const handleClientUpdateAfterAuth = async (updatedClient) => {
+    try {
+      // The onSnapshot listener will pick up the changes automatically
+    } catch (error) {
+      console.error("Error updating client after auth changes:", error);
+    }
+  };
+
+  const handleActivateClient = (client) => {
+    setClientToActivate(client);
+  };
+
+  const handleActivationClose = () => {
+    setClientToActivate(null);
+  };
+
+  const handleActivationSuccess = (updatedClient) => {
+    // This will trigger the onSnapshot listener to refresh the client list
+    // The page will be reloaded by the ActivateClientModal
+  };
+
+  const handleManageCredentials = (client) => {
+    // Store the client and show the password modal
+    setPendingClient(client);
+    setShowPasswordModal(true);
+  };
+
+  const handleCredentialManagerClose = () => {
+    setSelectedClientForAuth(null);
+    // Clear admin credentials for security
+    setAdminCredentials(null);
+    
+    // Make sure we stay on the clients page
+    window.history.pushState({}, "", "/clients");
+  };
+
   const deleteClient = async (id) => {
     if (window.confirm("Are you sure you want to delete this client? This action cannot be undone.")) {
       try {
+        // Find the client to check if it has a user account
+        const clientToDelete = clients.find(client => client.id === id);
+        
+        // If the client has a user account, warn about it
+        if (clientToDelete && clientToDelete.hasAccount) {
+          const confirmDelete = window.confirm(
+            "This client has a user account. Deleting this client will NOT delete their authentication account. " +
+            "You should manually disable their account in User Management. Continue with deletion?"
+          );
+          
+          if (!confirmDelete) {
+            return;
+          }
+        }
+        
         await deleteDoc(doc(db, "clients", id));
         alert("Client deleted successfully!");
       } catch (error) {
@@ -150,6 +236,19 @@ const ClientManagement = () => {
       }
     }
   };
+
+  // Check if user is admin - only admins should be able to manage B2B credentials
+  const isAdmin = userRole === "admin";
+
+  // Redirect non-admin users who somehow access this page
+  if (!isAdmin) {
+    return (
+      <div className="p-6 text-center">
+        <h2 className="text-2xl font-bold mb-4">Unauthorized Access</h2>
+        <p className="text-red-600">You don't have permission to access client management.</p>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -171,6 +270,37 @@ const ClientManagement = () => {
           clients={clients}
           onDelete={deleteClient}
           onEdit={setSelectedClient}
+          onManageCredentials={handleManageCredentials}
+          onActivateClient={handleActivateClient}
+          isAdmin={isAdmin}
+        />
+      )}
+
+      {/* B2B Client Credentials Manager Modal */}
+      {selectedClientForAuth && (
+        <B2BCredentialsManager
+          client={selectedClientForAuth}
+          onClose={handleCredentialManagerClose}
+          onSuccess={handleClientUpdateAfterAuth}
+          adminCredentials={adminCredentials}
+        />
+      )}
+
+      {/* Admin Password Modal */}
+      <AdminPasswordModal
+        isOpen={showPasswordModal}
+        onConfirm={handleAdminPasswordConfirm}
+        onCancel={handleAdminPasswordCancel}
+        adminEmail={currentUser?.email || ""}
+      />
+
+      {/* Activate Client Modal */}
+      {clientToActivate && (
+        <ActivateClientModal
+          client={clientToActivate}
+          onClose={handleActivationClose}
+          onSuccess={handleActivationSuccess}
+          adminEmail={currentUser?.email || ""}
         />
       )}
     </div>
