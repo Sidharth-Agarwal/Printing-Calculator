@@ -13,7 +13,7 @@ const OrdersPage = () => {
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState("date-desc"); // Default sort: Latest to oldest
   const [stageFilter, setStageFilter] = useState(""); // Default: All stages
-  const [viewMode, setViewMode] = useState("active"); // Default: Active orders
+  const [viewMode, setViewMode] = useState("all"); // Default: Active orders
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [pendingStageUpdate, setPendingStageUpdate] = useState(null);
 
@@ -256,6 +256,16 @@ const OrdersPage = () => {
           {/* View mode selector */}
           <div className="flex rounded-md overflow-hidden border border-gray-300">
             <button
+              onClick={() => setViewMode('all')}
+              className={`px-3 py-2 text-sm ${
+                viewMode === 'all' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              All
+            </button>
+            <button
               onClick={() => setViewMode('active')}
               className={`px-3 py-2 text-sm ${
                 viewMode === 'active' 
@@ -274,16 +284,6 @@ const OrdersPage = () => {
               }`}
             >
               Completed
-            </button>
-            <button
-              onClick={() => setViewMode('all')}
-              className={`px-3 py-2 text-sm ${
-                viewMode === 'all' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              All
             </button>
           </div>
           
