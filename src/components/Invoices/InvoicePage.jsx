@@ -14,7 +14,7 @@ const InvoicesPage = () => {
   // State for filtering and search
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState(''); // All orders by default
-  const [viewMode, setViewMode] = useState('active'); // 'active', 'completed', 'all'
+  const [viewMode, setViewMode] = useState('all'); // 'active', 'completed', 'all'
   const [sortBy, setSortBy] = useState('date-desc'); // Default sort
   
   // State for expanded clients and selection
@@ -300,6 +300,16 @@ const InvoicesPage = () => {
           {/* View mode selector */}
           <div className="flex rounded-md overflow-hidden border border-gray-300">
             <button
+              onClick={() => setViewMode('all')}
+              className={`px-2 py-1 text-xs ${
+                viewMode === 'all' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              All
+            </button>
+            <button
               onClick={() => setViewMode('active')}
               className={`px-2 py-1 text-xs ${
                 viewMode === 'active' 
@@ -318,16 +328,6 @@ const InvoicesPage = () => {
               }`}
             >
               Completed
-            </button>
-            <button
-              onClick={() => setViewMode('all')}
-              className={`px-2 py-1 text-xs ${
-                viewMode === 'all' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              All
             </button>
           </div>
           
