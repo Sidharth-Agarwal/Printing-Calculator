@@ -8,14 +8,22 @@ import { performCompleteCalculations } from "./enhancedCalculations";
 import ClientSelection from "./ClientSelection";
 import VersionSelection from "./VersionSelection";
 import OrderAndPaper from "./OrderAndPaper";
-import LPDetails from "./LPDetails";
-import FSDetails from "./FSDetails";
-import EMBDetails from "./EMBDetails";
-import DigiDetails from "./DigiDetails";
-import DieCutting from "./DieCutting";
-import Sandwich from "./Sandwich";
-import Pasting from "./Pasting";
+import LPDetails from "./Sections/LPDetails";
+import FSDetails from "./Sections/FSDetails";
+import EMBDetails from "./Sections/EMBDetails";
+import DigiDetails from "./Sections/DigiDetails";
+import DieCutting from "./Sections/DieCutting";
+import PostDC from "./Sections/PostDC";
+import FoldAndPaste from "./Sections/FoldAndPaste";
+import DstPaste from "./Sections/DstPaste";
+import QC from "./Sections/QC";
+import Packing from "./Sections/Packing";
+import Sandwich from "./Sections/Sandwich";
 import ReviewAndSubmit from "./ReviewAndSubmit";
+
+// Import service and job type configurations
+import { serviceRegistry } from "./serviceRegistry";
+import { jobTypeConfigurations } from "./jobTypeConfigurations";
 
 // Initial state for all steps
 const initialFormState = {
@@ -30,7 +38,7 @@ const initialFormState = {
     projectName: "",
     date: null,
     deliveryDate: null,
-    jobType: "Card",
+    jobType: "Card", // Default job type
     quantity: "",
     paperProvided: "Yes",
     paperName: "",
@@ -68,6 +76,21 @@ const initialFormState = {
     pdc: "",
     dcMR: "",
   },
+  postDC: {
+    isPostDCUsed: false,
+  },
+  foldAndPaste: {
+    isFoldAndPasteUsed: false,
+  },
+  dstPaste: {
+    isDstPasteUsed: false,
+  },
+  qc: {
+    isQCUsed: false,
+  },
+  packing: {
+    isPackingUsed: false,
+  },
   sandwich: {
     isSandwichComponentUsed: false,
     lpDetailsSandwich: {
@@ -88,11 +111,7 @@ const initialFormState = {
       plateTypeFemale: "",
       embMR: "",
     },
-  },
-  pasting: {
-    isPastingUsed: false,
-    pastingType: "",
-  },
+  }
 };
 
 // Reducer function to handle updates to the state
@@ -114,10 +133,18 @@ const reducer = (state, action) => {
       return { ...state, digiDetails: { ...state.digiDetails, ...action.payload } };
     case "UPDATE_DIE_CUTTING":
       return { ...state, dieCutting: { ...state.dieCutting, ...action.payload } };
+    case "UPDATE_POST_DC":
+      return { ...state, postDC: { ...state.postDC, ...action.payload } };
+    case "UPDATE_FOLD_AND_PASTE":
+      return { ...state, foldAndPaste: { ...state.foldAndPaste, ...action.payload } };
+    case "UPDATE_DST_PASTE":
+      return { ...state, dstPaste: { ...state.dstPaste, ...action.payload } };
+    case "UPDATE_QC":
+      return { ...state, qc: { ...state.qc, ...action.payload } };
+    case "UPDATE_PACKING":
+      return { ...state, packing: { ...state.packing, ...action.payload } };
     case "UPDATE_SANDWICH":
       return { ...state, sandwich: { ...state.sandwich, ...action.payload } };
-    case "UPDATE_PASTING":
-      return { ...state, pasting: { ...state.pasting, ...action.payload } };
     case "RESET_FORM":
       return initialFormState;
     case "INITIALIZE_FORM":
@@ -129,7 +156,8 @@ const reducer = (state, action) => {
 
 // Map state to Firebase structure with sanitization for undefined values
 const mapStateToFirebaseStructure = (state, calculations) => {
-  const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich, pasting } = state;
+  // This function is unchanged - keeping your existing implementation
+  const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich } = state;
 
   // Helper function to sanitize objects for Firebase
   const sanitizeForFirestore = (obj) => {
@@ -191,7 +219,13 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     digiDetails: digiDetails.isDigiUsed ? sanitizeForFirestore(digiDetails) : null,
     dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
     sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
-    pasting: pasting.isPastingUsed ? sanitizeForFirestore(pasting) : null,
+    
+    // Include other details based on what's enabled
+    postDC: state.postDC?.isPostDCUsed ? sanitizeForFirestore(state.postDC) : null,
+    foldAndPaste: state.foldAndPaste?.isFoldAndPasteUsed ? sanitizeForFirestore(state.foldAndPaste) : null,
+    dstPaste: state.dstPaste?.isDstPasteUsed ? sanitizeForFirestore(state.dstPaste) : null,
+    qc: state.qc?.isQCUsed ? sanitizeForFirestore(state.qc) : null,
+    packing: state.packing?.isPackingUsed ? sanitizeForFirestore(state.packing) : null,
     
     // Calculations - ensure markup values are included
     calculations: sanitizeForFirestore(calculations),
@@ -205,35 +239,39 @@ const mapStateToFirebaseStructure = (state, calculations) => {
 };
 
 // FormSection component with toggle in header
-const FormSection = ({ title, children, id, activeSection, setActiveSection, isUsed = false, onToggleUsage }) => {
+const FormSection = ({ title, children, id, activeSection, setActiveSection, isUsed = false, onToggleUsage, isDisabled = false }) => {
   const isActive = activeSection === id;
   
   const toggleSection = () => {
-    setActiveSection(isActive ? null : id);
+    if (!isDisabled) {
+      setActiveSection(isActive ? null : id);
+    }
   };
   
   return (
-    <div className="mb-6 border rounded-lg overflow-hidden shadow-sm">
+    <div className={`mb-6 border rounded-lg overflow-hidden shadow-sm ${isDisabled ? 'opacity-60' : ''}`}>
       <div 
         className={`p-3 flex justify-between items-center ${isActive ? 'bg-blue-50' : 'bg-gray-50'}`}
       >
         <div className="flex items-center space-x-4">
           {/* Toggle switch in section header */}
           <div 
-            className="flex items-center space-x-2 cursor-pointer"
+            className={`flex items-center space-x-2 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
             onClick={(e) => {
               e.stopPropagation(); // Prevent section expansion when clicking toggle
-              onToggleUsage();
+              if (!isDisabled) {
+                onToggleUsage();
+              }
             }}
           >
-            <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
+            <div className={`w-5 h-5 flex items-center justify-center border rounded-full ${isDisabled ? 'bg-gray-200 border-gray-300' : 'border-gray-300 bg-gray-200'}`}>
               {isUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
             </div>
           </div>
           
           {/* Section title */}
           <h2 
-            className="text-lg font-semibold cursor-pointer"
+            className={`text-lg font-semibold ${isDisabled ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer'}`}
             onClick={toggleSection}
           >
             {title}
@@ -242,7 +280,7 @@ const FormSection = ({ title, children, id, activeSection, setActiveSection, isU
         
         {/* Expand/collapse button */}
         <span 
-          className="text-gray-500 text-xl cursor-pointer"
+          className={`text-xl ${isDisabled ? 'cursor-not-allowed text-gray-400' : 'cursor-pointer text-gray-500'}`}
           onClick={toggleSection}
         >
           {isActive ? '−' : '+'}
@@ -268,6 +306,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [selectedVersion, setSelectedVersion] = useState("");
   const [showCostPreview, setShowCostPreview] = useState(false); // State for toggling cost preview
   const [defaultMarkup, setDefaultMarkup] = useState({ type: "STANDARD", percentage: 0 });
+  
+  // Define visible services based on the selected job type
+  const [visibleProductionServices, setVisibleProductionServices] = useState([]);
+  const [visiblePostProductionServices, setVisiblePostProductionServices] = useState([]);
 
   const formRef = useRef(null);
   
@@ -337,6 +379,32 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       }
     }
   }, [initialState, isEditMode]);
+
+  // Update visible services when job type changes
+  useEffect(() => {
+    const jobType = state.orderAndPaper.jobType || "Card";
+    const config = jobTypeConfigurations[jobType] || jobTypeConfigurations["Card"];
+    
+    // Set visible services based on job type
+    setVisibleProductionServices(config.productionServices || []);
+    setVisiblePostProductionServices(config.postProductionServices || []);
+    
+    // Reset non-applicable services to avoid showing disabled ones
+    Object.entries(serviceRegistry).forEach(([serviceCode, serviceInfo]) => {
+      const isVisible = 
+        config.productionServices.includes(serviceCode) || 
+        config.postProductionServices.includes(serviceCode);
+      
+      if (!isVisible && serviceInfo.stateKey && serviceInfo.toggleField) {
+        // Reset this service if it's not visible for the current job type
+        dispatch({
+          type: `UPDATE_${serviceInfo.stateKey.toUpperCase()}`,
+          payload: { [serviceInfo.toggleField]: false }
+        });
+      }
+    });
+    
+  }, [state.orderAndPaper.jobType]);
 
   // Calculate costs when form data changes
   useEffect(() => {
@@ -520,6 +588,19 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     });
   };
   
+  // Handle job type change in OrderAndPaper component
+  const handleJobTypeChange = (e) => {
+    const { value } = e.target;
+    
+    // Update the job type in the state
+    dispatch({
+      type: "UPDATE_ORDER_AND_PAPER",
+      payload: { jobType: value }
+    });
+    
+    // The useEffect will handle updating the visible services
+  };
+  
   // Generate client code function - needed for when creating new clients
   const generateClientCode = async (clientName) => {
     try {
@@ -564,170 +645,237 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
-  // Toggle handlers for each section
+  // Direct toggle handlers for each service type
   const toggleLPUsage = () => {
-    // If toggling on, set to default values; if toggling off, clear values
     const isCurrentlyUsed = state.lpDetails.isLPUsed;
+    
     dispatch({
       type: "UPDATE_LP_DETAILS",
-      payload: {
+      payload: { 
         isLPUsed: !isCurrentlyUsed,
-        noOfColors: !isCurrentlyUsed ? 1 : 0,
-        colorDetails: !isCurrentlyUsed
-          ? [
-              {
-                plateSizeType: "Auto",
-                plateDimensions: { 
-                  length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-                  breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-                },
-                pantoneType: "",
-                plateType: "Polymer Plate",
-                mrType: "Simple"
-              }
-            ]
-          : []
+        ...((!isCurrentlyUsed) && {
+          noOfColors: 1,
+          colorDetails: [
+            {
+              plateSizeType: "Auto",
+              plateDimensions: { 
+                length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+              },
+              pantoneType: "",
+              plateType: "Polymer Plate",
+              mrType: "Simple"
+            }
+          ]
+        })
       }
     });
     
-    // Auto-expand section when toggled on
+    // Auto expand when toggled on
     if (!isCurrentlyUsed) {
       setActiveSection("lp");
     }
   };
-
+  
   const toggleFSUsage = () => {
     const isCurrentlyUsed = state.fsDetails.isFSUsed;
+    
     dispatch({
       type: "UPDATE_FS_DETAILS",
-      payload: {
+      payload: { 
         isFSUsed: !isCurrentlyUsed,
-        fsType: !isCurrentlyUsed ? "FS1" : "",
-        foilDetails: !isCurrentlyUsed
-          ? [
-              {
-                blockSizeType: "Auto",
-                blockDimension: { 
-                  length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-                  breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-                },
-                foilType: "Gold MTS 220",
-                blockType: "Magnesium Block 3MM",
-                mrType: "Simple"
-              }
-            ]
-          : []
+        ...((!isCurrentlyUsed) && {
+          fsType: "FS1",
+          foilDetails: [
+            {
+              blockSizeType: "Auto",
+              blockDimension: { 
+                length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+              },
+              foilType: "Gold MTS 220",
+              blockType: "Magnesium Block 3MM",
+              mrType: "Simple"
+            }
+          ]
+        })
       }
     });
     
+    // Auto expand when toggled on
     if (!isCurrentlyUsed) {
       setActiveSection("fs");
     }
   };
-
+  
   const toggleEMBUsage = () => {
     const isCurrentlyUsed = state.embDetails.isEMBUsed;
+    
     dispatch({
       type: "UPDATE_EMB_DETAILS",
-      payload: {
+      payload: { 
         isEMBUsed: !isCurrentlyUsed,
-        plateSizeType: !isCurrentlyUsed ? "Auto" : "",
-        plateDimensions: !isCurrentlyUsed
-          ? { 
-              length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-              breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-            }
-          : { length: "", breadth: "" },
-        plateTypeMale: !isCurrentlyUsed ? "Polymer Plate" : "",
-        plateTypeFemale: !isCurrentlyUsed ? "Polymer Plate" : "",
-        embMR: !isCurrentlyUsed ? "Simple" : ""
+        ...((!isCurrentlyUsed) && {
+          plateSizeType: "Auto",
+          plateDimensions: { 
+            length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+            breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+          },
+          plateTypeMale: "Polymer Plate",
+          plateTypeFemale: "Polymer Plate",
+          embMR: "Simple"
+        })
       }
     });
     
+    // Auto expand when toggled on
     if (!isCurrentlyUsed) {
       setActiveSection("emb");
     }
   };
-
+  
   const toggleDigiUsage = () => {
     const isCurrentlyUsed = state.digiDetails.isDigiUsed;
+    
     dispatch({
       type: "UPDATE_DIGI_DETAILS",
-      payload: {
+      payload: { 
         isDigiUsed: !isCurrentlyUsed,
         digiDie: !isCurrentlyUsed ? "" : "",
-        digiDimensions: !isCurrentlyUsed
-          ? { length: "", breadth: "" }
-          : { length: "", breadth: "" }
+        digiDimensions: !isCurrentlyUsed ? { length: "", breadth: "" } : { length: "", breadth: "" }
       }
     });
     
+    // Auto expand when toggled on
     if (!isCurrentlyUsed) {
       setActiveSection("digi");
     }
   };
-
+  
   const toggleDieCuttingUsage = () => {
     const isCurrentlyUsed = state.dieCutting.isDieCuttingUsed;
+    
     dispatch({
       type: "UPDATE_DIE_CUTTING",
-      payload: {
+      payload: { 
         isDieCuttingUsed: !isCurrentlyUsed,
-        difficulty: !isCurrentlyUsed ? "No" : "",
-        pdc: !isCurrentlyUsed ? "No" : "",
-        dcMR: !isCurrentlyUsed ? "Simple" : ""
+        ...((!isCurrentlyUsed) && {
+          difficulty: "No",
+          pdc: "No",
+          dcMR: "Simple"
+        })
       }
     });
     
+    // Auto expand when toggled on
     if (!isCurrentlyUsed) {
       setActiveSection("dieCutting");
     }
   };
-
-  const toggleSandwichUsage = () => {
-    const isCurrentlyUsed = state.sandwich.isSandwichComponentUsed;
+  
+  const togglePostDCUsage = () => {
+    const isCurrentlyUsed = state.postDC?.isPostDCUsed || false;
+    
     dispatch({
-      type: "UPDATE_SANDWICH",
-      payload: {
-        isSandwichComponentUsed: !isCurrentlyUsed,
-        lpDetailsSandwich: {
-          isLPUsed: false,
-          noOfColors: 0,
-          colorDetails: []
-        },
-        fsDetailsSandwich: {
-          isFSUsed: false,
-          fsType: "",
-          foilDetails: []
-        },
-        embDetailsSandwich: {
-          isEMBUsed: false,
-          plateSizeType: "",
-          plateDimensions: { length: "", breadth: "" },
-          plateTypeMale: "",
-          plateTypeFemale: "",
-          embMR: ""
-        }
-      }
+      type: "UPDATE_POST_DC",
+      payload: { isPostDCUsed: !isCurrentlyUsed }
     });
     
+    // Auto expand when toggled on
     if (!isCurrentlyUsed) {
-      setActiveSection("sandwich");
+      setActiveSection("postDC");
     }
   };
-
-  const togglePastingUsage = () => {
-    const isCurrentlyUsed = state.pasting.isPastingUsed;
+  
+  const toggleFoldAndPasteUsage = () => {
+    const isCurrentlyUsed = state.foldAndPaste?.isFoldAndPasteUsed || false;
+    
     dispatch({
-      type: "UPDATE_PASTING",
-      payload: {
-        isPastingUsed: !isCurrentlyUsed,
-        pastingType: !isCurrentlyUsed ? "" : ""
+      type: "UPDATE_FOLD_AND_PASTE",
+      payload: { isFoldAndPasteUsed: !isCurrentlyUsed }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("foldAndPaste");
+    }
+  };
+  
+  const toggleDstPasteUsage = () => {
+    const isCurrentlyUsed = state.dstPaste?.isDstPasteUsed || false;
+    
+    dispatch({
+      type: "UPDATE_DST_PASTE",
+      payload: { isDstPasteUsed: !isCurrentlyUsed }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("dstPaste");
+    }
+  };
+  
+  const toggleQCUsage = () => {
+    const isCurrentlyUsed = state.qc?.isQCUsed || false;
+    
+    dispatch({
+      type: "UPDATE_QC",
+      payload: { isQCUsed: !isCurrentlyUsed }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("qc");
+    }
+  };
+  
+  const togglePackingUsage = () => {
+    const isCurrentlyUsed = state.packing?.isPackingUsed || false;
+    
+    dispatch({
+      type: "UPDATE_PACKING",
+      payload: { isPackingUsed: !isCurrentlyUsed }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("packing");
+    }
+  };
+  
+  const toggleSandwichUsage = () => {
+    const isCurrentlyUsed = state.sandwich?.isSandwichComponentUsed || false;
+    
+    dispatch({
+      type: "UPDATE_SANDWICH",
+      payload: { 
+        isSandwichComponentUsed: !isCurrentlyUsed,
+        ...((!isCurrentlyUsed) && {
+          lpDetailsSandwich: {
+            isLPUsed: false,
+            noOfColors: 0,
+            colorDetails: []
+          },
+          fsDetailsSandwich: {
+            isFSUsed: false,
+            fsType: "",
+            foilDetails: []
+          },
+          embDetailsSandwich: {
+            isEMBUsed: false,
+            plateSizeType: "",
+            plateDimensions: { length: "", breadth: "" },
+            plateTypeMale: "",
+            plateTypeFemale: "",
+            embMR: ""
+          }
+        })
       }
     });
     
+    // Auto expand when toggled on
     if (!isCurrentlyUsed) {
-      setActiveSection("pasting");
+      setActiveSection("sandwich");
     }
   };
 
@@ -756,6 +904,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     setShowCostPreview(!showCostPreview);
   };
 
+  // Check if a service is visible for the current job type
+  const isServiceVisible = (serviceCode) => {
+    return (
+      visibleProductionServices.includes(serviceCode) ||
+      visiblePostProductionServices.includes(serviceCode)
+    );
+  };
+
   return (
     <div className="bg-white rounded-lg">
       <div className="max-w-screen-xl mx-auto p-4">
@@ -766,13 +922,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           
           <div className="flex space-x-3">
             {/* Preview Cost Button */}
-            <button
+            {/* <button
               type="button"
               onClick={toggleCostPreview}
               className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
             >
               {showCostPreview ? "Hide Preview" : "Preview Costs"}
-            </button>
+            </button> */}
             
             {/* Reset Form Button */}
             <button 
@@ -847,129 +1003,249 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               onNext={() => {}} 
               validationErrors={validationErrors}
               singlePageMode={true}
+              onJobTypeChange={handleJobTypeChange}
             />
           </div>
 
-          {/* Processing Options in Collapsible Sections with direct toggles */}
-          <div>
-            <FormSection 
-              title="LETTER PRESS (LP)" 
-              id="lp"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              isUsed={state.lpDetails.isLPUsed}
-              onToggleUsage={toggleLPUsage}
-            >
-              <LPDetails 
-                state={state} 
-                dispatch={dispatch} 
-                onNext={() => {}} 
-                onPrevious={() => {}} 
-                singlePageMode={true}
-              />
-            </FormSection>
+          {/* Display selected job type info */}
+          {/* <div className="bg-blue-50 p-4 rounded-lg mb-6">
+            <div className="flex justify-between items-center">
+              <h3 className="font-medium text-blue-800">Selected Job Type: <span className="font-bold">{state.orderAndPaper.jobType}</span></h3>
+              <div className="text-sm text-blue-600">
+                <span className="mr-2">Production Services: {visibleProductionServices.length}</span>
+                <span>Post-Production Services: {visiblePostProductionServices.length}</span>
+              </div>
+            </div>
+          </div> */}
 
-            <FormSection 
-              title="FOIL STAMPING (FS)" 
-              id="fs"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              isUsed={state.fsDetails.isFSUsed}
-              onToggleUsage={toggleFSUsage}
-            >
-              <FSDetails 
-                state={state} 
-                dispatch={dispatch} 
-                onNext={() => {}} 
-                onPrevious={() => {}} 
-                singlePageMode={true}
-              />
-            </FormSection>
+          {/* Production Services Section */}
+          <div className="mb-8">
+            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">PRODUCTION SERVICES</h2>
+            
+            {/* LP Section */}
+            {isServiceVisible("LP") && (
+              <FormSection 
+                title="LETTER PRESS (LP)" 
+                id="lp"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.lpDetails.isLPUsed}
+                onToggleUsage={toggleLPUsage}
+              >
+                <LPDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
 
-            <FormSection 
-              title="EMBOSSING (EMB)" 
-              id="emb"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              isUsed={state.embDetails.isEMBUsed}
-              onToggleUsage={toggleEMBUsage}
-            >
-              <EMBDetails 
-                state={state} 
-                dispatch={dispatch} 
-                onNext={() => {}} 
-                onPrevious={() => {}} 
-                singlePageMode={true}
-              />
-            </FormSection>
+            {/* FS Section */}
+            {isServiceVisible("FS") && (
+              <FormSection 
+                title="FOIL STAMPING (FS)" 
+                id="fs"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.fsDetails.isFSUsed}
+                onToggleUsage={toggleFSUsage}
+              >
+                <FSDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
 
-            <FormSection 
-              title="DIGITAL PRINTING" 
-              id="digi"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              isUsed={state.digiDetails.isDigiUsed}
-              onToggleUsage={toggleDigiUsage}
-            >
-              <DigiDetails 
-                state={state} 
-                dispatch={dispatch} 
-                onNext={() => {}} 
-                onPrevious={() => {}} 
-                singlePageMode={true}
-              />
-            </FormSection>
+            {/* EMB Section */}
+            {isServiceVisible("EMB") && (
+              <FormSection 
+                title="EMBOSSING (EMB)" 
+                id="emb"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.embDetails.isEMBUsed}
+                onToggleUsage={toggleEMBUsage}
+              >
+                <EMBDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
 
-            <FormSection 
-              title="DIE CUTTING" 
-              id="dieCutting"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              isUsed={state.dieCutting.isDieCuttingUsed}
-              onToggleUsage={toggleDieCuttingUsage}
-            >
-              <DieCutting 
-                state={state} 
-                dispatch={dispatch} 
-                onNext={() => {}} 
-                onPrevious={() => {}} 
-                singlePageMode={true}
-              />
-            </FormSection>
+            {/* DIGI Section */}
+            {isServiceVisible("DIGI") && (
+              <FormSection 
+                title="DIGITAL PRINTING" 
+                id="digi"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.digiDetails.isDigiUsed}
+                onToggleUsage={toggleDigiUsage}
+              >
+                <DigiDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+          </div>
 
-            <FormSection 
-              title="SANDWICH" 
-              id="sandwich"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              isUsed={state.sandwich.isSandwichComponentUsed}
-              onToggleUsage={toggleSandwichUsage}
-            >
-              <Sandwich 
-                state={state} 
-                dispatch={dispatch} 
-                onNext={() => {}} 
-                onPrevious={() => {}} 
-                singlePageMode={true}
-              />
-            </FormSection>
+          {/* Post-Production Services Section */}
+          <div className="mb-8">
+          <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">POST-PRODUCTION SERVICES</h2>
+            
+            {/* Die Cutting Section */}
+            {isServiceVisible("DC") && (
+              <FormSection 
+                title="DIE CUTTING" 
+                id="dieCutting"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.dieCutting.isDieCuttingUsed}
+                onToggleUsage={toggleDieCuttingUsage}
+              >
+                <DieCutting 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
 
-            <FormSection 
-              title="PASTING" 
-              id="pasting"
-              activeSection={activeSection}
-              setActiveSection={setActiveSection}
-              isUsed={state.pasting.isPastingUsed}
-              onToggleUsage={togglePastingUsage}
-            >
-              <Pasting 
-                state={state} 
-                dispatch={dispatch} 
-                onNext={() => {}} 
-                onPrevious={() => {}} 
-                singlePageMode={true}
-              />
-            </FormSection>
+            {/* Post DC Section */}
+            {isServiceVisible("POST DC") && (
+              <FormSection 
+                title="POST DIE CUTTING" 
+                id="postDC"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.postDC?.isPostDCUsed || false}
+                onToggleUsage={togglePostDCUsage}
+              >
+                <PostDC 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+
+            {/* Fold & Paste Section */}
+            {isServiceVisible("FOLD & PASTE") && (
+              <FormSection 
+                title="FOLD & PASTE" 
+                id="foldAndPaste"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.foldAndPaste?.isFoldAndPasteUsed || false}
+                onToggleUsage={toggleFoldAndPasteUsage}
+              >
+                <FoldAndPaste 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+
+            {/* DST Paste Section */}
+            {isServiceVisible("DST PASTE") && (
+              <FormSection 
+                title="DST PASTE" 
+                id="dstPaste"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.dstPaste?.isDstPasteUsed || false}
+                onToggleUsage={toggleDstPasteUsage}
+              >
+                <DstPaste 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+
+            {/* QC Section */}
+            {isServiceVisible("QC") && (
+              <FormSection 
+                title="QUALITY CONTROL" 
+                id="qc"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.qc?.isQCUsed || false}
+                onToggleUsage={toggleQCUsage}
+              >
+                <QC 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+
+            {/* Packing Section */}
+            {isServiceVisible("PACKING") && (
+              <FormSection 
+                title="PACKING" 
+                id="packing"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.packing?.isPackingUsed || false}
+                onToggleUsage={togglePackingUsage}
+              >
+                <Packing 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+
+            {/* Sandwich Section */}
+            {isServiceVisible("DUPLEX") && (
+              <FormSection 
+                title="DUPLEX/SANDWICH" 
+                id="sandwich"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.sandwich?.isSandwichComponentUsed || false}
+                onToggleUsage={toggleSandwichUsage}
+              >
+                <Sandwich 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
           </div>
 
           {/* Cost Calculation & Review Section - Only visible when preview is toggled */}
@@ -999,15 +1275,15 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </div>
           )}
 
-          <div className="flex justify-between mt-8 border-t pt-6">
+          <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">
             {/* Left side: Preview costs button */}
-            <button
+            {/* <button
               type="button"
-              onClick={toggleCostPreview}
+              // onClick={toggleCostPreview}
               className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
             >
               {showCostPreview ? "Hide Preview" : "Preview Costs"}
-            </button>
+            </button> */}
             
             {/* Right side: Cancel and Submit buttons */}
             <div className="flex">
@@ -1035,7 +1311,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                     Saving...
                   </>
                 ) : (
-                  isEditMode ? "Save Changes" : "Create Estimate"
+                  isEditMode ? "Save Changes" : "Submit"
                 )}
               </button>
             </div>

@@ -6,7 +6,14 @@ import { db } from "../../firebaseConfig";
 import SearchablePaperDropdown from "./SearchablePaperDropdown";
 import InlineDieSelection from "./InlineDieSelection";
 
-const OrderAndPaper = ({ state, dispatch, onNext, validationErrors = {}, singlePageMode = false }) => {
+const OrderAndPaper = ({ 
+  state, 
+  dispatch, 
+  onNext, 
+  validationErrors = {}, 
+  singlePageMode = false, 
+  onJobTypeChange = null 
+}) => {
   const { orderAndPaper } = state;
 
   const [papers, setPapers] = useState([]);
@@ -70,12 +77,19 @@ const OrderAndPaper = ({ state, dispatch, onNext, validationErrors = {}, singleP
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    dispatch({
-      type: "UPDATE_ORDER_AND_PAPER",
-      payload: {
-        [name]: name === "quantity" ? Math.max(0, value) : value,
-      },
-    });
+    
+    // If this is a job type change and we have a custom handler
+    if (name === "jobType" && onJobTypeChange) {
+      onJobTypeChange(e);
+    } else {
+      // Normal field update
+      dispatch({
+        type: "UPDATE_ORDER_AND_PAPER",
+        payload: {
+          [name]: name === "quantity" ? Math.max(0, value) : value,
+        },
+      });
+    }
   };
 
   const handleDieSelect = (dieData) => {
@@ -212,10 +226,12 @@ const OrderAndPaper = ({ state, dispatch, onNext, validationErrors = {}, singleP
               >
                 <option value="Card">Card</option>
                 <option value="Biz Card">Biz Card</option>
-                <option value="Vellum Jacket">Vellum Jacket</option>
                 <option value="Envelope">Envelope</option>
-                <option value="Tag">Tag</option>
+                <option value="Seal">Seal</option>
                 <option value="Magnet">Magnet</option>
+                <option value="Packaging">Packaging</option>
+                <option value="Notebook">Notebook</option>
+                <option value="Custom">Custom</option>
               </select>
             </div>
 
