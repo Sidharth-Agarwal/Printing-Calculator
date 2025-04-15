@@ -687,7 +687,7 @@ const ReviewAndSubmit = ({
             ) : isEditMode ? (
               'Save Changes'
             ) : (
-              'Create Estimate'
+              'Submit'
             )}
           </button>
         </div>
