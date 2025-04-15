@@ -2,10 +2,11 @@ import React, { useReducer, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import { calculateEstimateCosts } from "./calculations";
+import { performCompleteCalculations } from "./enhancedCalculations";
 
 // Import components
 import ClientSelection from "./ClientSelection";
+import VersionSelection from "./VersionSelection";
 import OrderAndPaper from "./OrderAndPaper";
 import LPDetails from "./LPDetails";
 import FSDetails from "./FSDetails";
@@ -23,6 +24,8 @@ const initialFormState = {
     clientId: null,
     clientInfo: null
   },
+  // Version information
+  versionId: "",
   orderAndPaper: {
     projectName: "",
     date: null,
@@ -97,6 +100,8 @@ const reducer = (state, action) => {
   switch (action.type) {
     case "UPDATE_CLIENT":
       return { ...state, client: { ...state.client, ...action.payload } };
+    case "UPDATE_VERSION":
+      return { ...state, versionId: action.payload };
     case "UPDATE_ORDER_AND_PAPER":
       return { ...state, orderAndPaper: { ...state.orderAndPaper, ...action.payload } };
     case "UPDATE_LP_DETAILS":
@@ -122,14 +127,41 @@ const reducer = (state, action) => {
   }
 };
 
-// Map state to Firebase structure
+// Map state to Firebase structure with sanitization for undefined values
 const mapStateToFirebaseStructure = (state, calculations) => {
-  const { client, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich, pasting } = state;
+  const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich, pasting } = state;
 
-  return {
+  // Helper function to sanitize objects for Firebase
+  const sanitizeForFirestore = (obj) => {
+    if (obj === null || obj === undefined) return null;
+    if (typeof obj !== 'object') return obj;
+    
+    const sanitized = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Replace undefined values with null (Firebase accepts null but not undefined)
+      if (value === undefined) {
+        sanitized[key] = null;
+      } 
+      // Recursively sanitize nested objects
+      else if (value !== null && typeof value === 'object') {
+        sanitized[key] = sanitizeForFirestore(value);
+      } 
+      // Keep other values as-is
+      else {
+        sanitized[key] = value;
+      }
+    }
+    return sanitized;
+  };
+
+  // Create the sanitized Firebase data structure
+  const firestoreData = {
     // Client reference information
     clientId: client.clientId,
-    clientInfo: client.clientInfo,
+    clientInfo: sanitizeForFirestore(client.clientInfo),
+    
+    // Version information
+    versionId: versionId || "1", // Default to version 1 if not specified
     
     // Project specific information
     projectName: orderAndPaper.projectName,
@@ -137,37 +169,39 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     deliveryDate: orderAndPaper.deliveryDate?.toISOString() || null,
     
     // Job details
-    jobDetails: {
+    jobDetails: sanitizeForFirestore({
       jobType: orderAndPaper.jobType,
       quantity: orderAndPaper.quantity,
       paperProvided: orderAndPaper.paperProvided,
       paperName: orderAndPaper.paperName,
-    },
+    }),
     
     // Die details
-    dieDetails: {
+    dieDetails: sanitizeForFirestore({
       dieSelection: orderAndPaper.dieSelection,
       dieCode: orderAndPaper.dieCode,
       dieSize: orderAndPaper.dieSize,
       image: orderAndPaper.image,
-    },
+    }),
     
     // Processing options (only included when selected)
-    lpDetails: lpDetails.isLPUsed ? lpDetails : null,
-    fsDetails: fsDetails.isFSUsed ? fsDetails : null,
-    embDetails: embDetails.isEMBUsed ? embDetails : null,
-    digiDetails: digiDetails.isDigiUsed ? digiDetails : null,
-    dieCutting: dieCutting.isDieCuttingUsed ? dieCutting : null,
-    sandwich: sandwich.isSandwichComponentUsed ? sandwich : null,
-    pasting: pasting.isPastingUsed ? pasting : null,
+    lpDetails: lpDetails.isLPUsed ? sanitizeForFirestore(lpDetails) : null,
+    fsDetails: fsDetails.isFSUsed ? sanitizeForFirestore(fsDetails) : null,
+    embDetails: embDetails.isEMBUsed ? sanitizeForFirestore(embDetails) : null,
+    digiDetails: digiDetails.isDigiUsed ? sanitizeForFirestore(digiDetails) : null,
+    dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
+    sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
+    pasting: pasting.isPastingUsed ? sanitizeForFirestore(pasting) : null,
     
-    // Calculations
-    calculations,
+    // Calculations - ensure markup values are included
+    calculations: sanitizeForFirestore(calculations),
     
     // Metadata
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
   };
+
+  return firestoreData;
 };
 
 // FormSection component with toggle in header
@@ -195,7 +229,6 @@ const FormSection = ({ title, children, id, activeSection, setActiveSection, isU
             <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
               {isUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
             </div>
-            <span className="text-sm font-medium text-gray-600">Use</span>
           </div>
           
           {/* Section title */}
@@ -232,8 +265,42 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [validationErrors, setValidationErrors] = useState({});
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedVersion, setSelectedVersion] = useState("");
+  const [showCostPreview, setShowCostPreview] = useState(false); // State for toggling cost preview
+  const [defaultMarkup, setDefaultMarkup] = useState({ type: "STANDARD", percentage: 0 });
 
   const formRef = useRef(null);
+  
+  // Fetch default markup rates once when component mounts
+  useEffect(() => {
+    const fetchDefaultMarkup = async () => {
+      try {
+        const ratesCollection = collection(db, "standard_rates");
+        const querySnapshot = await getDocs(ratesCollection);
+        
+        const markupData = querySnapshot.docs
+          .map(doc => ({ id: doc.id, ...doc.data() }))
+          .filter(rate => rate.group && rate.group.toUpperCase() === "MARKUP");
+        
+        if (markupData.length > 0) {
+          const defaultMarkup = markupData.find(rate => rate.type === "STANDARD") || markupData[0];
+          setDefaultMarkup({
+            type: defaultMarkup.type,
+            percentage: parseFloat(defaultMarkup.finalRate) || 0
+          });
+          
+          console.log("Fetched default markup:", {
+            type: defaultMarkup.type,
+            percentage: parseFloat(defaultMarkup.finalRate)
+          });
+        }
+      } catch (error) {
+        console.error("Error fetching default markup:", error);
+      }
+    };
+    
+    fetchDefaultMarkup();
+  }, []);
   
   // Initialize form with data if in edit mode
   useEffect(() => {
@@ -263,6 +330,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         
         fetchClient();
       }
+      
+      // Set selected version if it exists in initialState
+      if (initialState.versionId) {
+        setSelectedVersion(initialState.versionId);
+      }
     }
   }, [initialState, isEditMode]);
 
@@ -275,6 +347,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     return () => clearTimeout(debounceTimer);
   }, [state]);
 
+  // Enhanced calculation function using the centralized calculation service
   const performCalculations = async () => {
     // Check if client and essential fields are filled
     const { projectName, quantity, paperName, dieCode, dieSize } = state.orderAndPaper;
@@ -287,10 +360,24 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     setIsCalculating(true);
     try {
-      const result = await calculateEstimateCosts(state);
+      // Pass the default markup values to the calculation service
+      const result = await performCompleteCalculations(
+        state,
+        5, // default misc charge
+        defaultMarkup.percentage,
+        defaultMarkup.type
+      );
+      
       if (result.error) {
         console.error("Error during calculations:", result.error);
       } else {
+        // Verify markup values are included
+        console.log("Calculation results with markup:", {
+          markupType: result.markupType,
+          markupPercentage: result.markupPercentage,
+          markupAmount: result.markupAmount
+        });
+        
         setCalculations(result);
       }
     } catch (error) {
@@ -302,10 +389,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
   const validateForm = () => {
     const errors = {};
-    const { orderAndPaper, client } = state;
+    const { orderAndPaper, client, versionId } = state;
     
     // Validate Client selection
     if (!client.clientId) errors.clientId = "Client selection is required";
+    
+    // Validate Version selection
+    if (!versionId) errors.versionId = "Version selection is required";
     
     // Validate Order & Paper section
     if (!orderAndPaper.projectName) errors.projectName = "Project name is required";
@@ -314,6 +404,24 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     setValidationErrors(errors);
     return Object.keys(errors).length === 0;
+  };
+
+  // Handler for Review and Submit when calculations are ready
+  const handleCreateEstimate = (enhancedCalculations) => {
+    // Log received calculations to verify markup values
+    console.log("Enhanced calculations from ReviewAndSubmit:", {
+      markupType: enhancedCalculations?.markupType,
+      markupPercentage: enhancedCalculations?.markupPercentage,
+      markupAmount: enhancedCalculations?.markupAmount
+    });
+    
+    // Store the enhanced calculations to use in handleSubmit
+    if (enhancedCalculations) {
+      setCalculations(enhancedCalculations);
+    }
+    
+    // Submit the form with the updated calculations
+    handleSubmit(new Event('submit'));
   };
 
   const handleSubmit = async (e) => {
@@ -330,20 +438,34 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     setIsSubmitting(true);
     try {
-      const formattedData = mapStateToFirebaseStructure(state, calculations);
+      // Double-check that markup values exist before saving
+      const calculationsWithMarkup = {
+        ...calculations,
+        markupType: calculations?.markupType || defaultMarkup.type, // Use default if not set
+        markupPercentage: parseFloat(calculations?.markupPercentage || defaultMarkup.percentage),
+        markupAmount: calculations?.markupAmount || "0.00"
+      };
+      
+      // Create the formatted data for Firebase using the enhanced calculations
+      const formattedData = mapStateToFirebaseStructure(state, calculationsWithMarkup);
+      
+      // Log the data before saving to verify markup values
+      console.log("Saving to Firebase:", {
+        markupType: formattedData.calculations.markupType,
+        markupPercentage: formattedData.calculations.markupPercentage,
+        markupAmount: formattedData.calculations.markupAmount
+      });
+      
       if (isEditMode && onSubmitSuccess) {
         await onSubmitSuccess(formattedData);
         if (onClose) onClose();
       } else {
         await addDoc(collection(db, "estimates"), formattedData);
         
-        // Optionally update client with estimate reference
-        // This creates a bi-directional relationship
-        // You could implement this if needed
-        
         alert("Estimate created successfully!");
         dispatch({ type: "RESET_FORM" });
         setSelectedClient(null);
+        setSelectedVersion("");
         // Navigate to estimates page
         navigate('/material-stock/estimates-db');
       }
@@ -355,18 +477,21 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
-  // Handler for Review and Submit when calculations are ready
-  const handleCreateEstimate = (enhancedCalculations) => {
-    // For single page mode, we're just submitting the form
-    handleSubmit(new Event('submit'));
-  };
-
   // Handle client selection from ClientSelection component
   const handleClientSelect = (clientData) => {
     if (clientData) {
+      // Ensure clientInfo has a category property to avoid undefined values
+      const sanitizedClientInfo = clientData.clientInfo || {};
+      if (sanitizedClientInfo.category === undefined) {
+        sanitizedClientInfo.category = null;
+      }
+      
       dispatch({
         type: "UPDATE_CLIENT",
-        payload: clientData
+        payload: {
+          clientId: clientData.clientId,
+          clientInfo: sanitizedClientInfo
+        }
       });
     } else {
       dispatch({
@@ -376,7 +501,23 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           clientInfo: null
         }
       });
+      
+      // Reset version when client is cleared
+      setSelectedVersion("");
+      dispatch({
+        type: "UPDATE_VERSION",
+        payload: ""
+      });
     }
+  };
+  
+  // Handle version selection
+  const handleVersionSelect = (versionId) => {
+    setSelectedVersion(versionId);
+    dispatch({
+      type: "UPDATE_VERSION",
+      payload: versionId
+    });
   };
   
   // Generate client code function - needed for when creating new clients
@@ -602,11 +743,17 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     setValidationErrors({});
     setCalculations(null);
     setSelectedClient(null);
+    setSelectedVersion("");
     
     // Scroll to top of form
     if (formRef.current) {
       formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
     }
+  };
+
+  // Toggle cost preview visibility
+  const toggleCostPreview = () => {
+    setShowCostPreview(!showCostPreview);
   };
 
   return (
@@ -617,14 +764,25 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {isEditMode ? "EDIT ESTIMATE" : "CREATE NEW ESTIMATE"}
           </h1>
           
-          {/* Reset Form Button */}
-          <button 
-            type="button"
-            onClick={handleResetForm}
-            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-          >
-            Reset Form
-          </button>
+          <div className="flex space-x-3">
+            {/* Preview Cost Button */}
+            <button
+              type="button"
+              onClick={toggleCostPreview}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            >
+              {showCostPreview ? "Hide Preview" : "Preview Costs"}
+            </button>
+            
+            {/* Reset Form Button */}
+            <button 
+              type="button"
+              onClick={handleResetForm}
+              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+            >
+              Reset Form
+            </button>
+          </div>
         </div>
 
         {/* Reset Confirmation Modal */}
@@ -668,6 +826,18 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             )}
           </div>
 
+          {/* Version Selection - Add after client selection */}
+          {state.client.clientId && (
+            <VersionSelection 
+              clientId={state.client.clientId}
+              selectedVersion={selectedVersion}
+              onVersionSelect={handleVersionSelect}
+            />
+          )}
+          {validationErrors.versionId && (
+            <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.versionId}</p>
+          )}
+
           {/* Order & Paper Section - Now Project Details */}
           <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
             <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">PROJECT & PAPER DETAILS</h2>
@@ -683,7 +853,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           {/* Processing Options in Collapsible Sections with direct toggles */}
           <div>
             <FormSection 
-              title="LETTER PRESS (LP) DETAILS" 
+              title="LETTER PRESS (LP)" 
               id="lp"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -700,7 +870,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="FOIL STAMPING (FS) DETAILS" 
+              title="FOIL STAMPING (FS)" 
               id="fs"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -717,7 +887,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="EMBOSSING (EMB) DETAILS" 
+              title="EMBOSSING (EMB)" 
               id="emb"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -734,7 +904,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="DIGITAL PRINTING DETAILS" 
+              title="DIGITAL PRINTING" 
               id="digi"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -751,7 +921,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="DIE CUTTING DETAILS" 
+              title="DIE CUTTING" 
               id="dieCutting"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -768,7 +938,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="SANDWICH DETAILS" 
+              title="SANDWICH" 
               id="sandwich"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -785,7 +955,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
 
             <FormSection 
-              title="PASTING DETAILS" 
+              title="PASTING" 
               id="pasting"
               activeSection={activeSection}
               setActiveSection={setActiveSection}
@@ -802,49 +972,73 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </FormSection>
           </div>
 
-          {/* Cost Calculation & Review Section - Always visible */}
-          <div className="bg-gray-50 p-5 rounded-lg shadow-sm mt-6">
-            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">COST CALCULATION & REVIEW</h2>
-            <ReviewAndSubmit 
-              state={state} 
-              calculations={calculations} 
-              isCalculating={isCalculating} 
-              onPrevious={() => {}} 
-              onCreateEstimate={handleCreateEstimate} 
-              isEditMode={isEditMode}
-              isSaving={isSubmitting}
-              singlePageMode={true}
-            />
-          </div>
+          {/* Cost Calculation & Review Section - Only visible when preview is toggled */}
+          {showCostPreview && (
+            <div className="bg-gray-50 p-5 rounded-lg shadow-sm mt-6 border-2 border-blue-300">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-lg font-semibold text-blue-700 border-b pb-2">COST CALCULATION PREVIEW</h2>
+                <button 
+                  type="button" 
+                  onClick={toggleCostPreview}
+                  className="text-blue-500 hover:text-blue-700"
+                >
+                  <span className="text-xl">×</span> Close Preview
+                </button>
+              </div>
+              <ReviewAndSubmit 
+                state={state} 
+                calculations={calculations} 
+                isCalculating={isCalculating} 
+                onPrevious={() => {}} 
+                onCreateEstimate={handleCreateEstimate} 
+                isEditMode={isEditMode}
+                isSaving={isSubmitting}
+                singlePageMode={true}
+                previewMode={true} // New prop to indicate preview mode
+              />
+            </div>
+          )}
 
-          <div className="flex justify-end mt-8 border-t pt-6">
-            {onClose && (
+          <div className="flex justify-between mt-8 border-t pt-6">
+            {/* Left side: Preview costs button */}
+            <button
+              type="button"
+              onClick={toggleCostPreview}
+              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+            >
+              {showCostPreview ? "Hide Preview" : "Preview Costs"}
+            </button>
+            
+            {/* Right side: Cancel and Submit buttons */}
+            <div className="flex">
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="mr-3 px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+              )}
               <button
-                type="button"
-                onClick={onClose}
-                className="mr-3 px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                type="submit"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
                 disabled={isSubmitting}
               >
-                Cancel
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  isEditMode ? "Save Changes" : "Create Estimate"
+                )}
               </button>
-            )}
-            <button
-              type="submit"
-              className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : (
-                isEditMode ? "Save Changes" : "Create Estimate"
-              )}
-            </button>
+            </div>
           </div>
         </form>
       </div>

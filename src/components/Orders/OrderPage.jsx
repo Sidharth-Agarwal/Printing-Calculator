@@ -13,8 +13,11 @@ const OrdersPage = () => {
   const [error, setError] = useState(null);
   const [sortBy, setSortBy] = useState("date-desc"); // Default sort: Latest to oldest
   const [stageFilter, setStageFilter] = useState(""); // Default: All stages
+  const [viewMode, setViewMode] = useState("all"); // Default: Active orders
+  const [showConfirmation, setShowConfirmation] = useState(false);
+  const [pendingStageUpdate, setPendingStageUpdate] = useState(null);
 
-  const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
+  const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
 
   const sortOptions = {
     "quantity-asc": "Quantity - Low to High",
@@ -29,7 +32,8 @@ const OrdersPage = () => {
     'Positives': { bg: 'bg-[#06B6D4]' },
     'Printing': { bg: 'bg-[#F97316]' },
     'Quality Check': { bg: 'bg-[#EC4899]' },
-    'Delivery': { bg: 'bg-[#10B981]' }
+    'Delivery': { bg: 'bg-[#10B981]' },
+    'Completed': { bg: 'bg-[#4F46E5]' }
   };
 
   useEffect(() => {
@@ -44,12 +48,13 @@ const OrdersPage = () => {
             const data = doc.data();
             return {
               id: doc.id,
-              clientName: data.clientName || '',
+              clientName: data.clientInfo.name || '',
               projectName: data.projectName || '',
               date: data.date || null,
               deliveryDate: data.deliveryDate || null,
               stage: data.stage || 'Not started yet',
               status: data.status || 'In Progress',
+              completed: data.stage === 'Completed',
               jobDetails: data.jobDetails || {},
               dieDetails: data.dieDetails || {},
               calculations: data.calculations || {},
@@ -57,13 +62,12 @@ const OrdersPage = () => {
               fsDetails: data.fsDetails || null,
               embDetails: data.embDetails || null,
               digiDetails: data.digiDetails || null,
-              dieCuttingDetails: data.dieCuttingDetails || null,
-              sandwichDetails: data.sandwichDetails || null,
-              pastingDetails: data.pastingDetails || {}
+              dieCutting: data.dieCutting || null,
+              sandwich: data.sandwich || null,
+              pasting: data.pasting || {}
             };
           });
           setOrders(ordersData);
-          setFilteredOrders(ordersData);
           setError(null);
         } catch (err) {
           console.error("Error processing orders data:", err);
@@ -120,18 +124,34 @@ const OrdersPage = () => {
       filtered = filtered.filter(order => order.stage === stageFilter);
     }
 
+    // Apply view mode filter
+    if (viewMode === 'active') {
+      filtered = filtered.filter(order => order.stage !== 'Completed');
+    } else if (viewMode === 'completed') {
+      filtered = filtered.filter(order => order.stage === 'Completed');
+    }
+    // For 'all', we don't need to filter
+
     // Apply sorting
     const sortedOrders = sortOrders(filtered);
     setFilteredOrders(sortedOrders);
-  }, [searchQuery, orders, sortBy, stageFilter]);
+  }, [searchQuery, orders, sortBy, stageFilter, viewMode]);
 
-  const updateStage = async (orderId, newStage) => {
+  const handleStageUpdateRequest = (orderId, currentStage, newStage) => {
+    setPendingStageUpdate({ orderId, currentStage, newStage });
+    setShowConfirmation(true);
+  };
+
+  const updateStage = async () => {
+    if (!pendingStageUpdate) return;
+    
     try {
       setUpdating(true);
+      const { orderId, newStage } = pendingStageUpdate;
       const orderRef = doc(db, "orders", orderId);
       await updateDoc(orderRef, {
         stage: newStage,
-        status: newStage === 'Delivery' ? 'Delivered' : 'In Progress',
+        status: newStage === 'Completed' ? 'Completed' : 'In Progress',
         lastUpdated: new Date().toISOString()
       });
     } catch (error) {
@@ -139,7 +159,14 @@ const OrdersPage = () => {
       throw error;
     } finally {
       setUpdating(false);
+      setShowConfirmation(false);
+      setPendingStageUpdate(null);
     }
+  };
+
+  const cancelStageUpdate = () => {
+    setShowConfirmation(false);
+    setPendingStageUpdate(null);
   };
 
   const StatusCircle = ({ stage, currentStage, orderId }) => {
@@ -149,19 +176,15 @@ const OrdersPage = () => {
     const isCurrent = currentStage === stage;
     const colors = stageColors[stage];
   
-    const handleStageClick = async (e) => {
+    const handleStageClick = (e) => {
       e.stopPropagation();
       if (updating) return;
   
-      try {
-        if (isCurrent) {
-          const previousStage = stages[thisStageOrder - 1] || 'Not started yet';
-          await updateStage(orderId, previousStage);
-        } else {
-          await updateStage(orderId, stage);
-        }
-      } catch (error) {
-        alert("Failed to update stage. Please try again.");
+      if (isCurrent) {
+        const previousStage = stages[thisStageOrder - 1] || 'Not started yet';
+        handleStageUpdateRequest(orderId, currentStage, previousStage);
+      } else {
+        handleStageUpdateRequest(orderId, currentStage, stage);
       }
     };
   
@@ -228,8 +251,42 @@ const OrdersPage = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-medium">ORDERS</h2>
+        <h2 className="text-xl font-bold">Orders</h2>
         <div className="flex gap-4">
+          {/* View mode selector */}
+          <div className="flex rounded-md overflow-hidden border border-gray-300">
+            <button
+              onClick={() => setViewMode('all')}
+              className={`px-3 py-2 text-sm ${
+                viewMode === 'all' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              All
+            </button>
+            <button
+              onClick={() => setViewMode('active')}
+              className={`px-3 py-2 text-sm ${
+                viewMode === 'active' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Active
+            </button>
+            <button
+              onClick={() => setViewMode('completed')}
+              className={`px-3 py-2 text-sm ${
+                viewMode === 'completed' 
+                  ? 'bg-blue-500 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+              }`}
+            >
+              Completed
+            </button>
+          </div>
+          
           <input
             type="text"
             placeholder="Search orders..."
@@ -288,53 +345,91 @@ const OrdersPage = () => {
             </tr>
           </thead>
           <tbody className="text-sm">
-            {filteredOrders.map((order) => (
-              <tr 
-                key={order.id} 
-                className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
-                onClick={() => setSelectedOrder(order)}
-              >
-                <td className="px-3 py-4">
-                  <span className="text-blue-600 hover:underline font-medium">
-                    {order.clientName}
-                  </span>
-                </td>
-                <td className="px-3 py-4">
-                  {order.jobDetails?.jobType || 'N/A'}
-                </td>
-                <td className="px-3 py-4">
-                  {order.jobDetails?.quantity || 'N/A'}
-                </td>
-                <td className="px-3 py-4">
-                  {formatDate(order.deliveryDate)}
-                </td>
-                <td className="px-3 py-4">
-                  <span className={`px-2 py-1 text-sm rounded-full text-white inline-block
-                    ${stageColors[order.stage]?.bg || 'bg-gray-100 text-gray-800'}`}
-                  >
-                    {order.stage === 'Delivery' ? 'Delivered' : order.stage || 'Not started yet'}
-                  </span>
-                </td>
-                {stages.slice(1).map((stage) => (
-                  <td key={`${order.id}-${stage}`} className="px-2 py-4 text-center">
-                    <StatusCircle 
-                      stage={stage} 
-                      currentStage={order.stage} 
-                      orderId={order.id}
-                    />
+            {filteredOrders.length > 0 ? (
+              filteredOrders.map((order) => (
+                <tr 
+                  key={order.id} 
+                  className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
+                  onClick={() => setSelectedOrder(order)}
+                >
+                  <td className="px-3 py-4">
+                    <span className="text-blue-600 hover:underline font-medium">
+                      {order.clientName}
+                    </span>
                   </td>
-                ))}
+                  <td className="px-3 py-4">
+                    {order.jobDetails?.jobType || 'N/A'}
+                  </td>
+                  <td className="px-3 py-4">
+                    {order.jobDetails?.quantity || 'N/A'}
+                  </td>
+                  <td className="px-3 py-4">
+                    {formatDate(order.deliveryDate)}
+                  </td>
+                  <td className="px-3 py-4">
+                    <span className={`px-2 py-1 text-sm rounded-full text-white inline-block
+                      ${stageColors[order.stage]?.bg || 'bg-gray-100 text-gray-800'}`}
+                    >
+                      {order.stage || 'Not started yet'}
+                    </span>
+                  </td>
+                  {stages.slice(1).map((stage) => (
+                    <td key={`${order.id}-${stage}`} className="px-2 py-4 text-center">
+                      <StatusCircle 
+                        stage={stage} 
+                        currentStage={order.stage} 
+                        orderId={order.id}
+                      />
+                    </td>
+                  ))}
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan={5 + stages.slice(1).length} className="px-3 py-6 text-center text-gray-500">
+                  No orders found matching your criteria.
+                </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
+
+      {/* Confirmation Dialog */}
+      {showConfirmation && pendingStageUpdate && (
+        <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md">
+            <h3 className="text-lg font-medium mb-4">Confirm Stage Update</h3>
+            <p className="mb-4">
+              Are you sure you want to change the stage from
+              <span className="font-medium"> "{pendingStageUpdate.currentStage}" </span>
+              to
+              <span className="font-medium"> "{pendingStageUpdate.newStage}"</span>?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelStageUpdate}
+                className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateStage}
+                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+                disabled={updating}
+              >
+                {updating ? 'Updating...' : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {selectedOrder && (
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
-          onStageUpdate={(newStage) => updateStage(selectedOrder.id, newStage)}
+          onStageUpdate={(newStage) => handleStageUpdateRequest(selectedOrder.id, selectedOrder.stage, newStage)}
         />
       )}
     </div>

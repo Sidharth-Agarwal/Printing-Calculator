@@ -56,11 +56,11 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, setSelectedRate
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-      <h2 className="text-lg font-medium mb-6">
-        {selectedRate ? "EDIT STANDARD RATE" : "ADD NEW STANDARD RATE"}
+    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
+      <h2 className="text-lg font-medium mb-4">
+        {selectedRate ? "Edit Standard Rate" : "Add New Standard Rate"}
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
         {[
           { label: "Group", name: "group", placeholder: "Enter group name", type: "text" },
           { label: "Type", name: "type", placeholder: "Enter type name", type: "text" },

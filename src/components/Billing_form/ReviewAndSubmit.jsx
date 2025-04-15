@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import { recalculateTotals } from "./enhancedCalculations";
 
 const ReviewAndSubmit = ({ 
   state, 
@@ -10,12 +11,15 @@ const ReviewAndSubmit = ({
   onCreateEstimate, 
   isEditMode = false,
   isSaving = false,
-  singlePageMode = false
+  singlePageMode = false,
+  previewMode = false
 }) => {
   const [markupPercentage, setMarkupPercentage] = useState(0);
   const [markupRates, setMarkupRates] = useState([]);
+  const [selectedMarkupType, setSelectedMarkupType] = useState("");
   const [isLoadingMarkups, setIsLoadingMarkups] = useState(false);
   const [miscCharge, setMiscCharge] = useState(5); // Default misc charge is 5 rupees per card
+  const [localCalculations, setLocalCalculations] = useState(null);
   
   // Section collapse state for cost details
   const [expandedSections, setExpandedSections] = useState({
@@ -38,6 +42,55 @@ const ReviewAndSubmit = ({
     }));
   };
   
+  // Initialize calculations with current values and check for existing markup values
+  useEffect(() => {
+    if (calculations && !calculations.error) {
+      // Check if calculations already have markup data (e.g., in edit mode)
+      if (calculations.markupPercentage !== undefined && calculations.markupType) {
+        setMarkupPercentage(parseFloat(calculations.markupPercentage) || 0);
+        setSelectedMarkupType(calculations.markupType);
+        console.log("Loaded existing markup data:", {
+          type: calculations.markupType,
+          percentage: calculations.markupPercentage
+        });
+      }
+      
+      // Initialize misc charge if it exists
+      if (calculations.miscChargePerCard !== undefined) {
+        setMiscCharge(parseFloat(calculations.miscChargePerCard) || 5);
+      }
+      
+      setLocalCalculations(calculations);
+    }
+  }, [calculations]);
+  
+  // Update local calculations when misc charge or markup changes
+  useEffect(() => {
+    if (calculations && !calculations.error) {
+      const updatedCalculations = recalculateTotals(
+        calculations,
+        miscCharge,
+        markupPercentage,
+        parseInt(state.orderAndPaper?.quantity || 0, 10)
+      );
+      
+      // Explicitly set markup values in local calculations
+      setLocalCalculations({
+        ...calculations,
+        ...updatedCalculations,
+        markupType: selectedMarkupType,
+        markupPercentage: markupPercentage
+      });
+      
+      // Log updates to verify values
+      console.log("Updated calculations with markup:", {
+        type: selectedMarkupType,
+        percentage: markupPercentage,
+        amount: updatedCalculations.markupAmount
+      });
+    }
+  }, [miscCharge, markupPercentage, selectedMarkupType, state.orderAndPaper?.quantity]);
+  
   // Fetch markup rates from standard_rates collection
   useEffect(() => {
     const fetchMarkupRates = async () => {
@@ -52,6 +105,19 @@ const ReviewAndSubmit = ({
           .filter(rate => rate.group && rate.group.toUpperCase() === "MARKUP");
         
         setMarkupRates(markupData);
+        
+        // Only set default markup if no existing markup is present
+        if (markupData.length > 0 && !selectedMarkupType) {
+          const defaultMarkup = markupData.find(rate => rate.type === "STANDARD") || markupData[0];
+          setSelectedMarkupType(defaultMarkup.type);
+          setMarkupPercentage(parseFloat(defaultMarkup.finalRate) || 0);
+          
+          // Log to verify values
+          console.log("Set default markup:", {
+            type: defaultMarkup.type,
+            percentage: parseFloat(defaultMarkup.finalRate)
+          });
+        }
       } catch (error) {
         console.error("Error fetching markup rates:", error);
       } finally {
@@ -156,7 +222,15 @@ const ReviewAndSubmit = ({
     difficulty: "Die Cut",
     pdc: "Pre Die Cut",
     dcMR: "Die Cutting MR Type",
-    miscCharge: "Misc. Charge per Card"
+    miscChargePerCard: "Misc. Charge per Card",
+    baseCost: "Base Cost",
+    baseWithMisc: "Base with Misc",
+    wastageAmount: "Wastage Cost",
+    overheadAmount: "Overhead Cost",
+    markupAmount: "Markup Cost",
+    subtotalPerCard: "Subtotal per Card",
+    totalCostPerCard: "Total Cost per Card",
+    totalCost: "Total Cost (All Units)"
   };
 
   const costFieldsOrder = [
@@ -187,11 +261,6 @@ const ReviewAndSubmit = ({
       .trim();
   };
 
-  const handleMarkupChange = (e) => {
-    const value = parseFloat(e.target.value) || 0;
-    setMarkupPercentage(Math.max(0, value)); // Only ensure it's not negative
-  };
-  
   const handleMiscChargeChange = (e) => {
     const value = parseFloat(e.target.value) || 0;
     setMiscCharge(Math.max(0, value)); // Ensure it's not negative
@@ -199,11 +268,7 @@ const ReviewAndSubmit = ({
   
   const handleMarkupSelection = (e) => {
     const selectedValue = e.target.value;
-    
-    if (selectedValue === "custom") {
-      // Just enable the input field but don't change the current value
-      return;
-    }
+    setSelectedMarkupType(selectedValue);
     
     // Find the selected markup rate from the fetched data
     const selectedRate = markupRates.find(rate => 
@@ -212,6 +277,7 @@ const ReviewAndSubmit = ({
     
     if (selectedRate && selectedRate.finalRate) {
       setMarkupPercentage(parseFloat(selectedRate.finalRate));
+      console.log(`Selected markup: ${selectedValue} (${selectedRate.finalRate}%)`);
     } else {
       console.warn(`Markup rate for "${selectedValue}" not found in database`);
     }
@@ -219,7 +285,7 @@ const ReviewAndSubmit = ({
 
   // Render a collapsible cost section with detailed breakdown
   const renderCostSection = (title, isUsed, totalCost, details, showExpanded = false) => {
-    if (!isUsed || !calculations) return null;
+    if (!isUsed || !localCalculations) return null;
     
     const sectionKey = title.toLowerCase().replace(/\s+/g, '');
     const isExpanded = expandedSections[sectionKey] || showExpanded;
@@ -264,91 +330,33 @@ const ReviewAndSubmit = ({
     );
   };
 
-  // Calculate total cost per card with wastage, overhead, and markup
-  const calculateTotalCostPerCard = (calculations) => {
-    if (!calculations) return { totalCost: 0 };
-    
-    const WASTAGE_PERCENTAGE = 5; // 5% wastage
-    const OVERHEAD_PERCENTAGE = 35; // 35% overhead
-
-    // Define all cost fields that should be included
-    const relevantFields = [
-      'paperAndCuttingCostPerCard',
-      'lpCostPerCard',
-      'fsCostPerCard',
-      'embCostPerCard',
-      'lpCostPerCardSandwich',
-      'fsCostPerCardSandwich',
-      'embCostPerCardSandwich',
-      'digiCostPerCard',
-      'dieCuttingCostPerCard',
-      'pastingCostPerCard'
-    ];
-
-    // Calculate base cost per card
-    const baseCost = relevantFields.reduce((acc, key) => {
-      const value = calculations[key];
-      return acc + (value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0);
-    }, 0);
-
-    // Add miscellaneous charge to base cost
-    const baseWithMisc = baseCost + miscCharge;
-    
-    // Calculate wastage cost
-    const wastageCost = baseWithMisc * (WASTAGE_PERCENTAGE / 100);
-    
-    // Calculate overhead cost
-    const overheadCost = baseWithMisc * (OVERHEAD_PERCENTAGE / 100);
-    
-    // Calculate cost with wastage and overhead
-    const costWithOverhead = baseWithMisc + wastageCost + overheadCost;
-    
-    // Calculate markup cost
-    const markupCost = costWithOverhead * (markupPercentage / 100);
-    
-    // Return total cost including wastage, overhead, and markup
-    return {
-      baseCost,
-      miscCharge: miscCharge,
-      baseWithMisc,
-      wastageCost,
-      overheadCost,
-      markupCost,
-      totalCost: costWithOverhead + markupCost
-    };
-  };
-
   const handleSubmit = (e) => {
     e.preventDefault();
     
-    // Include the markup percentage and other calculated values in the estimate data
-    if (calculations) {
-      const costs = calculateTotalCostPerCard(calculations);
-      
-      // Create an enhanced calculations object with all the cost details
-      const enhancedCalculations = {
-        ...calculations,
-        // Standard cost components
-        baseCost: costs.baseCost.toFixed(2),
-        miscChargePerCard: costs.miscCharge.toFixed(2),
-        baseWithMisc: costs.baseWithMisc.toFixed(2),
-        wastagePercentage: 5, // Store the actual percentages used
-        wastageAmount: costs.wastageCost.toFixed(2),
-        overheadPercentage: 35,
-        overheadAmount: costs.overheadCost.toFixed(2),
-        
-        // Markup information
+    // Pass the complete calculations with all the derived values
+    if (localCalculations) {
+      // Ensure markup values are explicitly set
+      const finalCalculations = {
+        ...localCalculations,
         markupPercentage: markupPercentage,
-        markupAmount: costs.markupCost.toFixed(2),
-        
-        // Totals
-        subtotalPerCard: (costs.baseWithMisc + costs.wastageCost + costs.overheadCost).toFixed(2),
-        totalCostPerCard: costs.totalCost.toFixed(2),
-        totalCost: (costs.totalCost * (state.orderAndPaper?.quantity || 0)).toFixed(2)
+        markupType: selectedMarkupType,
+        miscChargePerCard: miscCharge,
+        // Recalculate markup amount to ensure consistency
+        markupAmount: (
+          parseFloat(localCalculations.subtotalPerCard || 0) * 
+          (markupPercentage / 100)
+        ).toFixed(2)
       };
       
-      // If using single page mode, handle the submission through the parent component
-      onCreateEstimate(enhancedCalculations);
+      // Log the final values to verify
+      console.log("Final calculations with markup:", {
+        markupType: selectedMarkupType,
+        markupPercentage: markupPercentage,
+        markupAmount: finalCalculations.markupAmount,
+        miscCharge: miscCharge
+      });
+      
+      onCreateEstimate(finalCalculations);
     } else {
       onCreateEstimate();
     }
@@ -367,7 +375,7 @@ const ReviewAndSubmit = ({
             <span className="text-gray-600">Calculating costs...</span>
           </div>
         </div>
-      ) : calculations && !calculations.error ? (
+      ) : localCalculations && !localCalculations.error ? (
         <div className="space-y-4">
           <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown (per card)</h3>
           
@@ -375,12 +383,12 @@ const ReviewAndSubmit = ({
           {renderCostSection(
             "Paper and Cutting", 
             true, 
-            calculations.paperAndCuttingCostPerCard,
+            localCalculations.paperAndCuttingCostPerCard,
             {
-              paperCostPerCard: calculations.paperCostPerCard,
-              cuttingCostPerCard: calculations.cuttingCostPerCard,
-              gilCutCostPerCard: calculations.gilCutCostPerCard,
-              paperAndCuttingCostPerCard: calculations.paperAndCuttingCostPerCard
+              paperCostPerCard: localCalculations.paperCostPerCard,
+              cuttingCostPerCard: localCalculations.cuttingCostPerCard,
+              gilCutCostPerCard: localCalculations.gilCutCostPerCard,
+              paperAndCuttingCostPerCard: localCalculations.paperAndCuttingCostPerCard
             },
             true // Always expanded by default
           )}
@@ -389,12 +397,12 @@ const ReviewAndSubmit = ({
           {renderCostSection(
             "Letter Press", 
             state.lpDetails?.isLPUsed, 
-            calculations.lpCostPerCard,
+            localCalculations.lpCostPerCard,
             {
-              lpPlateCostPerCard: calculations.lpPlateCostPerCard,
-              lpMRCostPerCard: calculations.lpMRCostPerCard,
-              lpImpressionAndLaborCostPerCard: calculations.lpImpressionAndLaborCostPerCard,
-              lpCostPerCard: calculations.lpCostPerCard
+              lpPlateCostPerCard: localCalculations.lpPlateCostPerCard,
+              lpMRCostPerCard: localCalculations.lpMRCostPerCard,
+              lpImpressionAndLaborCostPerCard: localCalculations.lpImpressionAndLaborCostPerCard,
+              lpCostPerCard: localCalculations.lpCostPerCard
             }
           )}
           
@@ -402,13 +410,13 @@ const ReviewAndSubmit = ({
           {renderCostSection(
             "Foil Stamping", 
             state.fsDetails?.isFSUsed, 
-            calculations.fsCostPerCard,
+            localCalculations.fsCostPerCard,
             {
-              fsBlockCostPerCard: calculations.fsBlockCostPerCard,
-              fsFoilCostPerCard: calculations.fsFoilCostPerCard,
-              fsMRCostPerCard: calculations.fsMRCostPerCard,
-              fsImpressionCostPerCard: calculations.fsImpressionCostPerCard,
-              fsCostPerCard: calculations.fsCostPerCard
+              fsBlockCostPerCard: localCalculations.fsBlockCostPerCard,
+              fsFoilCostPerCard: localCalculations.fsFoilCostPerCard,
+              fsMRCostPerCard: localCalculations.fsMRCostPerCard,
+              fsImpressionCostPerCard: localCalculations.fsImpressionCostPerCard,
+              fsCostPerCard: localCalculations.fsCostPerCard
             }
           )}
           
@@ -416,11 +424,11 @@ const ReviewAndSubmit = ({
           {renderCostSection(
             "Embossing", 
             state.embDetails?.isEMBUsed, 
-            calculations.embCostPerCard,
+            localCalculations.embCostPerCard,
             {
-              embPlateCostPerCard: calculations.embPlateCostPerCard,
-              embMRCostPerCard: calculations.embMRCostPerCard,
-              embCostPerCard: calculations.embCostPerCard
+              embPlateCostPerCard: localCalculations.embPlateCostPerCard,
+              embMRCostPerCard: localCalculations.embMRCostPerCard,
+              embCostPerCard: localCalculations.embCostPerCard
             }
           )}
           
@@ -428,12 +436,12 @@ const ReviewAndSubmit = ({
           {renderCostSection(
             "Die Cutting", 
             state.dieCutting?.isDieCuttingUsed, 
-            calculations.dieCuttingCostPerCard,
+            localCalculations.dieCuttingCostPerCard,
             {
-              dcImpressionCostPerCard: calculations.dcImpressionCostPerCard,
-              dcMRCostPerCard: calculations.dcMRCostPerCard,
-              pdcCostPerCard: calculations.pdcCostPerCard,
-              dieCuttingCostPerCard: calculations.dieCuttingCostPerCard
+              dcImpressionCostPerCard: localCalculations.dcImpressionCostPerCard,
+              dcMRCostPerCard: localCalculations.dcMRCostPerCard,
+              pdcCostPerCard: localCalculations.pdcCostPerCard,
+              dieCuttingCostPerCard: localCalculations.dieCuttingCostPerCard
             }
           )}
           
@@ -441,9 +449,9 @@ const ReviewAndSubmit = ({
           {renderCostSection(
             "Digital Printing", 
             state.digiDetails?.isDigiUsed, 
-            calculations.digiCostPerCard,
+            localCalculations.digiCostPerCard,
             {
-              digiCostPerCard: calculations.digiCostPerCard
+              digiCostPerCard: localCalculations.digiCostPerCard
             }
           )}
           
@@ -456,12 +464,12 @@ const ReviewAndSubmit = ({
                 {renderCostSection(
                   "LP in Sandwich", 
                   state.sandwich.lpDetailsSandwich?.isLPUsed, 
-                  calculations.lpCostPerCardSandwich,
+                  localCalculations.lpCostPerCardSandwich,
                   {
-                    lpPlateCostPerCardSandwich: calculations.lpPlateCostPerCardSandwich,
-                    lpMRCostPerCardSandwich: calculations.lpMRCostPerCardSandwich,
-                    lpImpressionAndLaborCostPerCardSandwich: calculations.lpImpressionAndLaborCostPerCardSandwich,
-                    lpCostPerCardSandwich: calculations.lpCostPerCardSandwich
+                    lpPlateCostPerCardSandwich: localCalculations.lpPlateCostPerCardSandwich,
+                    lpMRCostPerCardSandwich: localCalculations.lpMRCostPerCardSandwich,
+                    lpImpressionAndLaborCostPerCardSandwich: localCalculations.lpImpressionAndLaborCostPerCardSandwich,
+                    lpCostPerCardSandwich: localCalculations.lpCostPerCardSandwich
                   }
                 )}
                 
@@ -469,13 +477,13 @@ const ReviewAndSubmit = ({
                 {renderCostSection(
                   "FS in Sandwich", 
                   state.sandwich.fsDetailsSandwich?.isFSUsed, 
-                  calculations.fsCostPerCardSandwich,
+                  localCalculations.fsCostPerCardSandwich,
                   {
-                    fsBlockCostPerCardSandwich: calculations.fsBlockCostPerCardSandwich,
-                    fsFoilCostPerCardSandwich: calculations.fsFoilCostPerCardSandwich,
-                    fsMRCostPerCardSandwich: calculations.fsMRCostPerCardSandwich,
-                    fsImpressionCostPerCardSandwich: calculations.fsImpressionCostPerCardSandwich,
-                    fsCostPerCardSandwich: calculations.fsCostPerCardSandwich
+                    fsBlockCostPerCardSandwich: localCalculations.fsBlockCostPerCardSandwich,
+                    fsFoilCostPerCardSandwich: localCalculations.fsFoilCostPerCardSandwich,
+                    fsMRCostPerCardSandwich: localCalculations.fsMRCostPerCardSandwich,
+                    fsImpressionCostPerCardSandwich: localCalculations.fsImpressionCostPerCardSandwich,
+                    fsCostPerCardSandwich: localCalculations.fsCostPerCardSandwich
                   }
                 )}
                 
@@ -483,11 +491,11 @@ const ReviewAndSubmit = ({
                 {renderCostSection(
                   "EMB in Sandwich", 
                   state.sandwich.embDetailsSandwich?.isEMBUsed, 
-                  calculations.embCostPerCardSandwich,
+                  localCalculations.embCostPerCardSandwich,
                   {
-                    embPlateCostPerCardSandwich: calculations.embPlateCostPerCardSandwich,
-                    embMRCostPerCardSandwich: calculations.embMRCostPerCardSandwich,
-                    embCostPerCardSandwich: calculations.embCostPerCardSandwich
+                    embPlateCostPerCardSandwich: localCalculations.embPlateCostPerCardSandwich,
+                    embMRCostPerCardSandwich: localCalculations.embMRCostPerCardSandwich,
+                    embCostPerCardSandwich: localCalculations.embCostPerCardSandwich
                   }
                 )}
               </div>
@@ -498,9 +506,9 @@ const ReviewAndSubmit = ({
           {renderCostSection(
             "Pasting", 
             state.pasting?.isPastingUsed, 
-            calculations.pastingCostPerCard,
+            localCalculations.pastingCostPerCard,
             {
-              pastingCostPerCard: calculations.pastingCostPerCard
+              pastingCostPerCard: localCalculations.pastingCostPerCard
             }
           )}
 
@@ -535,15 +543,15 @@ const ReviewAndSubmit = ({
           <div className="mt-6 bg-blue-50 p-4 rounded-md border border-blue-200">
             <h3 className="text-md font-semibold text-gray-700 mb-2">Markup Selection</h3>
             <div className="flex flex-col md:flex-row md:items-center gap-4">
-              <div className="w-full md:w-1/3">
+              <div className="w-full md:w-1/2">
                 <select
                   id="markupSelection"
                   onChange={handleMarkupSelection}
+                  value={selectedMarkupType}
                   className="border rounded-md p-2 w-full text-md"
                   disabled={isLoadingMarkups}
                 >
                   <option value="">Select Markup Type</option>
-                  <option value="custom">Custom</option>
                   {isLoadingMarkups ? (
                     <option disabled>Loading markups...</option>
                   ) : (
@@ -555,21 +563,14 @@ const ReviewAndSubmit = ({
                   )}
                 </select>
               </div>
-              <div className="w-full md:w-1/3 flex items-center gap-2">
-                <input
-                  id="markupPercentage"
-                  type="number"
-                  step="1"
-                  value={markupPercentage}
-                  onChange={handleMarkupChange}
-                  className="border rounded-md p-2 w-full text-lg font-bold"
-                  placeholder="Enter markup %"
-                />
-                <span className="text-lg font-bold">%</span>
+              <div className="w-full md:w-1/2 flex items-center gap-2">
+                <div className="border rounded-md p-2 w-full text-lg font-bold bg-gray-100">
+                  {markupPercentage}%
+                </div>
+                <span className="text-md text-gray-600">
+                  Applied markup percentage from database
+                </span>
               </div>
-              <span className="text-md text-gray-600">
-                Markup percentage to add to the final price as profit
-              </span>
             </div>
           </div>
 
@@ -577,90 +578,81 @@ const ReviewAndSubmit = ({
           <div className="mt-6 bg-gray-50 p-4 rounded-md border">
             <h3 className="text-md font-semibold text-gray-700 mb-2">Cost Summary</h3>
             
-            {/* Calculate all costs */}
-            {(() => {
-              const costs = calculateTotalCostPerCard(calculations);
-              const quantity = state.orderAndPaper?.quantity || 0;
+            {/* Display calculations */}
+            <div className="space-y-2 mt-4 mb-4">
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Base Cost per Card:</span>
+                <span className="text-gray-900">
+                  ₹ {parseFloat(localCalculations.baseCost || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Miscellaneous Charge:</span>
+                <span className="text-gray-900">
+                  ₹ {parseFloat(miscCharge).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Base Cost per card with Misc:</span>
+                <span className="text-gray-900">
+                  ₹ {parseFloat(localCalculations.baseWithMisc || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Wastage (5%):</span>
+                <span className="text-gray-900">
+                  ₹ {parseFloat(localCalculations.wastageAmount || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Overheads (35%):</span>
+                <span className="text-gray-900">
+                  ₹ {parseFloat(localCalculations.overheadAmount || 0).toFixed(2)}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="font-medium text-gray-700">Subtotal per Card:</span>
+                <span className="text-gray-900">
+                  ₹ {parseFloat(localCalculations.subtotalPerCard || 0).toFixed(2)}
+                </span>
+              </div>
               
-              return (
-                <>
-                  <div className="space-y-2 mt-4 mb-4">
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-700">Base Cost per Card:</span>
-                      <span className="text-gray-900">
-                        ₹ {costs.baseCost.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-700">Miscellaneous Charge:</span>
-                      <span className="text-gray-900">
-                        ₹ {costs.miscCharge.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-700">Base Cost per card with Misc:</span>
-                      <span className="text-gray-900">
-                        ₹ {costs.baseWithMisc.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-700">Wastage (5%):</span>
-                      <span className="text-gray-900">
-                        ₹ {costs.wastageCost.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-700">Overheads (35%):</span>
-                      <span className="text-gray-900">
-                        ₹ {costs.overheadCost.toFixed(2)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between items-center">
-                      <span className="font-medium text-gray-700">Subtotal per Card:</span>
-                      <span className="text-gray-900">
-                        ₹ {(costs.baseWithMisc + costs.wastageCost + costs.overheadCost).toFixed(2)}
-                      </span>
-                    </div>
-                    
-                    {/* Markup Line */}
-                    <div className="flex justify-between items-center text-blue-700 border-t border-gray-300 pt-2 mt-2">
-                      <span className="font-medium">Markup ({markupPercentage}%):</span>
-                      <span className="font-medium">
-                        ₹ {costs.markupCost.toFixed(2)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-                      <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
-                      <span className="text-lg font-bold text-gray-900">
-                        ₹ {costs.totalCost.toFixed(2)}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="flex justify-between items-center pt-3 border-t border-gray-300">
-                    <span className="text-lg font-bold text-gray-700">
-                      Total Cost ({quantity} pcs):
-                    </span>
-                    <span className="text-xl font-bold text-blue-600">
-                      ₹ {(costs.totalCost * quantity).toFixed(2)}
-                    </span>
-                  </div>
-                </>
-              );
-            })()}
+              {/* Markup Line */}
+              <div className="flex justify-between items-center text-blue-700 border-t border-gray-300 pt-2 mt-2">
+                <span className="font-medium">Markup ({selectedMarkupType}: {markupPercentage}%):</span>
+                <span className="font-medium">
+                  ₹ {parseFloat(localCalculations.markupAmount || 0).toFixed(2)}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
+                <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
+                <span className="text-lg font-bold text-gray-900">
+                  ₹ {parseFloat(localCalculations.totalCostPerCard || 0).toFixed(2)}
+                </span>
+              </div>
+            </div>
+            
+            <div className="flex justify-between items-center pt-3 border-t border-gray-300">
+              <span className="text-lg font-bold text-gray-700">
+                Total Cost ({state.orderAndPaper?.quantity || 0} pcs):
+              </span>
+              <span className="text-xl font-bold text-blue-600">
+                ₹ {parseFloat(localCalculations.totalCost || 0).toFixed(2)}
+              </span>
+            </div>
           </div>
         </div>
       ) : (
         <div className="bg-white p-4 rounded-md">
           <p className="text-red-600 text-center">
-            {calculations?.error || "Unable to fetch calculations. Please fill in the required fields to see cost details."}
+            {localCalculations?.error || calculations?.error || "Unable to fetch calculations. Please fill in the required fields to see cost details."}
           </p>
         </div>
       )}
 
       {/* Navigation Buttons - Only show in step-by-step mode */}
-      {!singlePageMode && (
+      {!singlePageMode && !previewMode && (
         <div className="flex justify-between mt-6">
           <button
             type="button"
@@ -684,7 +676,7 @@ const ReviewAndSubmit = ({
           >
             {isSaving ? (
               <>
-                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
@@ -695,17 +687,29 @@ const ReviewAndSubmit = ({
             ) : isEditMode ? (
               'Save Changes'
             ) : (
-              'Create Estimate'
+              'Submit'
             )}
           </button>
         </div>
       )}
 
+      {/* Submit button hidden when in preview mode */}
+      {previewMode && (
+        <div className="bg-yellow-50 p-4 border border-yellow-200 rounded-md">
+          <div className="flex items-center space-x-2 text-yellow-700">
+            <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clipRule="evenodd" />
+            </svg>
+            <p>This is a preview only. Close this preview and submit the form to create the estimate.</p>
+          </div>
+        </div>
+      )}
+
       {/* Error Message */}
-      {calculations?.error && (
+      {(localCalculations?.error || calculations?.error) && (
         <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded">
           <p className="font-medium">Error calculating costs:</p>
-          <p>{calculations.error}</p>
+          <p>{localCalculations?.error || calculations?.error}</p>
         </div>
       )}
     </form>

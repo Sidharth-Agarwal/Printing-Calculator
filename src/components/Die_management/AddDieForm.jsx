@@ -108,8 +108,8 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-6 rounded shadow mb-6">
-      <h2 className="text-lg font-medium mb-4">{editingDie ? "EDIT DIE" : "ADD NEW DIE"}</h2>
+    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
+      <h2 className="text-lg font-medium mb-4">{editingDie ? "Edit Die" : "Add New Die"}</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
         {[
           { label: "Job Type", name: "jobType", type: "select", options: jobTypeOptions },
@@ -180,7 +180,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage 
         </div>
       </div>
       <button type="submit" className="mt-6 px-3 py-2 bg-blue-500 text-white rounded text-sm">
-        {editingDie ? "Save Changes" : "Submit"}
+        {editingDie ? "Save Changes" : "Add New Die"}
       </button>
     </form>
   );

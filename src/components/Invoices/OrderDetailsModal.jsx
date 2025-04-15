@@ -1,15 +1,30 @@
 import React, { useState, useRef } from 'react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import OrderJobTicket from './OrderJobTicket';
-import TaxInvoice from './TaxInvoice';
+import InvoiceTemplate from './InvoiceTemplate';
 
 const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   const [activeView, setActiveView] = useState('details');
   const [isDownloading, setIsDownloading] = useState(false);
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
   const contentRef = useRef(null);
+  
+  // Invoice data state
+  const [invoiceData, setInvoiceData] = useState({
+    invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+    date: new Date().toISOString().split('T')[0],
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+    notes: '',
+    additionalInfo: '',
+    discount: 0,
+    taxRate: 12, // Default to 12% (6% CGST + 6% SGST)
+    showTax: true
+  });
+  
+  // Available stages for orders
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
 
   // Stage colors for visual representation
@@ -22,6 +37,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     'Delivery': { bg: 'bg-green-100', text: 'text-green-800' }
   };
 
+  // Field labels for order details
   const fieldLabels = {
     clientName: "Name of the Client",
     projectName: "Name of the Project",
@@ -33,7 +49,19 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     dieCode: "Die Code",
     dieSize: "Die Size",
     dieSelection: "Die Selection",
-    paperName: "Paper Name"
+    paperName: "Paper Name",
+    // Cost calculation fields
+    baseCost: "Base Cost per Card",
+    miscChargePerCard: "Misc. Charge",
+    baseWithMisc: "Base with Misc",
+    wastageAmount: "Wastage Cost",
+    overheadAmount: "Overhead Cost",
+    markupPercentage: "Markup Percentage",
+    markupType: "Markup Type",
+    markupAmount: "Markup Cost",
+    subtotalPerCard: "Subtotal per Card",
+    totalCostPerCard: "Total Cost per Card",
+    totalCost: "Total Cost (All Units)"
   };
 
   // Get label for field
@@ -129,12 +157,13 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   // Handle stage update
   const handleStageUpdate = async (newStage) => {
     try {
-      const orderRef = doc(db, "orders", order.id);
-      await updateDoc(orderRef, { stage: newStage });
-      onStageUpdate(newStage);
+      setIsUpdatingStage(true);
+      await onStageUpdate(newStage);
     } catch (error) {
       console.error("Error updating stage:", error);
       alert("Failed to update stage");
+    } finally {
+      setIsUpdatingStage(false);
     }
   };
 
@@ -173,7 +202,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
-  // Render the total cost calculation section
+  // Render the total cost calculation section with streamlined display
   const renderTotalCostCalculation = (calculations) => {
     if (!calculations) return null;
 
@@ -185,13 +214,6 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       costCalculationSteps.push({ 
         key: 'baseCost', 
         label: 'Base Cost per Card'
-      });
-    } else {
-      // For compatibility with old format
-      costCalculationSteps.push({ 
-        key: 'baseCost', 
-        label: 'Base Cost per Card',
-        value: calculateTotalCosts().baseCost.toFixed(2)
       });
     }
     
@@ -213,34 +235,16 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     }
     
     // Add wastage
-    if (calculations.wastageAmount !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'wastageAmount', 
-        label: 'Wastage (5%)'
-      });
-    } else {
-      // For compatibility with old format
-      costCalculationSteps.push({ 
-        key: 'wastageCost', 
-        label: 'Wastage (5%)',
-        value: calculateTotalCosts().wastageCost.toFixed(2)
-      });
-    }
+    costCalculationSteps.push({ 
+      key: calculations.wastageAmount !== undefined ? 'wastageAmount' : 'wastageCost', 
+      label: 'Wastage (5%)'
+    });
     
     // Add overhead
-    if (calculations.overheadAmount !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'overheadAmount', 
-        label: 'Overheads (35%)'
-      });
-    } else {
-      // For compatibility with old format
-      costCalculationSteps.push({ 
-        key: 'overheadCost', 
-        label: 'Overheads (35%)',
-        value: calculateTotalCosts().overheadCost.toFixed(2)
-      });
-    }
+    costCalculationSteps.push({ 
+      key: calculations.overheadAmount !== undefined ? 'overheadAmount' : 'overheadCost', 
+      label: 'Overheads (35%)'
+    });
     
     // Add subtotal if available
     if (calculations.subtotalPerCard !== undefined) {
@@ -265,24 +269,22 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       key: 'totalCostPerCard', 
       label: 'Total Cost per Card',
       isSeparator: true,
-      isTotal: true,
-      value: calculations.totalCostPerCard || calculateTotalCosts().totalCostPerCard.toFixed(2)
+      isTotal: true
     });
 
     const quantity = parseInt(order.jobDetails?.quantity || 0);
     const totalCost = calculations.totalCost || 
-      (parseFloat(calculations.totalCostPerCard || calculateTotalCosts().totalCostPerCard || 0) * quantity).toFixed(2);
+      (parseFloat(calculations.totalCostPerCard || 0) * quantity).toFixed(2);
     
     return (
       <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 mb-6">
         <h3 className="text-lg font-semibold text-gray-700 mb-4">Cost Summary</h3>
         
         <div className="space-y-2 mb-4">
-          {costCalculationSteps.map(({ key, label, value, isSeparator, isHighlighted, isTotal }) => {
-            // Use provided value or get from calculations
-            const displayValue = value !== undefined ? 
-              value : 
-              (calculations[key] !== undefined ? parseFloat(calculations[key] || 0).toFixed(2) : "0.00");
+          {costCalculationSteps.map(({ key, label, isSeparator, isHighlighted, isTotal }) => {
+            // Handle both types of calculation objects (old and new)
+            const value = calculations[key] !== undefined ? 
+              parseFloat(calculations[key] || 0).toFixed(2) : "0.00";
               
             return (
               <div key={key} className={`flex justify-between items-center ${isSeparator ? 'border-t border-gray-300 pt-2 mt-2' : ''}`}>
@@ -290,7 +292,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
                   {label}:
                 </span>
                 <span className={`${isTotal ? 'text-lg font-bold' : ''} ${isHighlighted ? 'text-blue-700 font-medium' : 'text-gray-900'}`}>
-                  ₹ {displayValue}
+                  ₹ {value}
                 </span>
               </div>
             );
@@ -309,56 +311,13 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
-  // Calculate total costs (for backwards compatibility)
-  const calculateTotalCosts = () => {
-    const WASTAGE_PERCENTAGE = 5; // 5% wastage
-    const OVERHEAD_PERCENTAGE = 35; // 35% overhead
-
-    const relevantFields = [
-      'paperAndCuttingCostPerCard',
-      'lpCostPerCard',
-      'fsCostPerCard',
-      'embCostPerCard',
-      'lpCostPerCardSandwich',
-      'fsCostPerCardSandwich',
-      'embCostPerCardSandwich',
-      'digiCostPerCard',
-      'pastingCostPerCard'
-    ];
-
-    // Calculate base cost per card
-    const baseCost = relevantFields.reduce((acc, key) => {
-      const value = order.calculations?.[key];
-      return acc + (value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0);
-    }, 0);
-
-    // Calculate wastage cost
-    const wastageCost = baseCost * (WASTAGE_PERCENTAGE / 100);
-    
-    // Calculate overhead cost
-    const overheadCost = baseCost * (OVERHEAD_PERCENTAGE / 100);
-    
-    // Total cost per card including wastage and overhead
-    const totalCostPerCard = baseCost + wastageCost + overheadCost;
-    
-    // Total cost for all cards
-    const totalCost = totalCostPerCard * (order.jobDetails?.quantity || 0);
-
-    return {
-      baseCost,
-      wastageCost,
-      overheadCost,
-      totalCostPerCard,
-      totalCost
-    };
-  };
-
   // Generate PDF
   const generatePDF = async () => {
     if (!contentRef.current) return;
     
     setIsDownloading(true);
     try {
+      // Wait for any images to load
       const images = contentRef.current.getElementsByTagName('img');
       const imagePromises = Array.from(images).map(img => {
         if (img.complete) return Promise.resolve();
@@ -390,7 +349,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       const imgHeight = canvas.height * imgWidth / canvas.width;
       
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      pdf.save(`${order.clientName}_${activeView === 'invoice' ? 'Invoice' : 'Job_Ticket'}_${new Date().toISOString().split('T')[0]}.pdf`);
+      pdf.save(`${activeView === 'invoice' ? 'Invoice' : 'Job_Ticket'}_${order.clientName}_${new Date().toISOString().split('T')[0]}.pdf`);
     } catch (error) {
       console.error("Error generating PDF:", error);
       alert("Failed to generate PDF. Please try again.");
@@ -399,15 +358,45 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     }
   };
 
+  // Calculate invoice totals
+  const calculateInvoiceTotals = () => {
+    const totalCostPerCard = parseFloat(order.calculations?.totalCostPerCard || 0);
+    const quantity = parseInt(order.jobDetails?.quantity) || 0;
+    
+    const subtotal = totalCostPerCard * quantity;
+    const discount = subtotal * (invoiceData.discount / 100);
+    const taxableAmount = subtotal - discount;
+    const tax = invoiceData.showTax ? (taxableAmount * (invoiceData.taxRate / 100)) : 0;
+    const total = taxableAmount + tax;
+    
+    return {
+      subtotal: parseFloat(subtotal.toFixed(2)),
+      discount: parseFloat(discount.toFixed(2)),
+      taxableAmount: parseFloat(taxableAmount.toFixed(2)),
+      tax: parseFloat(tax.toFixed(2)),
+      total: parseFloat(total.toFixed(2)),
+      totalQuantity: quantity
+    };
+  };
+
+  // Get invoice totals
+  const invoiceTotals = calculateInvoiceTotals();
+  
+  // Get client info for invoice
+  const clientInfo = {
+    name: order.clientName,
+    id: order.clientId || 'unknown'
+  };
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <h2 className="text-xl font-bold text-gray-800">
               {activeView === 'details' ? 'Order Details' : 
-               activeView === 'invoice' ? 'Tax Invoice' : 'Job Ticket'}
+               activeView === 'invoice' ? 'Invoice' : 'Job Ticket'}
             </h2>
             <div className="flex gap-2">
               <button
@@ -472,7 +461,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
           </div>
         </div>
 
-        {/* Stage Progress (making this section visible unlike the previous example) */}
+        {/* Stage Progression */}
         <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-2 md:mb-0">
@@ -554,7 +543,12 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
           ) : (
             <div ref={contentRef} className="p-6">
               {activeView === 'invoice' ? (
-                <TaxInvoice order={order} />
+                <InvoiceTemplate
+                  invoiceData={invoiceData}
+                  orders={[order]}
+                  clientInfo={clientInfo}
+                  totals={invoiceTotals}
+                />
               ) : (
                 <OrderJobTicket order={order} />
               )}
