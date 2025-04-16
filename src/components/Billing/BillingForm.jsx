@@ -12,6 +12,7 @@ import LPDetails from "./Sections/Production/LPDetails";
 import FSDetails from "./Sections/Production/FSDetails";
 import EMBDetails from "./Sections/Production/EMBDetails";
 import DigiDetails from "./Sections/Production/DigiDetails";
+import ScreenPrint from "./Sections/Production/ScreenPrint";
 import DieCutting from "./Sections/Post Production/DieCutting";
 import PostDC from "./Sections/Post Production/PostDC";
 import FoldAndPaste from "./Sections/Post Production/FoldAndPaste";
@@ -69,6 +70,9 @@ const initialFormState = {
     isDigiUsed: false,
     digiDie: "",
     digiDimensions: { length: "", breadth: "" },
+  },
+  screenPrint: {
+    isScreenPrintUsed: false
   },
   dieCutting: {
     isDieCuttingUsed: false,
@@ -131,6 +135,8 @@ const reducer = (state, action) => {
       return { ...state, embDetails: { ...state.embDetails, ...action.payload } };
     case "UPDATE_DIGI_DETAILS":
       return { ...state, digiDetails: { ...state.digiDetails, ...action.payload } };
+    case "UPDATE_SCREEN_PRINT":
+      return { ...state, screenPrint: { ...state.screenPrint, ...action.payload } };
     case "UPDATE_DIE_CUTTING":
       return { ...state, dieCutting: { ...state.dieCutting, ...action.payload } };
     case "UPDATE_POST_DC":
@@ -217,6 +223,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     fsDetails: fsDetails.isFSUsed ? sanitizeForFirestore(fsDetails) : null,
     embDetails: embDetails.isEMBUsed ? sanitizeForFirestore(embDetails) : null,
     digiDetails: digiDetails.isDigiUsed ? sanitizeForFirestore(digiDetails) : null,
+    screenPrint: state.screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(state.screenPrint) : null,
     dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
     sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
     
@@ -767,6 +774,22 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
   
+  const toggleScreenPrintUsage = () => {
+    const isCurrentlyUsed = state.screenPrint?.isScreenPrintUsed || false;
+    
+    dispatch({
+      type: "UPDATE_SCREEN_PRINT",
+      payload: { 
+        isScreenPrintUsed: !isCurrentlyUsed
+      }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("screenPrint");
+    }
+  };
+  
   const toggleDieCuttingUsage = () => {
     const isCurrentlyUsed = state.dieCutting.isDieCuttingUsed;
     
@@ -1108,6 +1131,26 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 onToggleUsage={toggleDigiUsage}
               >
                 <DigiDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+            
+            {/* SCREEN PRINT Section */}
+            {isServiceVisible("SCREEN") && (
+              <FormSection 
+                title="SCREEN PRINTING" 
+                id="screenPrint"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.screenPrint?.isScreenPrintUsed || false}
+                onToggleUsage={toggleScreenPrintUsage}
+              >
+                <ScreenPrint 
                   state={state} 
                   dispatch={dispatch} 
                   onNext={() => {}} 

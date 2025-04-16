@@ -2,6 +2,7 @@ import LPDetails from '../../Sections/Production/LPDetails';
 import FSDetails from '../../Sections/Production/FSDetails';
 import EMBDetails from '../../Sections/Production/EMBDetails';
 import DigiDetails from '../../Sections/Production/DigiDetails';
+import ScreenPrint from '../../Sections/Production/ScreenPrint';
 import DieCutting from '../../Sections/Post Production/DieCutting';
 import PostDC from '../../Sections/Post Production/PostDC';
 import FoldAndPaste from '../../Sections/Post Production/FoldAndPaste';
@@ -51,6 +52,14 @@ export const serviceRegistry = {
     component: DigiDetails,
     stateKey: "digiDetails",
     toggleField: "isDigiUsed",
+    group: "production"
+  },
+  "SCREEN": {
+    id: "screenPrint",
+    title: "SCREEN PRINTING",
+    component: ScreenPrint,
+    stateKey: "screenPrint",
+    toggleField: "isScreenPrintUsed",
     group: "production"
   },
 
