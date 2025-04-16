@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { collection, getDocs, addDoc } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "../../firebaseConfig";
+import { db, storage } from "../../../../firebaseConfig";
 
 const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   const [dies, setDies] = useState([]);

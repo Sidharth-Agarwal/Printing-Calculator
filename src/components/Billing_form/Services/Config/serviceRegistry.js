@@ -1,14 +1,14 @@
-import LPDetails from './Sections/LPDetails';
-import FSDetails from './Sections/FSDetails';
-import EMBDetails from './Sections/EMBDetails';
-import DigiDetails from './Sections/DigiDetails';
-import DieCutting from './Sections/DieCutting';
-import PostDC from './Sections/PostDC';
-import FoldAndPaste from './Sections/FoldAndPaste';
-import DstPaste from './Sections/DstPaste';
-import QC from './Sections/QC';
-import Packing from './Sections/Packing';
-import Sandwich from './Sections/Sandwich';
+import LPDetails from '../../Sections/Production/LPDetails';
+import FSDetails from '../../Sections/Production/FSDetails';
+import EMBDetails from '../../Sections/Production/EMBDetails';
+import DigiDetails from '../../Sections/Production/DigiDetails';
+import DieCutting from '../../Sections/Post Production/DieCutting';
+import PostDC from '../../Sections/Post Production/PostDC';
+import FoldAndPaste from '../../Sections/Post Production/FoldAndPaste';
+import DstPaste from '../../Sections/Post Production/DstPaste';
+import QC from '../../Sections/Post Production/QC';
+import Packing from '../../Sections/Post Production/Packing';
+import Sandwich from '../../Sections/Post Production/Sandwich';
 
 // Define service registry
 export const serviceRegistry = {

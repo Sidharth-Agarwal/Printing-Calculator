@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
 import { collection, onSnapshot } from "firebase/firestore";
-import { db } from "../../firebaseConfig";
+import { db } from "../../../../firebaseConfig";
 import SearchablePaperDropdown from "./SearchablePaperDropdown";
 import InlineDieSelection from "./InlineDieSelection";
 

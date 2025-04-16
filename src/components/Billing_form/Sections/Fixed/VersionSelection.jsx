@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../../firebaseConfig";
+import { db } from "../../../../firebaseConfig";
 import ExistingEstimates from "./ExistingEstimates";
 
 const VersionSelection = ({ clientId, selectedVersion, onVersionSelect }) => {

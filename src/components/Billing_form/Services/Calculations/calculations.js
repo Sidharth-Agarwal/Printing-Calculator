@@ -576,7 +576,7 @@ import {
   fetchMRDetailsForEMBDetails,
   fetchPaperDetailsByDimensions,
   fetchMRDetailsForDieCutting
-} from "../../utils/fetchDataUtils"; // Adjust the path if necessary
+} from "../../../../utils/fetchDataUtils"; // Adjust the path if necessary
 
 // Helper function to calculate maximum cards per sheet
 const calculateMaxCardsPerSheet = (dieSize, paperSize) => {

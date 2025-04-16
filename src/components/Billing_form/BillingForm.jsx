@@ -2,28 +2,28 @@ import React, { useReducer, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import { performCompleteCalculations } from "./enhancedCalculations";
+import { performCompleteCalculations } from "./Services/Calculations/enhancedCalculations";
 
 // Import components
-import ClientSelection from "./ClientSelection";
-import VersionSelection from "./VersionSelection";
-import OrderAndPaper from "./OrderAndPaper";
-import LPDetails from "./Sections/LPDetails";
-import FSDetails from "./Sections/FSDetails";
-import EMBDetails from "./Sections/EMBDetails";
-import DigiDetails from "./Sections/DigiDetails";
-import DieCutting from "./Sections/DieCutting";
-import PostDC from "./Sections/PostDC";
-import FoldAndPaste from "./Sections/FoldAndPaste";
-import DstPaste from "./Sections/DstPaste";
-import QC from "./Sections/QC";
-import Packing from "./Sections/Packing";
-import Sandwich from "./Sections/Sandwich";
+import ClientSelection from "./Sections/Fixed/ClientSelection";
+import VersionSelection from "./Sections/Fixed/VersionSelection";
+import OrderAndPaper from "./Sections/Fixed/OrderAndPaper";
+import LPDetails from "./Sections/Production/LPDetails";
+import FSDetails from "./Sections/Production/FSDetails";
+import EMBDetails from "./Sections/Production/EMBDetails";
+import DigiDetails from "./Sections/Production/DigiDetails";
+import DieCutting from "./Sections/Post Production/DieCutting";
+import PostDC from "./Sections/Post Production/PostDC";
+import FoldAndPaste from "./Sections/Post Production/FoldAndPaste";
+import DstPaste from "./Sections/Post Production/DstPaste";
+import QC from "./Sections/Post Production/QC";
+import Packing from "./Sections/Post Production/Packing";
+import Sandwich from "./Sections/Post Production/Sandwich";
 import ReviewAndSubmit from "./ReviewAndSubmit";
 
 // Import service and job type configurations
-import { serviceRegistry } from "./serviceRegistry";
-import { jobTypeConfigurations } from "./jobTypeConfigurations";
+import { serviceRegistry } from "./Services/Config/serviceRegistry";
+import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
 
 // Initial state for all steps
 const initialFormState = {

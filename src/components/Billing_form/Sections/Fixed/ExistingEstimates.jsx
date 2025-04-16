@@ -37,7 +37,7 @@ const ExistingEstimates = ({ estimates }) => {
       <h3 className="text-md font-semibold mb-3">Existing Estimates in this Version</h3>
       
       {estimates.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
           {estimates.map(estimate => {
             // NOTE: Cost calculation is commented out for now
             /*
@@ -50,8 +50,8 @@ const ExistingEstimates = ({ estimates }) => {
             */
             
             return (
-              <div key={estimate.id} className="p-3 bg-gray-50 hover:bg-gray-100 rounded border transition-colors">
-                <div className="flex justify-between items-start">
+              <div key={estimate.id} className="px-2 pt-2 bg-gray-50 hover:bg-gray-100 rounded border transition-colors">
+                <div className="flex items-start">
                   <h4 className="font-medium text-blue-700 text-sm truncate" title={estimate.projectName}>
                     {estimate.projectName}
                   </h4>
