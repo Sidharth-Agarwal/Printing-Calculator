@@ -34,7 +34,10 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
           : 5; // For FS5
 
       // Get default values from fetched lists or use fallbacks
-      const defaultMRType = mrTypes.length > 0 ? mrTypes[0].type : "Simple";
+      const defaultMRType = mrTypes.length > 0 ? 
+        { type: mrTypes[0].type, concatenated: mrTypes[0].concatenated } : 
+        { type: "SIMPLE", concatenated: "FS MR SIMPLE" };
+        
       const defaultFoilType = foilTypes.length > 0 ? foilTypes[0].materialName : "Gold MTS 220";
       const defaultBlockType = blockTypes.length > 0 ? blockTypes[0].materialName : "Magnesium Block 3MM";
 
@@ -50,7 +53,8 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
           },
           foilType: currentFoil.foilType || defaultFoilType,
           blockType: currentFoil.blockType || defaultBlockType,
-          mrType: currentFoil.mrType || defaultMRType
+          mrType: currentFoil.mrType || defaultMRType.type,
+          mrTypeConcatenated: currentFoil.mrTypeConcatenated || defaultMRType.concatenated
         };
         
         // Always update dimensions if Auto is selected
@@ -87,15 +91,16 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   // Set default MR Types when MR types are loaded and foil details have null/empty MR types
   useEffect(() => {
     if (fsDetails.isFSUsed && mrTypes.length > 0 && fsDetails.foilDetails.length > 0) {
-      const defaultMRType = mrTypes[0].type;
+      const defaultMRType = mrTypes[0];
       
       // Check if any foil detail has an empty/missing MR type
-      const needsMRTypeUpdate = fsDetails.foilDetails.some(foil => !foil.mrType);
+      const needsMRTypeUpdate = fsDetails.foilDetails.some(foil => !foil.mrType || !foil.mrTypeConcatenated);
       
       if (needsMRTypeUpdate) {
         const updatedFoilDetails = fsDetails.foilDetails.map(foil => ({
           ...foil,
-          mrType: foil.mrType || defaultMRType
+          mrType: foil.mrType || defaultMRType.type,
+          mrTypeConcatenated: foil.mrTypeConcatenated || defaultMRType.concatenated || `FS MR ${defaultMRType.type}`
         }));
         
         dispatch({
@@ -181,6 +186,17 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
       };
     } else {
       updatedFoilDetails[index][field] = value;
+      
+      // Special handling for mrType to also set the concatenated version
+      if (field === "mrType" && mrTypes.length > 0) {
+        const selectedMRType = mrTypes.find(type => type.type === value);
+        if (selectedMRType && selectedMRType.concatenated) {
+          updatedFoilDetails[index].mrTypeConcatenated = selectedMRType.concatenated;
+        } else {
+          // Fallback: create concatenated version if not found
+          updatedFoilDetails[index].mrTypeConcatenated = `FS MR ${value}`;
+        }
+      }
     }
 
     dispatch({
@@ -283,7 +299,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   )}
                 </div>
 
-                {/* Block Dimensions - Updated to match LP styling with flex-wrap */}
+                {/* Block Dimensions */}
                 {foil.blockSizeType && (
                   <div className="flex flex-wrap gap-4 flex-1">
                     <div className="flex-1">
@@ -413,6 +429,24 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!singlePageMode && (
+        <div className="flex justify-between mt-4">
+          <button
+            type="button"
+            onClick={onPrevious}
+            className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
+          >
+            Previous
+          </button>
+          <button
+            type="submit"
+            className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
+          >
+            Next
+          </button>
         </div>
       )}
     </form>

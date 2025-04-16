@@ -53,6 +53,17 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
       };
     } else {
       updatedDetails[index][field] = value;
+
+      // Special handling for mrType to also set the concatenated version
+      if (field === "mrType" && mrTypes.length > 0) {
+        const selectedMRType = mrTypes.find(type => type.type === value);
+        if (selectedMRType && selectedMRType.concatenated) {
+          updatedDetails[index].mrTypeConcatenated = selectedMRType.concatenated;
+        } else {
+          // Fallback: create concatenated version if not found
+          updatedDetails[index].mrTypeConcatenated = `LP MR ${value}`;
+        }
+      }
     }
 
     dispatch({
@@ -62,8 +73,10 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   };
 
   const generateColorDetails = (noOfColors) => {
-    // Get the default MR type from the fetched list, or fallback to "Simple"
-    const defaultMRType = mrTypes.length > 0 ? mrTypes[0].type : "Simple";
+    // Get the default MR type from the fetched list, or fallback to "SIMPLE"
+    const defaultMRType = mrTypes.length > 0 ? 
+      { type: mrTypes[0].type, concatenated: mrTypes[0].concatenated } : 
+      { type: "SIMPLE", concatenated: "LP MR SIMPLE" };
     
     // Get the default plate type from the fetched list, or fallback to "Polymer Plate"
     const defaultPlateType = plateTypes.length > 0 ? plateTypes[0].materialName : "Polymer Plate";
@@ -76,7 +89,8 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
       },
       pantoneType: lpDetails.colorDetails[index]?.pantoneType || "",
       plateType: lpDetails.colorDetails[index]?.plateType || defaultPlateType, // Use first plate type from API
-      mrType: lpDetails.colorDetails[index]?.mrType || defaultMRType // Use first MR type from API
+      mrType: lpDetails.colorDetails[index]?.mrType || defaultMRType.type, // Use first MR type from API
+      mrTypeConcatenated: lpDetails.colorDetails[index]?.mrTypeConcatenated || defaultMRType.concatenated // Store concatenated version
     }));
     
     dispatch({
@@ -160,15 +174,16 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   // Set default MR Types when MR types are loaded and colors have null/empty MR types
   useEffect(() => {
     if (lpDetails.isLPUsed && mrTypes.length > 0 && lpDetails.colorDetails.length > 0) {
-      const defaultMRType = mrTypes[0].type;
+      const defaultMRType = mrTypes[0];
       
       // Check if any color has an empty/missing MR type
-      const needsMRTypeUpdate = lpDetails.colorDetails.some(color => !color.mrType);
+      const needsMRTypeUpdate = lpDetails.colorDetails.some(color => !color.mrType || !color.mrTypeConcatenated);
       
       if (needsMRTypeUpdate) {
         const updatedDetails = lpDetails.colorDetails.map(color => ({
           ...color,
-          mrType: color.mrType || defaultMRType
+          mrType: color.mrType || defaultMRType.type,
+          mrTypeConcatenated: color.mrTypeConcatenated || defaultMRType.concatenated || `LP MR ${defaultMRType.type}`
         }));
         
         dispatch({
@@ -380,7 +395,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   )}
                 </div>
 
-                {/* MR Type */}
+                {/* MR Type - Updated to use dynamic MR types and store concatenated version */}
                 <div className="flex-1">
                   <div className="mb-1">MR Type:</div>
                   <select
@@ -409,6 +424,24 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
               </div>
             </div>
           ))}
+        </div>
+      )}
+
+      {!singlePageMode && (
+        <div className="flex justify-between">
+          <button
+            type="button"
+            onClick={onPrevious}
+            className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
+          >
+            Previous
+          </button>
+          <button
+            type="submit"
+            className="mt-2 px-3 py-2 bg-blue-500 text-white rounded text-sm"
+          >
+            Next
+          </button>
         </div>
       )}
     </form>

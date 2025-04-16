@@ -12,6 +12,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     plateTypeMale = "",
     plateTypeFemale = "",
     embMR = "",
+    embMRConcatenated = ""
   } = state.embDetails || {};
 
   const [errors, setErrors] = useState({});
@@ -24,16 +25,29 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
 
   // Set default MR Type when component mounts or when EMB is first enabled
   useEffect(() => {
-    if (isEMBUsed && mrTypes.length > 0 && !embMR) {
-      // Use the first MR type from the fetched list as default
-      const defaultMRType = mrTypes[0].type;
+    if (isEMBUsed && mrTypes.length > 0) {
+      const defaultMRType = mrTypes[0];
+      const updates = {};
       
-      dispatch({
-        type: "UPDATE_EMB_DETAILS",
-        payload: { embMR: defaultMRType }
-      });
+      // Set embMR if it's empty
+      if (!embMR) {
+        updates.embMR = defaultMRType.type;
+      }
+      
+      // Set embMRConcatenated if it's empty
+      if (!embMRConcatenated) {
+        updates.embMRConcatenated = defaultMRType.concatenated || `EMB MR ${defaultMRType.type}`;
+      }
+      
+      // Only dispatch if we have updates
+      if (Object.keys(updates).length > 0) {
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: updates
+        });
+      }
     }
-  }, [isEMBUsed, embMR, mrTypes, dispatch]);
+  }, [isEMBUsed, embMR, embMRConcatenated, mrTypes, dispatch]);
 
   // Set default plate types when component mounts or when EMB is first enabled
   useEffect(() => {
@@ -63,11 +77,38 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    dispatch({
-      type: "UPDATE_EMB_DETAILS",
-      payload: { [name]: value },
-    });
+    
+    // Handle special case for embMR to also set the concatenated version
+    if (name === "embMR" && mrTypes.length > 0) {
+      const selectedMRType = mrTypes.find(type => type.type === value);
+      
+      if (selectedMRType && selectedMRType.concatenated) {
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: { 
+            embMR: value,
+            embMRConcatenated: selectedMRType.concatenated
+          },
+        });
+      } else {
+        // Fallback: create concatenated version if not found
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: { 
+            embMR: value,
+            embMRConcatenated: `EMB MR ${value}`
+          },
+        });
+      }
+    } else {
+      // Handle other fields normally
+      dispatch({
+        type: "UPDATE_EMB_DETAILS",
+        payload: { [name]: value },
+      });
+    }
 
+    // Handle automatic dimension updates for plate size
     if (name === "plateSizeType" && value === "Auto") {
       dispatch({
         type: "UPDATE_EMB_DETAILS",
@@ -274,7 +315,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
           )}
         </div>
 
-        {/* EMB MR */}
+        {/* EMB MR - Updated to use dynamic MR types and store concatenated version */}
         <div>
           <label htmlFor="embMR" className="block mb-1">
             EMB MR:
@@ -298,6 +339,24 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
           {errors.embMR && <p className="text-red-500 text-sm">{errors.embMR}</p>}
         </div>
       </div>
+
+      {!singlePageMode && (
+        <div className="flex justify-between mt-4">
+          <button
+            type="button"
+            onClick={onPrevious}
+            className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
+          >
+            Previous
+          </button>
+          <button
+            type="submit"
+            className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
+          >
+            Next
+          </button>
+        </div>
+      )}
     </form>
   );
 };

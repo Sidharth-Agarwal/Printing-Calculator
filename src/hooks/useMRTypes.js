@@ -15,11 +15,11 @@ const useMRTypes = (group) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Default fallback values - using uppercase to match the database format
+  // Default fallback values with concatenated version
   const defaultMRTypes = [
-    { id: "simple", type: "SIMPLE", finalRate: "0" },
-    { id: "complex", type: "COMPLEX", finalRate: "0" },
-    { id: "supercomplex", type: "SUPER COMPLEX", finalRate: "0" }
+    { id: "simple", type: "SIMPLE", concatenated: `${group} SIMPLE`, finalRate: "0" },
+    { id: "complex", type: "COMPLEX", concatenated: `${group} COMPLEX`, finalRate: "0" },
+    { id: "supercomplex", type: "SUPER COMPLEX", concatenated: `${group} SUPER COMPLEX`, finalRate: "0" }
   ];
 
   useEffect(() => {
@@ -44,7 +44,8 @@ const useMRTypes = (group) => {
           // Process the fetched data
           const types = querySnapshot.docs.map(doc => ({
             id: doc.id,
-            type: doc.data().type, // Preserve original capitalization from the database
+            type: doc.data().type, // Display value
+            concatenated: doc.data().concatenate || `${group} ${doc.data().type}`, // Value for calculations
             finalRate: doc.data().finalRate || "0",
             description: doc.data().description || ""
           }));
@@ -97,6 +98,7 @@ const useMRTypes = (group) => {
             const types = querySnapshot.docs.map(doc => ({
               id: doc.id,
               type: doc.data().type,
+              concatenated: doc.data().concatenate || `${group} ${doc.data().type}`,
               finalRate: doc.data().finalRate || "0",
               description: doc.data().description || ""
             }));

@@ -761,24 +761,6 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           </div>
         )}
       </div>
-
-      {!singlePageMode && (
-        <div className="flex justify-between mt-4">
-          <button
-            type="button"
-            onClick={onPrevious}
-            className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
-          >
-            Previous
-          </button>
-          <button
-            type="submit"
-            className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
-          >
-            Next
-          </button>
-        </div>
-      )}
     </form>
   );
 };
