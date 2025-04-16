@@ -737,12 +737,25 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const toggleDigiUsage = () => {
     const isCurrentlyUsed = state.digiDetails.isDigiUsed;
     
+    // Define default DIGI_DIE_OPTIONS (same as in DigiDetails component)
+    const DIGI_DIE_OPTIONS = {
+      "12x18": { length: "12", breadth: "18" },
+      "13x19": { length: "13", breadth: "19" },
+    };
+    
+    // Get the first option as default
+    const firstOption = Object.keys(DIGI_DIE_OPTIONS)[0] || "12x18";
+    const defaultDimensions = DIGI_DIE_OPTIONS[firstOption] || { length: "12", breadth: "18" };
+    
     dispatch({
       type: "UPDATE_DIGI_DETAILS",
       payload: { 
         isDigiUsed: !isCurrentlyUsed,
-        digiDie: !isCurrentlyUsed ? "" : "",
-        digiDimensions: !isCurrentlyUsed ? { length: "", breadth: "" } : { length: "", breadth: "" }
+        // When toggling on, initialize with the first option
+        ...(!isCurrentlyUsed && {
+          digiDie: firstOption,
+          digiDimensions: defaultDimensions
+        })
       }
     });
     

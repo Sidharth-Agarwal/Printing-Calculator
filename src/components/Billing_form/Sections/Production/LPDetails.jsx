@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import useMRTypes from "../../../../hooks/useMRTypes";
+import useMaterialTypes from "../../../../hooks/useMaterialTypes";
 
 const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const lpDetails = state.lpDetails || {
@@ -9,6 +11,10 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
   const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
   const [errors, setErrors] = useState({});
+  
+  // Use the custom hooks to fetch LP MR types and plate types
+  const { mrTypes, loading: mrTypesLoading } = useMRTypes("LP MR");
+  const { materials: plateTypes, loading: plateTypesLoading } = useMaterialTypes("Plate Type");
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -21,8 +27,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
       generateColorDetails(value);
     }
   };
-
-  // NOTE: We've removed the toggle function as it's now handled in the parent component
 
   const handleColorDetailsChange = (index, field, value) => {
     const updatedDetails = [...lpDetails.colorDetails];
@@ -58,6 +62,12 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   };
 
   const generateColorDetails = (noOfColors) => {
+    // Get the default MR type from the fetched list, or fallback to "Simple"
+    const defaultMRType = mrTypes.length > 0 ? mrTypes[0].type : "Simple";
+    
+    // Get the default plate type from the fetched list, or fallback to "Polymer Plate"
+    const defaultPlateType = plateTypes.length > 0 ? plateTypes[0].materialName : "Polymer Plate";
+
     const details = Array.from({ length: noOfColors }, (_, index) => ({
       plateSizeType: lpDetails.colorDetails[index]?.plateSizeType || "Auto", // Default to "Auto"
       plateDimensions: lpDetails.colorDetails[index]?.plateDimensions || {
@@ -65,9 +75,10 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
       },
       pantoneType: lpDetails.colorDetails[index]?.pantoneType || "",
-      plateType: lpDetails.colorDetails[index]?.plateType || "Polymer Plate", // Default to "Polymer Plate"
-      mrType: lpDetails.colorDetails[index]?.mrType || "Simple", // Default to "Simple"
+      plateType: lpDetails.colorDetails[index]?.plateType || defaultPlateType, // Use first plate type from API
+      mrType: lpDetails.colorDetails[index]?.mrType || defaultMRType // Use first MR type from API
     }));
+    
     dispatch({
       type: "UPDATE_LP_DETAILS",
       payload: { colorDetails: details },
@@ -119,6 +130,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
+  // Update dimensions when die size changes (for Auto mode)
   useEffect(() => {
     if (lpDetails.isLPUsed) {
       const updatedDetails = lpDetails.colorDetails.map((color) => {
@@ -143,7 +155,51 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         });
       }
     }
-  }, [lpDetails.isLPUsed, dieSize, dispatch]);
+  }, [lpDetails.isLPUsed, dieSize, dispatch, lpDetails.colorDetails]);
+
+  // Set default MR Types when MR types are loaded and colors have null/empty MR types
+  useEffect(() => {
+    if (lpDetails.isLPUsed && mrTypes.length > 0 && lpDetails.colorDetails.length > 0) {
+      const defaultMRType = mrTypes[0].type;
+      
+      // Check if any color has an empty/missing MR type
+      const needsMRTypeUpdate = lpDetails.colorDetails.some(color => !color.mrType);
+      
+      if (needsMRTypeUpdate) {
+        const updatedDetails = lpDetails.colorDetails.map(color => ({
+          ...color,
+          mrType: color.mrType || defaultMRType
+        }));
+        
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { colorDetails: updatedDetails },
+        });
+      }
+    }
+  }, [mrTypes, lpDetails.isLPUsed, lpDetails.colorDetails, dispatch]);
+
+  // Set default plate types when plate types are loaded and colors have null/empty plate types
+  useEffect(() => {
+    if (lpDetails.isLPUsed && plateTypes.length > 0 && lpDetails.colorDetails.length > 0) {
+      const defaultPlateType = plateTypes[0].materialName;
+      
+      // Check if any color has an empty/missing plate type
+      const needsPlateTypeUpdate = lpDetails.colorDetails.some(color => !color.plateType);
+      
+      if (needsPlateTypeUpdate) {
+        const updatedDetails = lpDetails.colorDetails.map(color => ({
+          ...color,
+          plateType: color.plateType || defaultPlateType
+        }));
+        
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { colorDetails: updatedDetails },
+        });
+      }
+    }
+  }, [plateTypes, lpDetails.isLPUsed, lpDetails.colorDetails, dispatch]);
 
   // When LP is not used, we don't need to show any content
   if (!lpDetails.isLPUsed) {
@@ -297,17 +353,25 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   )}
                 </div>
 
-                {/* Plate Type */}
+                {/* Plate Type - Updated to use dynamic plate types from the materials hook */}
                 <div className="flex-1">
                   <div className="mb-1">Plate Type:</div>
                   <select
-                    value={lpDetails.colorDetails[index]?.plateType || "Polymer Plate"}
+                    value={lpDetails.colorDetails[index]?.plateType || ""}
                     onChange={(e) =>
                       handleColorDetailsChange(index, "plateType", e.target.value)
                     }
                     className="border rounded-md p-2 w-full"
                   >
-                    <option value="Polymer Plate">Polymer Plate</option>
+                    {plateTypesLoading ? (
+                      <option value="" disabled>Loading Plate Types...</option>
+                    ) : (
+                      plateTypes.map((plateType, idx) => (
+                        <option key={idx} value={plateType.materialName}>
+                          {plateType.materialName}
+                        </option>
+                      ))
+                    )}
                   </select>
                   {errors[`plateType_${index}`] && (
                     <p className="text-red-500 text-sm">
@@ -320,15 +384,21 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                 <div className="flex-1">
                   <div className="mb-1">MR Type:</div>
                   <select
-                    value={lpDetails.colorDetails[index]?.mrType || "Simple"}
+                    value={lpDetails.colorDetails[index]?.mrType || ""}
                     onChange={(e) =>
                       handleColorDetailsChange(index, "mrType", e.target.value)
                     }
                     className="border rounded-md p-2 w-full"
                   >
-                    <option value="Simple">Simple</option>
-                    <option value="Complex">Complex</option>
-                    <option value="Super Complex">Super Complex</option>
+                    {mrTypesLoading ? (
+                      <option value="" disabled>Loading MR Types...</option>
+                    ) : (
+                      mrTypes.map((typeOption, idx) => (
+                        <option key={idx} value={typeOption.type}>
+                          {typeOption.type}
+                        </option>
+                      ))
+                    )}
                   </select>
                   {errors[`mrType_${index}`] && (
                     <p className="text-red-500 text-sm">

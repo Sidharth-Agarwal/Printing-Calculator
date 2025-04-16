@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import useMRTypes from "../../../../hooks/useMRTypes";
+import useMaterialTypes from "../../../../hooks/useMaterialTypes";
 
 const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const fsDetails = state.fsDetails || {
@@ -9,6 +11,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
   const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
   const [errors, setErrors] = useState({});
+
+  // Use the custom hooks to fetch data
+  const { mrTypes, loading: mrTypesLoading } = useMRTypes("FS MR");
+  const { materials: foilTypes, loading: foilTypesLoading } = useMaterialTypes("Foil Type");
+  const { materials: blockTypes, loading: blockTypesLoading } = useMaterialTypes("Block Type");
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
@@ -26,6 +33,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
           ? 4
           : 5; // For FS5
 
+      // Get default values from fetched lists or use fallbacks
+      const defaultMRType = mrTypes.length > 0 ? mrTypes[0].type : "Simple";
+      const defaultFoilType = foilTypes.length > 0 ? foilTypes[0].materialName : "Gold MTS 220";
+      const defaultBlockType = blockTypes.length > 0 ? blockTypes[0].materialName : "Magnesium Block 3MM";
+
       const updatedFoilDetails = Array.from({ length: numberOfFoilOptions }, (_, index) => {
         const currentFoil = fsDetails.foilDetails[index] || {};
         
@@ -36,9 +48,9 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
             breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : ""
           },
-          foilType: currentFoil.foilType || "Gold MTS 220",
-          blockType: currentFoil.blockType || "Magnesium Block 3MM",
-          mrType: currentFoil.mrType || "Simple"
+          foilType: currentFoil.foilType || defaultFoilType,
+          blockType: currentFoil.blockType || defaultBlockType,
+          mrType: currentFoil.mrType || defaultMRType
         };
         
         // Always update dimensions if Auto is selected
@@ -61,9 +73,82 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         });
       }
     }
-  }, [fsDetails.fsType, fsDetails.isFSUsed, fsDetails.foilDetails, dieSize, dispatch]);
+  }, [
+    fsDetails.fsType, 
+    fsDetails.isFSUsed, 
+    fsDetails.foilDetails, 
+    dieSize, 
+    dispatch, 
+    mrTypes, 
+    foilTypes, 
+    blockTypes
+  ]);
 
-  // NOTE: Toggle function removed as it's now handled in the parent component
+  // Set default MR Types when MR types are loaded and foil details have null/empty MR types
+  useEffect(() => {
+    if (fsDetails.isFSUsed && mrTypes.length > 0 && fsDetails.foilDetails.length > 0) {
+      const defaultMRType = mrTypes[0].type;
+      
+      // Check if any foil detail has an empty/missing MR type
+      const needsMRTypeUpdate = fsDetails.foilDetails.some(foil => !foil.mrType);
+      
+      if (needsMRTypeUpdate) {
+        const updatedFoilDetails = fsDetails.foilDetails.map(foil => ({
+          ...foil,
+          mrType: foil.mrType || defaultMRType
+        }));
+        
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: { foilDetails: updatedFoilDetails },
+        });
+      }
+    }
+  }, [mrTypes, fsDetails.isFSUsed, fsDetails.foilDetails, dispatch]);
+
+  // Set default Foil Types when foil types are loaded and foil details have null/empty foil types
+  useEffect(() => {
+    if (fsDetails.isFSUsed && foilTypes.length > 0 && fsDetails.foilDetails.length > 0) {
+      const defaultFoilType = foilTypes[0].materialName;
+      
+      // Check if any foil detail has an empty/missing foil type
+      const needsFoilTypeUpdate = fsDetails.foilDetails.some(foil => !foil.foilType);
+      
+      if (needsFoilTypeUpdate) {
+        const updatedFoilDetails = fsDetails.foilDetails.map(foil => ({
+          ...foil,
+          foilType: foil.foilType || defaultFoilType
+        }));
+        
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: { foilDetails: updatedFoilDetails },
+        });
+      }
+    }
+  }, [foilTypes, fsDetails.isFSUsed, fsDetails.foilDetails, dispatch]);
+
+  // Set default Block Types when block types are loaded and foil details have null/empty block types
+  useEffect(() => {
+    if (fsDetails.isFSUsed && blockTypes.length > 0 && fsDetails.foilDetails.length > 0) {
+      const defaultBlockType = blockTypes[0].materialName;
+      
+      // Check if any foil detail has an empty/missing block type
+      const needsBlockTypeUpdate = fsDetails.foilDetails.some(foil => !foil.blockType);
+      
+      if (needsBlockTypeUpdate) {
+        const updatedFoilDetails = fsDetails.foilDetails.map(foil => ({
+          ...foil,
+          blockType: foil.blockType || defaultBlockType
+        }));
+        
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: { foilDetails: updatedFoilDetails },
+        });
+      }
+    }
+  }, [blockTypes, fsDetails.isFSUsed, fsDetails.foilDetails, dispatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -190,7 +275,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                     }
                     className="border rounded-md p-2 w-full"
                   >
-                    <option value="">Select Block Size Type</option>
                     <option value="Auto">Auto</option>
                     <option value="Manual">Manual</option>
                   </select>
@@ -199,9 +283,9 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   )}
                 </div>
 
-                {/* Block Dimensions */}
+                {/* Block Dimensions - Updated to match LP styling with flex-wrap */}
                 {foil.blockSizeType && (
-                  <>
+                  <div className="flex flex-wrap gap-4 flex-1">
                     <div className="flex-1">
                       <label htmlFor={`length-${index}`} className="block mb-1">
                         Length:
@@ -209,7 +293,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       <input
                         type="number"
                         id={`length-${index}`}
-                        placeholder="Length (cm)"
+                        placeholder="(cm)"
                         value={foil.blockDimension?.length || ""}
                         onChange={(e) =>
                           handleFoilDetailsChange(index, "blockDimension", {
@@ -233,7 +317,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       <input
                         type="number"
                         id={`breadth-${index}`}
-                        placeholder="Breadth (cm)"
+                        placeholder="(cm)"
                         value={foil.blockDimension?.breadth || ""}
                         onChange={(e) =>
                           handleFoilDetailsChange(index, "blockDimension", {
@@ -249,30 +333,28 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         <p className="text-red-500 text-sm">{errors[`blockBreadth-${index}`]}</p>
                       )}
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {/* Foil Type */}
                 <div className="flex-1">
                   <div className="mb-1">Foil Type:</div>
                   <select
-                    value={foil.foilType || "Gold MTS 220"}
+                    value={foil.foilType || ""}
                     onChange={(e) =>
                       handleFoilDetailsChange(index, "foilType", e.target.value)
                     }
                     className="border rounded-md p-2 w-full"
                   >
-                    {["Rosegold MTS 355",
-                      "Gold MTS 220",
-                      "White 911",
-                      "Blk MTS 362",
-                      "Silver ALUFIN PMAL METALITE",
-                      "MTS 432 PINK"
-                    ].map((type, idx) => (
-                      <option key={idx} value={type}>
-                        {type}
-                      </option>
-                    ))}
+                    {foilTypesLoading ? (
+                      <option value="" disabled>Loading Foil Types...</option>
+                    ) : (
+                      foilTypes.map((foilType, idx) => (
+                        <option key={idx} value={foilType.materialName}>
+                          {foilType.materialName}
+                        </option>
+                      ))
+                    )}
                   </select>
                   {errors[`foilType-${index}`] && (
                     <p className="text-red-500 text-sm">{errors[`foilType-${index}`]}</p>
@@ -283,23 +365,21 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                 <div className="flex-1">
                   <div className="mb-1">Block Type:</div>
                   <select
-                    value={foil.blockType || "Magnesium Block 3MM"}
+                    value={foil.blockType || ""}
                     onChange={(e) =>
                       handleFoilDetailsChange(index, "blockType", e.target.value)
                     }
                     className="border rounded-md p-2 w-full"
                   >
-                    {[
-                      "Magnesium Block 3MM",
-                      "Magnesium Block 4MM",
-                      "Magnesium Block 5MM",
-                      "Male Block",
-                      "Female Block",
-                    ].map((block, idx) => (
-                      <option key={idx} value={block}>
-                        {block}
-                      </option>
-                    ))}
+                    {blockTypesLoading ? (
+                      <option value="" disabled>Loading Block Types...</option>
+                    ) : (
+                      blockTypes.map((blockType, idx) => (
+                        <option key={idx} value={blockType.materialName}>
+                          {blockType.materialName}
+                        </option>
+                      ))
+                    )}
                   </select>
                   {errors[`blockType-${index}`] && (
                     <p className="text-red-500 text-sm">{errors[`blockType-${index}`]}</p>
@@ -310,15 +390,21 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                 <div className="flex-1">
                   <div className="mb-1">MR Type:</div>
                   <select
-                    value={foil.mrType || "Simple"}
+                    value={foil.mrType || ""}
                     onChange={(e) =>
                       handleFoilDetailsChange(index, "mrType", e.target.value)
                     }
                     className="border rounded-md p-2 w-full"
                   >
-                    <option value="Simple">Simple</option>
-                    <option value="Complex">Complex</option>
-                    <option value="Super Complex">Super Complex</option>
+                    {mrTypesLoading ? (
+                      <option value="" disabled>Loading MR Types...</option>
+                    ) : (
+                      mrTypes.map((typeOption, idx) => (
+                        <option key={idx} value={typeOption.type}>
+                          {typeOption.type}
+                        </option>
+                      ))
+                    )}
                   </select>
                   {errors[`mrType-${index}`] && (
                     <p className="text-red-500 text-sm">{errors[`mrType-${index}`]}</p>

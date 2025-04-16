@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import useMRTypes from "../../../../hooks/useMRTypes";
+import useMaterialTypes from "../../../../hooks/useMaterialTypes";
 
 const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
@@ -14,9 +16,50 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
 
   const [errors, setErrors] = useState({});
 
+  // Use the custom hooks to fetch data
+  const { mrTypes, loading: mrTypesLoading } = useMRTypes("EMB MR");
+  const { materials: plateTypes, loading: plateTypesLoading } = useMaterialTypes("Plate Type");
+
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
-  // NOTE: Toggle function removed as it's now handled in the parent component
+  // Set default MR Type when component mounts or when EMB is first enabled
+  useEffect(() => {
+    if (isEMBUsed && mrTypes.length > 0 && !embMR) {
+      // Use the first MR type from the fetched list as default
+      const defaultMRType = mrTypes[0].type;
+      
+      dispatch({
+        type: "UPDATE_EMB_DETAILS",
+        payload: { embMR: defaultMRType }
+      });
+    }
+  }, [isEMBUsed, embMR, mrTypes, dispatch]);
+
+  // Set default plate types when component mounts or when EMB is first enabled
+  useEffect(() => {
+    if (isEMBUsed && plateTypes.length > 0) {
+      const defaultPlateType = plateTypes[0].materialName;
+      const updates = {};
+      
+      // Set plateTypeMale if it's empty
+      if (!plateTypeMale) {
+        updates.plateTypeMale = defaultPlateType;
+      }
+      
+      // Set plateTypeFemale if it's empty
+      if (!plateTypeFemale) {
+        updates.plateTypeFemale = defaultPlateType;
+      }
+      
+      // Only dispatch if we have updates
+      if (Object.keys(updates).length > 0) {
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: updates
+        });
+      }
+    }
+  }, [isEMBUsed, plateTypes, plateTypeMale, plateTypeFemale, dispatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -141,7 +184,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               <input
                 type="number"
                 id="length"
-                placeholder="Length (cm)"
+                placeholder="(cm)"
                 value={plateDimensions.length || ""}
                 onChange={(e) =>
                   plateSizeType === "Manual"
@@ -162,7 +205,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               <input
                 type="number"
                 id="breadth"
-                placeholder="Breadth (cm)"
+                placeholder="(cm)"
                 value={plateDimensions.breadth || ""}
                 onChange={(e) =>
                   plateSizeType === "Manual"
@@ -179,7 +222,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
           </>
         )}
 
-        {/* Plate Type Male */}
+        {/* Plate Type Male - Updated to use dynamic plate types */}
         <div>
           <label htmlFor="plateTypeMale" className="block mb-1">
             Plate Type Male:
@@ -190,15 +233,22 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             onChange={handleChange}
             className={`border rounded-md p-2 w-full ${errors.plateTypeMale ? "border-red-500" : ""}`}
           >
-            <option value="">Select Plate Type Male</option>
-            <option value="Polymer Plate">Polymer Plate</option>
+            {plateTypesLoading ? (
+              <option value="" disabled>Loading Plate Types...</option>
+            ) : (
+              plateTypes.map((plateType, idx) => (
+                <option key={idx} value={plateType.materialName}>
+                  {plateType.materialName}
+                </option>
+              ))
+            )}
           </select>
           {errors.plateTypeMale && (
             <p className="text-red-500 text-sm">{errors.plateTypeMale}</p>
           )}
         </div>
 
-        {/* Plate Type Female */}
+        {/* Plate Type Female - Updated to use dynamic plate types */}
         <div>
           <label htmlFor="plateTypeFemale" className="block mb-1">
             Plate Type Female:
@@ -209,8 +259,15 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             onChange={handleChange}
             className={`border rounded-md p-2 w-full ${errors.plateTypeFemale ? "border-red-500" : ""}`}
           >
-            <option value="">Select Plate Type Female</option>
-            <option value="Polymer Plate">Polymer Plate</option>
+            {plateTypesLoading ? (
+              <option value="" disabled>Loading Plate Types...</option>
+            ) : (
+              plateTypes.map((plateType, idx) => (
+                <option key={idx} value={plateType.materialName}>
+                  {plateType.materialName}
+                </option>
+              ))
+            )}
           </select>
           {errors.plateTypeFemale && (
             <p className="text-red-500 text-sm">{errors.plateTypeFemale}</p>
@@ -228,10 +285,15 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             onChange={handleChange}
             className={`border rounded-md p-2 w-full ${errors.embMR ? "border-red-500" : ""}`}
           >
-            <option value="">Select MR Type</option>
-            <option value="Simple">Simple</option>
-            <option value="Complex">Complex</option>
-            <option value="Super Complex">Super Complex</option>
+            {mrTypesLoading ? (
+              <option value="" disabled>Loading MR Types...</option>
+            ) : (
+              mrTypes.map((typeOption, idx) => (
+                <option key={idx} value={typeOption.type}>
+                  {typeOption.type}
+                </option>
+              ))
+            )}
           </select>
           {errors.embMR && <p className="text-red-500 text-sm">{errors.embMR}</p>}
         </div>

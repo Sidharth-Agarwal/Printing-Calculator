@@ -9,7 +9,20 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
     "13x19": { length: "13", breadth: "19" },
   };
 
-  // NOTE: Toggle function removed as it's now handled in the parent component
+  // Set default selection when Digi is first enabled
+  useEffect(() => {
+    if (isDigiUsed && !digiDie && Object.keys(DIGI_DIE_OPTIONS).length > 0) {
+      // Select the first option by default
+      const firstOption = Object.keys(DIGI_DIE_OPTIONS)[0];
+      dispatch({
+        type: "UPDATE_DIGI_DETAILS",
+        payload: {
+          digiDie: firstOption,
+          digiDimensions: DIGI_DIE_OPTIONS[firstOption],
+        },
+      });
+    }
+  }, [isDigiUsed, digiDie, dispatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -64,49 +77,48 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        <div>
-          <label className="block mb-2 font-medium text-sm">Select Digital Printing Die:</label>
-          <select
-            name="digiDie"
-            value={digiDie}
-            onChange={handleChange}
-            className={`border rounded-md p-2 w-full text-sm ${
-              errors.digiDie ? "border-red-500" : ""
-            }`}
-          >
-            <option value="">Select Digi Die</option>
-            {Object.keys(DIGI_DIE_OPTIONS).map((option) => (
-              <option key={option} value={option}>
-                {option}
-              </option>
-            ))}
-          </select>
-          {errors.digiDie && (
-            <p className="text-red-500 text-sm mt-1">{errors.digiDie}</p>
-          )}
-        </div>
-
-        {digiDie && (
-          <div className="mt-2 text-sm">
-            <p className="text-gray-700 font-medium mb-2">
-              Dimensions:
-            </p>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="bg-gray-100 p-2 rounded">
-                <span className="font-medium text-gray-700">Length:</span> {digiDimensions.length || "N/A"} inches
-              </div>
-              <div className="bg-gray-100 p-2 rounded">
-                <span className="font-medium text-gray-700">Breadth:</span> {digiDimensions.breadth || "N/A"} inches
-              </div>
-            </div>
-          </div>
+    <form onSubmit={handleSubmit} className="space-y-4">
+      <div>
+        <div className="mb-1 text-sm">Select Digital Printing Die:</div>
+        <select
+          name="digiDie"
+          value={digiDie}
+          onChange={handleChange}
+          className={`border rounded-md p-2 w-full text-sm ${
+            errors.digiDie ? "border-red-500" : ""
+          }`}
+        >
+          {Object.keys(DIGI_DIE_OPTIONS).map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+        {errors.digiDie && (
+          <p className="text-red-500 text-sm mt-1">{errors.digiDie}</p>
         )}
       </div>
 
+      {digiDie && (
+        <div className="mt-2">
+          <div className="mb-1 text-sm">Dimensions:</div>
+          <div className="flex flex-wrap gap-4">
+            <div className="flex-1">
+              <div className="bg-gray-100 p-2 rounded-md w-full">
+                <span className="text-sm">Length: {digiDimensions.length || "N/A"} inches</span>
+              </div>
+            </div>
+            <div className="flex-1">
+              <div className="bg-gray-100 p-2 rounded-md w-full">
+                <span className="text-sm">Breadth: {digiDimensions.breadth || "N/A"} inches</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {!singlePageMode && (
-        <div className="flex justify-between">
+        <div className="flex justify-between mt-4">
           <button
             type="button"
             onClick={onPrevious}
