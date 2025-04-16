@@ -664,7 +664,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               },
               pantoneType: "",
               plateType: "Polymer Plate",
-              mrType: "Simple"
+              mrType: "SIMPLE" // Using uppercase to match database format
             }
           ]
         })
@@ -695,7 +695,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               },
               foilType: "Gold MTS 220",
               blockType: "Magnesium Block 3MM",
-              mrType: "Simple"
+              mrType: "SIMPLE" // Using uppercase to match database format
             }
           ]
         })
@@ -723,7 +723,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           },
           plateTypeMale: "Polymer Plate",
           plateTypeFemale: "Polymer Plate",
-          embMR: "Simple"
+          embMR: "SIMPLE" // Using uppercase to match database format
         })
       }
     });
@@ -734,36 +734,37 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
   
+  
   const toggleDigiUsage = () => {
-    const isCurrentlyUsed = state.digiDetails.isDigiUsed;
-    
-    // Define default DIGI_DIE_OPTIONS (same as in DigiDetails component)
-    const DIGI_DIE_OPTIONS = {
-      "12x18": { length: "12", breadth: "18" },
-      "13x19": { length: "13", breadth: "19" },
-    };
-    
-    // Get the first option as default
-    const firstOption = Object.keys(DIGI_DIE_OPTIONS)[0] || "12x18";
-    const defaultDimensions = DIGI_DIE_OPTIONS[firstOption] || { length: "12", breadth: "18" };
-    
-    dispatch({
-      type: "UPDATE_DIGI_DETAILS",
-      payload: { 
-        isDigiUsed: !isCurrentlyUsed,
-        // When toggling on, initialize with the first option
-        ...(!isCurrentlyUsed && {
-          digiDie: firstOption,
-          digiDimensions: defaultDimensions
-        })
-      }
-    });
-    
-    // Auto expand when toggled on
-    if (!isCurrentlyUsed) {
-      setActiveSection("digi");
-    }
+  const isCurrentlyUsed = state.digiDetails.isDigiUsed;
+  
+  // Define default DIGI_DIE_OPTIONS (same as in DigiDetails component)
+  const DIGI_DIE_OPTIONS = {
+    "12x18": { length: "12", breadth: "18" },
+    "13x19": { length: "13", breadth: "19" },
   };
+  
+  // Get the first option as default
+  const firstOption = Object.keys(DIGI_DIE_OPTIONS)[0] || "12x18";
+  const defaultDimensions = DIGI_DIE_OPTIONS[firstOption] || { length: "12", breadth: "18" };
+  
+  dispatch({
+    type: "UPDATE_DIGI_DETAILS",
+    payload: { 
+      isDigiUsed: !isCurrentlyUsed,
+      // When toggling on, initialize with the first option
+      ...(!isCurrentlyUsed && {
+        digiDie: firstOption,
+        digiDimensions: defaultDimensions
+      })
+    }
+  });
+  
+  // Auto expand when toggled on
+  if (!isCurrentlyUsed) {
+    setActiveSection("digi");
+  }
+};
   
   const toggleDieCuttingUsage = () => {
     const isCurrentlyUsed = state.dieCutting.isDieCuttingUsed;

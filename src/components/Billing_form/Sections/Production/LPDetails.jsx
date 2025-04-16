@@ -411,24 +411,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
           ))}
         </div>
       )}
-
-      {!singlePageMode && (
-        <div className="flex justify-between">
-          <button
-            type="button"
-            onClick={onPrevious}
-            className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
-          >
-            Previous
-          </button>
-          <button
-            type="submit"
-            className="mt-2 px-3 py-2 bg-blue-500 text-white rounded text-sm"
-          >
-            Next
-          </button>
-        </div>
-      )}
     </form>
   );
 };

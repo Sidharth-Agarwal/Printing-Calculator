@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
-import { db } from "../firebaseConfig"
+import { db } from "../firebaseConfig";
 
 // Cache to prevent redundant fetches
 const mrTypesCache = new Map();
@@ -15,16 +15,16 @@ const useMRTypes = (group) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Default fallback values
+  // Default fallback values - using uppercase to match the database format
   const defaultMRTypes = [
-    { type: "Simple", finalRate: "0" },
-    { type: "Complex", finalRate: "0" },
-    { type: "Super Complex", finalRate: "0" }
+    { id: "simple", type: "SIMPLE", finalRate: "0" },
+    { id: "complex", type: "COMPLEX", finalRate: "0" },
+    { id: "supercomplex", type: "SUPER COMPLEX", finalRate: "0" }
   ];
 
   useEffect(() => {
     const fetchMRTypes = async () => {
-      // Check cache first
+      // Return cached data if available
       if (mrTypesCache.has(group)) {
         setMRTypes(mrTypesCache.get(group));
         setLoading(false);
@@ -44,14 +44,15 @@ const useMRTypes = (group) => {
           // Process the fetched data
           const types = querySnapshot.docs.map(doc => ({
             id: doc.id,
-            type: doc.data().type || "",
-            finalRate: doc.data().finalRate || "0"
+            type: doc.data().type, // Preserve original capitalization from the database
+            finalRate: doc.data().finalRate || "0",
+            description: doc.data().description || ""
           }));
           
           // Sort types (Simple, Complex, Super Complex)
           types.sort((a, b) => {
             const order = { "SIMPLE": 1, "COMPLEX": 2, "SUPER COMPLEX": 3 };
-            return (order[a.type.toUpperCase()] || 999) - (order[b.type.toUpperCase()] || 999);
+            return (order[a.type] || 999) - (order[b.type] || 999);
           });
           
           // Cache the results
@@ -66,7 +67,7 @@ const useMRTypes = (group) => {
       } catch (err) {
         console.error(`Error fetching MR types for ${group}:`, err);
         setError(err);
-        setMRTypes(defaultMRTypes);
+        setMRTypes(defaultMRTypes); // Use defaults on error
       } finally {
         setLoading(false);
       }
@@ -74,13 +75,63 @@ const useMRTypes = (group) => {
 
     if (group) {
       fetchMRTypes();
+    } else {
+      setMRTypes(defaultMRTypes);
+      setLoading(false);
     }
   }, [group]);
+
+  // Function to refresh the data if needed
+  const refreshMRTypes = () => {
+    if (group) {
+      mrTypesCache.delete(group);
+      setLoading(true);
+      const fetchMRTypes = async () => {
+        try {
+          const ratesCollection = collection(db, "standard_rates");
+          const q = query(ratesCollection, where("group", "==", group));
+          
+          const querySnapshot = await getDocs(q);
+          
+          if (!querySnapshot.empty) {
+            const types = querySnapshot.docs.map(doc => ({
+              id: doc.id,
+              type: doc.data().type,
+              finalRate: doc.data().finalRate || "0",
+              description: doc.data().description || ""
+            }));
+            
+            types.sort((a, b) => {
+              const order = { "SIMPLE": 1, "COMPLEX": 2, "SUPER COMPLEX": 3 };
+              return (order[a.type] || 999) - (order[b.type] || 999);
+            });
+            
+            mrTypesCache.set(group, types);
+            setMRTypes(types);
+          } else {
+            setMRTypes(defaultMRTypes);
+          }
+          
+          setError(null);
+        } catch (err) {
+          console.error(`Error refreshing MR types for ${group}:`, err);
+          setError(err);
+          setMRTypes(defaultMRTypes);
+        } finally {
+          setLoading(false);
+        }
+      };
+      
+      fetchMRTypes();
+    }
+  };
 
   return { 
     mrTypes, 
     loading, 
-    error 
+    error, 
+    refreshMRTypes,
+    defaultMRTypes // Expose defaults in case they're needed
   };
 };
 
