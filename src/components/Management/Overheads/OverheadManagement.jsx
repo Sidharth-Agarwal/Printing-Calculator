@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
-import { db } from "../../firebaseConfig";
+import { db } from "../../../firebaseConfig";
 import AddOverheadForm from "./AddOverheadForm";
 import DisplayOverheadTable from "./DisplayOverheadTable";
 

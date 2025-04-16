@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
-import { db, storage } from "../../firebaseConfig";
+import { db, storage } from "../../../firebaseConfig";
 import AddDieForm from "./AddDieForm";
 import DisplayDieTable from "./DisplayDieTable";
 
