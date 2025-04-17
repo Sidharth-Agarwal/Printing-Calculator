@@ -10,6 +10,7 @@ import DstPaste from '../../Sections/Post Production/DstPaste';
 import QC from '../../Sections/Post Production/QC';
 import Packing from '../../Sections/Post Production/Packing';
 import Sandwich from '../../Sections/Post Production/Sandwich';
+import Misc from '../../Sections/Post Production/Misc';
 
 // Define service registry
 export const serviceRegistry = {
@@ -118,6 +119,14 @@ export const serviceRegistry = {
     component: Sandwich,
     stateKey: "sandwich",
     toggleField: "isSandwichComponentUsed",
+    group: "postProduction"
+  },
+  "MISC": {
+    id: "misc",
+    title: "MISCELLANEOUS",
+    component: Misc,
+    stateKey: "misc",
+    toggleField: "isMiscUsed",
     group: "postProduction"
   },
   

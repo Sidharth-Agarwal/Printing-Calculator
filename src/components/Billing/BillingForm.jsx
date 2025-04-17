@@ -20,6 +20,7 @@ import DstPaste from "./Sections/Post Production/DstPaste";
 import QC from "./Sections/Post Production/QC";
 import Packing from "./Sections/Post Production/Packing";
 import Sandwich from "./Sections/Post Production/Sandwich";
+import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
 
 // Import service and job type configurations
@@ -95,6 +96,9 @@ const initialFormState = {
   packing: {
     isPackingUsed: false,
   },
+  misc: {
+    isMiscUsed: false
+  },
   sandwich: {
     isSandwichComponentUsed: false,
     lpDetailsSandwich: {
@@ -149,6 +153,8 @@ const reducer = (state, action) => {
       return { ...state, qc: { ...state.qc, ...action.payload } };
     case "UPDATE_PACKING":
       return { ...state, packing: { ...state.packing, ...action.payload } };
+    case "UPDATE_MISC":
+      return { ...state, misc: { ...state.misc, ...action.payload } };
     case "UPDATE_SANDWICH":
       return { ...state, sandwich: { ...state.sandwich, ...action.payload } };
     case "RESET_FORM":
@@ -233,6 +239,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     dstPaste: state.dstPaste?.isDstPasteUsed ? sanitizeForFirestore(state.dstPaste) : null,
     qc: state.qc?.isQCUsed ? sanitizeForFirestore(state.qc) : null,
     packing: state.packing?.isPackingUsed ? sanitizeForFirestore(state.packing) : null,
+    misc: state.misc?.isMiscUsed ? sanitizeForFirestore(state.misc) : null,
     
     // Calculations - ensure markup values are included
     calculations: sanitizeForFirestore(calculations),
@@ -881,6 +888,22 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
   
+  const toggleMiscUsage = () => {
+    const isCurrentlyUsed = state.misc?.isMiscUsed || false;
+    
+    dispatch({
+      type: "UPDATE_MISC",
+      payload: { 
+        isMiscUsed: !isCurrentlyUsed
+      }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("misc");
+    }
+  };
+  
   const toggleSandwichUsage = () => {
     const isCurrentlyUsed = state.sandwich?.isSandwichComponentUsed || false;
     
@@ -1044,17 +1067,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               onJobTypeChange={handleJobTypeChange}
             />
           </div>
-
-          {/* Display selected job type info */}
-          {/* <div className="bg-blue-50 p-4 rounded-lg mb-6">
-            <div className="flex justify-between items-center">
-              <h3 className="font-medium text-blue-800">Selected Job Type: <span className="font-bold">{state.orderAndPaper.jobType}</span></h3>
-              <div className="text-sm text-blue-600">
-                <span className="mr-2">Production Services: {visibleProductionServices.length}</span>
-                <span>Post-Production Services: {visiblePostProductionServices.length}</span>
-              </div>
-            </div>
-          </div> */}
 
           {/* Production Services Section */}
           <div className="mb-8">
@@ -1284,6 +1296,26 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 />
               </FormSection>
             )}
+            
+            {/* Misc Section */}
+            {isServiceVisible("MISC") && (
+              <FormSection 
+                title="MISCELLANEOUS" 
+                id="misc"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.misc?.isMiscUsed || false}
+                onToggleUsage={toggleMiscUsage}
+              >
+                <Misc 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
 
             {/* Sandwich Section */}
             {isServiceVisible("DUPLEX") && (
@@ -1334,15 +1366,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           )}
 
           <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">
-            {/* Left side: Preview costs button */}
-            {/* <button
-              type="button"
-              // onClick={toggleCostPreview}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-            >
-              {showCostPreview ? "Hide Preview" : "Preview Costs"}
-            </button> */}
-            
             {/* Right side: Cancel and Submit buttons */}
             <div className="flex">
               {onClose && (
