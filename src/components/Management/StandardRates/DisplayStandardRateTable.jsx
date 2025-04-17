@@ -1,6 +1,12 @@
 import React from "react";
 
 const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
+  // Sort rates alphabetically by group
+  const sortedRates = [...rates].sort((a, b) => 
+    a.group.localeCompare(b.group) || 
+    a.type.localeCompare(b.type)
+  );
+
   return (
     <div className="bg-white p-4 rounded shadow">
       <h2 className="text-lg font-medium mb-4">Standard Rates</h2>
@@ -16,7 +22,7 @@ const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
             </tr>
           </thead>
           <tbody>
-            {rates.map((rate) => (
+            {sortedRates.map((rate) => (
               <tr key={rate.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-2">{rate.group}</td>
                 <td className="px-4 py-2">{rate.type}</td>
