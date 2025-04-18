@@ -37,7 +37,7 @@ export const calculateEMBCosts = async (state) => {
     }
 
     // 1. Fetch margin value from overheads
-    const { fetchOverheadValue } = require('../utils/dbFetchUtils');
+    const { fetchOverheadValue } = require('../../../../../../utils/dbFetchUtils');
     const marginValue = await fetchOverheadValue('MARGIN');
     const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
     
