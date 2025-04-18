@@ -790,7 +790,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             {lpDetailsSandwich.noOfColors > 0 && lpDetailsSandwich.colorDetails.map((color, index) => (
               <div key={index} className="p-3 border rounded-md bg-gray-50 mt-3">
                 <h4 className="text-xs font-semibold mb-2">Color {index + 1}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                   {/* Plate Size Type */}
                   <div>
                     <label className="block text-xs mb-1">Plate Size (cm):</label>
@@ -931,7 +931,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             {fsDetailsSandwich.foilDetails.map((foil, index) => (
               <div key={index} className="p-3 border rounded-md bg-gray-50 mt-3">
                 <h4 className="text-xs font-semibold mb-2">Foil {index + 1}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                   {/* Block Size Type */}
                   <div>
                     <label className="block text-xs mb-1">Block Size (cm):</label>
@@ -1059,7 +1059,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
 
         {embDetailsSandwich.isEMBUsed && (
           <div className="pl-6 border-l-2 border-gray-200 mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+            <div className="grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
               {/* Plate Size Type */}
               <div>
                 <label className="block text-xs mb-1">Plate Size:</label>

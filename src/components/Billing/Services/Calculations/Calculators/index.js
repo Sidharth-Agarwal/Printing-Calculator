@@ -16,7 +16,7 @@ export { calculatePostDCCosts } from './postProductionCalculator/postDCCalculato
 export { calculateQCCosts } from './postProductionCalculator/qcCalculator';
 export { calculatePackingCosts } from './postProductionCalculator/packingCalculator';
 export { calculateMiscCosts } from './postProductionCalculator/miscCalculator';
-// export { calculateSandwichCosts } from './postProductionCalculators/sandwichCalculator';
+export { calculateSandwichCosts } from './postProductionCalculator/sandwichCalculator';
 
 // Final calculators
 export { calculateWastage } from './finalCalculator/wastageCalculator';

@@ -11,7 +11,8 @@ import {
   calculateMiscCosts,
   calculateWastage,
   calculateOverhead,
-  calculateMarkup
+  calculateMarkup,
+  calculateSandwichCosts
 } from './Calculators';
 
 /**

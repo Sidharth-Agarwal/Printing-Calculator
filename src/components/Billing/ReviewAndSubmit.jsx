@@ -395,7 +395,7 @@ const ReviewAndSubmit = ({
           {/* Sandwich/Duplex Section */}
           {hasSandwich && (
             <div className="space-y-1">
-              <CostItem label="Duplex/Sandwich" value={0} isTotal />
+              <CostItem label="Duplex/Sandwich" value={localCalculations.sandwichCostPerCard || 0} isTotal />
               {/* Sandwich-specific LP */}
               {localCalculations.lpCostPerCardSandwich && (
                 <CostItem label="Sandwich LP Cost" value={localCalculations.lpCostPerCardSandwich} isSubItem />
