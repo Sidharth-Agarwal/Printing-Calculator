@@ -12,7 +12,7 @@ import {
   calculateWastage,
   calculateOverhead,
   calculateMarkup
-} from './calculators';
+} from './Calculators';
 
 /**
  * Performs all necessary calculations based on the form state
