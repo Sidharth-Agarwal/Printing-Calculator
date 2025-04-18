@@ -99,7 +99,7 @@ export const serviceRegistry = {
   },
   "QC": {
     id: "qc",
-    title: "QUALITY CONTROL",
+    title: "QUALITY CHECK",
     component: QC,
     stateKey: "qc",
     toggleField: "isQCUsed",

@@ -1,5 +1,5 @@
 import { fetchPaperDetails } from '../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchOverheadValue } from '../../../../../utils/fetchDataUtils';
+import { fetchStandardRate, fetchOverheadValue } from '../../../../../utils/dbFetchUtils';
 
 /**
  * Helper function to calculate maximum cards per sheet

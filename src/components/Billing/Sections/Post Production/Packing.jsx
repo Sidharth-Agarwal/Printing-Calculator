@@ -1,36 +1,26 @@
-import React, { useState } from "react";
+import React from "react";
 
 const Packing = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const packing = state.packing || {
-    isPackingUsed: false,
-  };
-
-  const [errors, setErrors] = useState({});
-
-  const validateFields = () => {
-    const newErrors = {};
-    // Add validation logic as needed
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+    isPackingUsed: false
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!singlePageMode && validateFields()) {
+    if (!singlePageMode) {
       onNext();
     }
   };
 
-  // When Packing is not used, we don't need to show any content
+  // If Packing is not used, don't render any content
   if (!packing.isPackingUsed) {
     return null;
   }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* PACKING CONTENT WILL GO HERE */}
-      <div className="bg-gray-50 p-4 rounded text-center">
-        <p className="text-gray-500">Packing options will go here.</p>
+      <div className="bg-green-50 p-2 rounded text-center border border-green-200">
+        <p className="text-green-600 font-medium">Packaging charges will now be added in the final pricing.</p>
       </div>
     </form>
   );

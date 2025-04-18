@@ -77,13 +77,15 @@ const initialFormState = {
   },
   dieCutting: {
     isDieCuttingUsed: false,
-    difficulty: "",
-    pdc: "",
     dcMR: "",
+    dcMRConcatenated: ""
   },
   postDC: {
     isPostDCUsed: false,
+    pdcMR: "",
+    pdcMRConcatenated: ""
   },
+
   foldAndPaste: {
     isFoldAndPasteUsed: false,
   },
@@ -803,9 +805,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       payload: { 
         isDieCuttingUsed: !isCurrentlyUsed,
         ...((!isCurrentlyUsed) && {
-          difficulty: "No",
-          pdc: "No",
-          dcMR: "Simple"
+          dcMR: "SIMPLE",
+          dcMRConcatenated: "DC MR SIMPLE"
         })
       }
     });
@@ -821,7 +822,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     dispatch({
       type: "UPDATE_POST_DC",
-      payload: { isPostDCUsed: !isCurrentlyUsed }
+      payload: { 
+        isPostDCUsed: !isCurrentlyUsed,
+        ...((!isCurrentlyUsed) && {
+          pdcMR: "SIMPLE", // Default value, will be replaced when MR types are loaded
+          pdcMRConcatenated: "PDC MR SIMPLE" // Default concatenated value
+        })
+      }
     });
     
     // Auto expand when toggled on
