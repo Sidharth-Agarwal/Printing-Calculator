@@ -1,4 +1,3 @@
-import React, { useState, useEffect, useMemo } from "react";
 import React, { useState, useEffect, useCallback } from "react";
 import PropTypes from 'prop-types';
 import { collection, getDocs, query, where } from "firebase/firestore";
@@ -10,6 +9,7 @@ const ReviewAndSubmit = ({
   calculations, 
   isCalculating, 
   onCreateEstimate, 
+  onMarkupChange,
   isEditMode = false,
   previewMode = false,
   isSaving = false
@@ -97,37 +97,21 @@ const ReviewAndSubmit = ({
   // Markup selection handler
   const handleMarkupSelection = (e) => {
     const selectedValue = e.target.value;
-    setSelectedMarkupType(selectedValue);
     
+    // Find the selected markup in our rates
     const selectedRate = markupRates.find(rate => rate.name === selectedValue);
     
-    if (selectedRate && selectedRate.percentage) {
-      setMarkupPercentage(parseFloat(selectedRate.percentage));
+    if (selectedRate) {
+      // Update local state
+      setSelectedMarkupType(selectedValue);
+      setMarkupPercentage(selectedRate.percentage);
+      
+      // Call the callback to update calculations in parent component
+      if (onMarkupChange) {
+        onMarkupChange(selectedValue, selectedRate.percentage);
+      }
     }
-    
-    // Recalculate totals with the new markup
-    recalculateTotals(selectedRate?.percentage);
   };
-
-  // Function to recalculate totals when markup changes
-  const recalculateTotals = useCallback((newMarkupPercentage = markupPercentage) => {
-    if (!localCalculations) return;
-    
-    const subtotal = parseFloat(localCalculations.subtotalPerCard || 0);
-    const markupAmount = (subtotal * (newMarkupPercentage / 100));
-    const totalCostPerCard = subtotal + markupAmount;
-    const quantity = parseInt(state.orderAndPaper?.quantity) || 0;
-    const totalCost = totalCostPerCard * quantity;
-    
-    setLocalCalculations(prev => ({
-      ...prev,
-      markupPercentage: newMarkupPercentage,
-      markupType: selectedMarkupType,
-      markupAmount: markupAmount.toFixed(2),
-      totalCostPerCard: totalCostPerCard.toFixed(2),
-      totalCost: totalCost.toFixed(2)
-    }));
-  }, [localCalculations, selectedMarkupType, state.orderAndPaper?.quantity]);
 
   // Section header component
   const SectionHeader = ({ title, isExpanded, onToggle, bgColor = "bg-gray-50" }) => (
@@ -626,6 +610,7 @@ ReviewAndSubmit.propTypes = {
   calculations: PropTypes.object,
   isCalculating: PropTypes.bool,
   onCreateEstimate: PropTypes.func.isRequired,
+  onMarkupChange: PropTypes.func,
   isEditMode: PropTypes.bool,
   previewMode: PropTypes.bool,
   isSaving: PropTypes.bool

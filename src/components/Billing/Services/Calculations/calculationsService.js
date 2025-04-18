@@ -178,15 +178,15 @@ export const performCalculations = async (state) => {
  * 
  * @param {Object} state - The complete form state
  * @param {Number} miscChargePerCard - Miscellaneous charge per card (optional, will fetch from DB if null)
+ * @param {Number} markupPercentage - Markup percentage to apply
  * @param {String} markupType - Markup type to apply
- * @param {Number} markupPercentage - Optional override for markup percentage
  * @returns {Promise<Object>} - Complete calculation results
  */
 export const performCompleteCalculations = async (
   state, 
   miscChargePerCard = null,
-  markupType = "MARKUP TIMELESS",
-  markupPercentage = null
+  markupPercentage = null,
+  markupType = "MARKUP TIMELESS"
 ) => {
   try {
     console.log("Starting complete calculations with:", {
@@ -336,7 +336,7 @@ export const performCompleteCalculations = async (
     const costWithMisc = costWithPacking + miscCost;
     console.log("Cost with misc:", costWithMisc);
     
-    // Calculate markup
+    // Calculate markup using specified percentage or fetch from DB
     let markupResult;
     if (markupPercentage !== null && typeof markupPercentage === 'number') {
       // If a specific percentage is provided as a number, use it directly
@@ -513,9 +513,9 @@ export const recalculateTotals = async (
       : 0;
     
     // Calculate packing cost as percentage of COGS
-    const packingCost = state.packing?.isPackingUsed 
-      ? COGS * (packingPercentage / 100) 
-      : 0;
+    // Check if packing is used in the base calculations
+    const packingUsed = baseCalculations.packingCostPerCard && parseFloat(baseCalculations.packingCostPerCard) > 0;
+    const packingCost = packingUsed ? COGS * (packingPercentage / 100) : 0;
     
     const costWithPacking = COGS + packingCost;
     
@@ -535,6 +535,8 @@ export const recalculateTotals = async (
     
     // Return updated calculations
     return {
+      ...baseCalculations, // Preserve original base calculations
+      
       productionCost: productionCost.toFixed(2),
       postProductionCost: postProductionCost.toFixed(2),
       qcCostPerCard: qcCost.toFixed(2),
@@ -586,7 +588,7 @@ export const recalculateTotals = async (
     const packingPercentage = baseCalculations.packingPercentage 
       ? parseFloat(baseCalculations.packingPercentage) 
       : 0;
-    const packingCost = baseCalculations.packingUsed 
+    const packingCost = baseCalculations.packingCostPerCard && parseFloat(baseCalculations.packingCostPerCard) > 0
       ? COGS * (packingPercentage / 100) 
       : 0;
     
@@ -601,6 +603,7 @@ export const recalculateTotals = async (
     const totalCost = totalCostPerCard * quantity;
     
     return {
+      ...baseCalculations, // Preserve original base calculations
       error: "Error recalculating with database values, using fallback calculations.",
       baseCost: baseCost.toFixed(2),
       wastagePercentage: WASTAGE_PERCENTAGE,
@@ -612,7 +615,7 @@ export const recalculateTotals = async (
       packingCostPerCard: packingCost.toFixed(2),
       costWithPacking: costWithPacking.toFixed(2),
       miscUsed: miscUsed,
-      miscChargePerCard: miscCharge.toFixed(2),
+      miscCostPerCard: miscCharge.toFixed(2),
       costWithMisc: costWithMisc.toFixed(2),
       markupType: markupType,
       markupPercentage: markupPercentage,
