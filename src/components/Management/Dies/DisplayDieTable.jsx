@@ -1,6 +1,11 @@
 import React from "react";
 
 const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
+  // Sort dies alphabetically by job type
+  const sortedDies = [...dies].sort((a, b) => 
+    (a.jobType || '').localeCompare(b.jobType || '')
+  );
+
   return (
     <div className="bg-white p-4 rounded shadow">
       <h2 className="text-lg font-medium mb-4">Available Dies</h2>
@@ -17,12 +22,6 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                 "Product B",
                 "Die L",
                 "Die B",
-                // "Paper L",
-                // "Paper B",
-                // "Plate L",
-                // "Plate B",
-                // "CLSD L",
-                // "CLSD B",
                 "Price (INR)",
                 "Image",
                 "Actions",
@@ -34,23 +33,17 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
             </tr>
           </thead>
           <tbody>
-            {dies.map((die) => (
+            {sortedDies.map((die) => (
               <tr key={die.id} className="border-t hover:bg-gray-50">
-                <td className="px-4 py-2">{die.jobType}</td>
-                <td className="px-4 py-2">{die.type}</td>
-                <td className="px-4 py-2">{die.dieCode}</td>
-                <td className="px-4 py-2">{die.frags}</td>
-                <td className="px-4 py-2">{die.productSizeL}</td>
-                <td className="px-4 py-2">{die.productSizeB}</td>
-                <td className="px-4 py-2">{die.dieSizeL}</td>
-                <td className="px-4 py-2">{die.dieSizeB}</td>
-                {/* <td className="px-4 py-2">{die.paperSizeL}</td>
-                <td className="px-4 py-2">{die.paperSizeB}</td> */}
-                {/* <td className="px-4 py-2">{die.plateSizeL}</td>
-                <td className="px-4 py-2">{die.plateSizeB}</td>
-                <td className="px-4 py-2">{die.clsdPrintSizeL}</td>
-                <td className="px-4 py-2">{die.clsdPrintSizeB}</td> */}
-                <td className="px-4 py-2">{die.price}</td> {/* Add price to table row */}
+                <td className="px-4 py-2">{die.jobType || "-"}</td>
+                <td className="px-4 py-2">{die.type || "-"}</td>
+                <td className="px-4 py-2">{die.dieCode || "-"}</td>
+                <td className="px-4 py-2">{die.frags || "-"}</td>
+                <td className="px-4 py-2">{die.productSizeL || "-"}</td>
+                <td className="px-4 py-2">{die.productSizeB || "-"}</td>
+                <td className="px-4 py-2">{die.dieSizeL || "-"}</td>
+                <td className="px-4 py-2">{die.dieSizeB || "-"}</td>
+                <td className="px-4 py-2">{die.price || "-"}</td>
                 <td className="px-4 py-2">
                   {die.imageUrl ? (
                     <img src={die.imageUrl} alt="Die" className="w-12 h-12 object-cover" />

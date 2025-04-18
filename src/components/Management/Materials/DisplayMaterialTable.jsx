@@ -1,6 +1,11 @@
 import React from "react";
 
 const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
+  // Sort materials alphabetically by material type
+  const sortedMaterials = [...materials].sort((a, b) => 
+    (a.materialType || '').localeCompare(b.materialType || '')
+  );
+
   return (
     <div className="bg-white p-4 rounded shadow">
       <h2 className="text-lg font-medium mb-4">Available Materials</h2>
@@ -30,7 +35,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
             </tr>
           </thead>
           <tbody>
-            {materials.map((material) => (
+            {sortedMaterials.map((material) => (
               <tr key={material.id} className="border-t hover:bg-gray-50">
                 <td className="px-4 py-2">{material.materialType}</td>
                 <td className="px-4 py-2">{material.materialName}</td>
