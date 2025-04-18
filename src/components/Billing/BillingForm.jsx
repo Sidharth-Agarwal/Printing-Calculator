@@ -2,7 +2,7 @@ import React, { useReducer, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import { performCompleteCalculations } from "./Services/Calculations/enhancedCalculations";
+import { performCompleteCalculations } from "./Services/Calculations/calculationsService";
 
 // Import components
 import ClientSelection from "./Sections/Fixed/ClientSelection";
@@ -168,8 +168,7 @@ const reducer = (state, action) => {
 
 // Map state to Firebase structure with sanitization for undefined values
 const mapStateToFirebaseStructure = (state, calculations) => {
-  // This function is unchanged - keeping your existing implementation
-  const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, dieCutting, sandwich } = state;
+  const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, screenPrint, dieCutting, sandwich } = state;
 
   // Helper function to sanitize objects for Firebase
   const sanitizeForFirestore = (obj) => {
@@ -229,7 +228,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     fsDetails: fsDetails.isFSUsed ? sanitizeForFirestore(fsDetails) : null,
     embDetails: embDetails.isEMBUsed ? sanitizeForFirestore(embDetails) : null,
     digiDetails: digiDetails.isDigiUsed ? sanitizeForFirestore(digiDetails) : null,
-    screenPrint: state.screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(state.screenPrint) : null,
+    screenPrint: screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(screenPrint) : null,
     dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
     sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
     
@@ -313,12 +312,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [calculations, setCalculations] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeSection, setActiveSection] = useState(null); // State for tracking active/open section
+  const [activeSection, setActiveSection] = useState(null);
   const [validationErrors, setValidationErrors] = useState({});
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedVersion, setSelectedVersion] = useState("");
-  const [showCostPreview, setShowCostPreview] = useState(false); // State for toggling cost preview
   const [defaultMarkup, setDefaultMarkup] = useState({ type: "STANDARD", percentage: 0 });
   
   // Define visible services based on the selected job type
@@ -960,11 +958,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
-  // Toggle cost preview visibility
-  const toggleCostPreview = () => {
-    setShowCostPreview(!showCostPreview);
-  };
-
   // Check if a service is visible for the current job type
   const isServiceVisible = (serviceCode) => {
     return (
@@ -982,15 +975,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           </h1>
           
           <div className="flex space-x-3">
-            {/* Preview Cost Button */}
-            {/* <button
-              type="button"
-              onClick={toggleCostPreview}
-              className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-            >
-              {showCostPreview ? "Hide Preview" : "Preview Costs"}
-            </button> */}
-            
             {/* Reset Form Button */}
             <button 
               type="button"
@@ -1338,32 +1322,23 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             )}
           </div>
 
-          {/* Cost Calculation & Review Section - Only visible when preview is toggled */}
-          {showCostPreview && (
-            <div className="bg-gray-50 p-5 rounded-lg shadow-sm mt-6 border-2 border-blue-300">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-semibold text-blue-700 border-b pb-2">COST CALCULATION PREVIEW</h2>
-                <button 
-                  type="button" 
-                  onClick={toggleCostPreview}
-                  className="text-blue-500 hover:text-blue-700"
-                >
-                  <span className="text-xl">×</span> Close Preview
-                </button>
-              </div>
-              <ReviewAndSubmit 
-                state={state} 
-                calculations={calculations} 
-                isCalculating={isCalculating} 
-                onPrevious={() => {}} 
-                onCreateEstimate={handleCreateEstimate} 
-                isEditMode={isEditMode}
-                isSaving={isSubmitting}
-                singlePageMode={true}
-                previewMode={true} // New prop to indicate preview mode
-              />
+          {/* Cost Calculation & Review Section - ALWAYS displayed */}
+          <div className="bg-gray-50 p-5 rounded-lg shadow-sm mt-6 border-2 border-blue-300">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-lg font-semibold text-blue-700 border-b pb-2">COST CALCULATION</h2>
             </div>
-          )}
+            <ReviewAndSubmit 
+              state={state} 
+              calculations={calculations} 
+              isCalculating={isCalculating} 
+              onPrevious={() => {}} 
+              onCreateEstimate={handleCreateEstimate} 
+              isEditMode={isEditMode}
+              isSaving={isSubmitting}
+              singlePageMode={true}
+              previewMode={true} // Preview mode to hide the Submit button inside the component
+            />
+          </div>
 
           <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">
             {/* Right side: Cancel and Submit buttons */}
