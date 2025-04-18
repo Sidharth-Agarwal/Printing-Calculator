@@ -4,8 +4,13 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClientType, setFilterClientType] = useState("");
 
-  // Filter clients based on search term and client type filter
-  const filteredClients = clients.filter((client) => {
+  // Sort clients alphabetically by name
+  const sortedClients = [...clients].sort((a, b) => 
+    (a.name || '').localeCompare(b.name || '')
+  );
+
+  // Filter sorted clients based on search term and client type filter
+  const filteredClients = sortedClients.filter((client) => {
     const matchesSearch =
       searchTerm === "" ||
       client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
