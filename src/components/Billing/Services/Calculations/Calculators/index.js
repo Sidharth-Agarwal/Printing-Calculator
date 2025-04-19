@@ -6,7 +6,7 @@ export { calculateLPCosts } from './productionCalculator/lpCalculator';
 export { calculateFSCosts } from './productionCalculator/fsCalculator';
 export { calculateEMBCosts } from './productionCalculator/embCalculator';
 export { calculateScreenPrintCosts } from './productionCalculator/screenCalculator';
-// export { calculateDigiDetailsCosts } from './productionCalculators/digiCalculator'; // To be implemented
+export { calculateDigiDetailsCosts } from './productionCalculator/digiCalculator';
 
 // Post-production service calculators
 export { calculateDieCuttingCosts } from './postProductionCalculator/dieCuttingCalculator';

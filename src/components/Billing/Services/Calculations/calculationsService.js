@@ -4,6 +4,7 @@ import {
   calculateFSCosts,
   calculateEMBCosts,
   calculateScreenPrintCosts,
+  calculateDigiDetailsCosts,
   calculateDieCuttingCosts,
   calculatePostDCCosts,
   calculateQCCosts,
