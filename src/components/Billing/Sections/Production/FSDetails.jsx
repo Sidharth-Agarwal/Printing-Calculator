@@ -400,17 +400,12 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       className="border rounded-md p-2 w-full"
                       data-testid={`foil-type-select-${index}`}
                     >
-                      <option value="">Select Foil Type</option>
                       {foilTypes.map((foilType, idx) => (
                         <option key={idx} value={foilType.materialName}>
                           {foilType.materialName}
                         </option>
                       ))}
                     </select>
-                    {/* Show currently selected value for debugging */}
-                    <div className="mt-1 text-xs text-gray-500">
-                      Selected: {foil.foilType || 'None'}
-                    </div>
                     {errors[`foilType-${index}`] && (
                       <p className="text-red-500 text-sm">{errors[`foilType-${index}`]}</p>
                     )}
@@ -426,7 +421,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       }
                       className="border rounded-md p-2 w-full"
                     >
-                      <option value="">Select Block Type</option>
                       {blockTypes.map((blockType, idx) => (
                         <option key={idx} value={blockType.materialName}>
                           {blockType.materialName}
@@ -448,7 +442,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       }
                       className="border rounded-md p-2 w-full"
                     >
-                      <option value="">Select MR Type</option>
                       {mrTypes.map((typeOption, idx) => (
                         <option key={idx} value={typeOption.type}>
                           {typeOption.type}
@@ -463,24 +456,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
               </div>
             ))
           )}
-        </div>
-      )}
-
-      {!singlePageMode && (
-        <div className="flex justify-between mt-4">
-          <button
-            type="button"
-            onClick={onPrevious}
-            className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
-          >
-            Previous
-          </button>
-          <button
-            type="submit"
-            className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
-          >
-            Next
-          </button>
         </div>
       )}
     </form>
