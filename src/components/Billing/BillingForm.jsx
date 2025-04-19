@@ -2,7 +2,7 @@
 // import { useNavigate } from "react-router-dom";
 // import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 // import { db } from "../../firebaseConfig";
-// import { performCompleteCalculations } from "./Services/Calculations/calculationsService";
+// import { performCompleteCalculations, recalculateTotals } from "./Services/Calculations/calculationsService";
 
 // // Import components
 // import ClientSelection from "./Sections/Fixed/ClientSelection";
@@ -253,50 +253,6 @@
 //   return firestoreData;
 // };
 
-// const recalculateWithMarkup = async (markupType, markupPercentage) => {
-//   setIsCalculating(true);
-//   try {
-//     // Use the recalculateTotals function from calculationsService if we already have base calculations
-//     if (calculations && !calculations.error) {
-//       const { recalculateTotals } = await import('./Services/Calculations/calculationsService');
-      
-//       // Call recalculateTotals with the existing calculations, updated markup info, and quantity
-//       const result = await recalculateTotals(
-//         calculations,
-//         calculations.miscCostPerCard || 5, // Use existing misc charge or default
-//         markupPercentage,
-//         parseInt(state.orderAndPaper?.quantity, 10) || 0,
-//         markupType
-//       );
-      
-//       if (result.error) {
-//         console.error("Error recalculating with new markup:", result.error);
-//       } else {
-//         console.log("Updated calculations with new markup:", result);
-//         setCalculations(result);
-//       }
-//     } else {
-//       // If we don't have base calculations yet, perform a complete calculation
-//       const result = await performCompleteCalculations(
-//         state,
-//         5, // default misc charge
-//         markupPercentage,
-//         markupType
-//       );
-      
-//       if (result.error) {
-//         console.error("Error during calculations:", result.error);
-//       } else {
-//         setCalculations(result);
-//       }
-//     }
-//   } catch (error) {
-//     console.error("Unexpected error during markup recalculation:", error);
-//   } finally {
-//     setIsCalculating(false);
-//   }
-// };
-
 // // FormSection component with toggle in header
 // const FormSection = ({ title, children, id, activeSection, setActiveSection, isUsed = false, onToggleUsage, isDisabled = false }) => {
 //   const isActive = activeSection === id;
@@ -363,7 +319,9 @@
 //   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
 //   const [selectedClient, setSelectedClient] = useState(null);
 //   const [selectedVersion, setSelectedVersion] = useState("");
-//   const [defaultMarkup, setDefaultMarkup] = useState({ type: "STANDARD", percentage: 0 });
+//   const [defaultMarkup, setDefaultMarkup] = useState({ type: "MARKUP TIMELESS", percentage: 50 });
+//   const [selectedMarkupType, setSelectedMarkupType] = useState("MARKUP TIMELESS");
+//   const [markupPercentage, setMarkupPercentage] = useState(50);
   
 //   // Define visible services based on the selected job type
 //   const [visibleProductionServices, setVisibleProductionServices] = useState([]);
@@ -375,27 +333,44 @@
 //   useEffect(() => {
 //     const fetchDefaultMarkup = async () => {
 //       try {
-//         const ratesCollection = collection(db, "standard_rates");
-//         const querySnapshot = await getDocs(ratesCollection);
+//         // Query the overheads collection for markup entries
+//         const overheadsCollection = collection(db, "overheads");
+//         const markupQuery = query(overheadsCollection, where("name", ">=", "MARKUP "), where("name", "<=", "MARKUP" + "\uf8ff"));
+//         const querySnapshot = await getDocs(markupQuery);
         
-//         const markupData = querySnapshot.docs
-//           .map(doc => ({ id: doc.id, ...doc.data() }))
-//           .filter(rate => rate.group && rate.group.toUpperCase() === "MARKUP");
-        
-//         if (markupData.length > 0) {
-//           const defaultMarkup = markupData.find(rate => rate.type === "STANDARD") || markupData[0];
-//           setDefaultMarkup({
-//             type: defaultMarkup.type,
-//             percentage: parseFloat(defaultMarkup.finalRate) || 0
+//         const fetchedMarkups = [];
+//         querySnapshot.forEach(doc => {
+//           const data = doc.data();
+//           fetchedMarkups.push({
+//             id: doc.id,
+//             name: data.name,
+//             percentage: parseFloat(data.percentage) || 0
 //           });
+//         });
+        
+//         if (fetchedMarkups.length > 0) {
+//           // Set default markup to MARKUP TIMELESS or first available
+//           const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS");
+//           if (timelessMarkup) {
+//             setDefaultMarkup({
+//               type: timelessMarkup.name,
+//               percentage: timelessMarkup.percentage
+//             });
+//             setSelectedMarkupType(timelessMarkup.name);
+//             setMarkupPercentage(timelessMarkup.percentage);
+//           } else {
+//             setDefaultMarkup({
+//               type: fetchedMarkups[0].name,
+//               percentage: fetchedMarkups[0].percentage
+//             });
+//             setSelectedMarkupType(fetchedMarkups[0].name);
+//             setMarkupPercentage(fetchedMarkups[0].percentage);
+//           }
           
-//           console.log("Fetched default markup:", {
-//             type: defaultMarkup.type,
-//             percentage: parseFloat(defaultMarkup.finalRate)
-//           });
+//           console.log("Fetched markup rates:", fetchedMarkups);
 //         }
 //       } catch (error) {
-//         console.error("Error fetching default markup:", error);
+//         console.error("Error fetching markup rates:", error);
 //       }
 //     };
     
@@ -435,6 +410,15 @@
 //       if (initialState.versionId) {
 //         setSelectedVersion(initialState.versionId);
 //       }
+      
+//       // Set markup if it exists in initialState calculations
+//       if (initialState.calculations?.markupType) {
+//         setSelectedMarkupType(initialState.calculations.markupType);
+//       }
+      
+//       if (initialState.calculations?.markupPercentage) {
+//         setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
+//       }
 //     }
 //   }, [initialState, isEditMode]);
 
@@ -473,6 +457,58 @@
 //     return () => clearTimeout(debounceTimer);
 //   }, [state]);
 
+//   // Function to handle markup changes from ReviewAndSubmit component
+//   const handleMarkupChange = async (markupType, markupPercentage) => {
+//     setSelectedMarkupType(markupType);
+//     setMarkupPercentage(markupPercentage);
+    
+//     await recalculateWithMarkup(markupType, markupPercentage);
+//   };
+
+//   // Function to recalculate totals when markup changes
+//   const recalculateWithMarkup = async (markupType, markupPercentage) => {
+//     console.log("Recalculating with new markup:", markupType, markupPercentage);
+//     setIsCalculating(true);
+//     try {
+//       // Use the recalculateTotals function from calculationsService if we already have base calculations
+//       if (calculations && !calculations.error) {
+//         // Call recalculateTotals with the existing calculations, updated markup info, and quantity
+//         const result = await recalculateTotals(
+//           calculations,
+//           parseFloat(calculations.miscCostPerCard || 5), // Use existing misc charge or default
+//           markupPercentage,
+//           parseInt(state.orderAndPaper?.quantity, 10) || 0,
+//           markupType
+//         );
+        
+//         if (result.error) {
+//           console.error("Error recalculating with new markup:", result.error);
+//         } else {
+//           console.log("Updated calculations with new markup:", result);
+//           setCalculations(result);
+//         }
+//       } else {
+//         // If we don't have base calculations yet, perform a complete calculation
+//         const result = await performCompleteCalculations(
+//           state,
+//           5, // default misc charge
+//           markupPercentage,
+//           markupType
+//         );
+        
+//         if (result.error) {
+//           console.error("Error during calculations:", result.error);
+//         } else {
+//           setCalculations(result);
+//         }
+//       }
+//     } catch (error) {
+//       console.error("Unexpected error during markup recalculation:", error);
+//     } finally {
+//       setIsCalculating(false);
+//     }
+//   };
+
 //   // Enhanced calculation function using the centralized calculation service
 //   const performCalculations = async () => {
 //     // Check if client and essential fields are filled
@@ -486,12 +522,12 @@
     
 //     setIsCalculating(true);
 //     try {
-//       // Pass the default markup values to the calculation service
+//       // Pass the current markup values to the calculation service
 //       const result = await performCompleteCalculations(
 //         state,
 //         5, // default misc charge
-//         defaultMarkup.percentage,
-//         defaultMarkup.type
+//         markupPercentage,
+//         selectedMarkupType
 //       );
       
 //       if (result.error) {
@@ -567,8 +603,8 @@
 //       // Double-check that markup values exist before saving
 //       const calculationsWithMarkup = {
 //         ...calculations,
-//         markupType: calculations?.markupType || defaultMarkup.type, // Use default if not set
-//         markupPercentage: parseFloat(calculations?.markupPercentage || defaultMarkup.percentage),
+//         markupType: selectedMarkupType,
+//         markupPercentage: markupPercentage,
 //         markupAmount: calculations?.markupAmount || "0.00"
 //       };
       
@@ -1003,6 +1039,10 @@
 //     setSelectedClient(null);
 //     setSelectedVersion("");
     
+//     // Reset markup to defaults
+//     setSelectedMarkupType(defaultMarkup.type);
+//     setMarkupPercentage(defaultMarkup.percentage);
+    
 //     // Scroll to top of form
 //     if (formRef.current) {
 //       formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -1383,10 +1423,9 @@
 //               calculations={calculations} 
 //               isCalculating={isCalculating} 
 //               onCreateEstimate={handleCreateEstimate}
-//               onMarkupChange={recalculateWithMarkup} // Add this new prop
+//               onMarkupChange={handleMarkupChange} 
 //               isEditMode={isEditMode}
 //               isSaving={isSubmitting}
-//               singlePageMode={true}
 //               previewMode={true}
 //             />
 //           </div>
@@ -1436,6 +1475,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { performCompleteCalculations, recalculateTotals } from "./Services/Calculations/calculationsService";
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 // Import components
 import ClientSelection from "./Sections/Fixed/ClientSelection";
@@ -1687,7 +1727,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
 };
 
 // FormSection component with toggle in header
-const FormSection = ({ title, children, id, activeSection, setActiveSection, isUsed = false, onToggleUsage, isDisabled = false }) => {
+const FormSection = ({ title, children, id, activeSection, setActiveSection, isUsed = false, onToggleUsage, isDisabled = false, bgColor = "bg-gray-50" }) => {
   const isActive = activeSection === id;
   
   const toggleSection = () => {
@@ -1696,42 +1736,44 @@ const FormSection = ({ title, children, id, activeSection, setActiveSection, isU
     }
   };
   
+  // Special handling for the ReviewAndSubmit section (which has no toggle)
+  const isReviewSection = id === "reviewAndSubmit";
+  
   return (
     <div className={`mb-6 border rounded-lg overflow-hidden shadow-sm ${isDisabled ? 'opacity-60' : ''}`}>
       <div 
-        className={`p-3 flex justify-between items-center ${isActive ? 'bg-blue-50' : 'bg-gray-50'}`}
+        className={`p-3 flex justify-between items-center ${isActive ? (bgColor || 'bg-blue-50') : (bgColor || 'bg-gray-50')} cursor-pointer`}
+        onClick={toggleSection}
       >
         <div className="flex items-center space-x-4">
-          {/* Toggle switch in section header */}
-          <div 
-            className={`flex items-center space-x-2 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-            onClick={(e) => {
-              e.stopPropagation(); // Prevent section expansion when clicking toggle
-              if (!isDisabled) {
-                onToggleUsage();
-              }
-            }}
-          >
-            <div className={`w-5 h-5 flex items-center justify-center border rounded-full ${isDisabled ? 'bg-gray-200 border-gray-300' : 'border-gray-300 bg-gray-200'}`}>
-              {isUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
+          {/* Toggle switch in section header - not shown for ReviewAndSubmit */}
+          {!isReviewSection && (
+            <div 
+              className={`flex items-center space-x-2 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
+              onClick={(e) => {
+                e.stopPropagation(); // Prevent section expansion when clicking toggle
+                if (!isDisabled) {
+                  onToggleUsage();
+                }
+              }}
+            >
+              <div className={`w-5 h-5 flex items-center justify-center border rounded-full ${isDisabled ? 'bg-gray-200 border-gray-300' : 'border-gray-300 bg-gray-200'}`}>
+                {isUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
+              </div>
             </div>
-          </div>
+          )}
           
           {/* Section title */}
           <h2 
             className={`text-lg font-semibold ${isDisabled ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer'}`}
-            onClick={toggleSection}
           >
             {title}
           </h2>
         </div>
         
         {/* Expand/collapse button */}
-        <span 
-          className={`text-xl ${isDisabled ? 'cursor-not-allowed text-gray-400' : 'cursor-pointer text-gray-500'}`}
-          onClick={toggleSection}
-        >
-          {isActive ? '−' : '+'}
+        <span className="text-gray-500">
+          {isActive ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
         </span>
       </div>
       <div className={`transition-all duration-300 ${isActive ? 'block p-4' : 'hidden'}`}>
@@ -1747,7 +1789,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [calculations, setCalculations] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeSection, setActiveSection] = useState(null);
+  const [activeSection, setActiveSection] = useState("reviewAndSubmit"); // Initially expand ReviewAndSubmit
   const [validationErrors, setValidationErrors] = useState({});
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
   const [selectedClient, setSelectedClient] = useState(null);
@@ -2172,6 +2214,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
+  // Toggle functions for all service sections
   const toggleLPUsage = () => {
     const isCurrentlyUsed = state.lpDetails.isLPUsed;
     
@@ -2455,6 +2498,16 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     // Auto expand when toggled on
     if (!isCurrentlyUsed) {
       setActiveSection("sandwich");
+    }
+  };
+  
+  // Special function for ReviewAndSubmit section
+  const toggleReviewSection = () => {
+    // This only expands/collapses the section without changing any usage state
+    if (activeSection === "reviewAndSubmit") {
+      setActiveSection(null);
+    } else {
+      setActiveSection("reviewAndSubmit");
     }
   };
 
@@ -2846,21 +2899,28 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             )}
           </div>
 
-          {/* Cost Calculation & Review Section - ALWAYS displayed */}
-          <div className="bg-gray-50 p-5 rounded-lg shadow-sm mt-6 border-2 border-blue-300">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-semibold text-blue-700 border-b pb-2">COST CALCULATION</h2>
-            </div>
-            <ReviewAndSubmit 
-              state={state} 
-              calculations={calculations} 
-              isCalculating={isCalculating} 
-              onCreateEstimate={handleCreateEstimate}
-              onMarkupChange={handleMarkupChange} 
-              isEditMode={isEditMode}
-              isSaving={isSubmitting}
-              previewMode={true}
-            />
+          {/* Cost Calculation & Review Section - Now Collapsible */}
+          <div className="mt-6 border-2 rounded-lg">
+            <FormSection 
+              title="COST CALCULATION" 
+              id="reviewAndSubmit"
+              activeSection={activeSection}
+              setActiveSection={setActiveSection}
+              isUsed={true}
+              onToggleUsage={toggleReviewSection}
+              bgColor="bg-blue-50"
+            >
+              <ReviewAndSubmit 
+                state={state} 
+                calculations={calculations} 
+                isCalculating={isCalculating} 
+                onCreateEstimate={handleCreateEstimate}
+                onMarkupChange={handleMarkupChange} 
+                isEditMode={isEditMode}
+                isSaving={isSubmitting}
+                previewMode={!isSubmitting}
+              />
+            </FormSection>
           </div>
 
           <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">
