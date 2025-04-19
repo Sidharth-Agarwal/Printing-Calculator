@@ -1,5 +1,30 @@
 import { fetchPaperDetails } from '../../../../../utils/fetchDataUtils';
 import { fetchStandardRate, fetchOverheadValue } from '../../../../../utils/dbFetchUtils';
+import { db } from '../../../../../firebaseConfig';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+
+/**
+ * Fetch die details from Firestore database
+ * @param {string} dieCode - Die code to look up
+ * @returns {Promise<Object|null>} - The die details or null if not found
+ */
+const fetchDieDetails = async (dieCode) => {
+  try {
+    const diesCollection = collection(db, "dies");
+    const q = query(diesCollection, where("dieCode", "==", dieCode));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    console.warn(`Die not found for code: ${dieCode}`);
+    return null;
+  } catch (error) {
+    console.error("Error fetching die details:", error);
+    return null;
+  }
+};
 
 /**
  * Helper function to calculate maximum cards per sheet
@@ -33,6 +58,7 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     const { orderAndPaper } = state;
     const paperName = orderAndPaper.paperName;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const dieCode = orderAndPaper.dieCode;
     
     // Validate required inputs
     if (!paperName || !totalCards || !orderAndPaper.dieSize.length || !orderAndPaper.dieSize.breadth) {
@@ -78,8 +104,25 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     // 6. Calculate maximum cards per sheet
     const maxCardsPerSheet = calculateMaxCardsPerSheet(dieSize, paperSize);
     
-    // 7. Calculate total sheets required
-    const totalSheetsRequired = Math.ceil(totalCards / maxCardsPerSheet);
+    // NEW STEP: Fetch die details to get frags
+    let dieDetails = null;
+    let fragsPerDie = 1; // Default to 1 if not found
+    
+    if (dieCode) {
+      dieDetails = await fetchDieDetails(dieCode);
+      console.log("Die details : ",dieDetails)
+      if (dieDetails && dieDetails.frags) {
+        fragsPerDie = parseInt(dieDetails.frags) || 1;
+        console.log("fragss per die : ", fragsPerDie)
+      }
+    }
+
+    // Calculate total frags per sheet
+    const totalFragsPerSheet = maxCardsPerSheet * fragsPerDie
+    
+    // 7. Calculate total sheets required, now considering frags if available
+    const totalSheetsRequired = Math.ceil(totalCards / (totalFragsPerSheet));
+    console.log("Total sheet required ", totalSheetsRequired);
 
     // 8. Calculate costs
     const paperCost = totalSheetsRequired * parseFloat(paperDetails.finalRate);
