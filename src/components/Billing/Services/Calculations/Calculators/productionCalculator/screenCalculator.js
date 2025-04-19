@@ -7,22 +7,17 @@ import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
  */
 export const calculateScreenPrintCosts = async (state) => {
   try {
-    const { screenPrintDetails, orderAndPaper } = state;
+    // FIX: Check both possible structures to ensure backward compatibility
+    const screenPrintInfo = state.screenPrintDetails || state.screenPrint;
+    const { orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
 
     // Check if screen printing is used
-    if (!screenPrintDetails?.isScreenPrintUsed) {
+    // FIX: Check both possible flag locations
+    const isScreenPrintUsed = screenPrintInfo?.isScreenPrintUsed || state.screenPrint?.isScreenPrintUsed;
+    
+    if (!isScreenPrintUsed) {
       return { 
-        screenPrintCostPerCard: "0.00",
-        screenPrintPerPieceCost: "0.00",
-        screenPrintBaseCostPerCard: "0.00"
-      };
-    }
-
-    // Validate required inputs
-    if (!totalCards) {
-      return { 
-        error: "Missing quantity information for screen printing calculations",
         screenPrintCostPerCard: "0.00",
         screenPrintPerPieceCost: "0.00",
         screenPrintBaseCostPerCard: "0.00"
@@ -46,6 +41,16 @@ export const calculateScreenPrintCosts = async (state) => {
     
     // 4. Calculate total screen printing cost per card
     const screenPrintCostPerCard = screenPrintPerPieceCost + screenPrintBaseCostPerCard;
+    
+    // Log calculation for debugging
+    console.log("Screen printing calculation:", {
+      isScreenPrintUsed,
+      screenPrintPerPieceCost,
+      screenPrintCost,
+      screenPrintBaseCostPerCard,
+      screenPrintCostPerCard,
+      totalCards
+    });
     
     // Return all calculations
     return {

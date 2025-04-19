@@ -190,11 +190,10 @@ const ReviewAndSubmit = ({
   const renderProductionServices = () => {
     if (!localCalculations) return null;
     
-    // Check if any production services are enabled
     const hasLP = state.lpDetails?.isLPUsed;
     const hasFS = state.fsDetails?.isFSUsed;
     const hasEMB = state.embDetails?.isEMBUsed;
-    const hasScreenPrint = state.screenPrint?.isScreenPrintUsed;
+    const hasScreenPrint = state.screenPrintDetails?.isScreenPrintUsed || state.screenPrint?.isScreenPrintUsed;
     const hasDigi = state.digiDetails?.isDigiUsed;
     
     if (!hasLP && !hasFS && !hasEMB && !hasScreenPrint && !hasDigi) {
