@@ -78,8 +78,7 @@ export const calculateFSCosts = async (state) => {
       }
       
       // 3. Calculate block cost and add freight
-      const blockBaseCost = blockArea * parseFloat(blockMaterialDetails.finalCostPerUnit || 0);
-      const blockCostWithFreight = blockBaseCost + freightCost;
+      const blockBaseCost = blockArea * parseFloat(blockMaterialDetails.landedCost || 0);
       totalBlockCost += blockBaseCost;
       totalFreightCost += freightCost;
       
@@ -93,7 +92,8 @@ export const calculateFSCosts = async (state) => {
       }
       
       // Calculate foil cost
-      const foilCost = blockArea * parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
+      const foilCostPerUnit = parseFloat(foilMaterialDetails.finalCostPerUnit || 0)
+      const foilCost = blockArea * foilCostPerUnit;
       totalFoilCost += foilCost;
       
       // 5. Fetch impression cost from standard rates
@@ -120,7 +120,7 @@ export const calculateFSCosts = async (state) => {
     
     // Calculate per card costs
     const fsBlockCostPerCard = totalBlockCost / totalCards;
-    const fsFoilCostPerCard = totalFoilCost / totalCards;
+    const fsFoilCostPerCard = totalFoilCost;
     const fsImpressionCostPerCard = totalImpressionCost / totalCards;
     const fsMRCostPerCard = totalMRCost / totalCards;
     const fsFreightCostPerCard = totalFreightCost / totalCards;
