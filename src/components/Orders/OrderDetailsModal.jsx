@@ -5,11 +5,19 @@ import jsPDF from 'jspdf';
 import html2canvas from 'html2canvas';
 import OrderJobTicket from './OrderJobTicket';
 import TaxInvoice from './TaxInvoice';
+import { ChevronDown, ChevronUp } from 'lucide-react';
 
 const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   const [activeView, setActiveView] = useState('details');
   const [isDownloading, setIsDownloading] = useState(false);
   const contentRef = useRef(null);
+  const [expandedSections, setExpandedSections] = useState({
+    paperAndCutting: true,
+    production: false,
+    postProduction: false,
+    wastageAndOverhead: false
+  });
+  
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
 
   // Stage colors for visual representation
@@ -34,6 +42,14 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     dieSize: "Die Size",
     dieSelection: "Die Selection",
     paperName: "Paper Name"
+  };
+
+  // Toggle section expansion
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }));
   };
 
   // Get label for field
@@ -138,174 +154,386 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     }
   };
 
-  // Render the main cost components section
-  const renderMainCostComponents = (calculations) => {
-    if (!calculations) return null;
+  // Section header component
+  const SectionHeader = ({ title, isExpanded, onToggle, bgColor = "bg-gray-50" }) => (
+    <div 
+      className={`flex justify-between items-center p-3 ${bgColor} rounded-t cursor-pointer`}
+      onClick={onToggle}
+    >
+      <h3 className="font-semibold text-gray-700">{title}</h3>
+      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+    </div>
+  );
 
-    const mainCostComponents = [
-      { key: 'paperAndCuttingCostPerCard', label: 'Paper & Cutting' },
-      { key: 'lpCostPerCard', label: 'Letter Press', condition: order.lpDetails?.isLPUsed },
-      { key: 'fsCostPerCard', label: 'Foil Stamping', condition: order.fsDetails?.isFSUsed },
-      { key: 'embCostPerCard', label: 'Embossing', condition: order.embDetails?.isEMBUsed },
-      { key: 'digiCostPerCard', label: 'Digital Printing', condition: order.digiDetails?.isDigiUsed },
-      { key: 'dieCuttingCostPerCard', label: 'Die Cutting', condition: order.dieCutting?.isDieCuttingUsed },
-      { key: 'pastingCostPerCard', label: 'Pasting', condition: order.pasting?.isPastingUsed },
-    ];
-
-    return (
-      <div className="mb-6">
-        <h3 className="text-lg font-semibold text-gray-600 mb-2">Main Cost Components</h3>
-        <div className="grid grid-cols-3 gap-3">
-          {mainCostComponents.map(({ key, label, condition }) => {
-            // Only show components that are used and have a value > 0
-            if (condition !== false && calculations[key] && parseFloat(calculations[key]) > 0) {
-              return (
-                <div key={key} className="flex justify-between items-center bg-gray-100 p-3 rounded-md">
-                  <span className="font-medium text-gray-600">{label}:</span>
-                  <span className="text-gray-800 font-bold">₹ {parseFloat(calculations[key]).toFixed(2)}</span>
-                </div>
-              );
-            }
-            return null;
-          })}
+  // Collapsible section component
+  const CollapsibleSection = ({ title, isExpanded, onToggle, children, bgColor }) => (
+    <div className="border rounded-md mb-3 overflow-hidden">
+      <SectionHeader 
+        title={title} 
+        isExpanded={isExpanded} 
+        onToggle={onToggle} 
+        bgColor={bgColor}
+      />
+      {isExpanded && (
+        <div className="p-3">
+          {children}
         </div>
+      )}
+    </div>
+  );
+
+  // Cost item row component
+  const CostItem = ({ label, value, isSubItem = false, isTotal = false }) => {
+    const formattedValue = parseFloat(value || 0).toFixed(2);
+    
+    return (
+      <div className={`
+        flex justify-between items-center py-1.5 px-2 rounded 
+        ${isTotal ? 'font-bold bg-blue-50' : isSubItem ? 'pl-6 text-sm' : 'bg-white'}
+      `}>
+        <span>{label}</span>
+        <span>₹ {formattedValue}</span>
       </div>
     );
   };
 
-  // Render the total cost calculation section
-  const renderTotalCostCalculation = (calculations) => {
+  // Render Paper and Cutting section
+  const renderPaperAndCuttingSection = () => {
+    const calculations = order.calculations;
     if (!calculations) return null;
-
-    // Create an array for the calculation breakdown
-    const costCalculationSteps = [];
-    
-    // Add base cost if available
-    if (calculations.baseCost !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'baseCost', 
-        label: 'Base Cost per Card'
-      });
-    } else {
-      // For compatibility with old format
-      costCalculationSteps.push({ 
-        key: 'baseCost', 
-        label: 'Base Cost per Card',
-        value: calculateTotalCosts().baseCost.toFixed(2)
-      });
-    }
-    
-    // Add misc charge if available
-    if (calculations.miscChargePerCard !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'miscChargePerCard', 
-        label: 'Miscellaneous Charge'
-      });
-    }
-    
-    // Add base with misc if available
-    if (calculations.baseWithMisc !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'baseWithMisc', 
-        label: 'Base Cost with Misc',
-        isSeparator: true
-      });
-    }
-    
-    // Add wastage
-    if (calculations.wastageAmount !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'wastageAmount', 
-        label: 'Wastage (5%)'
-      });
-    } else {
-      // For compatibility with old format
-      costCalculationSteps.push({ 
-        key: 'wastageCost', 
-        label: 'Wastage (5%)',
-        value: calculateTotalCosts().wastageCost.toFixed(2)
-      });
-    }
-    
-    // Add overhead
-    if (calculations.overheadAmount !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'overheadAmount', 
-        label: 'Overheads (35%)'
-      });
-    } else {
-      // For compatibility with old format
-      costCalculationSteps.push({ 
-        key: 'overheadCost', 
-        label: 'Overheads (35%)',
-        value: calculateTotalCosts().overheadCost.toFixed(2)
-      });
-    }
-    
-    // Add subtotal if available
-    if (calculations.subtotalPerCard !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'subtotalPerCard', 
-        label: 'Subtotal per Card',
-        isSeparator: true
-      });
-    }
-    
-    // Add markup if available
-    if (calculations.markupAmount !== undefined) {
-      costCalculationSteps.push({ 
-        key: 'markupAmount',
-        label: `Markup (${calculations.markupType || 'Standard'}: ${calculations.markupPercentage || 0}%)`,
-        isHighlighted: true
-      });
-    }
-    
-    // Add total cost per card
-    costCalculationSteps.push({ 
-      key: 'totalCostPerCard', 
-      label: 'Total Cost per Card',
-      isSeparator: true,
-      isTotal: true,
-      value: calculations.totalCostPerCard || calculateTotalCosts().totalCostPerCard.toFixed(2)
-    });
-
-    const quantity = parseInt(order.jobDetails?.quantity || 0);
-    const totalCost = calculations.totalCost || 
-      (parseFloat(calculations.totalCostPerCard || calculateTotalCosts().totalCostPerCard || 0) * quantity).toFixed(2);
     
     return (
-      <div className="bg-gray-50 p-5 rounded-lg border border-gray-200 mb-6">
-        <h3 className="text-lg font-semibold text-gray-700 mb-4">Cost Summary</h3>
-        
-        <div className="space-y-2 mb-4">
-          {costCalculationSteps.map(({ key, label, value, isSeparator, isHighlighted, isTotal }) => {
-            // Use provided value or get from calculations
-            const displayValue = value !== undefined ? 
-              value : 
-              (calculations[key] !== undefined ? parseFloat(calculations[key] || 0).toFixed(2) : "0.00");
-              
-            return (
-              <div key={key} className={`flex justify-between items-center ${isSeparator ? 'border-t border-gray-300 pt-2 mt-2' : ''}`}>
-                <span className={`${isTotal ? 'text-lg font-bold' : 'font-medium'} ${isHighlighted ? 'text-blue-700' : 'text-gray-700'}`}>
-                  {label}:
-                </span>
-                <span className={`${isTotal ? 'text-lg font-bold' : ''} ${isHighlighted ? 'text-blue-700 font-medium' : 'text-gray-900'}`}>
-                  ₹ {displayValue}
-                </span>
-              </div>
-            );
-          })}
+      <CollapsibleSection
+        title="Paper and Cutting"
+        isExpanded={expandedSections.paperAndCutting}
+        onToggle={() => toggleSection('paperAndCutting')}
+        bgColor="bg-blue-50"
+      >
+        <div className="space-y-1">
+          {calculations.paperCostPerCard && (
+            <CostItem label="Paper Cost" value={calculations.paperCostPerCard} isSubItem />
+          )}
+          {calculations.gilCutCostPerCard && (
+            <CostItem label="Gil Cutting Labor" value={calculations.gilCutCostPerCard} isSubItem />
+          )}
+          {calculations.paperAndCuttingCostPerCard && (
+            <CostItem 
+              label="Total Paper & Cutting" 
+              value={calculations.paperAndCuttingCostPerCard}
+              isTotal
+            />
+          )}
         </div>
-        
-        <div className="flex justify-between items-center pt-4 border-t-2 border-gray-300 mt-4">
-          <span className="text-xl font-bold text-gray-800">
-            Total Cost ({quantity} pcs):
-          </span>
-          <span className="text-xl font-bold text-blue-600">
-            ₹ {parseFloat(totalCost).toFixed(2)}
-          </span>
+      </CollapsibleSection>
+    );
+  };
+
+  // Render Production Services section
+  const renderProductionServices = () => {
+    const calculations = order.calculations;
+    if (!calculations) return null;
+    
+    // Check if any production services are enabled
+    const hasLP = order.lpDetails?.isLPUsed;
+    const hasFS = order.fsDetails?.isFSUsed;
+    const hasEMB = order.embDetails?.isEMBUsed;
+    const hasScreenPrint = order.screenPrint?.isScreenPrintUsed;
+    const hasDigi = order.digiDetails?.isDigiUsed;
+    
+    if (!hasLP && !hasFS && !hasEMB && !hasScreenPrint && !hasDigi) {
+      return null;
+    }
+    
+    return (
+      <CollapsibleSection
+        title="Production Services"
+        isExpanded={expandedSections.production}
+        onToggle={() => toggleSection('production')}
+        bgColor="bg-green-50"
+      >
+        <div className="space-y-3">
+          {/* LP Section */}
+          {hasLP && calculations.lpCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Letter Press (LP)" value={calculations.lpCostPerCard} isTotal />
+              {calculations.lpPlateCostPerCard && (
+                <CostItem label="LP Plate Cost" value={calculations.lpPlateCostPerCard} isSubItem />
+              )}
+              {calculations.lpPositiveFilmCostPerCard && (
+                <CostItem label="LP Positive Film" value={calculations.lpPositiveFilmCostPerCard} isSubItem />
+              )}
+              {calculations.lpMRCostPerCard && (
+                <CostItem label="LP MR Cost" value={calculations.lpMRCostPerCard} isSubItem />
+              )}
+              {calculations.lpMkgCostPerCard && (
+                <CostItem label="LP Making Cost" value={calculations.lpMkgCostPerCard} isSubItem />
+              )}
+              {calculations.lpInkCostPerCard && (
+                <CostItem label="LP Ink Cost" value={calculations.lpInkCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
+          
+          {/* FS Section */}
+          {hasFS && calculations.fsCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Foil Stamping (FS)" value={calculations.fsCostPerCard} isTotal />
+              {calculations.fsBlockCostPerCard && (
+                <CostItem label="FS Block Cost" value={calculations.fsBlockCostPerCard} isSubItem />
+              )}
+              {calculations.fsFoilCostPerCard && (
+                <CostItem label="FS Foil Cost" value={calculations.fsFoilCostPerCard} isSubItem />
+              )}
+              {calculations.fsMRCostPerCard && (
+                <CostItem label="FS MR Cost" value={calculations.fsMRCostPerCard} isSubItem />
+              )}
+              {calculations.fsImpressionCostPerCard && (
+                <CostItem label="FS Impression Cost" value={calculations.fsImpressionCostPerCard} isSubItem />
+              )}
+              {calculations.fsFreightCostPerCard && (
+                <CostItem label="FS Freight Cost" value={calculations.fsFreightCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
+          
+          {/* EMB Section */}
+          {hasEMB && calculations.embCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Embossing (EMB)" value={calculations.embCostPerCard} isTotal />
+              {calculations.embPlateCostPerCard && (
+                <CostItem label="EMB Plate Cost" value={calculations.embPlateCostPerCard} isSubItem />
+              )}
+              {calculations.embMRCostPerCard && (
+                <CostItem label="EMB MR Cost" value={calculations.embMRCostPerCard} isSubItem />
+              )}
+              {calculations.embPositiveFilmCostPerCard && (
+                <CostItem label="EMB Positive Film" value={calculations.embPositiveFilmCostPerCard} isSubItem />
+              )}
+              {calculations.embMkgPlateCostPerCard && (
+                <CostItem label="EMB Making Plate" value={calculations.embMkgPlateCostPerCard} isSubItem />
+              )}
+              {calculations.embImpressionCostPerCard && (
+                <CostItem label="EMB Impression" value={calculations.embImpressionCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
+          
+          {/* Screen Print Section */}
+          {hasScreenPrint && calculations.screenPrintCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Screen Printing" value={calculations.screenPrintCostPerCard} isTotal />
+              {calculations.screenPrintPerPieceCost && (
+                <CostItem label="Screen Print Per Piece" value={calculations.screenPrintPerPieceCost} isSubItem />
+              )}
+              {calculations.screenPrintBaseCostPerCard && (
+                <CostItem label="Screen Print Base Cost" value={calculations.screenPrintBaseCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
+          
+          {/* Digital Printing Section */}
+          {hasDigi && calculations.digiCostPerCard && (
+            <div className="space-y-1">
+              <CostItem label="Digital Printing" value={calculations.digiCostPerCard} isTotal />
+              {calculations.digiPrintCostPerCard && (
+                <CostItem label="Digital Print Cost" value={calculations.digiPrintCostPerCard} isSubItem />
+              )}
+              {calculations.digiPaperCostPerCard && (
+                <CostItem label="Digital Paper Cost" value={calculations.digiPaperCostPerCard} isSubItem />
+              )}
+              {calculations.digiGilCutCostPerCard && (
+                <CostItem label="Digital Gil Cut Cost" value={calculations.digiGilCutCostPerCard} isSubItem />
+              )}
+              {calculations.totalFragsPerSheet && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Fragments per sheet: {calculations.totalFragsPerSheet}
+                </div>
+              )}
+              {calculations.totalSheets && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Total sheets: {calculations.totalSheets}
+                </div>
+              )}
+            </div>
+          )}
         </div>
-      </div>
+      </CollapsibleSection>
+    );
+  };
+
+  // Render Post-Production Services section
+  const renderPostProductionServices = () => {
+    const calculations = order.calculations;
+    if (!calculations) return null;
+    
+    // Check if any post-production services are enabled
+    const hasDieCutting = order.dieCutting?.isDieCuttingUsed;
+    const hasPostDC = order.postDC?.isPostDCUsed;
+    const hasFoldAndPaste = order.foldAndPaste?.isFoldAndPasteUsed;
+    const hasDstPaste = order.dstPaste?.isDstPasteUsed;
+    const hasQC = order.qc?.isQCUsed;
+    const hasPacking = order.packing?.isPackingUsed;
+    const hasMisc = order.misc?.isMiscUsed;
+    const hasSandwich = order.sandwich?.isSandwichComponentUsed;
+    
+    if (!hasDieCutting && !hasPostDC && !hasFoldAndPaste && !hasDstPaste && 
+        !hasQC && !hasPacking && !hasMisc && !hasSandwich) {
+      return null;
+    }
+    
+    return (
+      <CollapsibleSection
+        title="Post-Production Services"
+        isExpanded={expandedSections.postProduction}
+        onToggle={() => toggleSection('postProduction')}
+        bgColor="bg-purple-50"
+      >
+        <div className="space-y-3">
+          {/* Die Cutting Section */}
+          {hasDieCutting && calculations.dieCuttingCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Die Cutting" value={calculations.dieCuttingCostPerCard} isTotal />
+              {calculations.dieCuttingMRCostPerCard && (
+                <CostItem label="Die Cutting MR Cost" value={calculations.dieCuttingMRCostPerCard} isSubItem />
+              )}
+              {calculations.dieCuttingImpressionCostPerCard && (
+                <CostItem label="Die Cutting Impression" value={calculations.dieCuttingImpressionCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
+          
+          {/* Post Die Cutting Section */}
+          {hasPostDC && calculations.postDCCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Post Die Cutting" value={calculations.postDCCostPerCard} isTotal />
+              {calculations.postDCMRCostPerCard && (
+                <CostItem label="Post DC MR Cost" value={calculations.postDCMRCostPerCard} isSubItem />
+              )}
+              {calculations.postDCImpressionCostPerCard && (
+                <CostItem label="Post DC Impression" value={calculations.postDCImpressionCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
+          
+          {/* Fold and Paste Section */}
+          {hasFoldAndPaste && calculations.foldAndPasteCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Fold and Paste" value={calculations.foldAndPasteCostPerCard} isTotal />
+            </div>
+          )}
+          
+          {/* DST Paste Section */}
+          {hasDstPaste && calculations.dstPasteCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="DST Paste" value={calculations.dstPasteCostPerCard} isTotal />
+            </div>
+          )}
+          
+          {/* QC Section */}
+          {hasQC && calculations.qcCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Quality Check" value={calculations.qcCostPerCard} isTotal />
+            </div>
+          )}
+          
+          {/* Packing Section */}
+          {hasPacking && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Packing" value={calculations.packingCostPerCard} isTotal />
+              {calculations.packingPercentage && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Packing: {calculations.packingPercentage}% of COGS
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Misc Section */}
+          {hasMisc && calculations.miscCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Miscellaneous" value={calculations.miscCostPerCard} isTotal />
+            </div>
+          )}
+          
+          {/* Sandwich/Duplex Section */}
+          {hasSandwich && (
+            <div className="space-y-1">
+              <CostItem label="Duplex/Sandwich" value={calculations.sandwichCostPerCard || 0} isTotal />
+              {/* Sandwich-specific LP */}
+              {calculations.lpCostPerCardSandwich && (
+                <CostItem label="Sandwich LP Cost" value={calculations.lpCostPerCardSandwich} isSubItem />
+              )}
+              {/* Sandwich-specific FS */}
+              {calculations.fsCostPerCardSandwich && (
+                <CostItem label="Sandwich FS Cost" value={calculations.fsCostPerCardSandwich} isSubItem />
+              )}
+              {/* Sandwich-specific EMB */}
+              {calculations.embCostPerCardSandwich && (
+                <CostItem label="Sandwich EMB Cost" value={calculations.embCostPerCardSandwich} isSubItem />
+              )}
+            </div>
+          )}
+        </div>
+      </CollapsibleSection>
+    );
+  };
+
+  // Render Wastage and Overhead section
+  const renderWastageAndOverhead = () => {
+    const calculations = order.calculations;
+    if (!calculations) return null;
+    
+    // Get values from calculations or calculate if not available
+    const baseCost = calculations.baseCost !== undefined ? 
+      parseFloat(calculations.baseCost) : 
+      calculateTotalCosts().baseCost;
+      
+    const wastageAmount = calculations.wastageAmount !== undefined ?
+      parseFloat(calculations.wastageAmount) :
+      calculations.wastageCost !== undefined ?
+        parseFloat(calculations.wastageCost) :
+        calculateTotalCosts().wastageCost;
+        
+    const overheadAmount = calculations.overheadAmount !== undefined ?
+      parseFloat(calculations.overheadAmount) :
+      calculations.overheadCost !== undefined ?
+        parseFloat(calculations.overheadCost) :
+        calculateTotalCosts().overheadCost;
+    
+    const wastagePercentage = calculations.wastagePercentage || 5;
+    const overheadPercentage = calculations.overheadPercentage || 35;
+    
+    const COGS = calculations.COGS !== undefined ?
+      parseFloat(calculations.COGS) :
+      baseCost + wastageAmount + overheadAmount;
+    
+    return (
+      <CollapsibleSection
+        title="Wastage and Overhead"
+        isExpanded={expandedSections.wastageAndOverhead}
+        onToggle={() => toggleSection('wastageAndOverhead')}
+        bgColor="bg-amber-50"
+      >
+        <div className="space-y-1">
+          <CostItem label="Base Cost" value={baseCost} />
+          
+          <div className="flex justify-between items-center py-1.5 px-2">
+            <span>Wastage ({wastagePercentage}%)</span>
+            <span>₹ {wastageAmount.toFixed(2)}</span>
+          </div>
+          
+          <div className="flex justify-between items-center py-1.5 px-2">
+            <span>Overhead ({overheadPercentage}%)</span>
+            <span>₹ {overheadAmount.toFixed(2)}</span>
+          </div>
+          
+          <CostItem 
+            label="COGS (Cost of Goods Sold)" 
+            value={COGS} 
+            isTotal
+          />
+        </div>
+      </CollapsibleSection>
     );
   };
 
@@ -351,6 +579,76 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       totalCostPerCard,
       totalCost
     };
+  };
+
+  // Render the final cost summary
+  const renderCostSummary = () => {
+    const calculations = order.calculations;
+    if (!calculations) return null;
+    
+    // Get values from calculations or calculate if not available
+    const costs = calculateTotalCosts();
+    
+    const subtotalPerCard = calculations.subtotalPerCard !== undefined ?
+      parseFloat(calculations.subtotalPerCard) :
+      costs.baseCost + costs.wastageCost + costs.overheadCost;
+      
+    const markupAmount = calculations.markupAmount !== undefined ?
+      parseFloat(calculations.markupAmount) :
+      0;
+      
+    const markupPercentage = calculations.markupPercentage || 0;
+    const markupType = calculations.markupType || 'Standard';
+    
+    const totalCostPerCard = calculations.totalCostPerCard !== undefined ?
+      parseFloat(calculations.totalCostPerCard) :
+      costs.totalCostPerCard;
+      
+    const quantity = parseInt(order.jobDetails?.quantity || 0);
+    
+    const totalCost = calculations.totalCost !== undefined ?
+      parseFloat(calculations.totalCost) :
+      totalCostPerCard * quantity;
+    
+    return (
+      <div className="mt-6 bg-gray-50 p-4 rounded-md border">
+        <h3 className="text-md font-semibold text-gray-700 mb-2">Cost Summary</h3>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-gray-700">Subtotal per Card:</span>
+            <span className="text-gray-900">
+              ₹ {subtotalPerCard.toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center text-blue-700 border-t border-gray-300 pt-2 mt-2">
+            <span className="font-medium">
+              Markup ({markupType.replace('MARKUP ', '')}: {markupPercentage}%):
+            </span>
+            <span className="font-medium">
+              ₹ {markupAmount.toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
+            <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
+            <span className="text-lg font-bold text-gray-900">
+              ₹ {totalCostPerCard.toFixed(2)}
+            </span>
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-center pt-3 border-t border-gray-300 mt-2">
+          <span className="text-lg font-bold text-gray-700">
+            Total Cost ({quantity} pcs):
+          </span>
+          <span className="text-xl font-bold text-blue-600">
+            ₹ {totalCost.toFixed(2)}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   // Generate PDF
@@ -472,7 +770,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
           </div>
         </div>
 
-        {/* Stage Progress (making this section visible unlike the previous example) */}
+        {/* Stage Progress */}
         <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="flex items-center mb-2 md:mb-0">
@@ -545,11 +843,25 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
                 image: order.dieDetails?.image
               })}
 
-              {/* Main Cost Components */}
-              {order.calculations && renderMainCostComponents(order.calculations)}
-
-              {/* Total Cost Calculation */}
-              {order.calculations && renderTotalCostCalculation(order.calculations)}
+              {/* Detailed Cost Sections */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
+                
+                {/* Paper and Cutting Section */}
+                {renderPaperAndCuttingSection()}
+                
+                {/* Production Services Section */}
+                {renderProductionServices()}
+                
+                {/* Post-Production Services Section */}
+                {renderPostProductionServices()}
+                
+                {/* Wastage and Overhead Section */}
+                {renderWastageAndOverhead()}
+                
+                {/* Final Cost Summary */}
+                {renderCostSummary()}
+              </div>
             </div>
           ) : (
             <div ref={contentRef} className="p-6">

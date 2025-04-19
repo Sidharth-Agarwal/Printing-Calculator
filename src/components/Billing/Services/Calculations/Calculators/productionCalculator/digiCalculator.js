@@ -105,7 +105,7 @@ export const calculateDigiDetailsCosts = async (state) => {
     
     // Fetch digital paper rate
     // Note: We're assuming a digital paper type exists, or we use a default rate
-    const digitalPaperName = "Digital Paper"; // This should be a configurable constant or fetched
+    const digitalPaperName = "Digital"; // This should be a configurable constant or fetched
     const digitalPaperDetails = await fetchPaperDetails(digitalPaperName);
     const digitalPaperRate = digitalPaperDetails ? 
       parseFloat(digitalPaperDetails.finalRate) : 
