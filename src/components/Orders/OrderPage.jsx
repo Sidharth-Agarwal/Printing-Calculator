@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react';
-import { collection, doc, updateDoc, onSnapshot } from 'firebase/firestore';
+import { collection, doc, updateDoc, onSnapshot, query, where, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import OrderDetailsModal from './OrderDetailsModal';
+import { useAuth } from "../Login/AuthContext"; // Add auth context
 
 const OrdersPage = () => {
+  const { userRole, currentUser } = useAuth(); // Get user role and current user
+  const [isB2BClient, setIsB2BClient] = useState(false);
+  const [linkedClientId, setLinkedClientId] = useState(null);
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -36,9 +40,45 @@ const OrdersPage = () => {
     'Completed': { bg: 'bg-[#4F46E5]' }
   };
 
+  // Fetch B2B client data if applicable
   useEffect(() => {
+    const fetchB2BClientData = async () => {
+      if (userRole === "b2b" && currentUser) {
+        setIsB2BClient(true);
+        
+        try {
+          // Get the user doc to find the linked client ID
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            if (userData.clientId) {
+              setLinkedClientId(userData.clientId);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching B2B client data:", error);
+        }
+      }
+    };
+    
+    fetchB2BClientData();
+  }, [userRole, currentUser]);
+
+  useEffect(() => {
+    let ordersQuery = collection(db, "orders");
+    
+    // If B2B client, filter orders by clientId
+    if (isB2BClient && linkedClientId) {
+      ordersQuery = query(
+        collection(db, "orders"),
+        where("clientId", "==", linkedClientId)
+      );
+    }
+    
     const unsubscribe = onSnapshot(
-      collection(db, "orders"),
+      ordersQuery,
       {
         includeMetadataChanges: true
       },
@@ -48,7 +88,7 @@ const OrdersPage = () => {
             const data = doc.data();
             return {
               id: doc.id,
-              clientName: data.clientInfo.name || '',
+              clientName: data.clientInfo?.name || data.clientName || '',
               projectName: data.projectName || '',
               date: data.date || null,
               deliveryDate: data.deliveryDate || null,
@@ -79,7 +119,7 @@ const OrdersPage = () => {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [isB2BClient, linkedClientId]);
 
   // Sort function
   const sortOrders = (ordersToSort) => {
@@ -170,6 +210,31 @@ const OrdersPage = () => {
   };
 
   const StatusCircle = ({ stage, currentStage, orderId }) => {
+    // Don't allow B2B clients to update stages
+    if (isB2BClient) {
+      const currentStageOrder = stages.indexOf(currentStage || 'Not started yet');
+      const thisStageOrder = stages.indexOf(stage);
+      const isCompleted = currentStageOrder > thisStageOrder || currentStage === stage;
+      const colors = stageColors[stage];
+      
+      return (
+        <div className="flex justify-center">
+          <div 
+            className={`w-6 h-6 rounded-full flex items-center justify-center
+              transition duration-150 ease-in-out
+              ${isCompleted ? colors.bg : 'bg-gray-200'}`}
+          >
+            {isCompleted && (
+              <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            )}
+          </div>
+        </div>
+      );
+    }
+    
+    // Admin functionality remains the same
     const currentStageOrder = stages.indexOf(currentStage || 'Not started yet');
     const thisStageOrder = stages.indexOf(stage);
     const isCompleted = currentStageOrder > thisStageOrder || currentStage === stage;
@@ -219,7 +284,9 @@ const OrdersPage = () => {
     return (
       <div className="p-6">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold">Orders</h1>
+          <h1 className="text-2xl font-bold">
+            {isB2BClient ? "Your Orders" : "Orders"}
+          </h1>
           <div className="animate-pulse w-64 h-10 bg-gray-200 rounded-md"></div>
         </div>
         <div className="animate-pulse space-y-4">
@@ -251,7 +318,9 @@ const OrdersPage = () => {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h2 className="text-xl font-bold">Orders</h2>
+        <h2 className="text-xl font-bold">
+          {isB2BClient ? "Your Orders" : "Orders"}
+        </h2>
         <div className="flex gap-4">
           {/* View mode selector */}
           <div className="flex rounded-md overflow-hidden border border-gray-300">
@@ -322,9 +391,11 @@ const OrdersPage = () => {
         <table className="w-full">
           <thead>
             <tr className="bg-gray-50 uppercase text-xs">
-              <th className="px-3 py-3 text-left font-medium text-gray-500 whitespace-nowrap">
-                Client Name
-              </th>
+              {!isB2BClient && (
+                <th className="px-3 py-3 text-left font-medium text-gray-500 whitespace-nowrap">
+                  Client Name
+                </th>
+              )}
               <th className="px-3 py-3 text-left font-medium text-gray-500 whitespace-nowrap">
                 Project Type
               </th>
@@ -352,11 +423,13 @@ const OrdersPage = () => {
                   className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
                   onClick={() => setSelectedOrder(order)}
                 >
-                  <td className="px-3 py-4">
-                    <span className="text-blue-600 hover:underline font-medium">
-                      {order.clientName}
-                    </span>
-                  </td>
+                  {!isB2BClient && (
+                    <td className="px-3 py-4">
+                      <span className="text-blue-600 hover:underline font-medium">
+                        {order.clientName}
+                      </span>
+                    </td>
+                  )}
                   <td className="px-3 py-4">
                     {order.jobDetails?.jobType || 'N/A'}
                   </td>
@@ -387,7 +460,9 @@ const OrdersPage = () => {
             ) : (
               <tr>
                 <td colSpan={5 + stages.slice(1).length} className="px-3 py-6 text-center text-gray-500">
-                  No orders found matching your criteria.
+                  {isB2BClient 
+                    ? "You don't have any orders yet."
+                    : "No orders found matching your criteria."}
                 </td>
               </tr>
             )}
