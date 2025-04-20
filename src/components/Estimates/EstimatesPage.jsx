@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, addDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc, query, where, getDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import EstimateCard from "./EstimateCard";
@@ -11,9 +11,13 @@ import jsPDF from 'jspdf';
 import { createRoot } from "react-dom/client";
 import ClientDropdown from "./ClientDropdown";
 import VersionDropdown from "./VersionDropdown";
+import { useAuth } from "../Login/AuthContext"; // Add auth context
 
 const EstimatesPage = () => {
   const navigate = useNavigate();
+  const { userRole, currentUser } = useAuth(); // Get user role and current user
+  const [isB2BClient, setIsB2BClient] = useState(false);
+  const [linkedClientId, setLinkedClientId] = useState(null);
   
   // State for data loading
   const [allEstimates, setAllEstimates] = useState([]);
@@ -35,12 +39,51 @@ const EstimatesPage = () => {
   const [previewData, setPreviewData] = useState(null);
   const [pdfError, setPdfError] = useState(null);
 
+  // Fetch B2B client data if applicable
+  useEffect(() => {
+    const fetchB2BClientData = async () => {
+      if (userRole === "b2b" && currentUser) {
+        setIsB2BClient(true);
+        
+        try {
+          // Get the user doc to find the linked client ID
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            if (userData.clientId) {
+              setLinkedClientId(userData.clientId);
+              // Auto-expand this client
+              setExpandedClientId(userData.clientId);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching B2B client data:", error);
+        }
+      }
+    };
+    
+    fetchB2BClientData();
+  }, [userRole, currentUser]);
+
   // Fetch all estimates on mount
   useEffect(() => {
     const fetchEstimates = async () => {
       try {
         setIsLoading(true);
-        const querySnapshot = await getDocs(collection(db, "estimates"));
+        
+        let estimatesQuery = collection(db, "estimates");
+        
+        // If B2B client, filter estimates by clientId
+        if (isB2BClient && linkedClientId) {
+          estimatesQuery = query(
+            collection(db, "estimates"),
+            where("clientId", "==", linkedClientId)
+          );
+        }
+        
+        const querySnapshot = await getDocs(estimatesQuery);
         const data = querySnapshot.docs.map((doc) => ({
           id: doc.id,
           ...doc.data(),
@@ -54,8 +97,11 @@ const EstimatesPage = () => {
       }
     };
 
-    fetchEstimates();
-  }, []);
+    // Only fetch estimates if not B2B or if B2B with linked client ID
+    if (!isB2BClient || linkedClientId) {
+      fetchEstimates();
+    }
+  }, [isB2BClient, linkedClientId]);
 
   // Process estimates into client groups
   const clientGroups = React.useMemo(() => {
@@ -123,6 +169,11 @@ const EstimatesPage = () => {
 
   // Toggle client expansion
   const toggleClient = (clientId) => {
+    // For B2B clients, don't allow expanding other clients
+    if (isB2BClient && clientId !== linkedClientId) {
+      return;
+    }
+    
     if (expandedClientId === clientId) {
       setExpandedClientId(null);
     } else {
@@ -265,7 +316,9 @@ const EstimatesPage = () => {
     <div className="p-3 max-w-screen-xl mx-auto">
       {/* Header Section - More compact */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-        <h1 className="text-xl font-bold">Estimates Management</h1>
+        <h1 className="text-xl font-bold">
+          {isB2BClient ? "Your Estimates" : "Estimates Management"}
+        </h1>
         <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <input
             type="text"
@@ -299,7 +352,9 @@ const EstimatesPage = () => {
           </svg>
           <h2 className="text-base font-medium text-gray-700 mt-2 mb-1">No Estimates Found</h2>
           <p className="text-sm text-gray-500">
-            No estimates match your current search criteria.
+            {isB2BClient 
+              ? "You don't have any estimates yet." 
+              : "No estimates match your current search criteria."}
           </p>
           {searchQuery || filterStatus ? (
             <button

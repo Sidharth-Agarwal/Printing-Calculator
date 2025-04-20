@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useAuth } from "../Login/AuthContext"; // Import the auth context
+import { useAuth } from "../Login/AuthContext";
 
 const ReviewAndSubmit = ({ 
   state, 
