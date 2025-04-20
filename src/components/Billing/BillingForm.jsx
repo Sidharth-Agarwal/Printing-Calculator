@@ -1,9 +1,10 @@
 import React, { useReducer, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, addDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { performCompleteCalculations, recalculateTotals } from "./Services/Calculations/calculationsService";
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useAuth } from "../Login/AuthContext"; // Added import for auth context
 
 // Import components
 import ClientSelection from "./Sections/Fixed/ClientSelection";
@@ -330,7 +331,60 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [visibleProductionServices, setVisibleProductionServices] = useState([]);
   const [visiblePostProductionServices, setVisiblePostProductionServices] = useState([]);
 
+  // Add B2B client detection using Auth context
+  const { userRole, currentUser } = useAuth();
+  const [isB2BClient, setIsB2BClient] = useState(false);
+  const [linkedClientData, setLinkedClientData] = useState(null);
+
   const formRef = useRef(null);
+  
+  // Add useEffect to fetch B2B client data when component mounts
+  useEffect(() => {
+    const fetchB2BClientData = async () => {
+      if (userRole === "b2b" && currentUser) {
+        try {
+          setIsB2BClient(true);
+          
+          // First get the user doc to find the linked client ID
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            // Check if this user has a linked client ID
+            if (userData.clientId) {
+              // Fetch the client data
+              const clientDoc = await getDoc(doc(db, "clients", userData.clientId));
+              
+              if (clientDoc.exists()) {
+                const clientData = {
+                  id: clientDoc.id,
+                  clientId: clientDoc.id,
+                  clientInfo: clientDoc.data(),
+                  ...clientDoc.data()
+                };
+                
+                setLinkedClientData(clientData);
+                
+                // Auto-select this client
+                handleClientSelect({
+                  clientId: clientData.id,
+                  clientInfo: clientData
+                });
+                
+                // Also set the selectedClient for props passed to ClientSelection
+                setSelectedClient(clientData);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching B2B client data:", error);
+        }
+      }
+    };
+    
+    fetchB2BClientData();
+  }, [userRole, currentUser]);
   
   // Fetch default markup rates once when component mounts
   useEffect(() => {
@@ -352,22 +406,34 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         });
         
         if (fetchedMarkups.length > 0) {
-          // Set default markup to MARKUP TIMELESS or first available
-          const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS");
-          if (timelessMarkup) {
+          // For B2B clients, automatically select MARKUP B2B MERCH
+          if (isB2BClient) {
+            const b2bMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP B2B MERCH");
+            if (b2bMarkup) {
+              setDefaultMarkup({
+                type: b2bMarkup.name,
+                percentage: b2bMarkup.percentage
+              });
+              setSelectedMarkupType(b2bMarkup.name);
+              setMarkupPercentage(b2bMarkup.percentage);
+            } else {
+              // Fallback to default if B2B MERCH not found
+              setDefaultMarkup({
+                type: fetchedMarkups[0].name,
+                percentage: fetchedMarkups[0].percentage
+              });
+              setSelectedMarkupType(fetchedMarkups[0].name);
+              setMarkupPercentage(fetchedMarkups[0].percentage);
+            }
+          } else {
+            // For admin users, set default markup to MARKUP TIMELESS or first available
+            const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
             setDefaultMarkup({
               type: timelessMarkup.name,
               percentage: timelessMarkup.percentage
             });
             setSelectedMarkupType(timelessMarkup.name);
             setMarkupPercentage(timelessMarkup.percentage);
-          } else {
-            setDefaultMarkup({
-              type: fetchedMarkups[0].name,
-              percentage: fetchedMarkups[0].percentage
-            });
-            setSelectedMarkupType(fetchedMarkups[0].name);
-            setMarkupPercentage(fetchedMarkups[0].percentage);
           }
           
           console.log("Fetched markup rates:", fetchedMarkups);
@@ -378,7 +444,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     };
     
     fetchDefaultMarkup();
-  }, []);
+  }, [isB2BClient]);
   
   // Initialize form with data if in edit mode
   useEffect(() => {
@@ -462,6 +528,15 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
   // Function to handle markup changes from ReviewAndSubmit component
   const handleMarkupChange = async (markupType, markupPercentage) => {
+    // For B2B clients, only allow MARKUP B2B MERCH to be selected
+    if (isB2BClient && markupType !== "MARKUP B2B MERCH") {
+      const b2bMarkup = markupRates.find(rate => rate.name === "MARKUP B2B MERCH");
+      if (b2bMarkup) {
+        markupType = b2bMarkup.name;
+        markupPercentage = b2bMarkup.percentage;
+      }
+    }
+    
     setSelectedMarkupType(markupType);
     setMarkupPercentage(markupPercentage);
     
@@ -1050,7 +1125,12 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     setActiveSection(null);
     setValidationErrors({});
     setCalculations(null);
-    setSelectedClient(null);
+    
+    // Don't reset client for B2B users, they should always use their own client
+    if (!isB2BClient) {
+      setSelectedClient(null);
+    }
+    
     setSelectedVersion("");
     
     // Reset markup to defaults
@@ -1118,15 +1198,38 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         )}
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-          {/* Client Selection Section - New section at top */}
+          {/* Client Selection Section - Modified for B2B users */}
           <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
             <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">CLIENT SELECTION</h2>
-            <ClientSelection 
-              onClientSelect={handleClientSelect}
-              selectedClient={selectedClient}
-              setSelectedClient={setSelectedClient}
-              generateClientCode={generateClientCode}
-            />
+            {isB2BClient && linkedClientData ? (
+              /* For B2B clients, show readonly client info */
+              <div className="p-4 bg-blue-50 rounded border border-blue-200">
+                <div className="flex items-center mb-2">
+                  <span className="font-bold">Client:</span>
+                  <span className="ml-2 text-lg">{linkedClientData.name || linkedClientData.clientInfo?.name}</span>
+                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                    B2B Client
+                  </span>
+                </div>
+                <div className="text-sm text-gray-600">
+                  <p>Client Code: {linkedClientData.clientCode || linkedClientData.clientInfo?.clientCode}</p>
+                  {linkedClientData.contactPerson && (
+                    <p>Contact: {linkedClientData.contactPerson}</p>
+                  )}
+                  {linkedClientData.email && (
+                    <p>Email: {linkedClientData.email}</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              /* For admin users, show normal client selection */
+              <ClientSelection 
+                onClientSelect={handleClientSelect}
+                selectedClient={selectedClient}
+                setSelectedClient={setSelectedClient}
+                generateClientCode={generateClientCode}
+              />
+            )}
             {validationErrors.clientId && (
               <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.clientId}</p>
             )}
