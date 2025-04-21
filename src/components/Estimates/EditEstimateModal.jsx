@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import BillingForm from '../Billing_form/BillingForm';
+import BillingForm from '../Billing/BillingForm';
 
 const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = [], setEstimatesData }) => {
   const [isSaving, setIsSaving] = useState(false);

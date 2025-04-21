@@ -1,12 +1,12 @@
 import React from "react";
 import { Route, Routes } from "react-router-dom";
-import BillingForm from "./components/Billing_form/BillingForm";
-import PaperManagement from "./components/Paper_management/PaperManagement";
-import MaterialManagement from "./components/Material_management/MaterialManagement";
-import DieManagement from "./components/Die_management/DieManagement";
-import StandardRateManagement from "./components/Standard_rates_management/StandardRateManagement";
-import OverheadManagement from "./components/Overhead_expenses/OverheadManagement";
-import ClientManagement from "./components/Client_management/ClientManagement";
+import BillingForm from "./components/Billing/BillingForm"
+import PaperManagement from "./components/Management/Papers/PaperManagement"
+import MaterialManagement from "./components/Management/Materials/MaterialManagement"
+import DieManagement from "./components/Management/Dies/DieManagement"
+import StandardRateManagement from "./components/Management/StandardRates/StandardRateManagement"
+import OverheadManagement from "./components/Management/Overheads/OverheadManagement"
+import ClientManagement from "./components/Clients/ClientManagement";
 import Header from "./components/Header";
 import Login from "./components/Login/login";
 import ChangePassword from "./components/Login/ChangePassword";
@@ -20,7 +20,7 @@ import TransactionsDashboard from "./components/Transactions/TransactionsDashboa
 import Unauthorized from "./components/Login/Unauthorized";
 import ProtectedRoute from "./components/Login/ProtectedRoute";
 import { AuthProvider } from "./components/Login/AuthContext";
-import B2BClientDashboard from "./components/Client_management/B2BClientDashboard";
+import B2BClientDashboard from "./components/Clients/B2BClientDashboard";
 import "./styles/tailwind.css";
 
 function App() {

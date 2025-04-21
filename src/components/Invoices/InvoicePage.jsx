@@ -1,11 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { collection, doc, updateDoc, onSnapshot, addDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, onSnapshot, addDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import OrderDetailsModal from './OrderDetailsModal';
 import ClientOrderGroup from './ClientOrderGroup';
 import NewInvoiceModal from './NewInvoiceModal';
+import { useAuth } from "../Login/AuthContext"; // Add auth context
 
 const InvoicesPage = () => {
+  const { userRole, currentUser } = useAuth(); // Get user role and current user
+  const [isB2BClient, setIsB2BClient] = useState(false);
+  const [linkedClientId, setLinkedClientId] = useState(null);
+  const [linkedClientName, setLinkedClientName] = useState("");
+  
   // State for data loading
   const [allOrders, setAllOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -38,10 +44,55 @@ const InvoicesPage = () => {
     "stage": "Stage"
   };
 
+  // Fetch B2B client data if applicable
+  useEffect(() => {
+    const fetchB2BClientData = async () => {
+      if (userRole === "b2b" && currentUser) {
+        setIsB2BClient(true);
+        
+        try {
+          // Get the user doc to find the linked client ID
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            if (userData.clientId) {
+              setLinkedClientId(userData.clientId);
+              
+              // Also get the client name for display
+              const clientDoc = await getDoc(doc(db, "clients", userData.clientId));
+              if (clientDoc.exists()) {
+                setLinkedClientName(clientDoc.data().name);
+              }
+              
+              // Auto-expand this client
+              setExpandedClientId(userData.clientId);
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching B2B client data:", error);
+        }
+      }
+    };
+    
+    fetchB2BClientData();
+  }, [userRole, currentUser]);
+
   // Fetch all orders on mount
   useEffect(() => {
+    let ordersQuery = collection(db, "orders");
+    
+    // If B2B client, filter orders by clientId
+    if (isB2BClient && linkedClientId) {
+      ordersQuery = query(
+        collection(db, "orders"),
+        where("clientId", "==", linkedClientId)
+      );
+    }
+    
     const unsubscribe = onSnapshot(
-      collection(db, "orders"),
+      ordersQuery,
       {
         includeMetadataChanges: true
       },
@@ -84,7 +135,7 @@ const InvoicesPage = () => {
     );
 
     return () => unsubscribe();
-  }, []);
+  }, [isB2BClient, linkedClientId]);
 
   // Update order stage
   const updateOrderStage = async (orderId, newStage) => {
@@ -197,6 +248,11 @@ const InvoicesPage = () => {
 
   // Toggle client expansion
   const toggleClient = (clientId) => {
+    // For B2B clients, don't allow expanding other clients
+    if (isB2BClient && clientId !== linkedClientId) {
+      return;
+    }
+    
     if (expandedClientId === clientId) {
       setExpandedClientId(null);
     } else {
@@ -260,7 +316,9 @@ const InvoicesPage = () => {
     return (
       <div className="p-4">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-xl font-bold">Orders</h1>
+          <h1 className="text-xl font-bold">
+            {isB2BClient ? "Your Invoices" : "Invoices Management"}
+          </h1>
           <div className="animate-pulse w-64 h-8 bg-gray-200 rounded-md"></div>
         </div>
         <div className="animate-pulse space-y-3">
@@ -294,7 +352,9 @@ const InvoicesPage = () => {
     <div className="p-4">
       {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-        <h1 className="text-xl font-bold">Invoices Management</h1>
+        <h1 className="text-xl font-bold">
+          {isB2BClient ? "Your Invoices" : "Invoices Management"}
+        </h1>
         
         <div className="flex flex-wrap gap-1 w-full sm:w-auto">
           {/* View mode selector */}
@@ -396,11 +456,13 @@ const InvoicesPage = () => {
           </svg>
           <h2 className="text-lg font-medium text-gray-700 mt-3 mb-1">No Orders Found</h2>
           <p className="text-sm text-gray-500">
-            {viewMode === 'active' 
-              ? 'There are no active orders that match your search criteria.' 
-              : viewMode === 'completed' 
-                ? 'There are no completed orders that match your search criteria.'
-                : 'No orders match your search criteria.'}
+            {isB2BClient 
+              ? "You don't have any orders ready for invoicing yet."
+              : viewMode === 'active' 
+                ? 'There are no active orders that match your search criteria.' 
+                : viewMode === 'completed' 
+                  ? 'There are no completed orders that match your search criteria.'
+                  : 'No orders match your search criteria.'}
           </p>
           {(searchQuery || filterStatus || viewMode !== 'all') && (
             <button
