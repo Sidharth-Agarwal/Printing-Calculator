@@ -6,6 +6,7 @@ import html2canvas from 'html2canvas';
 import OrderJobTicket from './OrderJobTicket';
 import TaxInvoice from './TaxInvoice';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useAuth } from "../Login/AuthContext"; // Added Auth context import
 
 const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   const [activeView, setActiveView] = useState('details');
@@ -17,6 +18,10 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     postProduction: false,
     wastageAndOverhead: false
   });
+  
+  // Get user role from auth context
+  const { userRole } = useAuth();
+  const isB2BClient = userRole === "b2b";
   
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
 
@@ -581,8 +586,59 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     };
   };
 
-  // Render the final cost summary
-  const renderCostSummary = () => {
+  // Render the simplified cost summary for B2B clients
+  const renderSimplifiedCostSummary = () => {
+    const calculations = order.calculations;
+    if (!calculations) return null;
+    
+    const totalCostPerCard = calculations.totalCostPerCard !== undefined ?
+      parseFloat(calculations.totalCostPerCard) :
+      calculateTotalCosts().totalCostPerCard;
+      
+    const quantity = parseInt(order.jobDetails?.quantity || 0);
+    
+    const totalCost = calculations.totalCost !== undefined ?
+      parseFloat(calculations.totalCost) :
+      totalCostPerCard * quantity;
+    
+    // Get markup info if available
+    const markupPercentage = calculations.markupPercentage || 0;
+    const markupType = calculations.markupType || 'Standard';
+    
+    return (
+      <div className="mt-6 bg-blue-50 p-4 rounded-md border border-blue-200">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Cost Summary</h3>
+        
+        <div className="space-y-4">
+          <div className="flex justify-between items-center text-lg">
+            <span className="font-medium">Total Cost per Card:</span>
+            <span className="font-bold">
+              ₹ {totalCostPerCard.toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center pt-3 border-t border-blue-300 text-xl">
+            <span className="font-bold text-gray-700">
+              Total Cost ({quantity} pcs):
+            </span>
+            <span className="font-bold text-blue-700">
+              ₹ {totalCost.toFixed(2)}
+            </span>
+          </div>
+        </div>
+        
+        {/* Hidden markup info - display read-only for transparency */}
+        {markupType && markupType.includes('B2B') && (
+          <div className="mt-4 pt-3 border-t border-blue-200 text-sm text-gray-600">
+            <p>Using B2B pricing ({markupPercentage}% markup)</p>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  // Render the final cost summary for non-B2B users
+  const renderDetailedCostSummary = () => {
     const calculations = order.calculations;
     if (!calculations) return null;
     
@@ -770,61 +826,6 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
           </div>
         </div>
 
-        {/* Stage Progress */}
-        <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
-          <div className="flex flex-col md:flex-row justify-between items-center">
-            <div className="flex items-center mb-2 md:mb-0">
-              <span className="mr-2 font-medium">Current Stage:</span>
-              <span className={`px-3 py-1 rounded-full ${stageColors[order.stage]?.bg || 'bg-gray-100'} ${stageColors[order.stage]?.text || 'text-gray-800'}`}>
-                {order.stage}
-              </span>
-            </div>
-            
-            <div className="flex gap-2">
-              {/* Stage progression stepper */}
-              <div className="flex items-center">
-                {stages.map((stage, index) => {
-                  const currentStageIndex = stages.indexOf(order.stage);
-                  const isCompletedStage = index <= currentStageIndex;
-                  const isCurrentStage = index === currentStageIndex;
-                  
-                  return (
-                    <div key={stage} className="flex items-center">
-                      <div 
-                        className={`w-8 h-8 rounded-full flex items-center justify-center cursor-pointer
-                          ${isCompletedStage 
-                            ? stageColors[stage]?.bg || 'bg-gray-200' 
-                            : 'bg-gray-200'} 
-                          ${isCompletedStage 
-                            ? stageColors[stage]?.text || 'text-gray-700' 
-                            : 'text-gray-500'}
-                          ${isCurrentStage ? 'ring-2 ring-blue-400' : ''}
-                        `}
-                        onClick={() => handleStageUpdate(stage)}
-                      >
-                        {isCompletedStage ? (
-                          <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                            <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                          </svg>
-                        ) : (
-                          <span className="text-xs">{index + 1}</span>
-                        )}
-                      </div>
-                      {index < stages.length - 1 && (
-                        <div className={`w-8 h-1 ${
-                          index < currentStageIndex 
-                            ? 'bg-blue-500' 
-                            : 'bg-gray-300'
-                        }`}></div>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          </div>
-        </div>
-
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto">
           {activeView === 'details' ? (
@@ -843,25 +844,30 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
                 image: order.dieDetails?.image
               })}
 
-              {/* Detailed Cost Sections */}
-              <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
-                
-                {/* Paper and Cutting Section */}
-                {renderPaperAndCuttingSection()}
-                
-                {/* Production Services Section */}
-                {renderProductionServices()}
-                
-                {/* Post-Production Services Section */}
-                {renderPostProductionServices()}
-                
-                {/* Wastage and Overhead Section */}
-                {renderWastageAndOverhead()}
-                
-                {/* Final Cost Summary */}
-                {renderCostSummary()}
-              </div>
+              {/* For B2B clients, show simplified cost view */}
+              {isB2BClient ? (
+                renderSimplifiedCostSummary()
+              ) : (
+                /* For admin/staff: Show detailed breakdown */
+                <div className="space-y-4">
+                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
+                  
+                  {/* Paper and Cutting Section */}
+                  {renderPaperAndCuttingSection()}
+                  
+                  {/* Production Services Section */}
+                  {renderProductionServices()}
+                  
+                  {/* Post-Production Services Section */}
+                  {renderPostProductionServices()}
+                  
+                  {/* Wastage and Overhead Section */}
+                  {renderWastageAndOverhead()}
+                  
+                  {/* Final Cost Summary */}
+                  {renderDetailedCostSummary()}
+                </div>
+              )}
             </div>
           ) : (
             <div ref={contentRef} className="p-6">
