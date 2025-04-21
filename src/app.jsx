@@ -46,15 +46,26 @@ function App() {
               } 
             />
             
+            {/* Admin-only routes */}
             <Route 
               path="/transactions" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="admin">
                   <TransactionsDashboard />
                 </ProtectedRoute>
               } 
             />
             
+            <Route 
+              path="/user-management" 
+              element={
+                <ProtectedRoute requiredRole="admin">
+                  <UserManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Routes accessible by multiple roles */}
             <Route 
               path="/orders" 
               element={
@@ -67,7 +78,7 @@ function App() {
             <Route 
               path="/invoices" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="staff">
                   <InvoicesPage />
                 </ProtectedRoute>
               } 
@@ -76,7 +87,7 @@ function App() {
             <Route 
               path="/clients" 
               element={
-                <ProtectedRoute>
+                <ProtectedRoute requiredRole="admin">
                   <ClientManagement />
                 </ProtectedRoute>
               } 
@@ -101,7 +112,7 @@ function App() {
               } 
             />
             
-            {/* Staff role routes */}
+            {/* Staff and Admin routes */}
             <Route 
               path="/new-bill" 
               element={
@@ -111,11 +122,11 @@ function App() {
               } 
             />
             
-            {/* Production role routes */}
+            {/* Material Management routes - accessible to Staff and Admin */}
             <Route 
               path="/material-stock/paper-db" 
               element={
-                <ProtectedRoute requiredRole="production">
+                <ProtectedRoute requiredRole="staff">
                   <PaperManagement />
                 </ProtectedRoute>
               } 
@@ -124,7 +135,7 @@ function App() {
             <Route 
               path="/material-stock/material-db" 
               element={
-                <ProtectedRoute requiredRole="production">
+                <ProtectedRoute requiredRole="staff">
                   <MaterialManagement />
                 </ProtectedRoute>
               } 
@@ -133,26 +144,19 @@ function App() {
             <Route 
               path="/material-stock/dies-db" 
               element={
-                <ProtectedRoute requiredRole="production">
+                <ProtectedRoute requiredRole="staff">
                   <DieManagement />
                 </ProtectedRoute>
               } 
             />
             
-            {/* Admin role routes */}
-            <Route 
-              path="/user-management" 
-              element={
-                <ProtectedRoute requiredRole="admin">
-                  <UserManagement />
-                </ProtectedRoute>
-              } 
-            />
-            
+            {/* IMPORTANT: These two routes were previously set to admin-only */}
+            {/* Now setting them to staff which will still allow admin access */}
+            {/* due to how ProtectedRoute component works */}
             <Route 
               path="/material-stock/standard-rates-db" 
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole="staff">
                   <StandardRateManagement />
                 </ProtectedRoute>
               } 
@@ -161,7 +165,7 @@ function App() {
             <Route 
               path="/material-stock/overheads" 
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute requiredRole="staff">
                   <OverheadManagement />
                 </ProtectedRoute>
               } 
