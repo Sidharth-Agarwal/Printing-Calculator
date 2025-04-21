@@ -1,8 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { collection, doc, updateDoc, onSnapshot, query, where, getDoc } from 'firebase/firestore';
+import { collection, doc, updateDoc, onSnapshot, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
 import OrderDetailsModal from './OrderDetailsModal';
-import { useAuth } from "../Login/AuthContext"; // Add auth context
+import ProductionAssignmentModal from './ProductionAssignmentModal';
+import { useAuth } from "../Login/AuthContext";
 
 const OrdersPage = () => {
   const { userRole, currentUser } = useAuth(); // Get user role and current user
@@ -20,6 +21,11 @@ const OrdersPage = () => {
   const [viewMode, setViewMode] = useState("all"); // Default: Active orders
   const [showConfirmation, setShowConfirmation] = useState(false);
   const [pendingStageUpdate, setPendingStageUpdate] = useState(null);
+  
+  // Production assignment states
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [orderForAssignment, setOrderForAssignment] = useState(null);
+  const [staffNames, setStaffNames] = useState({});
 
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
 
@@ -67,6 +73,43 @@ const OrdersPage = () => {
     fetchB2BClientData();
   }, [userRole, currentUser]);
 
+  // Fetch staff names
+  useEffect(() => {
+    const fetchStaffNames = async () => {
+      const staffIds = new Set();
+      
+      // Collect all unique staff IDs from orders
+      orders.forEach(order => {
+        if (order.productionAssignments && order.productionAssignments.assigned) {
+          staffIds.add(order.productionAssignments.assigned);
+        }
+      });
+      
+      if (staffIds.size === 0) return;
+      
+      // Fetch user details for each staff ID
+      const names = {};
+      const promises = Array.from(staffIds).map(async staffId => {
+        try {
+          const userDoc = await getDoc(doc(db, "users", staffId));
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            names[staffId] = userData.displayName || userData.email || 'Unknown';
+          }
+        } catch (error) {
+          console.error("Error fetching staff details:", error);
+        }
+      });
+      
+      await Promise.all(promises);
+      setStaffNames(names);
+    };
+    
+    if (orders.length > 0) {
+      fetchStaffNames();
+    }
+  }, [orders]);
+
   useEffect(() => {
     let ordersQuery = collection(db, "orders");
     
@@ -105,7 +148,9 @@ const OrdersPage = () => {
               digiDetails: data.digiDetails || null,
               dieCutting: data.dieCutting || null,
               sandwich: data.sandwich || null,
-              pasting: data.pasting || {}
+              pasting: data.pasting || {},
+              productionAssignments: data.productionAssignments || {},
+              clientId: data.clientId || null
             };
           });
           setOrders(ordersData);
@@ -209,6 +254,41 @@ const OrdersPage = () => {
   const cancelStageUpdate = () => {
     setShowConfirmation(false);
     setPendingStageUpdate(null);
+  };
+
+  // Handle opening the assignment modal
+  const handleOpenAssignmentModal = (order) => {
+    setOrderForAssignment(order);
+    setIsAssignmentModalOpen(true);
+  };
+
+  // Handle assignment updates
+  const handleAssignmentUpdate = (productionAssignments) => {
+    // Update the local orders array
+    setOrders(prevOrders => 
+      prevOrders.map(order => 
+        order.id === orderForAssignment.id 
+          ? { ...order, productionAssignments } 
+          : order
+      )
+    );
+  };
+
+  // Display assignment badge
+  const getAssignmentBadge = (productionAssignments) => {
+    if (!productionAssignments || !productionAssignments.assigned) return null;
+    
+    const staffId = productionAssignments.assigned;
+    if (!staffId) return null;
+    
+    // Get the staff name
+    const staffName = staffNames[staffId] || 'Assigned';
+    
+    return (
+      <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-teal-100 text-teal-800">
+        {staffName}
+      </span>
+    );
   };
 
   const StatusCircle = ({ stage, currentStage, orderId }) => {
@@ -430,6 +510,11 @@ const OrdersPage = () => {
                     {stage.split(' ')[0]}
                   </th>
                 ))}
+                {userRole === "admin" && (
+                  <th className="px-3 py-2 text-center font-medium text-gray-500 whitespace-nowrap">
+                    Actions
+                  </th>
+                )}
               </tr>
             </thead>
             <tbody className="text-sm">
@@ -447,7 +532,10 @@ const OrdersPage = () => {
                     </td>
                   )}
                   <td className="px-3 py-2">
-                    {order.projectName || 'Unnamed Project'}
+                    <div className="flex items-center">
+                      <span>{order.projectName || 'Unnamed Project'}</span>
+                      {getAssignmentBadge(order.productionAssignments)}
+                    </div>
                   </td>
                   <td className="px-3 py-2">
                     {order.jobDetails?.jobType || 'N/A'}
@@ -474,6 +562,22 @@ const OrdersPage = () => {
                       />
                     </td>
                   ))}
+                  {userRole === "admin" && (
+                    <td className="px-3 py-2 text-center">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation(); // Prevent row click action
+                          handleOpenAssignmentModal(order);
+                        }}
+                        className="p-1 text-teal-600 hover:text-teal-800 rounded-full hover:bg-teal-100"
+                        title="Assign Production Staff"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                        </svg>
+                      </button>
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -535,11 +639,24 @@ const OrdersPage = () => {
         </div>
       )}
 
+      {/* Order Details Modal */}
       {selectedOrder && (
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onStageUpdate={(newStage) => handleStageUpdateRequest(selectedOrder.id, selectedOrder.stage, newStage)}
+        />
+      )}
+
+      {/* Production Assignment Modal */}
+      {isAssignmentModalOpen && orderForAssignment && (
+        <ProductionAssignmentModal
+          order={orderForAssignment}
+          onClose={() => {
+            setIsAssignmentModalOpen(false);
+            setOrderForAssignment(null);
+          }}
+          onAssignmentUpdate={handleAssignmentUpdate}
         />
       )}
     </div>

@@ -21,6 +21,7 @@ import Unauthorized from "./components/Login/Unauthorized";
 import ProtectedRoute from "./components/Login/ProtectedRoute";
 import { AuthProvider } from "./components/Login/AuthContext";
 import B2BClientDashboard from "./components/Clients/B2BClientDashboard";
+import ProductionDashboard from "./components/Orders/ProductionDashboard";
 import "./styles/tailwind.css";
 
 function App() {
@@ -135,6 +136,15 @@ function App() {
               element={
                 <ProtectedRoute requiredRole="production">
                   <DieManagement />
+                </ProtectedRoute>
+              } 
+            />
+
+            <Route 
+              path="/production-assignments" 
+              element={
+                <ProtectedRoute requiredRole="production">
+                  <ProductionDashboard />
                 </ProtectedRoute>
               } 
             />

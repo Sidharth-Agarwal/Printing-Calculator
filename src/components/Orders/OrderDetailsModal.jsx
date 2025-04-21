@@ -3,7 +3,6 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext"; // Added Auth context import
 
 const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
-  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     paperAndCutting: true,
     production: false,
@@ -127,19 +126,6 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
         )}
       </div>
     );
-  };
-
-  // Handle stage update
-  const handleStageUpdate = async (newStage) => {
-    try {
-      setIsUpdatingStage(true);
-      await onStageUpdate(newStage);
-    } catch (error) {
-      console.error("Error updating stage:", error);
-      alert("Failed to update stage");
-    } finally {
-      setIsUpdatingStage(false);
-    }
   };
 
   // Section header component

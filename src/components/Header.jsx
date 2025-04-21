@@ -94,6 +94,7 @@ const Header = () => {
   const canAccessTransactions = ['admin'].includes(userRole); // Only admin can access transactions
   const isAdmin = userRole === "admin";
   const isB2B = userRole === "b2b";
+  const isProduction = userRole === "production";
 
   return (
     <header className="bg-blue-600 text-white shadow">
@@ -199,6 +200,18 @@ const Header = () => {
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Invoices
+            </button>
+          )}
+
+          {/* Production Assignments - Production Staff Only */}
+          {isProduction && (
+            <button
+              onClick={() => navigate('/production-assignments')}
+              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
+                location.pathname === "/production-assignments" ? "underline text-blue-300" : ""
+              }`}
+            >
+              My Assignments
             </button>
           )}
 
