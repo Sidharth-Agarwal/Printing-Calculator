@@ -2,8 +2,7 @@ import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext"; // Added Auth context import
 
-const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
-  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
+const OrderDetailsModal = ({ order, onClose, onStageUpdate, canEditStages }) => {
   const [expandedSections, setExpandedSections] = useState({
     paperAndCutting: true,
     production: false,
@@ -14,8 +13,13 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   // Get user role from auth context
   const { userRole } = useAuth();
   const isB2BClient = userRole === "b2b";
+  const isStaffOrProduction = userRole === "staff" || userRole === "production";
   
-  const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
+  // Only admin can see detailed cost, B2B can see simplified cost
+  const canViewDetailedCosts = userRole === "admin";
+  const canViewSimplifiedCosts = userRole === "admin" || userRole === "b2b";
+  
+  const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
 
   const fieldLabels = {
     clientName: "Name of the Client",
@@ -129,19 +133,6 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
-  // Handle stage update
-  const handleStageUpdate = async (newStage) => {
-    try {
-      setIsUpdatingStage(true);
-      await onStageUpdate(newStage);
-    } catch (error) {
-      console.error("Error updating stage:", error);
-      alert("Failed to update stage");
-    } finally {
-      setIsUpdatingStage(false);
-    }
-  };
-
   // Section header component
   const SectionHeader = ({ title, isExpanded, onToggle, bgColor = "bg-gray-50" }) => (
     <div 
@@ -187,6 +178,8 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
 
   // Render Paper and Cutting section
   const renderPaperAndCuttingSection = () => {
+    if (!canViewDetailedCosts) return null;
+    
     const calculations = order.calculations;
     if (!calculations) return null;
     
@@ -218,6 +211,8 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
 
   // Render Production Services section
   const renderProductionServices = () => {
+    if (!canViewDetailedCosts) return null;
+    
     const calculations = order.calculations;
     if (!calculations) return null;
     
@@ -351,6 +346,8 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
 
   // Render Post-Production Services section
   const renderPostProductionServices = () => {
+    if (!canViewDetailedCosts) return null;
+    
     const calculations = order.calculations;
     if (!calculations) return null;
     
@@ -468,6 +465,8 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
 
   // Render Wastage and Overhead section
   const renderWastageAndOverhead = () => {
+    if (!canViewDetailedCosts) return null;
+    
     const calculations = order.calculations;
     if (!calculations) return null;
     
@@ -505,8 +504,10 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
-  // Render the detailed cost summary (for non-B2B users)
+  // Render the detailed cost summary (for admin only)
   const renderDetailedCostSummary = () => {
+    if (!canViewDetailedCosts) return null;
+    
     const calculations = order.calculations;
     if (!calculations) return null;
     
@@ -553,6 +554,8 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
 
   // Render the simplified cost summary for B2B clients
   const renderSimplifiedCostSummary = () => {
+    if (!canViewSimplifiedCosts) return null;
+    
     const calculations = order.calculations;
     if (!calculations) return null;
     
@@ -596,6 +599,54 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
+  // Render a message for staff/production users who cannot see costs
+  const renderNoCostsMessage = () => {
+    if (!isStaffOrProduction) return null;
+    
+    // return (
+    //   <div className="mt-6 p-4 bg-gray-50 rounded-md text-center border border-gray-200">
+    //     <p className="text-gray-600">
+    //       Please contact the admin for any pricing or cost information.
+    //     </p>
+    //   </div>
+    // );
+  };
+
+  // Render production status option for staff and production
+  const renderProductionStatus = () => {
+    if (canEditStages) return null; // Admin uses different UI for changing stages
+    
+    return (
+      <div className="mt-6 p-4 bg-gray-50 rounded-md border border-gray-200">
+        <h3 className="text-md font-semibold text-gray-700 mb-2">Production Status</h3>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {stages.map((stage) => {
+            const isCurrentStage = stage === order.stage;
+            return (
+              <div 
+                key={stage}
+                className={`px-3 py-1.5 rounded-md text-sm ${
+                  isCurrentStage 
+                    ? 'bg-blue-500 text-white' 
+                    : 'bg-gray-100 text-gray-700'
+                }`}
+              >
+                {stage}
+                {isCurrentStage && (
+                  <span className="ml-2 inline-block">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </span>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
@@ -628,11 +679,14 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
               image: order.dieDetails?.image
             })}
 
+            {/* Production Status for staff and production users */}
+            {renderProductionStatus()}
+
             {/* For B2B clients, show simplified cost view */}
-            {isB2BClient ? (
-              renderSimplifiedCostSummary()
-            ) : (
-              /* For admin/staff: Show detailed breakdown */
+            {renderSimplifiedCostSummary()}
+
+            {/* For admin users: Show detailed breakdown */}
+            {canViewDetailedCosts && (
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
                 
@@ -652,10 +706,11 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
                 {renderDetailedCostSummary()}
               </div>
             )}
+            
+            {/* Message for staff/production users who cannot see costs */}
+            {renderNoCostsMessage()}
           </div>
         </div>
-
-        {/* Footer Section */}
       </div>
     </div>
   );

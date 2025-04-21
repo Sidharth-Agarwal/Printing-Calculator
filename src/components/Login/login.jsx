@@ -67,9 +67,12 @@ const Login = () => {
             } else if (userData.role === "b2b") {
               // B2B users go to their dashboard
               navigate("/b2b-dashboard");
-            } else if (userData.role === "staff" || userData.role === "production") {
+            } else if (userData.role === "staff") {
               // Staff and production users go to the billing form
               navigate("/new-bill");
+            } else if (userData.role === "production") {
+              // B2B users go to their dashboard
+              navigate("/orders");
             } else {
               // Default fallback
               navigate("/new-bill");
