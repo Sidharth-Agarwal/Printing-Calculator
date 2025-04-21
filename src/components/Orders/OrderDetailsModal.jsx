@@ -17,16 +17,6 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery'];
 
-  // Stage colors for visual representation
-  const stageColors = {
-    'Not started yet': { bg: 'bg-gray-100', text: 'text-gray-800' },
-    'Design': { bg: 'bg-indigo-100', text: 'text-indigo-800' },
-    'Positives': { bg: 'bg-cyan-100', text: 'text-cyan-800' },
-    'Printing': { bg: 'bg-orange-100', text: 'text-orange-800' },
-    'Quality Check': { bg: 'bg-pink-100', text: 'text-pink-800' },
-    'Delivery': { bg: 'bg-green-100', text: 'text-green-800' }
-  };
-
   const fieldLabels = {
     clientName: "Name of the Client",
     projectName: "Name of the Project",
