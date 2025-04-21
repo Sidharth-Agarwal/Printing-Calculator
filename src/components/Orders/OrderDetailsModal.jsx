@@ -1,17 +1,9 @@
-import React, { useState, useRef } from 'react';
-import { doc, updateDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import jsPDF from 'jspdf';
-import html2canvas from 'html2canvas';
-import OrderJobTicket from './OrderJobTicket';
-import TaxInvoice from './TaxInvoice';
+import React, { useState } from 'react';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext"; // Added Auth context import
 
 const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
-  const [activeView, setActiveView] = useState('details');
-  const [isDownloading, setIsDownloading] = useState(false);
-  const contentRef = useRef(null);
+  const [isUpdatingStage, setIsUpdatingStage] = useState(false);
   const [expandedSections, setExpandedSections] = useState({
     paperAndCutting: true,
     production: false,
@@ -150,12 +142,13 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   // Handle stage update
   const handleStageUpdate = async (newStage) => {
     try {
-      const orderRef = doc(db, "orders", order.id);
-      await updateDoc(orderRef, { stage: newStage });
-      onStageUpdate(newStage);
+      setIsUpdatingStage(true);
+      await onStageUpdate(newStage);
     } catch (error) {
       console.error("Error updating stage:", error);
       alert("Failed to update stage");
+    } finally {
+      setIsUpdatingStage(false);
     }
   };
 
@@ -488,30 +481,6 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     const calculations = order.calculations;
     if (!calculations) return null;
     
-    // Get values from calculations or calculate if not available
-    const baseCost = calculations.baseCost !== undefined ? 
-      parseFloat(calculations.baseCost) : 
-      calculateTotalCosts().baseCost;
-      
-    const wastageAmount = calculations.wastageAmount !== undefined ?
-      parseFloat(calculations.wastageAmount) :
-      calculations.wastageCost !== undefined ?
-        parseFloat(calculations.wastageCost) :
-        calculateTotalCosts().wastageCost;
-        
-    const overheadAmount = calculations.overheadAmount !== undefined ?
-      parseFloat(calculations.overheadAmount) :
-      calculations.overheadCost !== undefined ?
-        parseFloat(calculations.overheadCost) :
-        calculateTotalCosts().overheadCost;
-    
-    const wastagePercentage = calculations.wastagePercentage || 5;
-    const overheadPercentage = calculations.overheadPercentage || 35;
-    
-    const COGS = calculations.COGS !== undefined ?
-      parseFloat(calculations.COGS) :
-      baseCost + wastageAmount + overheadAmount;
-    
     return (
       <CollapsibleSection
         title="Wastage and Overhead"
@@ -520,21 +489,25 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
         bgColor="bg-amber-50"
       >
         <div className="space-y-1">
-          <CostItem label="Base Cost" value={baseCost} />
+          <CostItem label="Base Cost" value={calculations.baseCost} />
           
-          <div className="flex justify-between items-center py-1.5 px-2">
-            <span>Wastage ({wastagePercentage}%)</span>
-            <span>₹ {wastageAmount.toFixed(2)}</span>
-          </div>
+          {calculations.wastagePercentage && (
+            <div className="flex justify-between items-center py-1.5 px-2">
+              <span>Wastage ({calculations.wastagePercentage}%)</span>
+              <span>₹ {parseFloat(calculations.wastageAmount || 0).toFixed(2)}</span>
+            </div>
+          )}
           
-          <div className="flex justify-between items-center py-1.5 px-2">
-            <span>Overhead ({overheadPercentage}%)</span>
-            <span>₹ {overheadAmount.toFixed(2)}</span>
-          </div>
+          {calculations.overheadPercentage && (
+            <div className="flex justify-between items-center py-1.5 px-2">
+              <span>Overhead ({calculations.overheadPercentage}%)</span>
+              <span>₹ {parseFloat(calculations.overheadAmount || 0).toFixed(2)}</span>
+            </div>
+          )}
           
           <CostItem 
             label="COGS (Cost of Goods Sold)" 
-            value={COGS} 
+            value={calculations.COGS} 
             isTotal
           />
         </div>
@@ -542,48 +515,50 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
-  // Calculate total costs (for backwards compatibility)
-  const calculateTotalCosts = () => {
-    const WASTAGE_PERCENTAGE = 5; // 5% wastage
-    const OVERHEAD_PERCENTAGE = 35; // 35% overhead
-
-    const relevantFields = [
-      'paperAndCuttingCostPerCard',
-      'lpCostPerCard',
-      'fsCostPerCard',
-      'embCostPerCard',
-      'lpCostPerCardSandwich',
-      'fsCostPerCardSandwich',
-      'embCostPerCardSandwich',
-      'digiCostPerCard',
-      'pastingCostPerCard'
-    ];
-
-    // Calculate base cost per card
-    const baseCost = relevantFields.reduce((acc, key) => {
-      const value = order.calculations?.[key];
-      return acc + (value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0);
-    }, 0);
-
-    // Calculate wastage cost
-    const wastageCost = baseCost * (WASTAGE_PERCENTAGE / 100);
+  // Render the detailed cost summary (for non-B2B users)
+  const renderDetailedCostSummary = () => {
+    const calculations = order.calculations;
+    if (!calculations) return null;
     
-    // Calculate overhead cost
-    const overheadCost = baseCost * (OVERHEAD_PERCENTAGE / 100);
-    
-    // Total cost per card including wastage and overhead
-    const totalCostPerCard = baseCost + wastageCost + overheadCost;
-    
-    // Total cost for all cards
-    const totalCost = totalCostPerCard * (order.jobDetails?.quantity || 0);
-
-    return {
-      baseCost,
-      wastageCost,
-      overheadCost,
-      totalCostPerCard,
-      totalCost
-    };
+    return (
+      <div className="mt-6 bg-gray-50 p-4 rounded-md border">
+        <h3 className="text-md font-semibold text-gray-700 mb-2">Cost Summary</h3>
+        
+        <div className="space-y-2">
+          <div className="flex justify-between items-center">
+            <span className="font-medium text-gray-700">Subtotal per Card:</span>
+            <span className="text-gray-900">
+              ₹ {parseFloat(calculations.subtotalPerCard || 0).toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center text-blue-700 border-t border-gray-300 pt-2 mt-2">
+            <span className="font-medium">
+              Markup ({calculations.markupType?.replace('MARKUP ', '') || 'Standard'}: {calculations.markupPercentage || 0}%):
+            </span>
+            <span className="font-medium">
+              ₹ {parseFloat(calculations.markupAmount || 0).toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
+            <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
+            <span className="text-lg font-bold text-gray-900">
+              ₹ {parseFloat(calculations.totalCostPerCard || 0).toFixed(2)}
+            </span>
+          </div>
+        </div>
+        
+        <div className="flex justify-between items-center pt-3 border-t border-gray-300 mt-2">
+          <span className="text-lg font-bold text-gray-700">
+            Total Cost ({order.jobDetails?.quantity || 0} pcs):
+          </span>
+          <span className="text-xl font-bold text-blue-600">
+            ₹ {parseFloat(calculations.totalCost || 0).toFixed(2)}
+          </span>
+        </div>
+      </div>
+    );
   };
 
   // Render the simplified cost summary for B2B clients
@@ -591,15 +566,9 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     const calculations = order.calculations;
     if (!calculations) return null;
     
-    const totalCostPerCard = calculations.totalCostPerCard !== undefined ?
-      parseFloat(calculations.totalCostPerCard) :
-      calculateTotalCosts().totalCostPerCard;
-      
+    const totalCostPerCard = parseFloat(calculations.totalCostPerCard || 0);
     const quantity = parseInt(order.jobDetails?.quantity || 0);
-    
-    const totalCost = calculations.totalCost !== undefined ?
-      parseFloat(calculations.totalCost) :
-      totalCostPerCard * quantity;
+    const totalCost = parseFloat(calculations.totalCost || 0);
     
     // Get markup info if available
     const markupPercentage = calculations.markupPercentage || 0;
@@ -637,248 +606,66 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     );
   };
 
-  // Render the final cost summary for non-B2B users
-  const renderDetailedCostSummary = () => {
-    const calculations = order.calculations;
-    if (!calculations) return null;
-    
-    // Get values from calculations or calculate if not available
-    const costs = calculateTotalCosts();
-    
-    const subtotalPerCard = calculations.subtotalPerCard !== undefined ?
-      parseFloat(calculations.subtotalPerCard) :
-      costs.baseCost + costs.wastageCost + costs.overheadCost;
-      
-    const markupAmount = calculations.markupAmount !== undefined ?
-      parseFloat(calculations.markupAmount) :
-      0;
-      
-    const markupPercentage = calculations.markupPercentage || 0;
-    const markupType = calculations.markupType || 'Standard';
-    
-    const totalCostPerCard = calculations.totalCostPerCard !== undefined ?
-      parseFloat(calculations.totalCostPerCard) :
-      costs.totalCostPerCard;
-      
-    const quantity = parseInt(order.jobDetails?.quantity || 0);
-    
-    const totalCost = calculations.totalCost !== undefined ?
-      parseFloat(calculations.totalCost) :
-      totalCostPerCard * quantity;
-    
-    return (
-      <div className="mt-6 bg-gray-50 p-4 rounded-md border">
-        <h3 className="text-md font-semibold text-gray-700 mb-2">Cost Summary</h3>
-        
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-gray-700">Subtotal per Card:</span>
-            <span className="text-gray-900">
-              ₹ {subtotalPerCard.toFixed(2)}
-            </span>
-          </div>
-          
-          <div className="flex justify-between items-center text-blue-700 border-t border-gray-300 pt-2 mt-2">
-            <span className="font-medium">
-              Markup ({markupType.replace('MARKUP ', '')}: {markupPercentage}%):
-            </span>
-            <span className="font-medium">
-              ₹ {markupAmount.toFixed(2)}
-            </span>
-          </div>
-          
-          <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-            <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
-            <span className="text-lg font-bold text-gray-900">
-              ₹ {totalCostPerCard.toFixed(2)}
-            </span>
-          </div>
-        </div>
-        
-        <div className="flex justify-between items-center pt-3 border-t border-gray-300 mt-2">
-          <span className="text-lg font-bold text-gray-700">
-            Total Cost ({quantity} pcs):
-          </span>
-          <span className="text-xl font-bold text-blue-600">
-            ₹ {totalCost.toFixed(2)}
-          </span>
-        </div>
-      </div>
-    );
-  };
-
-  // Generate PDF
-  const generatePDF = async () => {
-    if (!contentRef.current) return;
-    
-    setIsDownloading(true);
-    try {
-      const images = contentRef.current.getElementsByTagName('img');
-      const imagePromises = Array.from(images).map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = reject;
-        });
-      });
-
-      await Promise.all(imagePromises);
-
-      const element = contentRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
-        useCORS: true,
-        logging: false,
-        allowTaint: true,
-        imageTimeout: 0
-      });
-      
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
-      const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4'
-      });
-
-      const imgWidth = 210;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
-      
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
-      pdf.save(`${order.clientName}_${activeView === 'invoice' ? 'Invoice' : 'Job_Ticket'}_${new Date().toISOString().split('T')[0]}.pdf`);
-    } catch (error) {
-      console.error("Error generating PDF:", error);
-      alert("Failed to generate PDF. Please try again.");
-    } finally {
-      setIsDownloading(false);
-    }
-  };
-
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <div className="flex items-center gap-4">
-            <h2 className="text-xl font-bold text-gray-800">
-              {activeView === 'details' ? 'Order Details' : 
-               activeView === 'invoice' ? 'Tax Invoice' : 'Job Ticket'}
-            </h2>
-            <div className="flex gap-2">
-              <button
-                onClick={() => setActiveView('details')}
-                className={`px-3 py-1 rounded-md text-sm ${
-                  activeView === 'details' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                Details
-              </button>
-              <button
-                onClick={() => setActiveView('ticket')}
-                className={`px-3 py-1 rounded-md text-sm ${
-                  activeView === 'ticket' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                Job Ticket
-              </button>
-              <button
-                onClick={() => setActiveView('invoice')}
-                className={`px-3 py-1 rounded-md text-sm ${
-                  activeView === 'invoice' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'bg-gray-100 hover:bg-gray-200 text-gray-700'
-                }`}
-              >
-                Invoice
-              </button>
-            </div>
+            <h2 className="text-xl font-bold text-gray-800">Order Details</h2>
           </div>
-          <div className="flex items-center gap-4">
-            {(activeView === 'invoice' || activeView === 'ticket') && (
-              <button
-                onClick={generatePDF}
-                disabled={isDownloading}
-                className={`flex items-center gap-2 px-4 py-2 ${
-                  isDownloading ? 'bg-gray-400' : 'bg-blue-500 hover:bg-blue-600'
-                } text-white rounded-md`}
-              >
-                {isDownloading ? (
-                  <>
-                    <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
-                    </svg>
-                    Generating...
-                  </>
-                ) : (
-                  <>Download {activeView === 'invoice' ? 'Invoice' : 'Job Ticket'}</>
-                )}
-              </button>
-            )}
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
-              </svg>
-            </button>
-          </div>
+          <button onClick={onClose} className="text-gray-500 hover:text-gray-700">
+            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          </button>
         </div>
 
         {/* Content Area */}
         <div className="flex-1 overflow-y-auto">
-          {activeView === 'details' ? (
-            <div className="p-6" id="order-content">
-              {/* Basic Order Information */}
-              {renderSectionInGrid("Order and Client Information", {
-                clientName: order.clientName,
-                projectName: order.projectName,
-                date: order.date,
-                deliveryDate: order.deliveryDate,
-                jobType: order.jobDetails?.jobType,
-                quantity: order.jobDetails?.quantity,
-                paperName: order.jobDetails?.paperName,
-                dieCode: order.dieDetails?.dieCode,
-                dieSize: `${order.dieDetails?.dieSize?.length || ''} x ${order.dieDetails?.dieSize?.breadth || ''}`,
-                image: order.dieDetails?.image
-              })}
+          <div className="p-6" id="order-content">
+            {/* Basic Order Information */}
+            {renderSectionInGrid("Order and Client Information", {
+              clientName: order.clientName,
+              projectName: order.projectName,
+              date: order.date,
+              deliveryDate: order.deliveryDate,
+              jobType: order.jobDetails?.jobType,
+              quantity: order.jobDetails?.quantity,
+              paperName: order.jobDetails?.paperName,
+              dieCode: order.dieDetails?.dieCode,
+              dieSize: `${order.dieDetails?.dieSize?.length || ''} x ${order.dieDetails?.dieSize?.breadth || ''}`,
+              image: order.dieDetails?.image
+            })}
 
-              {/* For B2B clients, show simplified cost view */}
-              {isB2BClient ? (
-                renderSimplifiedCostSummary()
-              ) : (
-                /* For admin/staff: Show detailed breakdown */
-                <div className="space-y-4">
-                  <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
-                  
-                  {/* Paper and Cutting Section */}
-                  {renderPaperAndCuttingSection()}
-                  
-                  {/* Production Services Section */}
-                  {renderProductionServices()}
-                  
-                  {/* Post-Production Services Section */}
-                  {renderPostProductionServices()}
-                  
-                  {/* Wastage and Overhead Section */}
-                  {renderWastageAndOverhead()}
-                  
-                  {/* Final Cost Summary */}
-                  {renderDetailedCostSummary()}
-                </div>
-              )}
-            </div>
-          ) : (
-            <div ref={contentRef} className="p-6">
-              {activeView === 'invoice' ? (
-                <TaxInvoice order={order} />
-              ) : (
-                <OrderJobTicket order={order} />
-              )}
-            </div>
-          )}
+            {/* For B2B clients, show simplified cost view */}
+            {isB2BClient ? (
+              renderSimplifiedCostSummary()
+            ) : (
+              /* For admin/staff: Show detailed breakdown */
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
+                
+                {/* Paper and Cutting Section */}
+                {renderPaperAndCuttingSection()}
+                
+                {/* Production Services Section */}
+                {renderProductionServices()}
+                
+                {/* Post-Production Services Section */}
+                {renderPostProductionServices()}
+                
+                {/* Wastage and Overhead Section */}
+                {renderWastageAndOverhead()}
+                
+                {/* Final Cost Summary */}
+                {renderDetailedCostSummary()}
+              </div>
+            )}
+          </div>
         </div>
+
+        {/* Footer Section */}
       </div>
     </div>
   );
