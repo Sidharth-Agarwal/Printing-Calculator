@@ -3,6 +3,7 @@ import { addDoc, collection } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import EditEstimateModal from "./EditEstimateModal";
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { useAuth } from "../Login/AuthContext"; // Added Auth context import
 
 const EstimateDetailsModal = ({ 
   estimate, 
@@ -20,6 +21,10 @@ const EstimateDetailsModal = ({
     postProduction: false,
     wastageAndOverhead: false
   });
+  
+  // Get user role from auth context
+  const { userRole } = useAuth();
+  const isB2BClient = userRole === "b2b";
   
   const fieldLabels = {
     clientName: "Name of the Client",
@@ -538,8 +543,8 @@ const EstimateDetailsModal = ({
     );
   };
 
-  // Render the final cost summary
-  const renderCostSummary = () => {
+  // Render the detailed cost summary (for non-B2B users)
+  const renderDetailedCostSummary = () => {
     const calculations = estimate.calculations;
     if (!calculations) return null;
     
@@ -583,6 +588,51 @@ const EstimateDetailsModal = ({
       </div>
     );
   };
+  
+  // Render the simplified cost summary for B2B clients
+  const renderSimplifiedCostSummary = () => {
+    const calculations = estimate.calculations;
+    if (!calculations) return null;
+    
+    const totalCostPerCard = parseFloat(calculations.totalCostPerCard || 0);
+    const quantity = parseInt(estimate.jobDetails?.quantity || 0);
+    const totalCost = parseFloat(calculations.totalCost || 0);
+    
+    // Get markup info if available
+    const markupPercentage = calculations.markupPercentage || 0;
+    const markupType = calculations.markupType || 'Standard';
+    
+    return (
+      <div className="mt-6 bg-blue-50 p-4 rounded-md border border-blue-200">
+        <h3 className="text-lg font-bold text-gray-800 mb-4">Cost Summary</h3>
+        
+        <div className="space-y-4">
+          <div className="flex justify-between items-center text-lg">
+            <span className="font-medium">Total Cost per Card:</span>
+            <span className="font-bold">
+              ₹ {totalCostPerCard.toFixed(2)}
+            </span>
+          </div>
+          
+          <div className="flex justify-between items-center pt-3 border-t border-blue-300 text-xl">
+            <span className="font-bold text-gray-700">
+              Total Cost ({quantity} pcs):
+            </span>
+            <span className="font-bold text-blue-700">
+              ₹ {totalCost.toFixed(2)}
+            </span>
+          </div>
+        </div>
+        
+        {/* Hidden markup info - display read-only for transparency */}
+        {markupType && markupType.includes('B2B') && (
+          <div className="mt-4 pt-3 border-t border-blue-200 text-sm text-gray-600">
+            <p>Using B2B pricing ({markupPercentage}% markup)</p>
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
@@ -590,15 +640,17 @@ const EstimateDetailsModal = ({
         <div className="flex justify-between items-center p-6 border-b">
           <h2 className="text-xl font-bold text-gray-700">Estimate Details</h2>
           <div className="flex items-center gap-4">
-            <button
-              onClick={() => setIsEditModalOpen(true)}
-              className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-              </svg>
-              Edit Estimate
-            </button>
+            {!isB2BClient && (
+              <button
+                onClick={() => setIsEditModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 bg-yellow-500 text-white rounded-md hover:bg-yellow-600"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                  <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                </svg>
+                Edit Estimate
+              </button>
+            )}
             <button
               onClick={onClose}
               className="text-gray-600 hover:text-gray-900 text-xl"
@@ -625,25 +677,30 @@ const EstimateDetailsModal = ({
                 image: estimate.dieDetails?.image
               })}
 
-            {/* Detailed Cost Sections */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
-              
-              {/* Paper and Cutting Section */}
-              {renderPaperAndCuttingSection()}
-              
-              {/* Production Services Section */}
-              {renderProductionServices()}
-              
-              {/* Post-Production Services Section */}
-              {renderPostProductionServices()}
-              
-              {/* Wastage and Overhead Section */}
-              {renderWastageAndOverhead()}
-              
-              {/* Final Cost Summary */}
-              {renderCostSummary()}
-            </div>
+            {/* For B2B clients, show simplified cost view */}
+            {isB2BClient ? (
+              renderSimplifiedCostSummary()
+            ) : (
+              /* For admin/staff: Show detailed breakdown */
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
+                
+                {/* Paper and Cutting Section */}
+                {renderPaperAndCuttingSection()}
+                
+                {/* Production Services Section */}
+                {renderProductionServices()}
+                
+                {/* Post-Production Services Section */}
+                {renderPostProductionServices()}
+                
+                {/* Wastage and Overhead Section */}
+                {renderWastageAndOverhead()}
+                
+                {/* Final Cost Summary */}
+                {renderDetailedCostSummary()}
+              </div>
+            )}
           </div>
         </div>
 
