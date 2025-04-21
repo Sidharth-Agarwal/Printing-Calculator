@@ -35,6 +35,12 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     console.log("B2B user accessing New Bill - allowed");
     return children;
   }
+  
+  // Special case for Material Management routes - allow staff to access all material routes
+  if (userRole === "staff" && location.pathname.startsWith("/material-stock/")) {
+    console.log("Staff user accessing material management - allowed");
+    return children;
+  }
 
   // If role is required but user doesn't have it (and is not admin), redirect to unauthorized
   // But skip this check during user creation process
