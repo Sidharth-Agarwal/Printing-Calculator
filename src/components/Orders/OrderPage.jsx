@@ -27,6 +27,9 @@ const OrdersPage = () => {
   const [orderForAssignment, setOrderForAssignment] = useState(null);
   const [staffNames, setStaffNames] = useState({});
 
+  // Check if user can edit stages (only admin can)
+  const canEditStages = userRole === "admin";
+
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
 
   const sortOptions = {
@@ -224,12 +227,15 @@ const OrdersPage = () => {
   }, [searchQuery, orders, sortBy, stageFilter, viewMode]);
 
   const handleStageUpdateRequest = (orderId, currentStage, newStage) => {
+    // Only admin can update stages
+    if (!canEditStages) return;
+    
     setPendingStageUpdate({ orderId, currentStage, newStage });
     setShowConfirmation(true);
   };
 
   const updateStage = async () => {
-    if (!pendingStageUpdate) return;
+    if (!pendingStageUpdate || !canEditStages) return;
     
     try {
       setUpdating(true);
@@ -258,6 +264,7 @@ const OrdersPage = () => {
 
   // Handle opening the assignment modal
   const handleOpenAssignmentModal = (order) => {
+    if (!canEditStages) return;
     setOrderForAssignment(order);
     setIsAssignmentModalOpen(true);
   };
@@ -292,8 +299,9 @@ const OrdersPage = () => {
   };
 
   const StatusCircle = ({ stage, currentStage, orderId }) => {
-    // Don't allow B2B clients to update stages
-    if (isB2BClient) {
+    // Modified to only allow admin users to edit stages
+    // All other roles (B2B, staff, production) can only view stages
+    if (!canEditStages) {
       const currentStageOrder = stages.indexOf(currentStage || 'Not started yet');
       const thisStageOrder = stages.indexOf(stage);
       const isCompleted = currentStageOrder > thisStageOrder || currentStage === stage;
@@ -510,7 +518,7 @@ const OrdersPage = () => {
                     {stage.split(' ')[0]}
                   </th>
                 ))}
-                {userRole === "admin" && (
+                {canEditStages && (
                   <th className="px-3 py-2 text-center font-medium text-gray-500 whitespace-nowrap">
                     Actions
                   </th>
@@ -562,7 +570,7 @@ const OrdersPage = () => {
                       />
                     </td>
                   ))}
-                  {userRole === "admin" && (
+                  {canEditStages && (
                     <td className="px-3 py-2 text-center">
                       <button
                         onClick={(e) => {
@@ -609,8 +617,8 @@ const OrdersPage = () => {
         )}
       </div>
 
-      {/* Confirmation Dialog */}
-      {showConfirmation && pendingStageUpdate && (
+      {/* Confirmation Dialog - Only shown to admin users */}
+      {canEditStages && showConfirmation && pendingStageUpdate && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-4 max-w-md">
             <h3 className="text-lg font-medium mb-3">Confirm Stage Update</h3>
@@ -644,12 +652,18 @@ const OrdersPage = () => {
         <OrderDetailsModal
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
-          onStageUpdate={(newStage) => handleStageUpdateRequest(selectedOrder.id, selectedOrder.stage, newStage)}
+          onStageUpdate={(newStage) => {
+            // Only allow stage updates from the modal if user is admin
+            if (canEditStages) {
+              handleStageUpdateRequest(selectedOrder.id, selectedOrder.stage, newStage);
+            }
+          }}
+          canEditStages={canEditStages} // Pass this prop to the modal
         />
       )}
 
-      {/* Production Assignment Modal */}
-      {isAssignmentModalOpen && orderForAssignment && (
+      {/* Production Assignment Modal - Only for admin */}
+      {canEditStages && isAssignmentModalOpen && orderForAssignment && (
         <ProductionAssignmentModal
           order={orderForAssignment}
           onClose={() => {

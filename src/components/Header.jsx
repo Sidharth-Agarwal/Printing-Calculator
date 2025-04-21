@@ -87,14 +87,13 @@ const Header = () => {
   // Role-based menu access
   const canAccessNewBill = ['admin', 'staff', 'b2b'].includes(userRole);
   const canAccessMaterials = ['admin', 'staff'].includes(userRole);
-  const canAccessClients = ['admin', 'staff'].includes(userRole);
+  const canAccessClients = ['admin'].includes(userRole);
   const canAccessEstimates = ['admin', 'staff', 'b2b'].includes(userRole);
   const canAccessOrders = ['admin', 'staff', 'production', 'b2b'].includes(userRole);
-  const canAccessInvoices = ['admin', 'staff', 'production', 'b2b'].includes(userRole);
+  const canAccessInvoices = ['admin', 'staff', 'b2b'].includes(userRole);
   const canAccessTransactions = ['admin'].includes(userRole); // Only admin can access transactions
   const isAdmin = userRole === "admin";
   const isB2B = userRole === "b2b";
-  const isProduction = userRole === "production";
 
   return (
     <header className="bg-blue-600 text-white shadow">
@@ -200,18 +199,6 @@ const Header = () => {
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Invoices
-            </button>
-          )}
-
-          {/* Production Assignments - Production Staff Only */}
-          {isProduction && (
-            <button
-              onClick={() => navigate('/production-assignments')}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                location.pathname === "/production-assignments" ? "underline text-blue-300" : ""
-              }`}
-            >
-              My Assignments
             </button>
           )}
 
