@@ -90,7 +90,7 @@ const Header = () => {
   const canAccessClients = ['admin'].includes(userRole);
   const canAccessEstimates = ['admin', 'staff', 'b2b'].includes(userRole);
   const canAccessOrders = ['admin', 'staff', 'production', 'b2b'].includes(userRole);
-  const canAccessInvoices = ['admin', 'staff', 'b2b'].includes(userRole);
+  const canAccessInvoices = ['admin', 'staff'].includes(userRole);
   const canAccessTransactions = ['admin'].includes(userRole); // Only admin can access transactions
   const isAdmin = userRole === "admin";
   const isB2B = userRole === "b2b";
