@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import { useAuth } from "../../../Login/AuthContext";
 
@@ -9,12 +9,11 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
   const [searchTerm, setSearchTerm] = useState("");
   
   // Add auth context for user role detection
-  const { userRole, currentUser } = useAuth();
+  const { userRole } = useAuth();
   const isB2BClient = userRole === "b2b";
 
-  // Fetch all clients for dropdown (for admin users)
+  // Fetch all clients
   useEffect(() => {
-    // Skip fetching all clients if user is B2B - they'll only use their own client
     if (isB2BClient) {
       setIsLoading(false);
       return;
@@ -22,18 +21,17 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     
     const fetchClients = async () => {
       try {
+        setIsLoading(true);
         const clientsCollection = collection(db, "clients");
         const querySnapshot = await getDocs(clientsCollection);
         
         const clientsData = querySnapshot.docs.map(doc => ({
           id: doc.id,
-          clientId: doc.id, // Add clientId field for consistency
+          clientId: doc.id,
           ...doc.data()
         }));
         
-        // Sort by name
         clientsData.sort((a, b) => a.name.localeCompare(b.name));
-        
         setClients(clientsData);
       } catch (error) {
         console.error("Error fetching clients:", error);
@@ -45,45 +43,35 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     fetchClients();
   }, [isB2BClient]);
 
-  // Handle selection change
-  const handleClientChange = (e) => {
-    const clientId = e.target.value;
-    
-    if (clientId === "") {
-      // Clear selection
-      onClientSelect(null);
-      setSelectedClient(null);
-    } else {
-      // Find client in list
-      const selectedClient = clients.find(client => client.id === clientId);
-      if (selectedClient) {
-        // Call the callback with client data including formatted clientId property
-        onClientSelect({
-          clientId: selectedClient.id,
-          clientInfo: selectedClient
-        });
-        // Update local state
-        setSelectedClient(selectedClient);
-      }
-    }
+  // Handle search input change
+  const handleSearchChange = (e) => {
+    setSearchTerm(e.target.value);
   };
 
-  // Filter clients based on search term
-  const filteredClients = clients.filter(client => 
-    client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    (client.clientCode && client.clientCode.toLowerCase().includes(searchTerm.toLowerCase()))
-  );
+  // Handle client selection
+  const handleClientSelect = (client) => {
+    onClientSelect({
+      clientId: client.id,
+      clientInfo: client
+    });
+    setSelectedClient(client);
+    setSearchTerm(""); // Clear search after selection
+  };
 
-  // For B2B clients, we don't show selection controls, so just return null if no selected client
-  if (isB2BClient && !selectedClient) {
-    return (
-      <div className="text-center p-4">
-        <p className="text-gray-500">Loading your client data...</p>
-      </div>
+  // Get filtered clients based on search term
+  const getFilteredClients = () => {
+    if (!searchTerm.trim()) {
+      return clients;
+    }
+    
+    const searchTermLower = searchTerm.toLowerCase();
+    return clients.filter(client => 
+      client.name.toLowerCase().includes(searchTermLower) || 
+      (client.clientCode && client.clientCode.toLowerCase().includes(searchTermLower))
     );
-  }
+  };
 
-  // For B2B clients with a selected client, we show a read-only view
+  // B2B client display
   if (isB2BClient && selectedClient) {
     return (
       <div className="p-4 bg-blue-50 rounded border border-blue-200">
@@ -107,54 +95,105 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     );
   }
 
-  // For admin users, show the normal selection interface
+  // Loading state for all clients
+  if (isLoading) {
+    return (
+      <div className="text-center p-4">
+        <p className="text-gray-500">Loading clients...</p>
+      </div>
+    );
+  }
+
+  // Render selected client information
+  if (selectedClient) {
+    return (
+      <div className="p-4 bg-blue-50 rounded border border-blue-200">
+        <div className="flex justify-between items-center mb-2">
+          <div>
+            <span className="font-bold">Client:</span>
+            <span className="ml-2 text-lg">{selectedClient.name}</span>
+          </div>
+          <button
+            onClick={() => {
+              onClientSelect(null);
+              setSelectedClient(null);
+            }}
+            className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+          >
+            Change Client
+          </button>
+        </div>
+        <div className="text-sm text-gray-600">
+          <p><strong>Code:</strong> {selectedClient.clientCode}</p>
+          {selectedClient.contactPerson && (
+            <p><strong>Contact:</strong> {selectedClient.contactPerson}</p>
+          )}
+          {selectedClient.email && (
+            <p><strong>Email:</strong> {selectedClient.email}</p>
+          )}
+          {selectedClient.category && (
+            <p><strong>Category:</strong> {selectedClient.category}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Client selection interface
+  const filteredClients = getFilteredClients();
+
   return (
     <div>
-      {isLoading ? (
-        <div className="text-center p-4">
-          <p className="text-gray-500">Loading clients...</p>
+      {/* Search input */}
+      <div className="mb-4">
+        <input
+          type="text"
+          placeholder="Search clients by name or code..."
+          value={searchTerm}
+          onChange={handleSearchChange}
+          className="w-full px-4 py-2 border rounded"
+        />
+      </div>
+
+      {/* Client list or dropdown */}
+      {searchTerm ? (
+        <div className="border rounded max-h-60 overflow-y-auto">
+          {filteredClients.length === 0 ? (
+            <p className="p-3 text-gray-500">No clients found</p>
+          ) : (
+            filteredClients.map(client => (
+              <div
+                key={client.id}
+                className="p-2 border-b hover:bg-gray-100 cursor-pointer"
+                onClick={() => handleClientSelect(client)}
+              >
+                <div className="font-medium">{client.name}</div>
+                <div className="text-sm text-gray-600">{client.clientCode}</div>
+              </div>
+            ))
+          )}
         </div>
       ) : (
-        <>
-          <div className="mb-4">
-            <input
-              type="text"
-              placeholder="Search clients by name or code..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border rounded"
-            />
-          </div>
-          
-          <div className="mb-4">
-            <select
-              value={selectedClient?.id || ""}
-              onChange={handleClientChange}
-              className="w-full p-2 border rounded"
-            >
-              <option value="">Select a client</option>
-              {filteredClients.map(client => (
-                <option key={client.id} value={client.id}>
-                  {client.name} ({client.clientCode})
-                </option>
-              ))}
-            </select>
-          </div>
-          
-          {selectedClient && (
-            <div className="p-4 bg-gray-50 rounded border">
-              <h3 className="font-medium mb-2">Selected Client:</h3>
-              <p><strong>Name:</strong> {selectedClient.name}</p>
-              <p><strong>Code:</strong> {selectedClient.clientCode}</p>
-              {selectedClient.contactPerson && (
-                <p><strong>Contact:</strong> {selectedClient.contactPerson}</p>
-              )}
-              {selectedClient.email && (
-                <p><strong>Email:</strong> {selectedClient.email}</p>
-              )}
-            </div>
-          )}
-        </>
+        <div className="mb-4">
+          <select
+            value=""
+            onChange={(e) => {
+              const selectedId = e.target.value;
+              if (selectedId) {
+                const selected = clients.find(c => c.id === selectedId);
+                if (selected) handleClientSelect(selected);
+              }
+            }}
+            className="w-full p-2 border rounded"
+          >
+            <option value="">Select a client</option>
+            {clients.map(client => (
+              <option key={client.id} value={client.id}>
+                {client.name} ({client.clientCode})
+              </option>
+            ))}
+          </select>
+        </div>
       )}
     </div>
   );
