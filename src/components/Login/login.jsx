@@ -66,7 +66,7 @@ const Login = () => {
               navigate("/transactions");
             } else if (userData.role === "b2b") {
               // B2B users go to their dashboard
-              navigate("/b2b-dashboard");
+              navigate("/orders");
             } else if (userData.role === "staff") {
               // Staff and production users go to the billing form
               navigate("/new-bill");
