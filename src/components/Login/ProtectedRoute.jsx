@@ -1,8 +1,8 @@
 import React from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useAuth } from "./AuthContext";
+import { ROUTE_ACCESS } from "./routesConfig"; // Import route configuration
 
-// This component wraps protected routes and redirects to login if not authenticated
 const ProtectedRoute = ({ children, requiredRole }) => {
   const { currentUser, userRole, loading } = useAuth();
   const location = useLocation();
@@ -19,50 +19,29 @@ const ProtectedRoute = ({ children, requiredRole }) => {
     );
   }
 
-  // If not logged in, redirect to login page
-  // But skip if we're in the middle of user creation process
+  // If not logged in and not in user creation process, redirect to login
   if (!currentUser && !userCreationInProgress) {
     return <Navigate to="/" replace />;
   }
 
-  // Specifically prevent B2B users from accessing client management page
-  if (userRole === "b2b" && location.pathname === "/clients") {
+  // Get allowed roles for the current route
+  const allowedRoles = ROUTE_ACCESS[location.pathname] || [];
+
+  // Determine if access is allowed
+  const isAccessAllowed = (
+    userCreationInProgress || 
+    userRole === 'admin' || // Admin has universal access
+    (requiredRole && userRole === requiredRole) || // Specific role check
+    allowedRoles.includes(userRole) // Check against route-specific roles
+  );
+
+  // If access is not allowed, redirect to unauthorized
+  if (!isAccessAllowed) {
+    console.log(`Access denied: User role ${userRole} for route ${location.pathname}`);
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // Special case for New Bill - explicitly allow B2B users to access it
-  if (location.pathname === "/new-bill" && userRole === "b2b") {
-    console.log("B2B user accessing New Bill - allowed");
-    return children;
-  }
-  
-  // Special case for Material Management routes - allow staff to access all material routes
-  if (userRole === "staff" && location.pathname.startsWith("/material-stock/")) {
-    console.log("Staff user accessing material management - allowed");
-    return children;
-  }
-
-  // If role is required but user doesn't have it (and is not admin), redirect to unauthorized
-  // But skip this check during user creation process
-  if (requiredRole && userRole !== requiredRole && userRole !== "admin" && !userCreationInProgress) {
-    // Special case for B2B users - they can only access routes specifically marked for b2b
-    if (userRole === "b2b") {
-      if (requiredRole !== "b2b") {
-        console.log(`Access denied: B2B user attempting to access ${requiredRole} route`);
-        return <Navigate to="/unauthorized" replace />;
-      }
-    } else {
-      console.log(`Access denied: User role ${userRole} doesn't match required role ${requiredRole}`);
-      return <Navigate to="/unauthorized" replace />;
-    }
-  }
-
-  // Special debug for admin users - they should have access to everything
-  if (userRole === "admin" && requiredRole) {
-    console.log(`Admin user accessing ${requiredRole} restricted route - allowed`);
-  }
-
-  // If authenticated and has the required role (or no role is required or is admin), render the children
+  // If authenticated and has the required role (or no role is required), render the children
   return children;
 };
 

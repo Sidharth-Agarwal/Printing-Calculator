@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./Login/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { MENU_ACCESS } from "../components/Login/routesConfig"; // Import menu access configuration
 
 const Header = () => {
   const { currentUser, userRole, logout } = useAuth();
@@ -12,10 +13,16 @@ const Header = () => {
   const [displayName, setDisplayName] = useState("");
   const [clientData, setClientData] = useState(null);
 
-  const navigateToNewTab = (path) => {
-    window.open(path, '_blank', 'noopener noreferrer');
+  // Helper function to navigate to a new tab or current window
+  const navigateToNewTab = (path, isB2BRoute = false) => {
+    if (isB2BRoute && userRole === 'b2b') {
+      navigate(path);
+    } else {
+      window.open(path, '_blank', 'noopener noreferrer');
+    }
   };
 
+  // Logout handler
   const handleLogout = async () => {
     try {
       await logout();
@@ -25,7 +32,7 @@ const Header = () => {
     }
   };
 
-  // Fetch the user's display name and client data (if B2B) when component mounts
+  // Fetch user data on component mount
   useEffect(() => {
     const fetchUserData = async () => {
       if (currentUser) {
@@ -37,7 +44,7 @@ const Header = () => {
               setDisplayName(userData.displayName);
             }
             
-            // If this is a B2B user, fetch linked client data
+            // Fetch client data for B2B users
             if (userData.role === "b2b" && userData.clientId) {
               const clientDoc = await getDoc(doc(db, "clients", userData.clientId));
               if (clientDoc.exists()) {
@@ -56,7 +63,7 @@ const Header = () => {
     fetchUserData();
   }, [currentUser]);
 
-  // Special case for setup-admin page - show minimal header
+  // Special case for setup-admin page - minimal header
   if (location.pathname === "/setup-admin") {
     return (
       <header className="bg-blue-600 text-white shadow">
@@ -78,28 +85,21 @@ const Header = () => {
     );
   }
 
-  // Get display text - either display name or email or client name for B2B users
+  // Determine display text for user
   let userDisplayText = displayName || currentUser.email;
   if (userRole === "b2b" && clientData) {
     userDisplayText = `${clientData.name} (${displayName || currentUser.email})`;
   }
 
-  // Role-based menu access
-  const canAccessNewBill = ['admin', 'staff', 'b2b'].includes(userRole);
-  const canAccessMaterials = ['admin', 'staff'].includes(userRole);
-  const canAccessClients = ['admin'].includes(userRole);
-  const canAccessEstimates = ['admin', 'staff', 'b2b'].includes(userRole);
-  const canAccessOrders = ['admin', 'staff', 'production', 'b2b'].includes(userRole);
-  const canAccessInvoices = ['admin', 'staff'].includes(userRole);
-  const canAccessTransactions = ['admin'].includes(userRole); // Only admin can access transactions
-  const isAdmin = userRole === "admin";
-  const isB2B = userRole === "b2b";
+  // Helper function to check menu item visibility
+  const isMenuItemVisible = (menuKey) => 
+    MENU_ACCESS[menuKey].includes(userRole);
 
   return (
     <header className="bg-blue-600 text-white shadow">
       <div className="w-full px-6 py-3 flex items-center justify-between">
         <h1 className="text-lg font-bold whitespace-nowrap">
-          {isB2B ? (
+          {userRole === "b2b" ? (
             <button 
               onClick={() => navigate("/b2b-dashboard")} 
               className="hover:text-blue-300 transition"
@@ -111,8 +111,8 @@ const Header = () => {
           )}
         </h1>
         <nav className="flex items-center space-x-6">
-          {/* New Bill - Admin, Staff, B2B */}
-          {canAccessNewBill && (
+          {/* New Bill */}
+          {isMenuItemVisible('newBill') && (
             <button
               onClick={() => navigateToNewTab('/new-bill')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
@@ -121,8 +121,8 @@ const Header = () => {
             </button>
           )}
 
-          {/* Material and Stock Dropdown - Staff and Admin */}
-          {canAccessMaterials && (
+          {/* Material and Stock Dropdown */}
+          {isMenuItemVisible('materials') && (
             <div className="group inline-block relative">
               <button className="hover:underline hover:text-blue-300 transition whitespace-nowrap">
                 Material & Stock
@@ -162,8 +162,8 @@ const Header = () => {
             </div>
           )}
 
-          {/* Clients - Admin, Staff */}
-          {canAccessClients && (
+          {/* Clients */}
+          {isMenuItemVisible('clients') && (
             <button
               onClick={() => navigateToNewTab('/clients')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
@@ -172,38 +172,38 @@ const Header = () => {
             </button>
           )}
 
-          {/* Estimates - Admin, Staff, B2B */}
-          {canAccessEstimates && (
+          {/* Estimates */}
+          {isMenuItemVisible('estimates') && (
             <button
-              onClick={() => isB2B ? navigate('/material-stock/estimates-db') : navigateToNewTab('/material-stock/estimates-db')}
+              onClick={() => navigateToNewTab('/material-stock/estimates-db', true)}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Estimates
             </button>
           )}
 
-          {/* Orders - Admin, Staff, Production, B2B */}
-          {canAccessOrders && (
+          {/* Orders */}
+          {isMenuItemVisible('orders') && (
             <button
-              onClick={() => isB2B ? navigate('/orders') : navigateToNewTab('/orders')}
+              onClick={() => navigateToNewTab('/orders', true)}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Orders
             </button>
           )}
 
-          {/* Invoices - Admin, Staff, Production, B2B */}
-          {canAccessInvoices && (
+          {/* Invoices */}
+          {isMenuItemVisible('invoices') && (
             <button
-              onClick={() => isB2B ? navigate('/invoices') : navigateToNewTab('/invoices')}
+              onClick={() => navigateToNewTab('/invoices', true)}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
             >
               Invoices
             </button>
           )}
 
-          {/* B2B Dashboard - B2B users only */}
-          {isB2B && (
+          {/* B2B Dashboard */}
+          {userRole === "b2b" && (
             <button
               onClick={() => navigate("/b2b-dashboard")}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
@@ -214,8 +214,8 @@ const Header = () => {
             </button>
           )}
 
-          {/* Transactions - Admin only */}
-          {canAccessTransactions && (
+          {/* Transactions */}
+          {isMenuItemVisible('transactions') && (
             <button
               onClick={() => navigateToNewTab('/transactions')}
               className="hover:underline hover:text-blue-300 transition whitespace-nowrap"
@@ -252,7 +252,8 @@ const Header = () => {
                   Logged in as <span className="font-semibold">{userRole}</span>
                 </div>
 
-                {isAdmin && (
+                {/* User Management - Only for Admin */}
+                {isMenuItemVisible('userManagement') && (
                   <button
                     onClick={() => {
                       setShowProfileMenu(false);
@@ -264,6 +265,7 @@ const Header = () => {
                   </button>
                 )}
                
+                {/* Change Password - Always Visible */}
                 <button
                   onClick={() => {
                     setShowProfileMenu(false);
@@ -274,6 +276,7 @@ const Header = () => {
                   Change Password
                 </button>
                
+                {/* Logout - Always Visible */}
                 <button
                   onClick={() => {
                     setShowProfileMenu(false);
