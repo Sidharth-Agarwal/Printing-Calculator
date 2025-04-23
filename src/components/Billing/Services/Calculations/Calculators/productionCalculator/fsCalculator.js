@@ -58,11 +58,18 @@ export const calculateFSCosts = async (state) => {
       // Calculate block area
       let blockArea = 0;
       
-      if (foilDetail.blockSizeType === "Auto" && orderAndPaper.dieSize) {
-        // If using Auto, calculate from die size
-        const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
-        const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-        blockArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+      if (foilDetail.blockSizeType === "Auto") {
+        // First check if product size is available
+        if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+          const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+          const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+          blockArea = (productLengthCm + margin) * (productBreadthCm + margin);
+        } else if (orderAndPaper.dieSize) {
+          // Fall back to die dimensions if product size is not available
+          const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+          const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+          blockArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+        }
       } else {
         // Otherwise use the provided block dimensions
         blockArea = parseFloat(foilDetail.blockDimension.length) * parseFloat(foilDetail.blockDimension.breadth);

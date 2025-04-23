@@ -41,7 +41,7 @@ export const calculateLPCosts = async (state) => {
     // 1. Fetch margin value from overheads
     const marginValue = await fetchOverheadValue('MARGIN');
     const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
-    console.log(marginValue)
+    
     // Initialize cost variables
     let totalPlateCost = 0;
     let totalPositiveFilmCost = 0;
@@ -57,11 +57,18 @@ export const calculateLPCosts = async (state) => {
       // Calculate plate area
       let plateArea = 0;
       
-      if (colorDetail.plateSizeType === "Auto" && orderAndPaper.dieSize) {
-        // If using Auto, calculate from die size
-        const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
-        const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-        plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+      if (colorDetail.plateSizeType === "Auto") {
+        // First check if product size is available
+        if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+          const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+          const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+          plateArea = (productLengthCm + margin) * (productBreadthCm + margin);
+        } else if (orderAndPaper.dieSize) {
+          // Fall back to die dimensions if product size is not available
+          const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+          const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+          plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+        }
       } else {
         // Otherwise use the provided plate dimensions
         plateArea = parseFloat(colorDetail.plateDimensions.length) * parseFloat(colorDetail.plateDimensions.breadth);

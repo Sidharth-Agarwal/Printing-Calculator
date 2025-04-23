@@ -174,6 +174,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       dieSelection: die.dieName || "",
       dieCode: die.dieCode || "",
       dieSize: { length: die.dieSizeL || "", breadth: die.dieSizeB || "" },
+      productSize: { length: die.productSizeL || "", breadth: die.productSizeB || "" },
       image: die.imageUrl || "",
     });
     
