@@ -36,7 +36,7 @@ function App() {
             <Route path="/unauthorized" element={<Unauthorized />} />
             <Route path="/user-created-success" element={<UserCreatedSuccess />} />
             
-            {/* Protected routes - accessible to all authenticated users */}
+            {/* Protected routes - all authenticated users */}
             <Route 
               path="/change-password" 
               element={
@@ -46,11 +46,11 @@ function App() {
               } 
             />
             
-            {/* Admin-only routes */}
+            {/* Routes with predefined access */}
             <Route 
               path="/transactions" 
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <TransactionsDashboard />
                 </ProtectedRoute>
               } 
@@ -59,13 +59,12 @@ function App() {
             <Route 
               path="/user-management" 
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <UserManagement />
                 </ProtectedRoute>
               } 
             />
             
-            {/* Routes accessible by multiple roles */}
             <Route 
               path="/orders" 
               element={
@@ -78,7 +77,7 @@ function App() {
             <Route 
               path="/invoices" 
               element={
-                <ProtectedRoute requiredRole="staff">
+                <ProtectedRoute>
                   <InvoicesPage />
                 </ProtectedRoute>
               } 
@@ -87,7 +86,7 @@ function App() {
             <Route 
               path="/clients" 
               element={
-                <ProtectedRoute requiredRole="admin">
+                <ProtectedRoute>
                   <ClientManagement />
                 </ProtectedRoute>
               } 
@@ -102,31 +101,28 @@ function App() {
               } 
             />
 
-            {/* B2B Dashboard - for B2B clients */}
             <Route 
               path="/b2b-dashboard" 
               element={
-                <ProtectedRoute requiredRole="b2b">
+                <ProtectedRoute>
                   <B2BClientDashboard />
                 </ProtectedRoute>
               } 
             />
             
-            {/* Staff and Admin routes */}
             <Route 
               path="/new-bill" 
               element={
-                <ProtectedRoute requiredRole="staff">
+                <ProtectedRoute>
                   <BillingForm />
                 </ProtectedRoute>
               } 
             />
             
-            {/* Material Management routes - accessible to Staff and Admin */}
             <Route 
               path="/material-stock/paper-db" 
               element={
-                <ProtectedRoute requiredRole="staff">
+                <ProtectedRoute>
                   <PaperManagement />
                 </ProtectedRoute>
               } 
@@ -135,7 +131,7 @@ function App() {
             <Route 
               path="/material-stock/material-db" 
               element={
-                <ProtectedRoute requiredRole="staff">
+                <ProtectedRoute>
                   <MaterialManagement />
                 </ProtectedRoute>
               } 
@@ -144,19 +140,16 @@ function App() {
             <Route 
               path="/material-stock/dies-db" 
               element={
-                <ProtectedRoute requiredRole="staff">
+                <ProtectedRoute>
                   <DieManagement />
                 </ProtectedRoute>
               } 
             />
             
-            {/* IMPORTANT: These two routes were previously set to admin-only */}
-            {/* Now setting them to staff which will still allow admin access */}
-            {/* due to how ProtectedRoute component works */}
             <Route 
               path="/material-stock/standard-rates-db" 
               element={
-                <ProtectedRoute requiredRole="staff">
+                <ProtectedRoute>
                   <StandardRateManagement />
                 </ProtectedRoute>
               } 
@@ -165,7 +158,7 @@ function App() {
             <Route 
               path="/material-stock/overheads" 
               element={
-                <ProtectedRoute requiredRole="staff">
+                <ProtectedRoute>
                   <OverheadManagement />
                 </ProtectedRoute>
               } 
