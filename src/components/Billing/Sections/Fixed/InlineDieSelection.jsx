@@ -13,6 +13,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [showSelectionUI, setShowSelectionUI] = useState(true);
   const [showAddDieForm, setShowAddDieForm] = useState(false);
+  const [selectedJobType, setSelectedJobType] = useState("Card"); // Default job type
   
   // New Die Form State
   const [newDieData, setNewDieData] = useState({
@@ -28,7 +29,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   });
   const [dieImage, setDieImage] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const jobTypeOptions = ["Card", "Biz Card", "Magnet", "Envelope"];
+  const jobTypeOptions = ["Card", "Biz Card", "Envelope", "Seal", "Magnet", "Packaging", "Notebook"];
 
   // Fetch dies from Firestore
   useEffect(() => {
@@ -40,12 +41,15 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
           ...doc.data(),
         }));
         setDies(fetchedDies);
+        
+        // Update filtered dies based on the current job type
+        filterDiesByJobType(fetchedDies, selectedJobType);
       } catch (error) {
         console.error("Error fetching dies:", error);
       }
     };
     fetchDies();
-  }, []);
+  }, [selectedJobType]);
 
   // When a die is selected (has dieCode), hide selection UI
   useEffect(() => {
@@ -53,6 +57,40 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       setShowSelectionUI(false);
     }
   }, [selectedDie.dieCode]);
+  
+  // Get job type from the parent form
+  useEffect(() => {
+    // Find the job type select in the parent form
+    const jobTypeSelect = document.querySelector('select[name="jobType"]');
+    
+    if (jobTypeSelect) {
+      // Set initial job type
+      setSelectedJobType(jobTypeSelect.value);
+      
+      // Add event listener to update when job type changes
+      const handleJobTypeChange = () => {
+        setSelectedJobType(jobTypeSelect.value);
+      };
+      
+      jobTypeSelect.addEventListener('change', handleJobTypeChange);
+      
+      // Clean up event listener
+      return () => {
+        jobTypeSelect.removeEventListener('change', handleJobTypeChange);
+      };
+    }
+  }, []);
+
+  // Filter dies by job type
+  const filterDiesByJobType = (dieArray, jobType) => {
+    if (!jobType) return setFilteredDies([]);
+    
+    const filtered = dieArray.filter(die => 
+      die.jobType === jobType
+    );
+    
+    setFilteredDies(filtered);
+  };
 
   const handleSearchChange = (e) => {
     const { name, value } = e.target;
@@ -68,14 +106,17 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     const term = e.target.value.toLowerCase().trim();
     
     if (!term) {
-      performSearch(searchDimensions);
+      // When search term is cleared, show all dies for the current job type
+      filterDiesByJobType(dies, selectedJobType);
       return;
     }
     
-    // Filter dies based on text search
+    // Filter dies based on text search within the selected job type
     const matches = dies.filter(die => 
-      (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-      (die.jobType && die.jobType.toLowerCase().includes(term))
+      die.jobType === selectedJobType && (
+        (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
+        (die.type && die.type.toLowerCase().includes(term))
+      )
     );
     
     setFilteredDies(matches);
@@ -84,27 +125,28 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   const performSearch = (dimensions) => {
     const { length, breadth } = dimensions;
     
-    // If both fields are empty and no search term, don't show any results
+    // If both fields are empty, show all dies for the current job type
     if (!length && !breadth && !searchTerm) {
-      setFilteredDies([]);
+      filterDiesByJobType(dies, selectedJobType);
       return;
     }
 
+    let baseSet = dies.filter(die => die.jobType === selectedJobType);
     let matches = [];
 
     // Text search takes precedence if present
     if (searchTerm) {
       const term = searchTerm.toLowerCase().trim();
-      matches = dies.filter(die => 
+      matches = baseSet.filter(die => 
         (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-        (die.jobType && die.jobType.toLowerCase().includes(term))
+        (die.type && die.type.toLowerCase().includes(term))
       );
     }
     // Otherwise search by dimensions
     else {
       // Case 1: Both length and breadth provided
       if (length && breadth) {
-        matches = dies.filter(
+        matches = baseSet.filter(
           (die) =>
             parseFloat(die.dieSizeL) === parseFloat(length) &&
             parseFloat(die.dieSizeB) === parseFloat(breadth)
@@ -112,13 +154,13 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       }
       // Case 2: Only length provided
       else if (length && !breadth) {
-        matches = dies.filter(
+        matches = baseSet.filter(
           (die) => parseFloat(die.dieSizeL) === parseFloat(length)
         );
       }
       // Case 3: Only breadth provided
       else if (!length && breadth) {
-        matches = dies.filter(
+        matches = baseSet.filter(
           (die) => parseFloat(die.dieSizeB) === parseFloat(breadth)
         );
       }
@@ -142,10 +184,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   // Show selection UI again when "Change Die" is clicked
   const handleChangeDie = () => {
     setShowSelectionUI(true);
-    // Reset search fields
+    // Reset search fields but maintain the job type filter
     setSearchTerm("");
     setSearchDimensions({ length: "", breadth: "" });
-    setFilteredDies([]);
+    filterDiesByJobType(dies, selectedJobType);
   };
   
   // New Die Form Handlers
@@ -165,7 +207,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
 
   const resetForm = () => {
     setNewDieData({
-      jobType: "",
+      jobType: selectedJobType, // Default to current job type
       type: "",
       dieCode: "",
       frags: "",
@@ -211,6 +253,11 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       const dieWithId = { id: docRef.id, ...newDie };
       setDies(prev => [...prev, dieWithId]);
       
+      // Update filtered dies if the new die matches the current job type
+      if (dieWithId.jobType === selectedJobType) {
+        setFilteredDies(prev => [...prev, dieWithId]);
+      }
+      
       // Select the newly added die
       handleSelectDie(dieWithId);
       
@@ -218,8 +265,6 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       setShowAddDieForm(false);
       resetForm();
       
-      // Use a less intrusive notification instead of alert
-      // alert("Die added successfully!");
       console.log("Die added successfully:", dieWithId);
     } catch (error) {
       console.error("Error adding die:", error);
@@ -273,7 +318,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                   <label className="block text-sm font-medium mb-2">Job Type:</label>
                   <select
                     name="jobType"
-                    value={newDieData.jobType}
+                    value={newDieData.jobType || selectedJobType}
                     onChange={handleDieFormChange}
                     className="border text-md rounded-md p-2 w-full"
                     required
@@ -412,7 +457,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
               
               <div className="flex justify-between">
                 <button
-                  type="button" // Changed from submit to button
+                  type="button"
                   onClick={handleAddDie}
                   disabled={isSubmitting}
                   className="px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors text-sm flex items-center"
@@ -445,8 +490,11 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       {showSelectionUI ? (
         // Die Selection UI
         <>
-          {/* New "Add Die" button at the top */}
-          <div className="flex justify-end mb-2">
+          {/* Die list header with info and Add button */}
+          <div className="flex justify-between items-center mb-4">
+            <div className="text-sm text-gray-600">
+              Showing dies for <span className="font-medium">{selectedJobType}</span>: {filteredDies.length} found
+            </div>
             <button
               type="button"
               onClick={() => setShowAddDieForm(true)}
@@ -458,10 +506,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
           
           {/* Search Fields */}
           <div className="mb-4">
-            <label className="block text-sm mb-1">Search by Code or Job Type</label>
+            <label className="block text-sm mb-1">Search by Code or Type</label>
             <input
               type="text"
-              placeholder="Type to search by die code or job type"
+              placeholder="Type to search by die code or type"
               value={searchTerm}
               onChange={handleTextSearch}
               className="border text-sm rounded-md p-2 w-full"
@@ -498,7 +546,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
             </div>
           </div>
 
-          {/* Search Results */}
+          {/* Dies List - Scrollable container showing dies for the selected job type */}
           <div className="max-h-60 overflow-y-auto border rounded-md bg-white">
             {filteredDies.length > 0 ? (
               filteredDies.map((die) => (
@@ -513,7 +561,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                       Size: {die.dieSizeL}" × {die.dieSizeB}"
                     </p>
                     <p className="text-xs text-gray-600">
-                      Job Type: {die.jobType || "Not specified"}
+                      Type: {die.type || "Not specified"}
                     </p>
                   </div>
                   {die.imageUrl && (
@@ -525,13 +573,9 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                   )}
                 </div>
               ))
-            ) : (searchDimensions.length || searchDimensions.breadth || searchTerm) ? (
-              <div className="p-3 bg-white border-b text-sm text-gray-600">
-                No dies found matching your search criteria.
-              </div>
             ) : (
               <div className="p-3 bg-white border-b text-sm text-gray-600">
-                Enter search criteria above to find dies.
+                No dies found for {selectedJobType}. Create a new die or select a different job type.
               </div>
             )}
           </div>
