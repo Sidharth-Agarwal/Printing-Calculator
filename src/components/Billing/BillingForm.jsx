@@ -49,6 +49,7 @@ const initialFormState = {
     dieSelection: "",
     dieCode: "",
     dieSize: { length: "", breadth: "" },
+    productSize: { length: "", breadth: "" },
     image: "",
   },
   lpDetails: {
@@ -171,8 +172,7 @@ const reducer = (state, action) => {
 };
 
 // Map state to Firebase structure with sanitization for undefined values
-// Modified to include productSize information in dieDetails
-const mapStateToFirebaseStructure = async (state, calculations) => {
+const mapStateToFirebaseStructure = (state, calculations) => {
   const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, screenPrint, dieCutting, sandwich } = state;
 
   // Helper function to sanitize objects for Firebase
@@ -198,34 +198,6 @@ const mapStateToFirebaseStructure = async (state, calculations) => {
     return sanitized;
   };
 
-  // Get the product size information from the selected die
-  let productSize = {
-    length: "",
-    breadth: ""
-  };
-
-  // If we have a dieCode, fetch the die details to get productSize
-  if (orderAndPaper.dieCode) {
-    try {
-      // Query the dies collection for the selected die
-      const diesCollection = collection(db, "dies");
-      const q = query(diesCollection, where("dieCode", "==", orderAndPaper.dieCode));
-      const querySnapshot = await getDocs(q);
-      
-      // If we found the die, extract productSize info
-      if (!querySnapshot.empty) {
-        const dieData = querySnapshot.docs[0].data();
-        productSize = {
-          length: dieData.productSizeL || "",
-          breadth: dieData.productSizeB || ""
-        };
-      }
-    } catch (error) {
-      console.error("Error fetching die details for productSize:", error);
-      // In case of error, continue with empty productSize
-    }
-  }
-
   // Create the sanitized Firebase data structure
   const firestoreData = {
     // Client reference information
@@ -248,12 +220,12 @@ const mapStateToFirebaseStructure = async (state, calculations) => {
       paperName: orderAndPaper.paperName,
     }),
     
-    // Die detaile
+    // Die details with product size directly from orderAndPaper
     dieDetails: sanitizeForFirestore({
       dieSelection: orderAndPaper.dieSelection,
       dieCode: orderAndPaper.dieCode,
       dieSize: orderAndPaper.dieSize,
-      productSize: productSize, // Add product size information
+      productSize: orderAndPaper.productSize,
       image: orderAndPaper.image,
     }),
     
@@ -717,8 +689,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       };
       
       // Create the formatted data for Firebase using the enhanced calculations
-      // Note the await here since mapStateToFirebaseStructure is now async
-      const formattedData = await mapStateToFirebaseStructure(state, calculationsWithMarkup);
+      const formattedData = mapStateToFirebaseStructure(state, calculationsWithMarkup);
       
       // Log the data before saving to verify markup values
       console.log("Saving to Firebase:", {
