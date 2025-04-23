@@ -6,6 +6,7 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, setSelectedRate
     type: "",
     concatenate: "",
     finalRate: "",
+    percentage: "", // New field for percentage
   });
 
   useEffect(() => {
@@ -17,6 +18,7 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, setSelectedRate
         type: "",
         concatenate: "",
         finalRate: "",
+        percentage: "",
       });
     }
   }, [selectedRate]);
@@ -52,6 +54,7 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, setSelectedRate
       type: "",
       concatenate: "",
       finalRate: "",
+      percentage: "",
     });
   };
 
@@ -60,12 +63,13 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, setSelectedRate
       <h2 className="text-lg font-medium mb-4">
         {selectedRate ? "Edit Standard Rate" : "Add New Standard Rate"}
       </h2>
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
         {[
           { label: "Group", name: "group", placeholder: "Enter group name", type: "text" },
           { label: "Type", name: "type", placeholder: "Enter type name", type: "text" },
           { label: "Concatenate", name: "concatenate", type: "text", readOnly: true },
           { label: "Final Rate (INR)", name: "finalRate", placeholder: "Enter rate", type: "number" },
+          { label: "Percentage (%)", name: "percentage", placeholder: "Enter percentage", type: "number" },
         ].map((field, idx) => (
           <div key={idx}>
             <label className="block text-sm font-medium text-gray-700">{field.label}</label>
@@ -79,10 +83,12 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, setSelectedRate
               className={`text-md mt-3 block w-full border-gray-300 rounded-sm shadow-sm text-sm ${
                 field.readOnly ? "bg-gray-100" : ""
               }`}
-              required={!field.readOnly}
             />
           </div>
         ))}
+      </div>
+      <div className="mt-4 text-xs text-gray-500">
+        Note: Enter either a final rate or a percentage
       </div>
       <button type="submit" className="mt-6 px-3 py-2 bg-blue-500 text-white rounded text-sm">
         {selectedRate ? "Save Changes" : "Add Rate"}

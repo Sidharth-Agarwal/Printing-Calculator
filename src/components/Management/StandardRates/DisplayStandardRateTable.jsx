@@ -14,7 +14,7 @@ const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
         <table className="w-full border-collapse text-sm">
           <thead className="bg-gray-100">
             <tr>
-              {["Group", "Type", "Concatenate", "Final Rate (INR)", "Actions"].map((header, idx) => (
+              {["Group", "Type", "Concatenate", "Final Rate (INR)", "Percentage (%)", "Actions"].map((header, idx) => (
                 <th key={idx} className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">
                   {header}
                 </th>
@@ -27,7 +27,8 @@ const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
                 <td className="px-4 py-2">{rate.group}</td>
                 <td className="px-4 py-2">{rate.type}</td>
                 <td className="px-4 py-2">{rate.concatenate}</td>
-                <td className="px-4 py-2">{rate.finalRate}</td>
+                <td className="px-4 py-2">{rate.finalRate || "-"}</td>
+                <td className="px-4 py-2">{rate.percentage || "-"}</td>
                 <td className="px-4 py-2">
                   <button
                     onClick={() => onEdit(rate)}
