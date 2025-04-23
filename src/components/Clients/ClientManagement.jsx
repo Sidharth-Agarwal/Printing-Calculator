@@ -241,7 +241,7 @@ const ClientManagement = () => {
   const isAdmin = userRole === "admin";
 
   // Redirect non-admin users who somehow access this page
-  if (!isAdmin) {
+  if (!isAdmin && userRole !== "staff") {
     return (
       <div className="p-6 text-center">
         <h2 className="text-2xl font-bold mb-4">Unauthorized Access</h2>
