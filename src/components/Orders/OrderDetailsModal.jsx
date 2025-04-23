@@ -32,7 +32,11 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate, canEditStages }) => 
     dieCode: "Die Code",
     dieSize: "Die Size",
     dieSelection: "Die Selection",
-    paperName: "Paper Name"
+    paperName: "Paper Name",
+    // GST-related fields
+    gstRate: "GST Rate",
+    gstAmount: "GST Amount",
+    totalWithGST: "Total with GST"
   };
 
   // Toggle section expansion
@@ -548,6 +552,30 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate, canEditStages }) => 
             ₹ {parseFloat(calculations.totalCost || 0).toFixed(2)}
           </span>
         </div>
+        
+        {/* GST Section */}
+        {calculations.gstRate && (
+          <div className="flex justify-between items-center text-green-700 border-t border-gray-300 pt-2 mt-2">
+            <span className="font-medium">
+              GST ({calculations.gstRate || 18}%):
+            </span>
+            <span className="font-medium">
+              ₹ {parseFloat(calculations.gstAmount || 0).toFixed(2)}
+            </span>
+          </div>
+        )}
+        
+        {/* Final Total with GST */}
+        {calculations.totalWithGST && (
+          <div className="flex justify-between items-center border-t-2 border-gray-300 pt-3 mt-3">
+            <span className="text-xl font-bold text-gray-700">
+              Total with GST:
+            </span>
+            <span className="text-xl font-bold text-green-600">
+              ₹ {parseFloat(calculations.totalWithGST || 0).toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
     );
   };
@@ -562,6 +590,11 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate, canEditStages }) => 
     const totalCostPerCard = parseFloat(calculations.totalCostPerCard || 0);
     const quantity = parseInt(order.jobDetails?.quantity || 0);
     const totalCost = parseFloat(calculations.totalCost || 0);
+    
+    // Get GST info if available
+    const gstRate = calculations.gstRate || 18;
+    const gstAmount = parseFloat(calculations.gstAmount || 0);
+    const totalWithGST = parseFloat(calculations.totalWithGST || totalCost + gstAmount);
     
     // Get markup info if available
     const markupPercentage = calculations.markupPercentage || 0;
@@ -585,6 +618,23 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate, canEditStages }) => 
             </span>
             <span className="font-bold text-blue-700">
               ₹ {totalCost.toFixed(2)}
+            </span>
+          </div>
+          
+          {/* GST Section for B2B View */}
+          <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-3 mt-2">
+            <span className="font-medium">GST ({gstRate}%):</span>
+            <span className="font-bold">
+              ₹ {gstAmount.toFixed(2)}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center pt-2 text-xl">
+            <span className="font-bold text-gray-800">
+              Total with GST:
+            </span>
+            <span className="font-bold text-green-700">
+              ₹ {totalWithGST.toFixed(2)}
             </span>
           </div>
         </div>
