@@ -41,14 +41,21 @@ export const calculateEMBCosts = async (state) => {
     const marginValue = await fetchOverheadValue('MARGIN');
     const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
     
-    // Convert die dimensions to cm (if using die dimensions) and add margin
+    // Calculate plate area 
     let plateArea = 0;
     
-    if (embDetails.plateSizeType === "Auto" && orderAndPaper.dieSize) {
-      // If using Auto, calculate from die size
-      const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
-      const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-      plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+    if (embDetails.plateSizeType === "Auto") {
+      // First check if product size is available
+      if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+        const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+        const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+        plateArea = (productLengthCm + margin) * (productBreadthCm + margin);
+      } else if (orderAndPaper.dieSize) {
+        // Fall back to die dimensions if product size is not available
+        const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+        const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+        plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+      }
     } else {
       // Otherwise use the provided plate dimensions
       plateArea = parseFloat(embDetails.plateDimensions.length) * parseFloat(embDetails.plateDimensions.breadth);
