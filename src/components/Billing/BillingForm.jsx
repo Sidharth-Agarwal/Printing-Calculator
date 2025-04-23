@@ -49,6 +49,7 @@ const initialFormState = {
     dieSelection: "",
     dieCode: "",
     dieSize: { length: "", breadth: "" },
+    productSize: { length: "", breadth: "" },
     image: "",
   },
   lpDetails: {
@@ -219,11 +220,12 @@ const mapStateToFirebaseStructure = (state, calculations) => {
       paperName: orderAndPaper.paperName,
     }),
     
-    // Die details
+    // Die details with product size directly from orderAndPaper
     dieDetails: sanitizeForFirestore({
       dieSelection: orderAndPaper.dieSelection,
       dieCode: orderAndPaper.dieCode,
       dieSize: orderAndPaper.dieSize,
+      productSize: orderAndPaper.productSize,
       image: orderAndPaper.image,
     }),
     
