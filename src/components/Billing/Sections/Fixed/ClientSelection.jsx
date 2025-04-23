@@ -71,6 +71,19 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     );
   };
 
+  // Function to determine client type badge
+  const getClientTypeBadge = (client) => {
+    if (!client) return null;
+    
+    const clientType = (client.clientType || "DIRECT").toUpperCase();
+    
+    if (clientType === "B2B") {
+      return <span className="ml-2 px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full">B2B</span>;
+    } else {
+      return <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">Direct</span>;
+    }
+  };
+
   // B2B client display
   if (isB2BClient && selectedClient) {
     return (
@@ -78,9 +91,7 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
         <div className="flex items-center mb-2">
           <span className="font-bold">Client:</span>
           <span className="ml-2 text-lg">{selectedClient.name}</span>
-          <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-            B2B Client
-          </span>
+          {getClientTypeBadge(selectedClient)}
         </div>
         <div className="text-sm text-gray-600">
           <p>Client Code: {selectedClient.clientCode}</p>
@@ -109,9 +120,10 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     return (
       <div className="p-4 bg-blue-50 rounded border border-blue-200">
         <div className="flex justify-between items-center mb-2">
-          <div>
+          <div className="flex items-center">
             <span className="font-bold">Client:</span>
             <span className="ml-2 text-lg">{selectedClient.name}</span>
+            {getClientTypeBadge(selectedClient)}
           </div>
           <button
             onClick={() => {
@@ -130,9 +142,6 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
           )}
           {selectedClient.email && (
             <p><strong>Email:</strong> {selectedClient.email}</p>
-          )}
-          {selectedClient.category && (
-            <p><strong>Category:</strong> {selectedClient.category}</p>
           )}
         </div>
       </div>
@@ -167,7 +176,10 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
                 className="p-2 border-b hover:bg-gray-100 cursor-pointer"
                 onClick={() => handleClientSelect(client)}
               >
-                <div className="font-medium">{client.name}</div>
+                <div className="flex items-center">
+                  <span className="font-medium">{client.name}</span>
+                  {getClientTypeBadge(client)}
+                </div>
                 <div className="text-sm text-gray-600">{client.clientCode}</div>
               </div>
             ))
@@ -187,11 +199,14 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
             className="w-full p-2 border rounded"
           >
             <option value="">Select a client</option>
-            {clients.map(client => (
-              <option key={client.id} value={client.id}>
-                {client.name} ({client.clientCode})
-              </option>
-            ))}
+            {clients.map(client => {
+              const clientType = (client.clientType || "DIRECT").toUpperCase();
+              return (
+                <option key={client.id} value={client.id}>
+                  {client.name} ({client.clientCode}) - {clientType}
+                </option>
+              );
+            })}
           </select>
         </div>
       )}
