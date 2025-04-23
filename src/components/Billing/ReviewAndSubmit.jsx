@@ -32,6 +32,8 @@
   
 //   // Use a ref to prevent multiple updates from the same calculation change
 //   const calculationsRef = useRef(null);
+//   // Add ref to track if markup has been initialized
+//   const markupInitializedRef = useRef(false);
 
 //   // Get the user role from auth context
 //   const { userRole } = useAuth(); 
@@ -89,14 +91,30 @@
 //               setMarkupPercentage(defaultMarkup.percentage);
 //               console.warn("MARKUP B2B MERCH not found, using default markup");
 //             }
-//           } else if (!isB2BClient && !hasAppliedB2BMarkup) {
-//             // For admin/staff users, use MARKUP TIMELESS or first available
-//             const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
-//             setSelectedMarkupType(timelessMarkup.name);
-//             setMarkupPercentage(timelessMarkup.percentage);
+//           } else if (!isB2BClient && !markupInitializedRef.current) {
+//             // For admin/staff users, check if calculations already have a markup type
+//             if (calculations?.markupType) {
+//               // Find the matching markup in our fetched rates
+//               const matchingMarkup = fetchedMarkups.find(rate => rate.name === calculations.markupType);
+//               if (matchingMarkup) {
+//                 setSelectedMarkupType(matchingMarkup.name);
+//                 setMarkupPercentage(parseFloat(calculations.markupPercentage) || matchingMarkup.percentage);
+//               } else {
+//                 // Use MARKUP TIMELESS or first available as fallback
+//                 const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
+//                 setSelectedMarkupType(timelessMarkup.name);
+//                 setMarkupPercentage(timelessMarkup.percentage);
+//               }
+//             } else {
+//               // No markup in calculations yet, use MARKUP TIMELESS or first available
+//               const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
+//               setSelectedMarkupType(timelessMarkup.name);
+//               setMarkupPercentage(timelessMarkup.percentage);
+//             }
+//             markupInitializedRef.current = true;
 //           }
           
-//           console.log("Fetched markup rates");
+//           console.log("Fetched markup rates, selected type:", selectedMarkupType);
 //         }
 //       } catch (error) {
 //         console.error("Error fetching markup rates from Firestore:", error);
@@ -106,7 +124,7 @@
 //     };
     
 //     fetchMarkupRates();
-//   }, [isB2BClient, hasAppliedB2BMarkup, markupRates.length, onMarkupChange]);
+//   }, [isB2BClient, hasAppliedB2BMarkup, markupRates.length, onMarkupChange, calculations]);
 
 //   // Initialize and update calculations
 //   useEffect(() => {
@@ -122,16 +140,20 @@
 //       // Update local calculations with the provided ones
 //       setLocalCalculations(calculations);
       
-//       // For non-B2B users or when B2B markup hasn't been applied yet
-//       if ((!isB2BClient || !hasAppliedB2BMarkup) && calculations.markupType) {
+//       // For non-B2B users, always update the markup type from calculations
+//       if (!isB2BClient && calculations.markupType) {
+//         console.log("Updating markup type from calculations:", calculations.markupType);
 //         setSelectedMarkupType(calculations.markupType);
-//       }
-      
-//       if ((!isB2BClient || !hasAppliedB2BMarkup) && calculations.markupPercentage) {
-//         setMarkupPercentage(parseFloat(calculations.markupPercentage));
+        
+//         if (calculations.markupPercentage) {
+//           const percentage = parseFloat(calculations.markupPercentage);
+//           if (!isNaN(percentage)) {
+//             setMarkupPercentage(percentage);
+//           }
+//         }
 //       }
 //     }
-//   }, [calculations, isB2BClient, hasAppliedB2BMarkup]);
+//   }, [calculations, isB2BClient]);
 
 //   // Toggle section expansion
 //   const toggleSection = (section) => {
@@ -152,6 +174,8 @@
 //     const selectedRate = markupRates.find(rate => rate.name === selectedValue);
     
 //     if (selectedRate) {
+//       console.log("Markup selection changed to:", selectedValue);
+      
 //       // Update local state
 //       setSelectedMarkupType(selectedValue);
 //       setMarkupPercentage(selectedRate.percentage);
@@ -531,6 +555,15 @@
 //       onCreateEstimate();
 //     }
 //   };
+
+//   // Log current markup state for debugging
+//   useEffect(() => {
+//     console.log("Current markup state:", {
+//       selectedType: selectedMarkupType,
+//       percentage: markupPercentage,
+//       calculationsType: calculations?.markupType
+//     });
+//   }, [selectedMarkupType, markupPercentage, calculations]);
 
 //   return (
 //     <form onSubmit={handleSubmit} className="space-y-6">
@@ -1321,6 +1354,23 @@ const ReviewAndSubmit = ({
                     ₹ {parseFloat(localCalculations.totalCost || 0).toFixed(2)}
                   </span>
                 </div>
+
+                {/* GST Section for B2B View */}
+                <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-3 mt-3">
+                  <span className="font-medium">GST ({localCalculations.gstRate}%):</span>
+                  <span className="font-bold">
+                    ₹ {parseFloat(localCalculations.gstAmount || 0).toFixed(2)}
+                  </span>
+                </div>
+
+                <div className="flex justify-between items-center pt-2 text-xl">
+                  <span className="font-bold text-gray-800">
+                    Total with GST:
+                  </span>
+                  <span className="font-bold text-green-700">
+                    ₹ {parseFloat(localCalculations.totalWithGST || 0).toFixed(2)}
+                  </span>
+                </div>
               </div>
               
               {/* Hidden markup info - display read-only for transparency */}
@@ -1411,6 +1461,26 @@ const ReviewAndSubmit = ({
                   </span>
                   <span className="text-xl font-bold text-blue-600">
                     ₹ {parseFloat(localCalculations.totalCost || 0).toFixed(2)}
+                  </span>
+                </div>
+
+                {/* GST Section */}
+                <div className="flex justify-between items-center text-green-700 border-t border-gray-300 pt-2 mt-2">
+                  <span className="font-medium">
+                    GST ({localCalculations.gstRate}%):
+                  </span>
+                  <span className="font-medium">
+                    ₹ {parseFloat(localCalculations.gstAmount || 0).toFixed(2)}
+                  </span>
+                </div>
+                
+                {/* Final Total with GST */}
+                <div className="flex justify-between items-center border-t-2 border-gray-300 pt-3 mt-3">
+                  <span className="text-xl font-bold text-gray-700">
+                    Total with GST:
+                  </span>
+                  <span className="text-xl font-bold text-green-600">
+                    ₹ {parseFloat(localCalculations.totalWithGST || 0).toFixed(2)}
                   </span>
                 </div>
               </div>

@@ -32,7 +32,7 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     notes: '',
     additionalInfo: '',
     discount: 0,
-    taxRate: 12, // Default to 12% (6% CGST + 6% SGST)
+    taxRate: 18, // Updated default to 18% to match GST
     showTax: true
   });
   
@@ -73,7 +73,11 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     markupAmount: "Markup Cost",
     subtotalPerCard: "Subtotal per Card",
     totalCostPerCard: "Total Cost per Card",
-    totalCost: "Total Cost (All Units)"
+    totalCost: "Total Cost (All Units)",
+    // GST fields
+    gstRate: "GST Rate",
+    gstAmount: "GST Amount",
+    totalWithGST: "Total with GST"
   };
 
   // Toggle section expansion
@@ -592,6 +596,30 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
             ₹ {parseFloat(calculations.totalCost || 0).toFixed(2)}
           </span>
         </div>
+        
+        {/* GST Section */}
+        {calculations.gstRate && (
+          <div className="flex justify-between items-center text-green-700 border-t border-gray-300 pt-2 mt-2">
+            <span className="font-medium">
+              GST ({calculations.gstRate || 18}%):
+            </span>
+            <span className="font-medium">
+              ₹ {parseFloat(calculations.gstAmount || 0).toFixed(2)}
+            </span>
+          </div>
+        )}
+        
+        {/* Final Total with GST */}
+        {calculations.totalWithGST && (
+          <div className="flex justify-between items-center border-t-2 border-gray-300 pt-3 mt-3">
+            <span className="text-xl font-bold text-gray-700">
+              Total with GST:
+            </span>
+            <span className="text-xl font-bold text-green-600">
+              ₹ {parseFloat(calculations.totalWithGST || 0).toFixed(2)}
+            </span>
+          </div>
+        )}
       </div>
     );
   };
@@ -604,6 +632,11 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     const totalCostPerCard = parseFloat(calculations.totalCostPerCard || 0);
     const quantity = parseInt(order.jobDetails?.quantity || 0);
     const totalCost = parseFloat(calculations.totalCost || 0);
+    
+    // Get GST info if available
+    const gstRate = calculations.gstRate || 18;
+    const gstAmount = parseFloat(calculations.gstAmount || 0);
+    const totalWithGST = parseFloat(calculations.totalWithGST || totalCost + gstAmount);
     
     // Get markup info if available
     const markupPercentage = calculations.markupPercentage || 0;
@@ -627,6 +660,23 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
             </span>
             <span className="font-bold text-blue-700">
               ₹ {totalCost.toFixed(2)}
+            </span>
+          </div>
+          
+          {/* GST Section for B2B View */}
+          <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-3 mt-2">
+            <span className="font-medium">GST ({gstRate}%):</span>
+            <span className="font-bold">
+              ₹ {gstAmount.toFixed(2)}
+            </span>
+          </div>
+
+          <div className="flex justify-between items-center pt-2 text-xl">
+            <span className="font-bold text-gray-800">
+              Total with GST:
+              </span>
+            <span className="font-bold text-green-700">
+              ₹ {totalWithGST.toFixed(2)}
             </span>
           </div>
         </div>
@@ -696,7 +746,10 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
     const subtotal = totalCostPerCard * quantity;
     const discount = subtotal * (invoiceData.discount / 100);
     const taxableAmount = subtotal - discount;
-    const tax = invoiceData.showTax ? (taxableAmount * (invoiceData.taxRate / 100)) : 0;
+    
+    // Update tax calculation to match GST from calculations if available
+    const gstRate = order.calculations?.gstRate || invoiceData.taxRate;
+    const tax = invoiceData.showTax ? (taxableAmount * (gstRate / 100)) : 0;
     const total = taxableAmount + tax;
     
     return {
@@ -704,10 +757,21 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
       discount: parseFloat(discount.toFixed(2)),
       taxableAmount: parseFloat(taxableAmount.toFixed(2)),
       tax: parseFloat(tax.toFixed(2)),
+      gstRate: gstRate, // Add GST rate for display
       total: parseFloat(total.toFixed(2)),
       totalQuantity: quantity
     };
   };
+
+  // Effect to update invoice tax rate when GST rate is available
+  React.useEffect(() => {
+    if (order.calculations?.gstRate) {
+      setInvoiceData(prev => ({
+        ...prev,
+        taxRate: order.calculations.gstRate
+      }));
+    }
+  }, [order.calculations?.gstRate]);
 
   // Get invoice totals
   const invoiceTotals = calculateInvoiceTotals();
@@ -838,7 +902,11 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
             <div ref={contentRef} className="p-6">
               {activeView === 'invoice' ? (
                 <InvoiceTemplate
-                  invoiceData={invoiceData}
+                  invoiceData={{
+                    ...invoiceData,
+                    // Set tax rate to GST rate from calculations if available
+                    taxRate: order.calculations?.gstRate || invoiceData.taxRate 
+                  }}
                   orders={[order]}
                   clientInfo={clientInfo}
                   totals={invoiceTotals}

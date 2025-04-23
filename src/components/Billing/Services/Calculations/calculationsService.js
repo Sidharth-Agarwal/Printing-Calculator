@@ -13,6 +13,7 @@ import {
   calculateWastage,
   calculateOverhead,
   calculateMarkup,
+  calculateGST,
   calculateSandwichCosts
 } from './Calculators';
 
@@ -177,6 +178,7 @@ export const performCalculations = async (state) => {
  * 6. Add packing costs (if enabled)
  * 7. Add misc costs (if selected)
  * 8. Apply markup to get final cost
+ * 9. Apply GST based on job type to get total with tax
  * 
  * @param {Object} state - The complete form state
  * @param {Number} miscChargePerCard - Miscellaneous charge per card (optional, will fetch from DB if null)
@@ -195,7 +197,8 @@ export const performCompleteCalculations = async (
       miscChargePerCard,
       markupType,
       markupPercentage,
-      quantity: state.orderAndPaper?.quantity
+      quantity: state.orderAndPaper?.quantity,
+      jobType: state.orderAndPaper?.jobType
     });
 
     // Get base calculations first
@@ -381,10 +384,32 @@ export const performCompleteCalculations = async (
     // Total cost for all cards
     const totalCost = totalCostPerCard * (state.orderAndPaper?.quantity || 0);
     
-    console.log("Final cost calculation:", {
+    console.log("Cost calculation after markup:", {
       totalCostPerCard,
       quantity: state.orderAndPaper?.quantity,
       totalCost
+    });
+
+    // 4. Calculate GST based on job type
+    const jobType = state.orderAndPaper?.jobType || "Card";
+    const gstResult = await calculateGST(totalCost, jobType);
+    
+    console.log("GST calculation:", {
+      jobType,
+      gstRate: gstResult.gstRate,
+      gstAmount: gstResult.gstAmount,
+      totalWithGST: gstResult.totalWithGST
+    });
+    
+    const gstAmount = parseFloat(gstResult.gstAmount);
+    const totalWithGST = parseFloat(gstResult.totalWithGST);
+    
+    console.log("Final cost calculation with GST:", {
+      totalCostPerCard,
+      quantity: state.orderAndPaper?.quantity,
+      totalCost,
+      gstAmount,
+      totalWithGST
     });
 
     // Return all calculations in one comprehensive object
@@ -422,10 +447,15 @@ export const performCompleteCalculations = async (
       markupPercentage: markupResult.markupPercentage,
       markupAmount: markupResult.markupAmount,
       
+      // GST information
+      gstRate: gstResult.gstRate,
+      gstAmount: gstResult.gstAmount,
+      
       // Final totals
       subtotalPerCard: costWithMisc.toFixed(2), // Subtotal is now cost with misc (before markup)
-      totalCostPerCard: totalCostPerCard.toFixed(2),
-      totalCost: totalCost.toFixed(2)
+      totalCostPerCard: totalCostPerCard.toFixed(2), // Total after markup (before GST)
+      totalCost: totalCost.toFixed(2), // Total for all cards after markup (before GST)
+      totalWithGST: gstResult.totalWithGST // Total for all cards including GST
     };
     
     console.log("Complete calculation results:", results);
@@ -447,6 +477,7 @@ export const performCompleteCalculations = async (
  * @param {Number} markupPercentage - Markup percentage
  * @param {Number} quantity - Total quantity of cards
  * @param {String} markupType - Markup type
+ * @param {String} jobType - Job type for GST calculations
  * @returns {Promise<Object>} - Updated calculations with new totals
  */
 export const recalculateTotals = async (
@@ -454,7 +485,8 @@ export const recalculateTotals = async (
   miscChargePerCard, 
   markupPercentage, 
   quantity,
-  markupType = "MARKUP TIMELESS"
+  markupType = "MARKUP TIMELESS",
+  jobType = "Card"
 ) => {
   try {
     // Define production and post-production cost fields
@@ -535,6 +567,11 @@ export const recalculateTotals = async (
     // Total cost for all cards
     const totalCost = totalCostPerCard * quantity;
     
+    // Calculate GST based on job type
+    const gstResult = await calculateGST(totalCost, jobType);
+    const gstAmount = parseFloat(gstResult.gstAmount);
+    const totalWithGST = parseFloat(gstResult.totalWithGST);
+    
     // Return updated calculations
     return {
       ...baseCalculations, // Preserve original base calculations
@@ -568,10 +605,15 @@ export const recalculateTotals = async (
       markupPercentage: markupPercentage,
       markupAmount: markupCost.toFixed(2),
       
+      // GST
+      gstRate: gstResult.gstRate,
+      gstAmount: gstResult.gstAmount,
+      
       // Totals
       subtotalPerCard: costWithMisc.toFixed(2),
       totalCostPerCard: totalCostPerCard.toFixed(2),
-      totalCost: totalCost.toFixed(2)
+      totalCost: totalCost.toFixed(2),
+      totalWithGST: gstResult.totalWithGST
     };
   } catch (error) {
     console.error("Error recalculating totals:", error);
@@ -579,6 +621,7 @@ export const recalculateTotals = async (
     // Fallback to synchronous calculation with default percentages if the async calls fail
     const WASTAGE_PERCENTAGE = 5;
     const OVERHEAD_PERCENTAGE = 35;
+    const DEFAULT_GST_RATE = 18;
     
     // Simple fallback calculation
     const baseCost = parseFloat(baseCalculations.baseCost || 0);
@@ -604,6 +647,10 @@ export const recalculateTotals = async (
     const totalCostPerCard = costWithMisc + markupCost;
     const totalCost = totalCostPerCard * quantity;
     
+    // Calculate GST (simple fallback)
+    const gstAmount = totalCost * (DEFAULT_GST_RATE / 100);
+    const totalWithGST = totalCost + gstAmount;
+    
     return {
       ...baseCalculations, // Preserve original base calculations
       error: "Error recalculating with database values, using fallback calculations.",
@@ -624,7 +671,10 @@ export const recalculateTotals = async (
       markupAmount: markupCost.toFixed(2),
       subtotalPerCard: costWithMisc.toFixed(2),
       totalCostPerCard: totalCostPerCard.toFixed(2),
-      totalCost: totalCost.toFixed(2)
+      totalCost: totalCost.toFixed(2),
+      gstRate: DEFAULT_GST_RATE,
+      gstAmount: gstAmount.toFixed(2),
+      totalWithGST: totalWithGST.toFixed(2)
     };
   }
 };
