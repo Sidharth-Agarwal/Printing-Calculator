@@ -22,6 +22,7 @@ export { calculateSandwichCosts } from './postProductionCalculator/sandwichCalcu
 export { calculateWastage } from './finalCalculator/wastageCalculator';
 export { calculateOverhead } from './finalCalculator/overheadCalculator';
 export { calculateMarkup, getAvailableMarkupTypes } from './finalCalculator/markupCalculator';
+export { calculateGST } from './finalCalculator/gstCalculator';
 
 // Export the main calculation function that orchestrates all individual calculators
 export { performCalculations } from '../calculationsService';

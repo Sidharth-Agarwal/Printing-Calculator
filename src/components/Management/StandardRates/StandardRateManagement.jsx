@@ -23,21 +23,38 @@ const StandardRateManagement = () => {
 
   const addRate = async (rateData) => {
     try {
+      // Validate that at least one of finalRate or percentage is provided
+      if (!rateData.finalRate && !rateData.percentage) {
+        alert("Please enter either a Final Rate or a Percentage");
+        return;
+      }
+
       const ratesCollection = collection(db, "standard_rates");
-      await addDoc(ratesCollection, rateData);
+      await addDoc(ratesCollection, {
+        ...rateData,
+        timestamp: new Date()
+      });
       alert("Rate added successfully!");
     } catch (error) {
       console.error("Error adding rate:", error);
+      alert("Failed to add rate. Please try again.");
     }
   };
 
   const updateRate = async (id, updatedData) => {
     try {
+      // Validate that at least one of finalRate or percentage is provided
+      if (!updatedData.finalRate && !updatedData.percentage) {
+        alert("Please enter either a Final Rate or a Percentage");
+        return;
+      }
+
       const rateDoc = doc(db, "standard_rates", id);
       await updateDoc(rateDoc, updatedData);
       alert("Rate updated successfully!");
     } catch (error) {
       console.error("Error updating rate:", error);
+      alert("Failed to update rate. Please try again.");
     }
   };
 
@@ -47,6 +64,7 @@ const StandardRateManagement = () => {
       alert("Rate deleted successfully!");
     } catch (error) {
       console.error("Error deleting rate:", error);
+      alert("Failed to delete rate. Please try again.");
     }
   };
 
