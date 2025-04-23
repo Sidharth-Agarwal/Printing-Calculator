@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
 import { db, storage } from "../../../firebaseConfig";
 import AddDieForm from "./AddDieForm";
 import DisplayDieTable from "./DisplayDieTable";
@@ -28,16 +28,11 @@ const DieManagement = () => {
   }, []);
 
   // Check if die code already exists in the database
-  const isDieCodeUnique = async (dieCode, excludeId = null) => {
+  const isDieCodeUnique = async (dieCode) => {
     try {
       const diesCollection = collection(db, "dies");
       const q = query(diesCollection, where("dieCode", "==", dieCode));
       const querySnapshot = await getDocs(q);
-      
-      // If we're updating an existing die, exclude it from the uniqueness check
-      if (excludeId) {
-        return querySnapshot.docs.every(doc => doc.id !== excludeId);
-      }
       
       return querySnapshot.empty;
     } catch (error) {
@@ -84,18 +79,24 @@ const DieManagement = () => {
     setIsSubmitting(true);
     
     try {
-      // Check if the updated die code is unique (excluding current die)
-      const isUnique = await isDieCodeUnique(updatedData.dieCode, id);
+      // First, get the current die data
+      const dieRef = doc(db, "dies", id);
+      const dieSnap = await getDoc(dieRef);
       
-      if (!isUnique) {
-        throw new Error(`Die code "${updatedData.dieCode}" already exists. Please use a unique die code.`);
+      // Only check for uniqueness if the die code has changed
+      if (dieSnap.exists() && dieSnap.data().dieCode !== updatedData.dieCode) {
+        // Check if the updated die code is unique
+        const isUnique = await isDieCodeUnique(updatedData.dieCode);
+        
+        if (!isUnique) {
+          throw new Error(`Die code "${updatedData.dieCode}" already exists. Please use a unique die code.`);
+        }
       }
       
       // Remove price field if it exists
       const { price, ...dieData } = updatedData;
       
-      const dieDoc = doc(db, "dies", id);
-      await updateDoc(dieDoc, dieData);
+      await updateDoc(dieRef, dieData);
       alert("Die updated successfully!");
       return true;
     } catch (error) {
