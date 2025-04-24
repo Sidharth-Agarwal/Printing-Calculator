@@ -12,7 +12,6 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     notes: '',
     additionalInfo: '',
     discount: 0,
-    taxRate: 12, // Default to 12% (6% CGST + 6% SGST)
     showTax: true
   });
   const contentRef = useRef(null);
@@ -32,65 +31,45 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }));
   };
   
-  // Calculate totals for all orders
+  // Calculate totals for all orders with GST
   const calculateTotals = () => {
     let subtotal = 0;
     let totalQuantity = 0;
+    let totalGstAmount = 0;
     
     orders.forEach(order => {
-      // Calculate cost per card
+      // Get cost per card from calculations
       const calculations = order.calculations || {};
+      const costPerCard = parseFloat(calculations.totalCostPerCard || 0);
       
-      // List of possible cost fields
-      const costFields = [
-        'paperAndCuttingCostPerCard', 
-        'lpCostPerCard', 
-        'fsCostPerCard', 
-        'embCostPerCard',
-        'lpCostPerCardSandwich', 
-        'fsCostPerCardSandwich', 
-        'embCostPerCardSandwich', 
-        'digiCostPerCard',
-        'pastingCostPerCard'
-      ];
-      
-      // Calculate cost per card by summing all applicable costs
-      const costPerCard = costFields.reduce((total, field) => {
-        const value = calculations[field];
-        return total + (value !== null && value !== undefined ? parseFloat(value) || 0 : 0);
-      }, 0);
-      
-      // Apply overheads and wastage
-      const wastageRate = 0.05; // 5%
-      const overheadRate = 0.35; // 35%
-      
-      const wastage = costPerCard * wastageRate;
-      const overhead = costPerCard * overheadRate;
-      const totalCostPerCard = costPerCard + wastage + overhead;
-      
-      // Calculate total cost for this order
+      // Get quantity
       const quantity = parseInt(order.jobDetails?.quantity) || 0;
       totalQuantity += quantity;
       
-      const orderTotal = totalCostPerCard * quantity;
-      subtotal += orderTotal;
+      // Calculate item total
+      const itemTotal = costPerCard * quantity;
+      subtotal += itemTotal;
+      
+      // Get GST info from calculations
+      const gstRate = calculations.gstRate || 18;
+      const gstAmount = invoiceData.showTax ? parseFloat(calculations.gstAmount || (itemTotal * gstRate / 100)) : 0;
+      totalGstAmount += gstAmount;
     });
     
     // Calculate discount amount
     const discountAmount = (subtotal * (invoiceData.discount / 100)) || 0;
     
-    // Calculate tax
+    // Apply discount to subtotal
     const taxableAmount = subtotal - discountAmount;
-    const taxAmount = invoiceData.showTax ? (taxableAmount * (invoiceData.taxRate / 100)) : 0;
     
-    // Calculate final total
-    const total = taxableAmount + taxAmount;
+    // Calculate total with GST
+    const total = taxableAmount + totalGstAmount;
     
     return {
       subtotal: parseFloat(subtotal.toFixed(2)),
       discount: parseFloat(discountAmount.toFixed(2)),
       taxableAmount: parseFloat(taxableAmount.toFixed(2)),
-      tax: parseFloat(taxAmount.toFixed(2)),
+      tax: parseFloat(totalGstAmount.toFixed(2)),
       total: parseFloat(total.toFixed(2)),
       totalQuantity
     };
@@ -123,27 +102,75 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
       
       await Promise.all(imagePromises);
       
+      // Clone the element for PDF generation to avoid affecting the display
+      const originalElement = contentRef.current;
+      const clonedElement = originalElement.cloneNode(true);
+      
+      // Temporarily add the cloned element to the body with fixed dimensions
+      clonedElement.style.position = 'absolute';
+      clonedElement.style.top = '-9999px';
+      clonedElement.style.left = '-9999px';
+      clonedElement.style.width = '800px'; // Fixed width for PDF generation
+      document.body.appendChild(clonedElement);
+      
       // Generate PDF
-      const element = contentRef.current;
-      const canvas = await html2canvas(element, {
-        scale: 2,
+      const canvas = await html2canvas(clonedElement, {
+        scale: 2, // Higher scale for better quality
         useCORS: true,
         logging: false,
         allowTaint: true,
         imageTimeout: 0
       });
       
-      const imgData = canvas.toDataURL('image/jpeg', 1.0);
+      // Remove the cloned element
+      document.body.removeChild(clonedElement);
+      
+      // Calculate aspect ratio to determine orientation
+      const aspectRatio = canvas.width / canvas.height;
+      const orientation = aspectRatio > 1 ? 'landscape' : 'portrait';
+      
+      // Create PDF with the appropriate orientation
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: orientation,
         unit: 'mm',
         format: 'a4'
       });
       
-      const imgWidth = 210;
-      const imgHeight = canvas.height * imgWidth / canvas.width;
+      // Get PDF dimensions
+      const pdfWidth = orientation === 'landscape' ? 297 : 210; // A4 width in mm
+      const pdfHeight = orientation === 'landscape' ? 210 : 297; // A4 height in mm
       
-      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, imgHeight);
+      // Calculate image dimensions to fit in PDF
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If the image height exceeds the PDF height, adjust scale to fit
+      if (imgHeight > pdfHeight) {
+        const scale = pdfHeight / imgHeight;
+        const adjustedWidth = pdfWidth * scale;
+        const adjustedHeight = pdfHeight;
+        
+        pdf.addImage(
+          canvas.toDataURL('image/jpeg', 1.0),
+          'JPEG',
+          (pdfWidth - adjustedWidth) / 2, // Center horizontally
+          0,
+          adjustedWidth,
+          adjustedHeight
+        );
+      } else {
+        // Image fits, add it to PDF
+        pdf.addImage(
+          canvas.toDataURL('image/jpeg', 1.0),
+          'JPEG',
+          0,
+          (pdfHeight - imgHeight) / 2, // Center vertically
+          imgWidth,
+          imgHeight
+        );
+      }
+      
+      // Save the PDF
       pdf.save(`Invoice_${clientInfo.name}_${invoiceData.invoiceNumber}.pdf`);
       
       onClose();
@@ -160,7 +187,7 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">
@@ -198,46 +225,46 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
         
         {/* Modal Body */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Invoice Controls */}
-          <div className="p-6 md:w-1/3 overflow-y-auto border-r border-gray-200">
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Invoice Details</h3>
+          {/* Invoice Controls - Reduced width */}
+          <div className="p-4 md:w-1/4 overflow-y-auto border-r border-gray-200">
+            <div className="space-y-3">
+              <h3 className="text-md font-medium">Invoice Details</h3>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Invoice Number</label>
+                <label className="block text-xs font-medium text-gray-700">Invoice Number</label>
                 <input
                   type="text"
                   name="invoiceNumber"
                   value={invoiceData.invoiceNumber}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Date</label>
+                <label className="block text-xs font-medium text-gray-700">Date</label>
                 <input
                   type="date"
                   name="date"
                   value={invoiceData.date}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Due Date</label>
+                <label className="block text-xs font-medium text-gray-700">Due Date</label>
                 <input
                   type="date"
                   name="dueDate"
                   value={invoiceData.dueDate}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Discount (%)</label>
+                <label className="block text-xs font-medium text-gray-700">Discount (%)</label>
                 <input
                   type="number"
                   name="discount"
@@ -246,7 +273,7 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   min="0"
                   max="100"
                   step="0.01"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               
@@ -258,82 +285,66 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   onChange={handleInputChange}
                   className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                 />
-                <label className="ml-2 block text-sm text-gray-700">
+                <label className="ml-2 block text-xs text-gray-700">
                   Include Tax (GST)
                 </label>
               </div>
               
-              {invoiceData.showTax && (
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Tax Rate (%)</label>
-                  <input
-                    type="number"
-                    name="taxRate"
-                    value={invoiceData.taxRate}
-                    onChange={handleInputChange}
-                    min="0"
-                    max="100"
-                    step="0.01"
-                    className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                  />
-                </div>
-              )}
-              
               <div>
-                <label className="block text-sm font-medium text-gray-700">Notes</label>
+                <label className="block text-xs font-medium text-gray-700">Notes</label>
                 <textarea
                   name="notes"
                   value={invoiceData.notes}
                   onChange={handleInputChange}
-                  rows="3"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  rows="2"
+                  className="mt-1 block w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Payment terms, delivery notes, etc."
                 ></textarea>
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700">Additional Information</label>
+                <label className="block text-xs font-medium text-gray-700">Additional Information</label>
                 <textarea
                   name="additionalInfo"
                   value={invoiceData.additionalInfo}
                   onChange={handleInputChange}
-                  rows="3"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  rows="2"
+                  className="mt-1 block w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Bank details, etc."
                 ></textarea>
               </div>
               
-              <div className="mt-6 bg-gray-50 p-4 rounded-lg">
+              <div className="mt-4 bg-gray-50 p-3 rounded-lg text-xs">
                 <h4 className="font-medium text-gray-700 mb-2">Invoice Summary</h4>
-                <div className="space-y-1 text-sm">
+                <div className="space-y-1">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
-                    <span>{formatCurrency(totals.subtotal)}</span>
+                    <span className="font-mono">{formatCurrency(totals.subtotal)}</span>
                   </div>
                   {invoiceData.discount > 0 && (
                     <div className="flex justify-between text-red-600">
                       <span>Discount ({invoiceData.discount}%):</span>
-                      <span>-{formatCurrency(totals.discount)}</span>
+                      <span className="font-mono">-{formatCurrency(totals.discount)}</span>
                     </div>
                   )}
                   {invoiceData.showTax && (
                     <div className="flex justify-between">
-                      <span>Tax ({invoiceData.taxRate}%):</span>
-                      <span>{formatCurrency(totals.tax)}</span>
+                      <span>GST:</span>
+                      <span className="font-mono">{formatCurrency(totals.tax)}</span>
                     </div>
                   )}
-                  <div className="flex justify-between font-bold border-t border-gray-300 pt-2 mt-2">
+                  <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
                     <span>Total:</span>
-                    <span>{formatCurrency(totals.total)}</span>
+                    <span className="font-mono">{formatCurrency(totals.total)}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
           
-          {/* Invoice Preview */}
+          {/* Invoice Preview - Expanded */}
           <div className="flex-1 overflow-y-auto bg-gray-50">
-            <div className="p-6">
+            <div className="p-4">
               <div ref={contentRef} className="bg-white shadow-lg rounded-lg overflow-hidden">
                 <InvoiceTemplate
                   invoiceData={invoiceData}
