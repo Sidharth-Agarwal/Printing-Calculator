@@ -288,25 +288,93 @@ const EstimatesPage = () => {
     setPdfError(null);
     
     try {
-      // PDF generation code (abbreviated for brevity)
+      // Create a temporary div for rendering
       const tempDiv = document.createElement('div');
       tempDiv.style.position = 'absolute';
       tempDiv.style.left = '-9999px';
+      tempDiv.style.width = '800px'; // Fixed width for PDF generation
       document.body.appendChild(tempDiv);
       
-      // Rendering and PDF creation would go here
+      // Create a new root and render the component to the temporary div
+      const root = createRoot(tempDiv);
+      await new Promise(resolve => {
+        root.render(
+          <GroupedJobTicket
+            estimates={previewData.estimates}
+            clientInfo={previewData.clientInfo}
+            version={previewData.version}
+            onRenderComplete={resolve}
+          />
+        );
+      });
       
-      // For demo purposes, just simulate a delay
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Wait a bit for fonts and images to load properly
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      
+      // Generate the PDF
+      const canvas = await html2canvas(tempDiv, {
+        scale: 2, // Higher scale for better quality
+        logging: false,
+        useCORS: true,
+        allowTaint: true
+      });
+      
+      // Calculate aspect ratio to determine orientation
+      const aspectRatio = canvas.width / canvas.height;
+      const orientation = aspectRatio > 1 ? 'landscape' : 'portrait';
+      
+      // Create PDF with appropriate orientation
+      const pdf = new jsPDF({
+        orientation: orientation,
+        unit: 'mm',
+        format: 'a4'
+      });
+      
+      // Get PDF dimensions
+      const pdfWidth = orientation === 'landscape' ? 297 : 210; // A4 width in mm
+      const pdfHeight = orientation === 'landscape' ? 210 : 297; // A4 height in mm
+      
+      // Calculate image dimensions to fit in PDF
+      const imgWidth = pdfWidth;
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      // If the image height exceeds the PDF height, adjust scale to fit
+      if (imgHeight > pdfHeight) {
+        const scale = pdfHeight / imgHeight;
+        const adjustedWidth = pdfWidth * scale;
+        const adjustedHeight = pdfHeight;
+        
+        pdf.addImage(
+          canvas.toDataURL('image/jpeg', 1.0),
+          'JPEG',
+          (pdfWidth - adjustedWidth) / 2, // Center horizontally
+          0,
+          adjustedWidth,
+          adjustedHeight
+        );
+      } else {
+        // Image fits, add it to PDF
+        pdf.addImage(
+          canvas.toDataURL('image/jpeg', 1.0),
+          'JPEG',
+          0,
+          (pdfHeight - imgHeight) / 2, // Center vertically
+          imgWidth,
+          imgHeight
+        );
+      }
+      
+      // Save the PDF with customer-specific name
+      pdf.save(`Customer_Estimate_${previewData.clientInfo.name}_V${previewData.version}.pdf`);
       
       // Clean up
       if (tempDiv && tempDiv.parentNode) {
+        root.unmount();
         tempDiv.parentNode.removeChild(tempDiv);
       }
-      
     } catch (error) {
-      console.error('Error generating job ticket:', error);
-      setPdfError(error.message || 'Failed to generate job ticket');
+      console.error('Error generating customer estimate:', error);
+      setPdfError(error.message || 'Failed to generate estimate');
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -433,7 +501,7 @@ const EstimatesPage = () => {
                             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                             <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                           </svg>
-                          Preview Job Ticket
+                          Preview Customer Estimate
                         </button>
                       </div>
                       
@@ -458,7 +526,7 @@ const EstimatesPage = () => {
         </div>
       )}
 
-      {/* Modals remain the same */}
+      {/* Modals */}
       {isModalOpen && selectedEstimate && (
         <EstimateDetailsModal
           estimate={selectedEstimate}

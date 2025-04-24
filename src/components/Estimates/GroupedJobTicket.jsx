@@ -1,5 +1,4 @@
 import React, { useEffect, useState } from 'react';
-import format from 'date-fns/format';
 
 // Component to display die image with error handling
 const DieImage = ({ imageUrl }) => {
@@ -46,6 +45,15 @@ const DieImage = ({ imageUrl }) => {
   );
 };
 
+// Format currency values
+const formatCurrency = (amount) => {
+  return new Intl.NumberFormat('en-IN', {
+    style: 'currency',
+    currency: 'INR',
+    minimumFractionDigits: 2
+  }).format(amount || 0);
+};
+
 // Safely render a value or provide a fallback
 const SafeValue = ({ value, fallback = "N/A" }) => {
   if (value === null || value === undefined || value === "") {
@@ -54,170 +62,110 @@ const SafeValue = ({ value, fallback = "N/A" }) => {
   return <span>{value}</span>;
 };
 
-// More compact estimate details component
-const EstimateDetails = ({ estimate, index }) => {
-  // Helper function to calculate cost with safeguards
-  const calculateTotalCost = (estimate) => {
-    if (!estimate?.calculations) return { perCard: 0, total: 0 };
-    
-    const relevantFields = [
-      'paperAndCuttingCostPerCard', 'lpCostPerCard', 'fsCostPerCard', 'embCostPerCard',
-      'lpCostPerCardSandwich', 'fsCostPerCardSandwich', 'embCostPerCardSandwich', 'digiCostPerCard',
-      'pastingCostPerCard'
-    ];
-    
-    const costPerCard = relevantFields.reduce((acc, key) => {
-      const value = estimate.calculations[key];
-      const numValue = parseFloat(value);
-      return acc + (!isNaN(numValue) ? numValue : 0);
-    }, 0);
-    
-    return {
-      perCard: costPerCard,
-      total: costPerCard * (parseInt(estimate?.jobDetails?.quantity) || 0)
-    };
-  };
-
-  // Wrap calculations in try/catch to prevent errors
-  let costs = { perCard: 0, total: 0 };
-  try {
-    costs = calculateTotalCost(estimate);
-  } catch (error) {
-    console.error("Error calculating costs:", error);
-  }
-
-  // Get processing features used in this estimate
-  const processingFeatures = [];
-  if (estimate?.lpDetails?.isLPUsed) processingFeatures.push("LP");
-  if (estimate?.fsDetails?.isFSUsed) processingFeatures.push("FS");
-  if (estimate?.embDetails?.isEMBUsed) processingFeatures.push("EMB");
-  if (estimate?.digiDetails?.isDigiUsed) processingFeatures.push("DIGI");
-  if (estimate?.sandwich?.isSandwichComponentUsed) processingFeatures.push("Sandwich");
-  if (estimate?.pasting?.isPastingUsed) processingFeatures.push("Pasting");
-
-  return (
-    <div className="border rounded p-2 mb-2 bg-gray-50 print:break-inside-avoid">
-      <div className="flex items-center justify-between mb-1">
-        <h3 className="text-sm font-bold">
-          #{index + 1}: <SafeValue value={estimate?.jobDetails?.jobType} fallback="Unknown" /> 
-          (<SafeValue value={estimate?.jobDetails?.quantity} fallback="0" /> pcs)
-        </h3>
-        <div className="text-xs text-gray-500">
-          Cost: ₹{costs.perCard.toFixed(2)}/pc
-        </div>
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 mb-1">
-        {/* Left column - Basic details */}
-        <div className="col-span-2 space-y-1 text-xs">
-          <div><span className="font-medium">Project:</span> <SafeValue value={estimate?.projectName} /></div>
-          <div><span className="font-medium">Paper:</span> <SafeValue value={estimate?.jobDetails?.paperName} /></div>
-          <div><span className="font-medium">Die Code:</span> <SafeValue value={estimate?.dieDetails?.dieCode} /></div>
-          <div>
-            <span className="font-medium">Size:</span> 
-            <SafeValue 
-              value={`${estimate?.dieDetails?.dieSize?.length || "?"} x ${estimate?.dieDetails?.dieSize?.breadth || "?"}`} 
-              fallback="Not specified"
-            />
-          </div>
-
-          {/* Processing Features */}
-          {processingFeatures.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-1">
-              {processingFeatures.map((feature, idx) => {
-                let bgColor = "bg-gray-100";
-                let textColor = "text-gray-800";
-                
-                switch(feature) {
-                  case "LP": 
-                    bgColor = "bg-blue-100"; 
-                    textColor = "text-blue-800"; 
-                    break;
-                  case "FS": 
-                    bgColor = "bg-yellow-100"; 
-                    textColor = "text-yellow-800"; 
-                    break;
-                  case "EMB": 
-                    bgColor = "bg-purple-100"; 
-                    textColor = "text-purple-800"; 
-                    break;
-                  case "DIGI": 
-                    bgColor = "bg-green-100"; 
-                    textColor = "text-green-800"; 
-                    break;
-                  case "Sandwich": 
-                    bgColor = "bg-orange-100"; 
-                    textColor = "text-orange-800"; 
-                    break;
-                  case "Pasting": 
-                    bgColor = "bg-pink-100"; 
-                    textColor = "text-pink-800"; 
-                    break;
-                }
-                
-                return (
-                  <span 
-                    key={idx} 
-                    className={`${bgColor} ${textColor} text-xs px-1.5 py-0.5 rounded-full`}
-                  >
-                    {feature}
-                  </span>
-                );
-              })}
-            </div>
-          )}
-        </div>
-        
-        {/* Right column - Die image */}
-        <div>
-          <DieImage imageUrl={estimate?.dieDetails?.image} />
-        </div>
-      </div>
-    </div>
-  );
-};
-
-// Main Job Ticket component - More compact layout
+// Main Job Ticket component - Invoice-like format
 const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) => {
-  // Add state to track rendering status
   const [isReady, setIsReady] = useState(false);
 
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     try {
-      return format(new Date(dateString), 'dd/MM/yyyy');
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-GB', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric'
+      });
     } catch (error) {
       console.error("Error formatting date:", error);
       return String(dateString);
     }
   };
 
-  // Safely group estimates by project name
-  const projectGroups = React.useMemo(() => {
-    try {
-      return (estimates || []).reduce((acc, est) => {
-        const projectName = est?.projectName || "Unnamed Project";
-        if (!acc[projectName]) acc[projectName] = [];
-        acc[projectName].push(est);
-        return acc;
-      }, {});
-    } catch (error) {
-      console.error("Error grouping by project:", error);
-      return { "Error Processing Projects": estimates || [] };
-    }
+  // Get the current date for the document
+  const currentDate = formatDate(new Date());
+  const dueDate = formatDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)); // 30 days from now
+
+  // Calculate total quantities and amounts
+  const totals = React.useMemo(() => {
+    let totalQuantity = 0;
+    let totalAmount = 0;
+    let totalGST = 0;
+    let totalWithGST = 0;
+    let gstRate = 18; // Default GST rate
+
+    estimates.forEach(estimate => {
+      const qty = parseInt(estimate?.jobDetails?.quantity) || 0;
+      const calc = estimate?.calculations || {};
+      
+      // Get per card cost
+      const costPerCard = parseFloat(calc.totalCostPerCard || 0);
+      const amount = costPerCard * qty;
+      
+      // Get GST info
+      const estimateGSTRate = calc.gstRate || 18;
+      const gstAmount = parseFloat(calc.gstAmount || (amount * estimateGSTRate / 100)) || 0;
+      
+      // Update totals
+      totalQuantity += qty;
+      totalAmount += amount;
+      totalGST += gstAmount;
+      
+      // Use the last GST rate (in case estimates have different rates)
+      gstRate = estimateGSTRate;
+    });
+
+    totalWithGST = totalAmount + totalGST;
+
+    return {
+      quantity: totalQuantity,
+      amount: totalAmount,
+      gstRate: gstRate,
+      gstAmount: totalGST,
+      total: totalWithGST
+    };
   }, [estimates]);
 
-  // Calculate total quantity
-  const totalQuantity = React.useMemo(() => {
-    try {
-      return (estimates || []).reduce((total, est) => {
-        const qty = parseInt(est?.jobDetails?.quantity);
-        return total + (isNaN(qty) ? 0 : qty);
-      }, 0);
-    } catch (error) {
-      console.error("Error calculating quantity:", error);
-      return 0;
-    }
+  // Prepare line items similar to invoice format
+  const lineItems = React.useMemo(() => {
+    return estimates.map((estimate, index) => {
+      const jobDetails = estimate?.jobDetails || {};
+      const dieDetails = estimate?.dieDetails || {};
+      const calc = estimate?.calculations || {};
+      
+      // Get processing features
+      const features = [];
+      if (estimate?.lpDetails?.isLPUsed) features.push("Letterpress");
+      if (estimate?.fsDetails?.isFSUsed) features.push("Foil Stamping");
+      if (estimate?.embDetails?.isEMBUsed) features.push("Embossing");
+      if (estimate?.digiDetails?.isDigiUsed) features.push("Digital Print");
+      if (estimate?.sandwich?.isSandwichComponentUsed) features.push("Sandwich");
+      if (estimate?.pasting?.isPastingUsed) features.push("Pasting");
+      
+      // Get quantities and costs
+      const quantity = parseInt(jobDetails.quantity) || 0;
+      const unitCost = parseFloat(calc.totalCostPerCard || 0);
+      const totalCost = unitCost * quantity;
+      
+      // GST calculations
+      const gstRate = calc.gstRate || 18;
+      const gstAmount = parseFloat(calc.gstAmount || (totalCost * gstRate / 100)) || 0;
+      const finalTotal = totalCost + gstAmount;
+      
+      return {
+        id: estimate.id || `est-${index}`,
+        name: estimate.projectName || "Unnamed Project",
+        description: features.join(", "),
+        jobType: jobDetails.jobType || "Card",
+        paperName: jobDetails.paperName || "Standard Paper",
+        dieCode: dieDetails.dieCode || "",
+        quantity: quantity,
+        price: unitCost,
+        total: totalCost,
+        gstRate: gstRate,
+        gstAmount: gstAmount,
+        finalTotal: finalTotal
+      };
+    });
   }, [estimates]);
 
   // Call onRenderComplete when component is done rendering
@@ -234,60 +182,212 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
     }
   }, [onRenderComplete]);
 
+  // Convert number to words (for amount in words)
+  const numberToWords = (num) => {
+    if (isNaN(num)) return '';
+    
+    const single = ['', 'One', 'Two', 'Three', 'Four', 'Five', 'Six', 'Seven', 'Eight', 'Nine'];
+    const double = ['Ten', 'Eleven', 'Twelve', 'Thirteen', 'Fourteen', 'Fifteen', 'Sixteen', 'Seventeen', 'Eighteen', 'Nineteen'];
+    const tens = ['', '', 'Twenty', 'Thirty', 'Forty', 'Fifty', 'Sixty', 'Seventy', 'Eighty', 'Ninety'];
+    
+    const formatHundred = (n) => {
+      if (n < 10) return single[n];
+      else if (n < 20) return double[n - 10];
+      else {
+        const digit = n % 10;
+        return tens[Math.floor(n / 10)] + (digit ? '-' + single[digit] : '');
+      }
+    };
+    
+    const clean = Math.abs(num);
+    const trillion = Math.floor(clean / 1000000000000);
+    const billion = Math.floor((clean % 1000000000000) / 1000000000);
+    const million = Math.floor((clean % 1000000000) / 1000000);
+    const thousand = Math.floor((clean % 1000000) / 1000);
+    const hundred = Math.floor((clean % 1000) / 100);
+    const tens_ones = clean % 100;
+    const decimals = (clean % 1).toFixed(2).slice(2);
+    
+    let words = '';
+    
+    if (trillion) words += formatHundred(trillion) + ' Trillion ';
+    if (billion) words += formatHundred(billion) + ' Billion ';
+    if (million) words += formatHundred(million) + ' Million ';
+    if (thousand) words += formatHundred(thousand) + ' Thousand ';
+    if (hundred) words += single[hundred] + ' Hundred ';
+    
+    if (tens_ones) {
+      if (words !== '') words += 'and ';
+      words += formatHundred(tens_ones);
+    }
+    
+    if (decimals !== '00') {
+      words += ' and ' + decimals + '/100';
+    }
+    
+    return words + ' Only';
+  };
+
   return (
-    <div className="bg-white p-3 max-w-4xl mx-auto print:p-0">
+    <div className="bg-white p-5 print:p-0" style={{ maxWidth: '800px', margin: '0 auto' }}>
       {/* Loading indicator */}
       {!isReady && (
         <div className="flex justify-center items-center h-32">
           <div className="animate-pulse text-center">
             <div className="animate-spin h-6 w-6 border-3 border-blue-500 rounded-full border-t-transparent mx-auto mb-2"></div>
-            <p className="text-blue-500 text-sm">Loading job ticket...</p>
+            <p className="text-blue-500 text-sm">Loading estimate...</p>
           </div>
         </div>
       )}
 
       <div className={!isReady ? 'opacity-0' : 'opacity-100'}>
-        {/* Header - More compact */}
-        <div className="border-b-2 border-gray-800 pb-2 mb-3 print:mb-4">
-          <h1 className="text-lg font-bold text-center mb-2">
-            JOB TICKET - {clientInfo?.name || "Client"} - Version {version}
-          </h1>
-          <div className="grid grid-cols-2 gap-2 text-xs">
-            <div>
-              <p><span className="font-medium">Client:</span> <SafeValue value={clientInfo?.name} fallback="Unknown Client" /></p>
-              <p><span className="font-medium">Client Code:</span> <SafeValue value={clientInfo?.clientCode} /></p>
-              <p><span className="font-medium">Total Estimates:</span> {estimates?.length || 0}</p>
-            </div>
-            <div>
-              <p><span className="font-medium">Version:</span> {version}</p>
-              <p><span className="font-medium">Total Quantity:</span> {totalQuantity.toLocaleString()} pcs</p>
-              <p><span className="font-medium">Date:</span> {formatDate(new Date())}</p>
+        {/* Header */}
+        <div className="flex justify-between items-start mb-6">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">CUSTOMER ESTIMATE</h1>
+            <div className="mt-1 text-gray-500">Version: {version}</div>
+          </div>
+          <div className="text-right">
+            <div className="font-bold text-lg text-gray-900">M/S FAMOUS</div>
+            <div className="text-gray-500 text-sm">AT TETRIS BUILDING, INDUSTRIAL ESTATE COLONY</div>
+            <div className="text-gray-500 text-sm">DIMAPUR NAGALAND</div>
+            <div className="text-gray-500 text-sm">GSTIN/UIN: 13ALFPA3458Q2Z0</div>
+            <div className="text-gray-500 text-sm">State Name: Nagaland, Code: 13</div>
+          </div>
+        </div>
+        
+        {/* Client Info */}
+        <div className="grid grid-cols-2 gap-4 mb-4">
+          <div>
+            <h2 className="text-sm font-semibold text-gray-700 mb-1">Client:</h2>
+            <div className="font-medium">{clientInfo?.name || "Unknown Client"}</div>
+            <div className="text-gray-500 text-sm">Client Code: {clientInfo?.clientCode || "N/A"}</div>
+            <div className="text-gray-500 text-sm">State Name: Nagaland, Code: 13</div>
+          </div>
+          <div>
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <div className="text-gray-500">Estimate Date:</div>
+              <div className="text-right">{currentDate}</div>
+              
+              <div className="text-gray-500">Valid Until:</div>
+              <div className="text-right">{dueDate}</div>
+              
+              <div className="text-gray-500">Estimate Total:</div>
+              <div className="text-right font-semibold text-blue-600">
+                {formatCurrency(totals.total)}
+              </div>
             </div>
           </div>
         </div>
-
-        {/* Estimates by Project - More compact */}
-        {Object.entries(projectGroups).map(([projectName, projectEstimates]) => (
-          <div key={projectName} className="mb-3 print:mb-4">
-            <h2 className="text-base font-semibold border-b pb-1 mb-2">
-              Project: {projectName}
-            </h2>
-            <div className="space-y-2">
-              {projectEstimates.map((estimate, index) => (
-                <EstimateDetails 
-                  key={estimate?.id || index} 
-                  estimate={estimate} 
-                  index={index + 1}
-                />
+        
+        {/* Line Items */}
+        <div className="mb-4 overflow-x-auto" style={{ width: '100%' }}>
+          <table className="w-full border-collapse text-sm">
+            <thead>
+              <tr className="bg-gray-100 text-gray-700">
+                <th className="py-1 px-2 border border-gray-300 text-center">S.No</th>
+                <th className="py-1 px-2 border border-gray-300 text-left">Item</th>
+                <th className="py-1 px-2 border border-gray-300 text-center">Job Type</th>
+                <th className="py-1 px-2 border border-gray-300 text-center">Paper</th>
+                <th className="py-1 px-2 border border-gray-300 text-center">Die Code</th>
+                <th className="py-1 px-2 border border-gray-300 text-center">Qty</th>
+                <th className="py-1 px-2 border border-gray-300 text-right">Unit Cost</th>
+                <th className="py-1 px-2 border border-gray-300 text-right">Total</th>
+                <th className="py-1 px-2 border border-gray-300 text-center">GST %</th>
+                <th className="py-1 px-2 border border-gray-300 text-right">GST Amt</th>
+                <th className="py-1 px-2 border border-gray-300 text-right">Final Total</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineItems.map((item, index) => (
+                <tr key={item.id} className="text-gray-700">
+                  <td className="py-1 px-2 border border-gray-300 text-center">{index + 1}</td>
+                  <td className="py-1 px-2 border border-gray-300">
+                    <div className="font-medium">{item.name}</div>
+                    {item.description && (
+                      <div className="text-xs text-gray-500">{item.description}</div>
+                    )}
+                  </td>
+                  <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-center">{item.paperName}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-center">{item.dieCode}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-center">{item.quantity}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.total.toFixed(2)}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-center">{item.gstRate}%</td>
+                  <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
+                </tr>
               ))}
+            </tbody>
+          </table>
+        </div>
+        
+        {/* Summary */}
+        <div className="flex justify-end mb-3">
+          <div className="w-64">
+            <div className="flex justify-between py-1 text-sm border-t border-gray-200">
+              <div className="text-gray-700">Subtotal:</div>
+              <div className="text-gray-900 font-medium font-mono">
+                {formatCurrency(totals.amount)}
+              </div>
+            </div>
+            
+            <div className="flex justify-between py-1 text-sm">
+              <div className="text-gray-700">GST ({totals.gstRate}%):</div>
+              <div className="text-gray-900 font-mono">
+                {formatCurrency(totals.gstAmount)}
+              </div>
+            </div>
+            
+            <div className="flex justify-between py-1 font-bold border-t border-gray-300">
+              <div>Total:</div>
+              <div className="font-mono">
+                {formatCurrency(totals.total)}
+              </div>
             </div>
           </div>
-        ))}
-
-        {/* Print Info - Only visible when printing */}
-        <div className="hidden print:block text-xs text-gray-400 text-center mt-4">
-          <p>Generated on: {new Date().toLocaleString()}</p>
-          <p>Job Ticket - {clientInfo?.name} - Version {version}</p>
+        </div>
+        
+        {/* Amount in Words */}
+        <div className="mb-3 border-t border-b border-gray-200 py-2">
+          <div className="text-xs text-gray-600">Amount in Words:</div>
+          <div className="font-medium text-sm">Indian Rupees {numberToWords(totals.total)}</div>
+        </div>
+        
+        {/* Terms and Conditions */}
+        <div className="mb-3">
+          <div className="font-medium text-gray-700 mb-1 text-xs">Terms and Conditions:</div>
+          <div className="text-gray-600 text-xs">
+            <ol className="list-decimal pl-4 space-y-1">
+              <li>This estimate is valid for 30 days from the date of issue.</li>
+              <li>50% advance payment is required to confirm the order.</li>
+              <li>Final artwork approval is required before production.</li>
+              <li>Delivery time will be confirmed upon order confirmation.</li>
+              <li>Prices are subject to change based on final specifications.</li>
+            </ol>
+          </div>
+        </div>
+        
+        {/* Footer */}
+        <div className="mt-4 pt-2 border-t border-gray-200">
+          <div className="grid grid-cols-2">
+            <div>
+              <div className="font-medium mb-1 text-xs">Note</div>
+              <div className="text-xs text-gray-600">
+                This is just an estimate, not a tax invoice. Prices may vary based on final specifications and quantity.
+              </div>
+            </div>
+            <div className="text-right">
+              <div className="font-medium mb-8">for M/S FAMOUS</div>
+              <div className="text-xs">Authorised Signatory</div>
+            </div>
+          </div>
+        </div>
+        
+        {/* Print Info */}
+        <div className="mt-3 text-center text-xs text-gray-500">
+          <p>This is a computer generated estimate and does not require a signature.</p>
         </div>
       </div>
     </div>
