@@ -9,8 +9,6 @@ import GroupedJobTicket from "./GroupedJobTicket";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { createRoot } from "react-dom/client";
-import ClientDropdown from "./ClientDropdown";
-import VersionDropdown from "./VersionDropdown";
 import { useAuth } from "../Login/AuthContext"; // Add auth context
 
 const EstimatesPage = () => {
