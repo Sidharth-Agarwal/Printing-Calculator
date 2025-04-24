@@ -18,64 +18,43 @@ const TaxInvoice = ({ order }) => {
 
   // Calculate costs
   const calculateCosts = () => {
-    // Prepare line items based on order details
-    const lineItems = [];
-
-    // Check and add Letterpress/Card
-    if (order.lpDetails?.isLPUsed || order.jobDetails?.jobType === 'Card') {
-      lineItems.push({
-        description: 'Card',
-        quantity: order.jobDetails?.quantity || 0,
-        rate: parseFloat(order.calculations?.lpCostPerCard || 83.23)
-      });
-    }
-
-    // Check and add Pre-Press or other services
-    const prePressCost = parseFloat(order.calculations?.prePressPerCard || 350.00);
-    if (prePressCost > 0) {
-      lineItems.push({
-        description: 'Pre Press',
-        quantity: order.jobDetails?.quantity ? Math.ceil(order.jobDetails.quantity * 0.03) : 0,
-        rate: prePressCost
-      });
-    }
-
-    // Add other possible services
-    const additionalServices = [
-      { key: 'fsCostPerCard', description: 'Foil Stamping' },
-      { key: 'embCostPerCard', description: 'Embossing' },
-      { key: 'digiCostPerCard', description: 'Digital Print' }
-    ];
-
-    additionalServices.forEach(service => {
-      const cost = parseFloat(order.calculations?.[service.key] || 0);
-      if (cost > 0) {
-        lineItems.push({
-          description: service.description,
-          quantity: order.jobDetails?.quantity || 0,
-          rate: cost
-        });
-      }
-    });
-
+    // Get calculations from order
+    const calculations = order.calculations || {};
+    const costPerCard = parseFloat(calculations.totalCostPerCard || 0);
+    const quantity = parseInt(order.jobDetails?.quantity) || 0;
+    
     // Calculate base amount
-    const baseAmount = lineItems.reduce((total, item) => 
-      total + (item.quantity * item.rate), 0);
+    const baseAmount = costPerCard * quantity;
+    
+    // Get GST information from calculations
+    const gstRate = calculations.gstRate || 18;
+    const gstAmount = parseFloat(calculations.gstAmount || (baseAmount * gstRate / 100)) || 0;
+    
+    // Calculate final total
+    const totalAmount = baseAmount + gstAmount;
 
-    // Calculate GST
-    const gstRate = 0.06; // 6% GST
-    const cgst = baseAmount * gstRate;
-    const sgst = baseAmount * gstRate;
-    const totalAmount = baseAmount + cgst + sgst;
+    // Get job type, paper and die code
+    const jobType = order.jobDetails?.jobType || 'Card';
+    const paperName = order.jobDetails?.paperName || 'Standard Paper';
+    const dieCode = order.dieDetails?.dieCode || '';
 
     return {
-      lineItems,
+      lineItems: [
+        {
+          description: order.projectName || 'Project',
+          jobType: jobType,
+          paperName: paperName,
+          dieCode: dieCode,
+          quantity: quantity,
+          rate: costPerCard,
+          amount: baseAmount
+        }
+      ],
       baseAmount: formatNumber(baseAmount),
-      cgst: formatNumber(cgst),
-      sgst: formatNumber(sgst),
+      gstRate: gstRate,
+      gstAmount: formatNumber(gstAmount),
       totalAmount: formatNumber(totalAmount),
-      totalTaxAmount: formatNumber(cgst + sgst),
-      totalQuantity: lineItems.reduce((total, item) => total + item.quantity, 0)
+      totalQuantity: quantity
     };
   };
 
@@ -181,14 +160,18 @@ const TaxInvoice = ({ order }) => {
         <table className="w-full border-b border-black">
           <thead className="text-sm">
             <tr>
-              <th className="border-r border-b border-black p-2 w-16">SI No.</th>
-              <th className="border-r border-b border-black p-2">Description of Goods</th>
-              <th className="border-r border-b border-black p-2 w-24">HSN/SAC</th>
-              <th className="border-r border-b border-black p-2 w-24">Quantity</th>
-              <th className="border-r border-b border-black p-2 w-24">Rate</th>
-              <th className="border-r border-b border-black p-2 w-16">per</th>
-              <th className="border-r border-b border-black p-2 w-20">Disc. %</th>
-              <th className="border-b border-black p-2 w-28">Amount</th>
+              <th className="border-r border-b border-black p-2 w-10">S.No.</th>
+              <th className="border-r border-b border-black p-2">Description</th>
+              <th className="border-r border-b border-black p-2">Job Type</th>
+              <th className="border-r border-b border-black p-2">Paper Used</th>
+              <th className="border-r border-b border-black p-2">Die Code</th>
+              <th className="border-r border-b border-black p-2 w-16">HSN/SAC</th>
+              <th className="border-r border-b border-black p-2 w-20">Quantity</th>
+              <th className="border-r border-b border-black p-2 w-20">Unit Cost</th>
+              <th className="border-r border-b border-black p-2 w-20">Total</th>
+              <th className="border-r border-b border-black p-2 w-16">GST Rate</th>
+              <th className="border-r border-b border-black p-2 w-20">GST Amount</th>
+              <th className="border-b border-black p-2 w-24">Final Total</th>
             </tr>
           </thead>
           <tbody className="text-sm">
@@ -196,27 +179,24 @@ const TaxInvoice = ({ order }) => {
               <tr key={index}>
                 <td className="border-r border-black p-2 text-center">{index + 1}</td>
                 <td className="border-r border-black p-2">{item.description}</td>
+                <td className="border-r border-black p-2">{item.jobType}</td>
+                <td className="border-r border-black p-2">{item.paperName}</td>
+                <td className="border-r border-black p-2">{item.dieCode}</td>
                 <td className="border-r border-black p-2 text-center">49100010</td>
-                <td className="border-r border-black p-2 text-right">{item.quantity}.00 pcs</td>
+                <td className="border-r border-black p-2 text-right">{item.quantity}</td>
                 <td className="border-r border-black p-2 text-right">{formatNumber(item.rate)}</td>
-                <td className="border-r border-black p-2 text-center">pcs</td>
-                <td className="border-r border-black p-2 text-right"></td>
-                <td className="p-2 text-right">{formatNumber(item.quantity * item.rate)}</td>
+                <td className="border-r border-black p-2 text-right">{formatNumber(item.amount)}</td>
+                <td className="border-r border-black p-2 text-right">{costs.gstRate}%</td>
+                <td className="border-r border-black p-2 text-right">{costs.gstAmount}</td>
+                <td className="p-2 text-right">{costs.totalAmount}</td>
               </tr>
             ))}
             <tr>
-              <td className="border-r border-black p-2 text-left" colSpan="3">Total</td>
-              <td className="border-r border-black p-2 text-right">{costs.totalQuantity}.00 pcs</td>
-              <td colSpan="3" className="border-r border-black p-2"></td>
-              <td className="p-2 text-right font-bold">{costs.baseAmount}</td>
-            </tr>
-            <tr>
-              <td colSpan="7" className="border-r border-black p-2 text-right">Output CGST</td>
-              <td className="p-2 text-right">{costs.cgst}</td>
-            </tr>
-            <tr>
-              <td colSpan="7" className="border-r border-black p-2 text-right">Output SGST</td>
-              <td className="p-2 text-right">{costs.sgst}</td>
+              <td className="border-r border-black p-2 text-left" colSpan="6">Total</td>
+              <td className="border-r border-black p-2 text-right">{costs.totalQuantity}</td>
+              <td colSpan="2" className="border-r border-black p-2 text-right">{costs.baseAmount}</td>
+              <td colSpan="2" className="border-r border-black p-2 text-right">{costs.gstAmount}</td>
+              <td className="p-2 text-right font-bold">{costs.totalAmount}</td>
             </tr>
           </tbody>
         </table>
@@ -233,13 +213,10 @@ const TaxInvoice = ({ order }) => {
             <tr>
               <th className="border-r border-b border-black p-2" rowSpan="2">HSN/SAC</th>
               <th className="border-r border-b border-black p-2" rowSpan="2">Taxable Value</th>
-              <th className="border-r border-black p-2" colSpan="2">Central Tax</th>
-              <th className="border-r border-black p-2" colSpan="2">State Tax</th>
+              <th className="border-r border-black p-2" colSpan="2">GST</th>
               <th className="border-b border-black p-2" rowSpan="2">Total Tax Amount</th>
             </tr>
             <tr>
-              <th className="border-r border-b border-black p-2">Rate</th>
-              <th className="border-r border-b border-black p-2">Amount</th>
               <th className="border-r border-b border-black p-2">Rate</th>
               <th className="border-r border-b border-black p-2">Amount</th>
             </tr>
@@ -248,11 +225,9 @@ const TaxInvoice = ({ order }) => {
             <tr>
               <td className="border-r border-black p-2">49100010</td>
               <td className="border-r border-black p-2">{costs.baseAmount}</td>
-              <td className="border-r border-black p-2">6%</td>
-              <td className="border-r border-black p-2">{costs.cgst}</td>
-              <td className="border-r border-black p-2">6%</td>
-              <td className="border-r border-black p-2">{costs.sgst}</td>
-              <td className="p-2">{costs.totalTaxAmount}</td>
+              <td className="border-r border-black p-2">{costs.gstRate}%</td>
+              <td className="border-r border-black p-2">{costs.gstAmount}</td>
+              <td className="p-2">{costs.gstAmount}</td>
             </tr>
           </tbody>
         </table>
@@ -260,7 +235,7 @@ const TaxInvoice = ({ order }) => {
         {/* Tax Amount in Words */}
         <div className="border-b border-black p-4">
           <div>Tax Amount (in words):</div>
-          <div>INR {numberToWords(parseFloat(costs.totalTaxAmount))}</div>
+          <div>INR {numberToWords(parseFloat(costs.gstAmount))}</div>
         </div>
 
         {/* Declaration and Signature */}
