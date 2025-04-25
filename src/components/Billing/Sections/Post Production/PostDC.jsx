@@ -46,7 +46,7 @@ const PostDC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
         type: "UPDATE_POST_DC",
         payload: { 
           pdcMR: defaultMRType.type,
-          pdcMRConcatenated: defaultMRType.concatenate 
+          pdcMRConcatenated: defaultMRType.concatenated
         },
       });
     }
