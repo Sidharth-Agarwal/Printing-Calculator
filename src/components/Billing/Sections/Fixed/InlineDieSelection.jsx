@@ -85,6 +85,13 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   const filterDiesByJobType = (dieArray, jobType) => {
     if (!jobType) return setFilteredDies([]);
     
+    // If "Custom" is selected, show all dies
+    if (jobType === "Custom") {
+      setFilteredDies(dieArray);
+      return;
+    }
+    
+    // For other job types, filter as usual
     const filtered = dieArray.filter(die => 
       die.jobType === jobType
     );
@@ -106,18 +113,30 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     const term = e.target.value.toLowerCase().trim();
     
     if (!term) {
-      // When search term is cleared, show all dies for the current job type
+      // When search term is cleared, show all dies for the current job type (or all dies for Custom)
       filterDiesByJobType(dies, selectedJobType);
       return;
     }
     
-    // Filter dies based on text search within the selected job type
-    const matches = dies.filter(die => 
-      die.jobType === selectedJobType && (
+    // Filter based on text search
+    let matches;
+    
+    // If Custom is selected, search across all dies
+    if (selectedJobType === "Custom") {
+      matches = dies.filter(die => 
         (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-        (die.type && die.type.toLowerCase().includes(term))
-      )
-    );
+        (die.type && die.type.toLowerCase().includes(term)) ||
+        (die.jobType && die.jobType.toLowerCase().includes(term))
+      );
+    } else {
+      // Otherwise filter within the selected job type
+      matches = dies.filter(die => 
+        die.jobType === selectedJobType && (
+          (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
+          (die.type && die.type.toLowerCase().includes(term))
+        )
+      );
+    }
     
     setFilteredDies(matches);
   };
@@ -131,7 +150,16 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       return;
     }
 
-    let baseSet = dies.filter(die => die.jobType === selectedJobType);
+    let baseSet;
+    
+    // If Custom is selected, use all dies as the base set
+    if (selectedJobType === "Custom") {
+      baseSet = dies;
+    } else {
+      // Otherwise filter by selected job type
+      baseSet = dies.filter(die => die.jobType === selectedJobType);
+    }
+    
     let matches = [];
 
     // Text search takes precedence if present
@@ -139,7 +167,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       const term = searchTerm.toLowerCase().trim();
       matches = baseSet.filter(die => 
         (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-        (die.type && die.type.toLowerCase().includes(term))
+        (die.type && die.type.toLowerCase().includes(term)) ||
+        (selectedJobType === "Custom" && die.jobType && die.jobType.toLowerCase().includes(term))
       );
     }
     // Otherwise search by dimensions
@@ -255,7 +284,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       setDies(prev => [...prev, dieWithId]);
       
       // Update filtered dies if the new die matches the current job type
-      if (dieWithId.jobType === selectedJobType) {
+      // For Custom job type, always add to filtered dies
+      if (dieWithId.jobType === selectedJobType || selectedJobType === "Custom") {
         setFilteredDies(prev => [...prev, dieWithId]);
       }
       
@@ -494,7 +524,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
           {/* Die list header with info and Add button */}
           <div className="flex justify-between items-center mb-4">
             <div className="text-sm text-gray-600">
-              Showing dies for <span className="font-medium">{selectedJobType}</span>: {filteredDies.length} found
+              {selectedJobType === "Custom" 
+                ? `Showing all dies: ${filteredDies.length} found`
+                : `Showing dies for ${selectedJobType}: ${filteredDies.length} found`
+              }
             </div>
             <button
               type="button"
@@ -507,10 +540,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
           
           {/* Search Fields */}
           <div className="mb-4">
-            <label className="block text-sm mb-1">Search by Code or Type</label>
+            <label className="block text-sm mb-1">Search by Code, Type or Job Type</label>
             <input
               type="text"
-              placeholder="Type to search by die code or type"
+              placeholder="Type to search by die code, type or job type"
               value={searchTerm}
               onChange={handleTextSearch}
               className="border text-sm rounded-md p-2 w-full"
@@ -564,6 +597,11 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                     <p className="text-xs text-gray-600">
                       Type: {die.type || "Not specified"}
                     </p>
+                    {selectedJobType === "Custom" && (
+                      <p className="text-xs text-gray-500">
+                        Job Type: {die.jobType || "Not specified"}
+                      </p>
+                    )}
                   </div>
                   {die.imageUrl && (
                     <img
@@ -576,7 +614,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
               ))
             ) : (
               <div className="p-3 bg-white border-b text-sm text-gray-600">
-                No dies found for {selectedJobType}. Create a new die or select a different job type.
+                {selectedJobType === "Custom" 
+                  ? "No dies found in the database. Create a new die."
+                  : `No dies found for ${selectedJobType}. Create a new die or select a different job type.`
+                }
               </div>
             )}
           </div>
