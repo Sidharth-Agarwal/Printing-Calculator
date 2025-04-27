@@ -1,5 +1,30 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
 import { fetchStandardRate, fetchOverheadValue } from '../../../../../../utils/dbFetchUtils';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../../../../firebaseConfig';
+
+/**
+ * Fetch die details from Firestore database
+ * @param {string} dieCode - Die code to look up
+ * @returns {Promise<Object|null>} - The die details or null if not found
+ */
+const fetchDieDetails = async (dieCode) => {
+  try {
+    const diesCollection = collection(db, "dies");
+    const q = query(diesCollection, where("dieCode", "==", dieCode));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    console.warn(`Die not found for code: ${dieCode}`);
+    return null;
+  } catch (error) {
+    console.error("Error fetching die details:", error);
+    return null;
+  }
+};
 
 /**
  * Calculates foil stamping (FS) costs based on form state
@@ -10,6 +35,7 @@ export const calculateFSCosts = async (state) => {
   try {
     const { fsDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const dieCode = orderAndPaper.dieCode;
 
     // Check if FS is used
     if (!fsDetails.isFSUsed || !fsDetails.foilDetails?.length) {
@@ -34,6 +60,19 @@ export const calculateFSCosts = async (state) => {
         fsMRCostPerCard: "0.00",
         fsFreightCostPerCard: "0.00"
       };
+    }
+
+    // NEW STEP: Fetch die details to get frags
+    let dieDetails = null;
+    let fragsPerDie = 1; // Default to 1 if not found
+    
+    if (dieCode) {
+      dieDetails = await fetchDieDetails(dieCode);
+      console.log("Die details:", dieDetails);
+      if (dieDetails && dieDetails.frags) {
+        fragsPerDie = parseInt(dieDetails.frags) || 1;
+        console.log("Frags per die:", fragsPerDie);
+      }
     }
 
     // 1. Fetch margin value from overheads
@@ -99,7 +138,7 @@ export const calculateFSCosts = async (state) => {
       }
       
       // Calculate foil cost
-      const foilCostPerUnit = parseFloat(foilMaterialDetails.finalCostPerUnit || 0)
+      const foilCostPerUnit = parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
       const foilCost = blockArea * foilCostPerUnit;
       totalFoilCost += foilCost;
       
@@ -127,7 +166,8 @@ export const calculateFSCosts = async (state) => {
     
     // Calculate per card costs
     const fsBlockCostPerCard = totalBlockCost / totalCards;
-    const fsFoilCostPerCard = totalFoilCost;
+    // Modified: Account for frags when calculating foil cost per card
+    const fsFoilCostPerCard = totalFoilCost / fragsPerDie;
     const fsImpressionCostPerCard = totalImpressionCost / totalCards;
     const fsMRCostPerCard = totalMRCost / totalCards;
     const fsFreightCostPerCard = totalFreightCost / totalCards;
@@ -154,6 +194,7 @@ export const calculateFSCosts = async (state) => {
       totalImpressionCost: totalImpressionCost.toFixed(2),
       totalMRCost: totalMRCost.toFixed(2),
       totalFreightCost: totalFreightCost.toFixed(2),
+      fragsPerDie: fragsPerDie,
       foilsCount: fsDetails.foilDetails.length
     };
   } catch (error) {
