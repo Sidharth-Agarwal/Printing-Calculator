@@ -103,13 +103,12 @@ export const calculateDigiDetailsCosts = async (state) => {
     // Calculate total sheets required
     const totalSheets = Math.ceil(totalCards / totalFragsPerSheet);
     
-    // Fetch digital paper rate
-    // Note: We're assuming a digital paper type exists, or we use a default rate
-    const digitalPaperName = "Digital"; // This should be a configurable constant or fetched
-    const digitalPaperDetails = await fetchPaperDetails(digitalPaperName);
-    const digitalPaperRate = digitalPaperDetails ? 
-      parseFloat(digitalPaperDetails.finalRate) : 
-      10.0; // Default rate if not found
+    // UPDATED: Fetch digital print rate from standard rates instead of papers DB
+    const digitalPrintRate = await fetchStandardRate('DIGITAL', 'PRINT');
+    const digitalPrintRateValue = digitalPrintRate ? 
+      parseFloat(digitalPrintRate.finalRate) : 
+      20.0; // Default rate if not found (using value from screenshot)
+    console.log("Digital printing rate : ",digitalPrintRate.finalRate)
     
     // Fetch GIL CUT rate
     const gilCutRate = await fetchStandardRate('GIL CUT', 'PER SHEET');
@@ -117,8 +116,8 @@ export const calculateDigiDetailsCosts = async (state) => {
       parseFloat(gilCutRate.finalRate) : 
       0.25; // Default if not found
     
-    // Calculate Digital Print cost per card (from digital paper rate)
-    const digiPrintCostPerCard = digitalPaperRate / totalFragsPerSheet;
+    // Calculate Digital Print cost per card (from standard rates)
+    const digiPrintCostPerCard = digitalPrintRateValue / totalFragsPerSheet;
     
     // Calculate Digital Paper cost components
     const paperCostPerCard = (parseFloat(paperDetails.finalRate) * totalSheets) / totalCards;
@@ -141,7 +140,7 @@ export const calculateDigiDetailsCosts = async (state) => {
       totalFragsPerSheet,
       totalSheets,
       paperRate: parseFloat(paperDetails.finalRate).toFixed(2),
-      digitalPaperRate: digitalPaperRate.toFixed(2),
+      digitalPrintRate: digitalPrintRateValue.toFixed(2),
       gilCutRate: gilCutCostPerSheet.toFixed(2)
     };
   } catch (error) {
