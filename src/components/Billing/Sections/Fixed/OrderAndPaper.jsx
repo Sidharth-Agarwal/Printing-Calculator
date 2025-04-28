@@ -231,6 +231,7 @@ const OrderAndPaper = ({
                 <option value="Magnet">Magnet</option>
                 <option value="Packaging">Packaging</option>
                 <option value="Notebook">Notebook</option>
+                <option value="Liner">Liner</option>
                 <option value="Custom">Custom</option>
               </select>
             </div>

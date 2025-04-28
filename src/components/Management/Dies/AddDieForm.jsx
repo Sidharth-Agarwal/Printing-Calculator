@@ -16,7 +16,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
 
   const [image, setImage] = useState(null);
   const [error, setError] = useState(null);
-  const jobTypeOptions = ["Card", "Biz Card", "Envelope", "Seal", "Magnet", "Packaging", "Notebook"];
+  const jobTypeOptions = ["Card", "Biz Card", "Envelope", "Seal", "Magnet", "Packaging", "Notebook", "Liner"];
 
   useEffect(() => {
     if (editingDie) {
