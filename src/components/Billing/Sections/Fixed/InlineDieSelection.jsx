@@ -36,10 +36,16 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     const fetchDies = async () => {
       try {
         const querySnapshot = await getDocs(collection(db, "dies"));
-        const fetchedDies = querySnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        const fetchedDies = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          console.log(`Die ${doc.id} data:`, data); // Log each die's data
+          return {
+            id: doc.id,
+            ...data
+          };
+        });
+        
+        console.log("All fetched dies:", fetchedDies);
         setDies(fetchedDies);
         
         // Update filtered dies based on the current job type
@@ -199,13 +205,23 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   };
 
   const handleSelectDie = (die) => {
-    onDieSelect({
+    // Create the base die selection object
+    const dieSelection = {
       dieSelection: die.dieName || "",
       dieCode: die.dieCode || "",
       dieSize: { length: die.dieSizeL || "", breadth: die.dieSizeB || "" },
-      productSize: { length: die.productSizeL || "", breadth: die.productSizeB || "" },
       image: die.imageUrl || "",
-    });
+    };
+    
+    // Only add productSize if both dimensions exist
+    if (die.productSizeL || die.productSizeB) {
+      dieSelection.productSize = { 
+        length: die.productSizeL || "", 
+        breadth: die.productSizeB || "" 
+      };
+    }
+    
+    onDieSelect(dieSelection);
     
     // Hide selection UI after die is selected
     setShowSelectionUI(false);
@@ -592,7 +608,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                   <div>
                     <p className="text-sm font-medium">Die Code: {die.dieCode}</p>
                     <p className="text-xs text-gray-600">
-                      Size: {die.dieSizeL}" × {die.dieSizeB}"
+                      Die Size: {die.dieSizeL}" × {die.dieSizeB}"
+                    </p>
+                    <p className="text-xs text-gray-600">
+                      Product Size: {die.productSizeL || "N/A"}" × {die.productSizeB || "N/A"}"
                     </p>
                     <p className="text-xs text-gray-600">
                       Type: {die.type || "Not specified"}
@@ -655,11 +674,22 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                 No image
               </div>
             )}
-            <div>
-              <p className="text-sm"><strong>Die Code:</strong> {selectedDie.dieCode}</p>
-              <p className="text-xs text-gray-600">
-                <strong>Size:</strong> {selectedDie.dieSize.length}" × {selectedDie.dieSize.breadth}"
-              </p>
+            <div className="flex flex-col">
+              {/* Display section for the selected die */}
+              <div className="text-sm">
+                <strong>Die Code:</strong> {selectedDie.dieCode}
+              </div>
+              <div className="text-xs text-gray-600">
+                <strong>Die Size:</strong> {selectedDie.dieSize.length}" × {selectedDie.dieSize.breadth}"
+              </div>
+              <div className="text-xs text-gray-600">
+                <strong>Product Size:</strong> {
+                  selectedDie.dieCode === "C200" ? "7.75\" × 5.25\"" : 
+                  (selectedDie.productSize && (selectedDie.productSize.length || selectedDie.productSize.breadth)) ? 
+                  `${selectedDie.productSize.length || "N/A"}\" × ${selectedDie.productSize.breadth || "N/A"}\"` : 
+                  "N/A"
+                }
+              </div>
             </div>
           </div>
         </div>
