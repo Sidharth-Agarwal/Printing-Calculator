@@ -11,12 +11,13 @@ export { calculateDigiDetailsCosts } from './productionCalculator/digiCalculator
 // Post-production service calculators
 export { calculateDieCuttingCosts } from './postProductionCalculator/dieCuttingCalculator';
 export { calculatePostDCCosts } from './postProductionCalculator/postDCCalculator';
-// export { calculateFoldAndPasteCosts } from './postProductionCalculators/foldAndPasteCalculator';
-// export { calculateDstPasteCosts } from './postProductionCalculators/dstPasteCalculator';
+export { calculateFoldAndPasteCosts } from './postProductionCalculator/foldPastCalculator';
+export { calculateDstPasteCosts } from './postProductionCalculator/dstCalculator';
 export { calculateQCCosts } from './postProductionCalculator/qcCalculator';
 export { calculatePackingCosts } from './postProductionCalculator/packingCalculator';
 export { calculateMiscCosts } from './postProductionCalculator/miscCalculator';
 export { calculateSandwichCosts } from './postProductionCalculator/sandwichCalculator';
+export { calculateMagnetCosts } from './postProductionCalculator/magnetCalculator';
 
 // Final calculators
 export { calculateWastage } from './finalCalculator/wastageCalculator';

@@ -7,6 +7,8 @@ import {
   calculateDigiDetailsCosts,
   calculateDieCuttingCosts,
   calculatePostDCCosts,
+  calculateFoldAndPasteCosts, // New calculator
+  calculateDstPasteCosts,     // New calculator
   calculateQCCosts,
   calculatePackingCosts,
   calculateMiscCosts,
@@ -14,7 +16,8 @@ import {
   calculateOverhead,
   calculateMarkup,
   calculateGST,
-  calculateSandwichCosts
+  calculateSandwichCosts,
+  calculateMagnetCosts       // New calculator
 } from './Calculators';
 
 /**
@@ -107,6 +110,7 @@ export const performCalculations = async (state) => {
       }
     }
     
+    // NEW: Calculate Fold And Paste costs if used
     if (state.foldAndPaste?.isFoldAndPasteUsed) {
       const foldAndPasteResults = await calculateFoldAndPasteCosts(state);
       if (foldAndPasteResults.error) {
@@ -116,12 +120,23 @@ export const performCalculations = async (state) => {
       }
     }
     
+    // NEW: Calculate DST Paste costs if used
     if (state.dstPaste?.isDstPasteUsed) {
       const dstPasteResults = await calculateDstPasteCosts(state);
       if (dstPasteResults.error) {
         console.warn("DST paste calculation error:", dstPasteResults.error);
       } else {
         Object.assign(results, dstPasteResults);
+      }
+    }
+    
+    // NEW: Calculate Magnet costs if used
+    if (state.magnet?.isMagnetUsed) {
+      const magnetResults = await calculateMagnetCosts(state);
+      if (magnetResults.error) {
+        console.warn("Magnet calculation error:", magnetResults.error);
+      } else {
+        Object.assign(results, magnetResults);
       }
     }
     

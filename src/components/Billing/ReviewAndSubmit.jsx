@@ -400,13 +400,14 @@ const ReviewAndSubmit = ({
     const hasPostDC = state.postDC?.isPostDCUsed;
     const hasFoldAndPaste = state.foldAndPaste?.isFoldAndPasteUsed;
     const hasDstPaste = state.dstPaste?.isDstPasteUsed;
+    const hasMagnet = state.magnet?.isMagnetUsed;
     const hasQC = state.qc?.isQCUsed;
     const hasPacking = state.packing?.isPackingUsed;
     const hasMisc = state.misc?.isMiscUsed;
     const hasSandwich = state.sandwich?.isSandwichComponentUsed;
     
     if (!hasDieCutting && !hasPostDC && !hasFoldAndPaste && !hasDstPaste && 
-        !hasQC && !hasPacking && !hasMisc && !hasSandwich) {
+        !hasMagnet && !hasQC && !hasPacking && !hasMisc && !hasSandwich) {
       return null;
     }
     
@@ -444,17 +445,55 @@ const ReviewAndSubmit = ({
             </div>
           )}
           
-          {/* Fold and Paste Section */}
+          {/* Fold and Paste Section - Updated with detailed breakdown */}
           {hasFoldAndPaste && localCalculations.foldAndPasteCostPerCard && (
             <div className="space-y-1 border-b pb-2 mb-2">
               <CostItem label="Fold and Paste" value={localCalculations.foldAndPasteCostPerCard} isTotal />
+              {localCalculations.dstMaterialCostPerCard && (
+                <CostItem label="DST Material Cost" value={localCalculations.dstMaterialCostPerCard} isSubItem />
+              )}
+              {localCalculations.foldAndPasteOperationCostPerCard && (
+                <CostItem label="Fold & Paste Operation" value={localCalculations.foldAndPasteOperationCostPerCard} isSubItem />
+              )}
+              {localCalculations.fragsPerDie && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Fragments per die: {localCalculations.fragsPerDie}
+                </div>
+              )}
             </div>
           )}
           
-          {/* DST Paste Section */}
+          {/* DST Paste Section - Updated with detailed breakdown */}
           {hasDstPaste && localCalculations.dstPasteCostPerCard && (
             <div className="space-y-1 border-b pb-2 mb-2">
               <CostItem label="DST Paste" value={localCalculations.dstPasteCostPerCard} isTotal />
+              {localCalculations.dstType && (
+                <div className="pl-6 text-sm text-gray-600">
+                  DST Type: {localCalculations.dstType}
+                </div>
+              )}
+              {localCalculations.fragsPerDie && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Fragments per die: {localCalculations.fragsPerDie}
+                </div>
+              )}
+            </div>
+          )}
+          
+          {/* Magnet Section - New section */}
+          {hasMagnet && localCalculations.magnetCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Magnet" value={localCalculations.magnetCostPerCard} isTotal />
+              {localCalculations.plateArea && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Plate Area: {localCalculations.plateArea} cm²
+                </div>
+              )}
+              {localCalculations.fragsPerDie && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Fragments per die: {localCalculations.fragsPerDie}
+                </div>
+              )}
             </div>
           )}
           
