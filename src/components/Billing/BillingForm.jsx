@@ -19,6 +19,7 @@ import DieCutting from "./Sections/Post Production/DieCutting";
 import PostDC from "./Sections/Post Production/PostDC";
 import FoldAndPaste from "./Sections/Post Production/FoldAndPaste";
 import DstPaste from "./Sections/Post Production/DstPaste";
+import Magnet from "./Sections/Post Production/Magnet";
 import QC from "./Sections/Post Production/QC";
 import Packing from "./Sections/Post Production/Packing";
 import Sandwich from "./Sections/Post Production/Sandwich";
@@ -88,12 +89,18 @@ const initialFormState = {
     pdcMR: "",
     pdcMRConcatenated: ""
   },
-
   foldAndPaste: {
     isFoldAndPasteUsed: false,
-  },
+    dstMaterial: "", // New field
+    dstType: "",     // New field
+  },  
   dstPaste: {
     isDstPasteUsed: false,
+    dstType: "",
+  },
+  magnet: {          // Add this new state section
+    isMagnetUsed: false,
+    magnetMaterial: ""
   },
   qc: {
     isQCUsed: false,
@@ -154,6 +161,8 @@ const reducer = (state, action) => {
       return { ...state, foldAndPaste: { ...state.foldAndPaste, ...action.payload } };
     case "UPDATE_DST_PASTE":
       return { ...state, dstPaste: { ...state.dstPaste, ...action.payload } };
+    case "UPDATE_MAGNET":
+      return { ...state, magnet: { ...state.magnet, ...action.payload } };
     case "UPDATE_QC":
       return { ...state, qc: { ...state.qc, ...action.payload } };
     case "UPDATE_PACKING":
@@ -172,8 +181,21 @@ const reducer = (state, action) => {
 };
 
 // Map state to Firebase structure with sanitization for undefined values
+// Map state to Firebase structure with sanitization for undefined values
 const mapStateToFirebaseStructure = (state, calculations) => {
-  const { client, versionId, orderAndPaper, lpDetails, fsDetails, embDetails, digiDetails, screenPrint, dieCutting, sandwich } = state;
+  const { 
+    client, 
+    versionId, 
+    orderAndPaper, 
+    lpDetails, 
+    fsDetails, 
+    embDetails, 
+    digiDetails, 
+    screenPrint, 
+    dieCutting, 
+    sandwich,
+    magnet // Added magnet to destructuring
+  } = state;
 
   // Helper function to sanitize objects for Firebase
   const sanitizeForFirestore = (obj) => {
@@ -237,6 +259,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     screenPrint: screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(screenPrint) : null,
     dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
     sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
+    magnet: magnet?.isMagnetUsed ? sanitizeForFirestore(magnet) : null, // Added magnet to Firestore data
     
     // Include other details based on what's enabled
     postDC: state.postDC?.isPostDCUsed ? sanitizeForFirestore(state.postDC) : null,
@@ -1003,7 +1026,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     dispatch({
       type: "UPDATE_FOLD_AND_PASTE",
-      payload: { isFoldAndPasteUsed: !isCurrentlyUsed }
+      payload: { 
+        isFoldAndPasteUsed: !isCurrentlyUsed,
+        ...((!isCurrentlyUsed) && {
+          dstMaterial: "", // Initialize dstMaterial field
+          dstType: ""      // Initialize dstType field
+        })
+      }
     });
     
     // Auto expand when toggled on
@@ -1017,12 +1046,36 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     dispatch({
       type: "UPDATE_DST_PASTE",
-      payload: { isDstPasteUsed: !isCurrentlyUsed }
+      payload: { 
+        isDstPasteUsed: !isCurrentlyUsed,
+        ...((!isCurrentlyUsed) && {
+          dstType: ""  // Initialize dstType field
+        })
+      }
     });
     
     // Auto expand when toggled on
     if (!isCurrentlyUsed) {
       setActiveSection("dstPaste");
+    }
+  };
+
+  const toggleMagnetUsage = () => {
+    const isCurrentlyUsed = state.magnet?.isMagnetUsed || false;
+    
+    dispatch({
+      type: "UPDATE_MAGNET",
+      payload: { 
+        isMagnetUsed: !isCurrentlyUsed,
+        ...((!isCurrentlyUsed) && {
+          magnetMaterial: ""
+        })
+      }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("magnet");
     }
   };
   
@@ -1442,6 +1495,26 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 onToggleUsage={toggleDstPasteUsage}
               >
                 <DstPaste 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+
+            {/* Magnet Section */}
+            {isServiceVisible("MAGNET") && (
+              <FormSection 
+                title="MAGNET" 
+                id="magnet"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.magnet?.isMagnetUsed || false}
+                onToggleUsage={toggleMagnetUsage}
+              >
+                <Magnet 
                   state={state} 
                   dispatch={dispatch} 
                   onNext={() => {}} 

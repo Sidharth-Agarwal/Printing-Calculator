@@ -6,6 +6,7 @@ import ScreenPrint from '../../Sections/Production/ScreenPrint';
 import DieCutting from '../../Sections/Post Production/DieCutting';
 import PostDC from '../../Sections/Post Production/PostDC';
 import FoldAndPaste from '../../Sections/Post Production/FoldAndPaste';
+import Magnet from '../../Sections/Post Production/Magnet';
 import DstPaste from '../../Sections/Post Production/DstPaste';
 import QC from '../../Sections/Post Production/QC';
 import Packing from '../../Sections/Post Production/Packing';
@@ -37,14 +38,6 @@ export const serviceRegistry = {
     component: EMBDetails,
     stateKey: "embDetails",
     toggleField: "isEMBUsed",
-    group: "production"
-  },
-  "SCN": {
-    id: "scn",
-    title: "SCANNING (SCN)",
-    component: null, // This would need to be created
-    stateKey: "scanDetails",
-    toggleField: "isScanUsed",
     group: "production"
   },
   "DIGI": {
@@ -97,6 +90,14 @@ export const serviceRegistry = {
     toggleField: "isDstPasteUsed",
     group: "postProduction"
   },
+  "MAGNET": {   // Added Magnet component
+    id: "magnet",
+    title: "MAGNET",
+    component: Magnet,
+    stateKey: "magnet",
+    toggleField: "isMagnetUsed",
+    group: "postProduction"
+  },
   "QC": {
     id: "qc",
     title: "QUALITY CHECK",
@@ -128,9 +129,7 @@ export const serviceRegistry = {
     stateKey: "misc",
     toggleField: "isMiscUsed",
     group: "postProduction"
-  },
-  
-  // Note: DUPLEX uses the Sandwich component, so we don't need a separate SANDWICH entry
+  }
 };
 
 // Helper functions to get services by group

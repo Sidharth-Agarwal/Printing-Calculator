@@ -4,6 +4,11 @@ export const jobTypeConfigurations = {
         postProductionServices: ["DC", "DST PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
         defaultValues: { /* Card-specific defaults */ }
     },
+    "Liner": {
+        productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
+        postProductionServices: ["DC", "DST PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
+        defaultValues: { /* Liner-specific defaults (same as Card) */ }
+    },
     "Biz Card": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
         postProductionServices: ["DC", "DST PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
@@ -11,7 +16,7 @@ export const jobTypeConfigurations = {
     },
     "Envelope": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["DC","FOLD & PASTE", "QC", "PACKING", "MISC"],
+        postProductionServices: ["DC", "FOLD & PASTE", "QC", "PACKING", "MISC"],
         defaultValues: { /* Envelope-specific defaults */ }
     },
     "Seal": {
@@ -21,7 +26,7 @@ export const jobTypeConfigurations = {
     },
     "Magnet": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["DC", "DST PASTE", "QC", "PACKING", "MISC"],
+        postProductionServices: ["DC", "MAGNET", "QC", "PACKING", "MISC"], // Added MAGNET service
         defaultValues: { /* Magnet-specific defaults */ }
     },
     "Packaging": {
@@ -36,7 +41,7 @@ export const jobTypeConfigurations = {
     },
     "Custom": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["DC", "POST DC", "FOLD & PASTE", "DST PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
+        postProductionServices: ["DC", "POST DC", "FOLD & PASTE", "DST PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"], // Added MAGNET service
         defaultValues: { /* Custom defaults - likely all enabled */ }
     }
 };
