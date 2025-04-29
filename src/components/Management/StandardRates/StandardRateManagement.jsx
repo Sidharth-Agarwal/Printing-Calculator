@@ -3,10 +3,22 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddStandardRateForm from "./AddStandardRateForm";
 import DisplayStandardRateTable from "./DisplayStandardRateTable";
+import DeleteConfirmationModal from "../DeleteConfirmationModal";
+import ConfirmationModal from "../ConfirmationModal";
 
 const StandardRateManagement = () => {
   const [rates, setRates] = useState([]);
   const [selectedRate, setSelectedRate] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    itemId: null
+  });
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    message: "",
+    title: "",
+    status: "success"
+  });
 
   useEffect(() => {
     const ratesCollection = collection(db, "standard_rates");
@@ -25,7 +37,12 @@ const StandardRateManagement = () => {
     try {
       // Validate that at least one of finalRate or percentage is provided
       if (!rateData.finalRate && !rateData.percentage) {
-        alert("Please enter either a Final Rate or a Percentage");
+        setNotification({
+          isOpen: true,
+          message: "Please enter either a Final Rate or a Percentage",
+          title: "Validation Error",
+          status: "error"
+        });
         return;
       }
 
@@ -34,10 +51,22 @@ const StandardRateManagement = () => {
         ...rateData,
         timestamp: new Date()
       });
-      alert("Rate added successfully!");
+      
+      setNotification({
+        isOpen: true,
+        message: "Rate added successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error adding rate:", error);
-      alert("Failed to add rate. Please try again.");
+      
+      setNotification({
+        isOpen: true,
+        message: "Failed to add rate. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
@@ -45,26 +74,80 @@ const StandardRateManagement = () => {
     try {
       // Validate that at least one of finalRate or percentage is provided
       if (!updatedData.finalRate && !updatedData.percentage) {
-        alert("Please enter either a Final Rate or a Percentage");
+        setNotification({
+          isOpen: true,
+          message: "Please enter either a Final Rate or a Percentage",
+          title: "Validation Error",
+          status: "error"
+        });
         return;
       }
 
       const rateDoc = doc(db, "standard_rates", id);
       await updateDoc(rateDoc, updatedData);
-      alert("Rate updated successfully!");
+      
+      setNotification({
+        isOpen: true,
+        message: "Rate updated successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error updating rate:", error);
-      alert("Failed to update rate. Please try again.");
+      
+      setNotification({
+        isOpen: true,
+        message: "Failed to update rate. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
-  const deleteRate = async (id) => {
+  const confirmDelete = (id) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      itemId: id
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      itemId: null
+    });
+  };
+
+  const closeNotification = () => {
+    setNotification({
+      isOpen: false,
+      message: "",
+      title: "",
+      status: "success"
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
     try {
-      await deleteDoc(doc(db, "standard_rates", id));
-      alert("Rate deleted successfully!");
+      await deleteDoc(doc(db, "standard_rates", deleteConfirmation.itemId));
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Rate deleted successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error deleting rate:", error);
-      alert("Failed to delete rate. Please try again.");
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Failed to delete rate. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
@@ -79,8 +162,21 @@ const StandardRateManagement = () => {
       />
       <DisplayStandardRateTable
         rates={rates}
-        onDelete={deleteRate}
+        onDelete={confirmDelete}
         onEdit={(rate) => setSelectedRate(rate)}
+      />
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteConfirm}
+        itemName="rate"
+      />
+      <ConfirmationModal
+        isOpen={notification.isOpen}
+        onClose={closeNotification}
+        message={notification.message}
+        title={notification.title}
+        status={notification.status}
       />
     </div>
   );

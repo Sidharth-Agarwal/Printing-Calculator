@@ -3,10 +3,22 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddMaterialForm from "./AddMaterialForm";
 import DisplayMaterialTable from "./DisplayMaterialTable";
+import DeleteConfirmationModal from "../DeleteConfirmationModal";
+import ConfirmationModal from "../ConfirmationModal";
 
 const MaterialManagement = () => {
   const [materials, setMaterials] = useState([]);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    itemId: null
+  });
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    message: "",
+    title: "",
+    status: "success"
+  });
 
   useEffect(() => {
     const materialsCollection = collection(db, "materials");
@@ -25,9 +37,22 @@ const MaterialManagement = () => {
     try {
       const materialsCollection = collection(db, "materials");
       await addDoc(materialsCollection, materialData);
-      alert("Material added successfully!");
+      
+      setNotification({
+        isOpen: true,
+        message: "Material added successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error adding material:", error);
+      
+      setNotification({
+        isOpen: true,
+        message: "Error adding material. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
@@ -35,18 +60,69 @@ const MaterialManagement = () => {
     try {
       const materialDoc = doc(db, "materials", id);
       await updateDoc(materialDoc, updatedData);
-      alert("Material updated successfully!");
+      
+      setNotification({
+        isOpen: true,
+        message: "Material updated successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error updating material:", error);
+      
+      setNotification({
+        isOpen: true,
+        message: "Error updating material. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
-  const deleteMaterial = async (id) => {
+  const confirmDelete = (id) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      itemId: id
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      itemId: null
+    });
+  };
+
+  const closeNotification = () => {
+    setNotification({
+      isOpen: false,
+      message: "",
+      title: "",
+      status: "success"
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
     try {
-      await deleteDoc(doc(db, "materials", id));
-      alert("Material deleted successfully!");
+      await deleteDoc(doc(db, "materials", deleteConfirmation.itemId));
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Material deleted successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error deleting material:", error);
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Error deleting material. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
@@ -61,8 +137,21 @@ const MaterialManagement = () => {
       />
       <DisplayMaterialTable
         materials={materials}
-        onDelete={deleteMaterial}
+        onDelete={confirmDelete}
         onEdit={(material) => setSelectedMaterial(material)}
+      />
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteConfirm}
+        itemName="material"
+      />
+      <ConfirmationModal
+        isOpen={notification.isOpen}
+        onClose={closeNotification}
+        message={notification.message}
+        title={notification.title}
+        status={notification.status}
       />
     </div>
   );

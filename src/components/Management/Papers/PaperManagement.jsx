@@ -3,10 +3,22 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddPaperForm from "./AddPaperForm";
 import DisplayPaperTable from "./DisplayPaperTable";
+import DeleteConfirmationModal from "../DeleteConfirmationModal";
+import ConfirmationModal from "../ConfirmationModal";
 
 const PaperManagement = () => {
   const [papers, setPapers] = useState([]);
   const [editingPaper, setEditingPaper] = useState(null); // Track the paper being edited
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    itemId: null
+  });
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    message: "",
+    title: "",
+    status: "success"
+  });
 
   // Real-time listener for papers
   useEffect(() => {
@@ -27,9 +39,22 @@ const PaperManagement = () => {
     try {
       const papersCollection = collection(db, "papers");
       await addDoc(papersCollection, { ...newPaper, timestamp: new Date() });
-      alert("Paper added successfully!");
+      
+      setNotification({
+        isOpen: true,
+        message: "Paper added successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error adding paper:", error);
+      
+      setNotification({
+        isOpen: true,
+        message: "Error adding paper. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
@@ -38,20 +63,70 @@ const PaperManagement = () => {
     try {
       const paperDoc = doc(db, "papers", id);
       await updateDoc(paperDoc, updatedData);
-      alert("Paper updated successfully!");
       setEditingPaper(null); // Clear the editing state
+      
+      setNotification({
+        isOpen: true,
+        message: "Paper updated successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error updating paper:", error);
+      
+      setNotification({
+        isOpen: true,
+        message: "Error updating paper. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
-  // Delete paper from Firestore
-  const deletePaper = async (id) => {
+  const confirmDelete = (id) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      itemId: id
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      itemId: null
+    });
+  };
+
+  const closeNotification = () => {
+    setNotification({
+      isOpen: false,
+      message: "",
+      title: "",
+      status: "success"
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
     try {
-      await deleteDoc(doc(db, "papers", id));
-      alert("Paper deleted successfully!");
+      await deleteDoc(doc(db, "papers", deleteConfirmation.itemId));
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Paper deleted successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error deleting paper:", error);
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Error deleting paper. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
@@ -67,7 +142,20 @@ const PaperManagement = () => {
       <DisplayPaperTable
         papers={papers}
         onEditPaper={setEditingPaper} // Pass the selected paper to edit
-        onDeletePaper={deletePaper}
+        onDeletePaper={confirmDelete}
+      />
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteConfirm}
+        itemName="paper"
+      />
+      <ConfirmationModal
+        isOpen={notification.isOpen}
+        onClose={closeNotification}
+        message={notification.message}
+        title={notification.title}
+        status={notification.status}
       />
     </div>
   );
