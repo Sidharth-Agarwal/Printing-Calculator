@@ -7,6 +7,9 @@ const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
     a.type.localeCompare(b.type)
   );
 
+  // Check if edit functionality is enabled
+  const hasEditAccess = typeof onEdit === "function" && typeof onDelete === "function";
+
   return (
     <div className="bg-white p-4 rounded shadow">
       <h2 className="text-lg font-medium mb-4">Standard Rates</h2>
@@ -14,7 +17,10 @@ const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
         <table className="w-full border-collapse text-sm">
           <thead className="bg-gray-100">
             <tr>
-              {["Group", "Type", "Concatenate", "Final Rate (INR)", "Percentage (%)", "Actions"].map((header, idx) => (
+              {["Group", "Type", "Concatenate", "Final Rate (INR)", "Percentage (%)"]
+                // Only include Actions column if user has edit access
+                .concat(hasEditAccess ? ["Actions"] : [])
+                .map((header, idx) => (
                 <th key={idx} className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">
                   {header}
                 </th>
@@ -29,20 +35,24 @@ const DisplayStandardRateTable = ({ rates, onDelete, onEdit }) => {
                 <td className="px-4 py-2">{rate.concatenate}</td>
                 <td className="px-4 py-2">{rate.finalRate || "-"}</td>
                 <td className="px-4 py-2">{rate.percentage || "-"}</td>
-                <td className="px-4 py-2">
-                  <button
-                    onClick={() => onEdit(rate)}
-                    className="text-yellow-600 hover:underline mr-4"
-                  >
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => onDelete(rate.id)}
-                    className="text-red-600 hover:underline"
-                  >
-                    Delete
-                  </button>
-                </td>
+                
+                {/* Only render Actions cell if user has edit access */}
+                {hasEditAccess && (
+                  <td className="px-4 py-2">
+                    <button
+                      onClick={() => onEdit(rate)}
+                      className="text-yellow-600 hover:underline mr-4"
+                    >
+                      Edit
+                    </button>
+                    <button
+                      onClick={() => onDelete(rate.id)}
+                      className="text-red-600 hover:underline"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                )}
               </tr>
             ))}
           </tbody>

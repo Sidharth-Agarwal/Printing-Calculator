@@ -5,6 +5,7 @@ import AddStandardRateForm from "./AddStandardRateForm";
 import DisplayStandardRateTable from "./DisplayStandardRateTable";
 import DeleteConfirmationModal from "../DeleteConfirmationModal";
 import ConfirmationModal from "../ConfirmationModal";
+import { useAuth } from "../../Login/AuthContext";
 
 const StandardRateManagement = () => {
   const [rates, setRates] = useState([]);
@@ -20,6 +21,12 @@ const StandardRateManagement = () => {
     status: "success"
   });
 
+  // Get the user role from auth context
+  const { userRole } = useAuth();
+  
+  // Check if user has admin privileges
+  const isAdmin = userRole === "admin";
+
   useEffect(() => {
     const ratesCollection = collection(db, "standard_rates");
     const unsubscribe = onSnapshot(ratesCollection, (snapshot) => {
@@ -34,6 +41,9 @@ const StandardRateManagement = () => {
   }, []);
 
   const addRate = async (rateData) => {
+    // Return early if user is not admin
+    if (!isAdmin) return;
+
     try {
       // Validate that at least one of finalRate or percentage is provided
       if (!rateData.finalRate && !rateData.percentage) {
@@ -71,6 +81,9 @@ const StandardRateManagement = () => {
   };
 
   const updateRate = async (id, updatedData) => {
+    // Return early if user is not admin
+    if (!isAdmin) return;
+
     try {
       // Validate that at least one of finalRate or percentage is provided
       if (!updatedData.finalRate && !updatedData.percentage) {
@@ -105,6 +118,9 @@ const StandardRateManagement = () => {
   };
 
   const confirmDelete = (id) => {
+    // Return early if user is not admin
+    if (!isAdmin) return;
+
     setDeleteConfirmation({
       isOpen: true,
       itemId: id
@@ -128,6 +144,9 @@ const StandardRateManagement = () => {
   };
 
   const handleDeleteConfirm = async () => {
+    // Return early if user is not admin
+    if (!isAdmin) return;
+
     try {
       await deleteDoc(doc(db, "standard_rates", deleteConfirmation.itemId));
       closeDeleteModal();
@@ -154,30 +173,42 @@ const StandardRateManagement = () => {
   return (
     <div>
       <h1 className="text-xl font-bold mb-4">Standard Rate Management</h1>
-      <AddStandardRateForm
-        onSubmit={addRate}
-        selectedRate={selectedRate}
-        onUpdate={updateRate}
-        setSelectedRate={setSelectedRate}
-      />
+      
+      {/* Only show the form if user is admin */}
+      {isAdmin && (
+        <AddStandardRateForm
+          onSubmit={addRate}
+          selectedRate={selectedRate}
+          onUpdate={updateRate}
+          setSelectedRate={setSelectedRate}
+        />
+      )}
+      
+      {/* Display table for all users, but pass edit/delete handlers only for admin */}
       <DisplayStandardRateTable
         rates={rates}
-        onDelete={confirmDelete}
-        onEdit={(rate) => setSelectedRate(rate)}
+        onDelete={isAdmin ? confirmDelete : null}
+        onEdit={isAdmin ? (rate) => setSelectedRate(rate) : null}
       />
-      <DeleteConfirmationModal
-        isOpen={deleteConfirmation.isOpen}
-        onClose={closeDeleteModal}
-        onConfirm={handleDeleteConfirm}
-        itemName="rate"
-      />
-      <ConfirmationModal
-        isOpen={notification.isOpen}
-        onClose={closeNotification}
-        message={notification.message}
-        title={notification.title}
-        status={notification.status}
-      />
+      
+      {/* Only render modals if user is admin */}
+      {isAdmin && (
+        <>
+          <DeleteConfirmationModal
+            isOpen={deleteConfirmation.isOpen}
+            onClose={closeDeleteModal}
+            onConfirm={handleDeleteConfirm}
+            itemName="rate"
+          />
+          <ConfirmationModal
+            isOpen={notification.isOpen}
+            onClose={closeNotification}
+            message={notification.message}
+            title={notification.title}
+            status={notification.status}
+          />
+        </>
+      )}
     </div>
   );
 };

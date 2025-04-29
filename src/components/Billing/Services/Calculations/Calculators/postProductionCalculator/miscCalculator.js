@@ -14,21 +14,34 @@ export const calculateMiscCosts = async (state) => {
       return { miscCostPerCard: "0.00" };
     }
 
-    // Fetch Misc value from overheads
-    const miscOverhead = await fetchOverheadValue("MISCELLANEOUS");
+    // First, check if there's a user-defined value in the state
+    let miscCostPerCard;
     
-    // Use the value from DB or default if not found
-    const miscCostPerCard = miscOverhead && miscOverhead.value
-      ? parseFloat(miscOverhead.value)
-      : 5.0; // Default to 5.0 if not found
+    if (misc.miscCharge && !isNaN(parseFloat(misc.miscCharge))) {
+      // Use the user-defined value from the UI
+      miscCostPerCard = parseFloat(misc.miscCharge);
+      console.log("Using user-defined misc charge:", miscCostPerCard);
+    } else {
+      // Fetch Misc value from overheads as fallback
+      const miscOverhead = await fetchOverheadValue("MISCELLANEOUS");
+      
+      // Use the value from DB or default if not found
+      miscCostPerCard = miscOverhead && miscOverhead.value
+        ? parseFloat(miscOverhead.value)
+        : 5.0; // Default to 5.0 if not found
+      
+      console.log("Using DB misc charge:", miscCostPerCard);
+    }
     
     console.log("Misc calculation:", {
       isMiscUsed: misc.isMiscUsed,
+      userDefined: !!misc.miscCharge,
       miscCostPerCard
     });
     
     return {
-      miscCostPerCard: miscCostPerCard.toFixed(2)
+      miscCostPerCard: miscCostPerCard.toFixed(2),
+      miscChargeSource: misc.miscCharge ? "user" : "database"
     };
   } catch (error) {
     console.error("Error calculating Misc costs:", error);
