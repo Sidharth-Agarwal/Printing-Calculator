@@ -3,11 +3,23 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where
 import { db, storage } from "../../../firebaseConfig";
 import AddDieForm from "./AddDieForm";
 import DisplayDieTable from "./DisplayDieTable";
+import DeleteConfirmationModal from "../DeleteConfirmationModal";
+import ConfirmationModal from "../ConfirmationModal";
 
 const DieManagement = () => {
   const [dies, setDies] = useState([]);
   const [editingDie, setEditingDie] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    itemId: null
+  });
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    message: "",
+    title: "",
+    status: "success"
+  });
 
   useEffect(() => {
     const diesCollection = collection(db, "dies");
@@ -61,7 +73,14 @@ const DieManagement = () => {
       
       const diesCollection = collection(db, "dies");
       await addDoc(diesCollection, { ...dieData, timestamp: new Date() });
-      alert("Die added successfully!");
+      
+      setNotification({
+        isOpen: true,
+        message: "Die added successfully!",
+        title: "Success",
+        status: "success"
+      });
+      
       return true;
     } catch (error) {
       console.error("Error adding die:", error);
@@ -97,7 +116,14 @@ const DieManagement = () => {
       const { price, ...dieData } = updatedData;
       
       await updateDoc(dieRef, dieData);
-      alert("Die updated successfully!");
+      
+      setNotification({
+        isOpen: true,
+        message: "Die updated successfully!",
+        title: "Success",
+        status: "success"
+      });
+      
       return true;
     } catch (error) {
       console.error("Error updating die:", error);
@@ -107,17 +133,50 @@ const DieManagement = () => {
     }
   };
 
-  const deleteDie = async (id) => {
-    if (!confirm("Are you sure you want to delete this die?")) {
-      return;
-    }
-    
+  const confirmDelete = (id) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      itemId: id
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      itemId: null
+    });
+  };
+
+  const closeNotification = () => {
+    setNotification({
+      isOpen: false,
+      message: "",
+      title: "",
+      status: "success"
+    });
+  };
+
+  const handleDeleteConfirm = async () => {
     try {
-      await deleteDoc(doc(db, "dies", id));
-      alert("Die deleted successfully!");
+      await deleteDoc(doc(db, "dies", deleteConfirmation.itemId));
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Die deleted successfully!",
+        title: "Success",
+        status: "success"
+      });
     } catch (error) {
       console.error("Error deleting die:", error);
-      alert("Error deleting die.");
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Error deleting die. Please try again.",
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
@@ -143,7 +202,20 @@ const DieManagement = () => {
       <DisplayDieTable
         dies={dies}
         onEditDie={setEditingDie}
-        onDeleteDie={deleteDie}
+        onDeleteDie={confirmDelete}
+      />
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteConfirm}
+        itemName="die"
+      />
+      <ConfirmationModal
+        isOpen={notification.isOpen}
+        onClose={closeNotification}
+        message={notification.message}
+        title={notification.title}
+        status={notification.status}
       />
     </div>
   );
