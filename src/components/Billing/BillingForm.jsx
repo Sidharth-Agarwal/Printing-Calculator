@@ -4,7 +4,7 @@ import { collection, addDoc, query, where, getDocs, doc, getDoc } from "firebase
 import { db } from "../../firebaseConfig";
 import { performCompleteCalculations, recalculateTotals } from "./Services/Calculations/calculationsService";
 import { ChevronDown, ChevronUp } from 'lucide-react';
-import { useAuth } from "../Login/AuthContext"; // Added import for auth context
+import { useAuth } from "../Login/AuthContext";
 
 // Import components
 import ClientSelection from "./Sections/Fixed/ClientSelection";
@@ -25,6 +25,7 @@ import Packing from "./Sections/Post Production/Packing";
 import Sandwich from "./Sections/Post Production/Sandwich";
 import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
+import SuccessNotification from "./SuccessNotification"; // Import the success notification component
 
 // Import service and job type configurations
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
@@ -109,7 +110,8 @@ const initialFormState = {
     isPackingUsed: false,
   },
   misc: {
-    isMiscUsed: false
+    isMiscUsed: false,
+    miscCharge: "" // Add this new field to store the editable value
   },
   sandwich: {
     isSandwichComponentUsed: false,
@@ -180,7 +182,6 @@ const reducer = (state, action) => {
   }
 };
 
-// Map state to Firebase structure with sanitization for undefined values
 // Map state to Firebase structure with sanitization for undefined values
 const mapStateToFirebaseStructure = (state, calculations) => {
   const { 
@@ -352,6 +353,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [selectedMarkupType, setSelectedMarkupType] = useState("MARKUP TIMELESS");
   const [markupPercentage, setMarkupPercentage] = useState(50);
   
+  // Success notification state
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  
   // Define visible services based on the selected job type
   const [visibleProductionServices, setVisibleProductionServices] = useState([]);
   const [visiblePostProductionServices, setVisiblePostProductionServices] = useState([]);
@@ -362,6 +366,36 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [linkedClientData, setLinkedClientData] = useState(null);
 
   const formRef = useRef(null);
+  
+  // Add CSS for success notification animations
+  useEffect(() => {
+    const style = document.createElement('style');
+    style.innerHTML = `
+      @keyframes fade-in {
+        0% { opacity: 0; transform: translateY(-20px); }
+        100% { opacity: 1; transform: translateY(0); }
+      }
+      
+      @keyframes success-check {
+        0% { transform: scale(0.5); opacity: 0; }
+        50% { transform: scale(1.2); opacity: 1; }
+        100% { transform: scale(1); opacity: 1; }
+      }
+      
+      .animate-fade-in {
+        animation: fade-in 0.5s ease forwards;
+      }
+      
+      .animate-success-check {
+        animation: success-check 0.6s ease-in-out forwards;
+      }
+    `;
+    document.head.appendChild(style);
+    
+    return () => {
+      document.head.removeChild(style);
+    };
+  }, []);
   
   // Add useEffect to fetch B2B client data when component mounts
   useEffect(() => {
@@ -568,17 +602,27 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     await recalculateWithMarkup(markupType, markupPercentage);
   };
 
+  // Function to close success notification
+  const closeSuccessNotification = () => {
+    setShowSuccessNotification(false);
+  };
+
   // Function to recalculate totals when markup changes
   const recalculateWithMarkup = async (markupType, markupPercentage) => {
     console.log("Recalculating with new markup:", markupType, markupPercentage);
     setIsCalculating(true);
     try {
+      // Get the misc charge from the form state if available and misc is enabled
+      const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
+        ? parseFloat(state.misc.miscCharge) 
+        : null; // Pass null to let the calculator fetch from DB
+      
       // Use the recalculateTotals function from calculationsService if we already have base calculations
       if (calculations && !calculations.error) {
         // Call recalculateTotals with the existing calculations, updated markup info, and quantity
         const result = await recalculateTotals(
           calculations,
-          parseFloat(calculations.miscCostPerCard || 5), // Use existing misc charge or default
+          miscCharge, // Use the custom misc charge if available
           markupPercentage,
           parseInt(state.orderAndPaper?.quantity, 10) || 0,
           markupType
@@ -594,7 +638,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         // If we don't have base calculations yet, perform a complete calculation
         const result = await performCompleteCalculations(
           state,
-          5, // default misc charge
+          miscCharge, // Use the custom misc charge if available
           markupPercentage,
           markupType
         );
@@ -625,10 +669,15 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     setIsCalculating(true);
     try {
-      // Pass the current markup values to the calculation service
+      // Get the misc charge from the form state if available and misc is enabled
+      const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
+        ? parseFloat(state.misc.miscCharge) 
+        : null; // Pass null to let the calculator fetch from DB
+      
+      // Pass the current markup values and misc charge to the calculation service
       const result = await performCompleteCalculations(
         state,
-        5, // default misc charge
+        miscCharge, // Use the custom misc charge if available
         markupPercentage,
         selectedMarkupType
       );
@@ -640,7 +689,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         console.log("Calculation results with markup:", {
           markupType: result.markupType,
           markupPercentage: result.markupPercentage,
-          markupAmount: result.markupAmount
+          markupAmount: result.markupAmount,
+          miscCharge: miscCharge ? `Custom: ${miscCharge}` : "From DB"
         });
         
         setCalculations(result);
@@ -727,12 +777,18 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       } else {
         await addDoc(collection(db, "estimates"), formattedData);
         
-        alert("Estimate created successfully!");
-        dispatch({ type: "RESET_FORM" });
-        setSelectedClient(null);
-        setSelectedVersion("");
-        // Navigate to estimates page
-        navigate('/material-stock/estimates-db');
+        // Show success notification instead of alert
+        setShowSuccessNotification(true);
+        
+        // Reset form after a brief delay to allow user to see the success notification
+        setTimeout(() => {
+          dispatch({ type: "RESET_FORM" });
+          setSelectedClient(null);
+          setSelectedVersion("");
+          
+          // Navigate to estimates page after notification disappears
+          navigate('/material-stock/estimates-db');
+        }, 2000);
       }
     } catch (error) {
       console.error("Error handling estimate:", error);
@@ -1113,7 +1169,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     dispatch({
       type: "UPDATE_MISC",
       payload: { 
-        isMiscUsed: !isCurrentlyUsed
+        isMiscUsed: !isCurrentlyUsed,
+        miscCharge: "" // Initialize as empty string to allow fetching from DB
       }
     });
     
@@ -1225,6 +1282,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </button>
           </div>
         </div>
+
+        {/* Success Notification Component */}
+        <SuccessNotification
+          message="Estimate Created!"
+          isVisible={showSuccessNotification}
+          onClose={closeSuccessNotification}
+          duration={2000}
+        />
 
         {/* Reset Confirmation Modal */}
         {showResetConfirmation && (

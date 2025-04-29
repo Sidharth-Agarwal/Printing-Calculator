@@ -27,8 +27,11 @@ const OrdersPage = () => {
   const [orderForAssignment, setOrderForAssignment] = useState(null);
   const [staffNames, setStaffNames] = useState({});
 
-  // Check if user can edit stages (only admin can)
-  const canEditStages = userRole === "admin";
+  // Check if user can edit stages (admin, staff, and production can)
+  const canEditStages = userRole === "admin" || userRole === "staff" || userRole === "production";
+  
+  // Check if user can assign production staff (only admin and staff can)
+  const canAssignProduction = userRole === "admin" || userRole === "staff";
 
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
 
@@ -227,7 +230,7 @@ const OrdersPage = () => {
   }, [searchQuery, orders, sortBy, stageFilter, viewMode]);
 
   const handleStageUpdateRequest = (orderId, currentStage, newStage) => {
-    // Only admin can update stages
+    // Allow admin, staff and production to update stages
     if (!canEditStages) return;
     
     setPendingStageUpdate({ orderId, currentStage, newStage });
@@ -264,7 +267,8 @@ const OrdersPage = () => {
 
   // Handle opening the assignment modal
   const handleOpenAssignmentModal = (order) => {
-    if (!canEditStages) return;
+    // Only admin and staff can assign production
+    if (!canAssignProduction) return;
     setOrderForAssignment(order);
     setIsAssignmentModalOpen(true);
   };
@@ -281,27 +285,19 @@ const OrdersPage = () => {
     );
   };
 
-  // Display assignment badge
-  const getAssignmentBadge = (productionAssignments) => {
-    if (!productionAssignments || !productionAssignments.assigned) return null;
+  // Get assigned staff name
+  const getAssignedStaffName = (productionAssignments) => {
+    if (!productionAssignments || !productionAssignments.assigned) {
+      return 'Not Assigned';
+    }
     
     const staffId = productionAssignments.assigned;
-    if (!staffId) return null;
-    
-    // Get the staff name
-    const staffName = staffNames[staffId] || 'Assigned';
-    
-    return (
-      <span className="ml-2 px-2 py-0.5 text-xs rounded-full bg-teal-100 text-teal-800">
-        {staffName}
-      </span>
-    );
+    return staffNames[staffId] || 'Unknown';
   };
 
   const StatusCircle = ({ stage, currentStage, orderId }) => {
-    // Modified to only allow admin users to edit stages
-    // All other roles (B2B, staff, production) can only view stages
-    if (!canEditStages) {
+    // B2B clients can only view stages - all other users can edit
+    if (isB2BClient) {
       const currentStageOrder = stages.indexOf(currentStage || 'Not started yet');
       const thisStageOrder = stages.indexOf(stage);
       const isCompleted = currentStageOrder > thisStageOrder || currentStage === stage;
@@ -324,7 +320,7 @@ const OrdersPage = () => {
       );
     }
     
-    // Admin functionality remains the same
+    // Admin, staff, and production users can edit stages
     const currentStageOrder = stages.indexOf(currentStage || 'Not started yet');
     const thisStageOrder = stages.indexOf(stage);
     const isCompleted = currentStageOrder > thisStageOrder || currentStage === stage;
@@ -510,6 +506,10 @@ const OrdersPage = () => {
                 <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
                   Delivery
                 </th>
+                {/* Assigned production staff column */}
+                <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
+                  Assigned To
+                </th>
                 <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
                   Status
                 </th>
@@ -518,7 +518,7 @@ const OrdersPage = () => {
                     {stage.split(' ')[0]}
                   </th>
                 ))}
-                {canEditStages && (
+                {canAssignProduction && (
                   <th className="px-3 py-2 text-center font-medium text-gray-500 whitespace-nowrap">
                     Actions
                   </th>
@@ -540,10 +540,7 @@ const OrdersPage = () => {
                     </td>
                   )}
                   <td className="px-3 py-2">
-                    <div className="flex items-center">
-                      <span>{order.projectName || 'Unnamed Project'}</span>
-                      {getAssignmentBadge(order.productionAssignments)}
-                    </div>
+                    <span>{order.projectName || 'Unnamed Project'}</span>
                   </td>
                   <td className="px-3 py-2">
                     {order.jobDetails?.jobType || 'N/A'}
@@ -553,6 +550,12 @@ const OrdersPage = () => {
                   </td>
                   <td className="px-3 py-2">
                     {formatDate(order.deliveryDate)}
+                  </td>
+                  {/* Assigned production staff cell */}
+                  <td className="px-3 py-2">
+                    <span className={`${order.productionAssignments?.assigned ? 'text-teal-600 font-medium' : 'text-gray-500 italic'}`}>
+                      {getAssignedStaffName(order.productionAssignments)}
+                    </span>
                   </td>
                   <td className="px-3 py-2">
                     <span className={`px-2 py-0.5 text-xs rounded-full text-white inline-block
@@ -570,7 +573,7 @@ const OrdersPage = () => {
                       />
                     </td>
                   ))}
-                  {canEditStages && (
+                  {canAssignProduction && (
                     <td className="px-3 py-2 text-center">
                       <button
                         onClick={(e) => {
@@ -617,7 +620,7 @@ const OrdersPage = () => {
         )}
       </div>
 
-      {/* Confirmation Dialog - Only shown to admin users */}
+      {/* Confirmation Dialog - Shown to admin, staff, and production users */}
       {canEditStages && showConfirmation && pendingStageUpdate && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-4 max-w-md">
@@ -653,7 +656,7 @@ const OrdersPage = () => {
           order={selectedOrder}
           onClose={() => setSelectedOrder(null)}
           onStageUpdate={(newStage) => {
-            // Only allow stage updates from the modal if user is admin
+            // Allow admin, staff, and production to update stages
             if (canEditStages) {
               handleStageUpdateRequest(selectedOrder.id, selectedOrder.stage, newStage);
             }
@@ -662,8 +665,8 @@ const OrdersPage = () => {
         />
       )}
 
-      {/* Production Assignment Modal - Only for admin */}
-      {canEditStages && isAssignmentModalOpen && orderForAssignment && (
+      {/* Production Assignment Modal - Only for admin and staff */}
+      {canAssignProduction && isAssignmentModalOpen && orderForAssignment && (
         <ProductionAssignmentModal
           order={orderForAssignment}
           onClose={() => {
