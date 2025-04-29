@@ -520,6 +520,16 @@ const ReviewAndSubmit = ({
           {hasMisc && localCalculations.miscCostPerCard && (
             <div className="space-y-1 border-b pb-2 mb-2">
               <CostItem label="Miscellaneous" value={localCalculations.miscCostPerCard} isTotal />
+              {localCalculations.miscChargeSource === "user" && (
+                <div className="pl-6 text-sm text-blue-600">
+                  Custom charge
+                </div>
+              )}
+              {localCalculations.miscChargeSource === "database" && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Standard charge
+                </div>
+              )}
             </div>
           )}
           
