@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where, getDocs } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where, getDocs, getDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import AddLoyaltyTierForm from "./AddLoyaltyTierForm";
 import DisplayLoyaltyTierTable from "./DisplayLoyaltyTierTable";
@@ -32,11 +32,14 @@ const LoyaltyTierManagement = () => {
 
     const loyaltyTiersCollection = collection(db, "loyaltyTiers");
     const unsubscribe = onSnapshot(loyaltyTiersCollection, (snapshot) => {
-      const tiersData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        dbId: doc.id, // Store Firestore document ID separately
-        ...doc.data(),
-      }));
+      const tiersData = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return {
+          ...data,
+          dbId: doc.id // Store Firestore document ID
+        };
+      });
+      
       setLoyaltyTiers(tiersData);
     });
 
@@ -44,31 +47,14 @@ const LoyaltyTierManagement = () => {
   }, [isAdmin]);
 
   // Check if tier ID is unique
-  const isTierIdUnique = async (tierId, currentDocId = null) => {
+  const isTierIdUnique = async (tierId) => {
     try {
       const tiersCollection = collection(db, "loyaltyTiers");
       const q = query(tiersCollection, where("id", "==", tierId));
       const querySnapshot = await getDocs(q);
       
       // If no matches found, the ID is unique
-      if (querySnapshot.empty) return true;
-      
-      // If we're updating an existing tier, we need to check if the only match
-      // is the current document we're updating
-      if (currentDocId) {
-        // Check each matching document to see if it's the one we're currently updating
-        for (const doc of querySnapshot.docs) {
-          // If this is not our current document, then the ID is used by another tier
-          if (doc.id !== currentDocId) {
-            return false;
-          }
-        }
-        // If we got here, all matches were our current document, so the ID is effectively unique
-        return true;
-      }
-      
-      // If we're adding a new tier, any match means the ID is not unique
-      return false;
+      return querySnapshot.empty;
     } catch (error) {
       console.error("Error checking tier ID uniqueness:", error);
       return false;
@@ -114,7 +100,7 @@ const LoyaltyTierManagement = () => {
       
       setNotification({
         isOpen: true,
-        message: "Error adding loyalty tier. Please try again.",
+        message: `Error adding loyalty tier: ${error.message}`,
         title: "Error",
         status: "error"
       });
@@ -130,12 +116,43 @@ const LoyaltyTierManagement = () => {
     setIsSubmitting(true);
     
     try {
-      // Only check for uniqueness if the ID has changed from the original
-      const originalTier = loyaltyTiers.find(tier => tier.dbId === dbId);
-      const idHasChanged = originalTier && originalTier.id !== updatedData.id;
+      console.log("Updating tier with dbId:", dbId);
+      console.log("Updated data:", updatedData);
       
-      // Check if updated tier ID is unique only if the ID has changed
-      if (idHasChanged) {
+      // Make sure we're using a valid document ID
+      if (!dbId) {
+        console.error("No document ID provided for update operation");
+        setNotification({
+          isOpen: true,
+          message: "Error: Missing document ID for update operation.",
+          title: "Error",
+          status: "error"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      // First, get the current tier data
+      const tierRef = doc(db, "loyaltyTiers", dbId);
+      const tierSnap = await getDoc(tierRef);
+      
+      if (!tierSnap.exists()) {
+        console.error(`Document with ID ${dbId} not found in Firestore`);
+        setNotification({
+          isOpen: true,
+          message: "Error: Loyalty tier not found in database.",
+          title: "Error",
+          status: "error"
+        });
+        setIsSubmitting(false);
+        return;
+      }
+      
+      const currentData = tierSnap.data();
+      console.log("Current data from Firestore:", currentData);
+      
+      // Only check for uniqueness if the tier ID has changed
+      if (currentData.id !== updatedData.id) {
         const isUnique = await isTierIdUnique(updatedData.id);
         
         if (!isUnique) {
@@ -150,9 +167,14 @@ const LoyaltyTierManagement = () => {
         }
       }
       
-      const tierRef = doc(db, "loyaltyTiers", dbId);
+      // Create a clean version of the update data without the dbId field
+      // as dbId is not a field in the Firestore document
+      const { dbId: _, ...cleanUpdateData } = updatedData;
+      
+      console.log("Sending update with clean data:", cleanUpdateData);
+      
       await updateDoc(tierRef, {
-        ...updatedData,
+        ...cleanUpdateData,
         updatedAt: new Date()
       });
       
@@ -170,7 +192,7 @@ const LoyaltyTierManagement = () => {
       
       setNotification({
         isOpen: true,
-        message: "Error updating loyalty tier. Please try again.",
+        message: `Error updating loyalty tier: ${error.message}`,
         title: "Error",
         status: "error"
       });
@@ -225,7 +247,7 @@ const LoyaltyTierManagement = () => {
       
       setNotification({
         isOpen: true,
-        message: "Error deleting loyalty tier. Please try again.",
+        message: `Error deleting loyalty tier: ${error.message}`,
         title: "Error",
         status: "error"
       });
@@ -249,19 +271,47 @@ const LoyaltyTierManagement = () => {
       <AddLoyaltyTierForm
         onSubmit={addLoyaltyTier}
         selectedTier={selectedTier}
-        onUpdate={updateLoyaltyTier}
+        onUpdate={(id, data) => {
+          // Ensure we're using the document ID (dbId) for the update operation
+          const docId = selectedTier?.dbId || id;
+          console.log("Updating tier with document ID:", docId);
+          updateLoyaltyTier(docId, data);
+        }}
         setSelectedTier={setSelectedTier}
       />
       
       <DisplayLoyaltyTierTable
         tiers={loyaltyTiers}
         onDelete={(id) => {
-          const tier = loyaltyTiers.find(t => t.dbId === id);
+          // First try to find the tier by dbId
+          let tier = loyaltyTiers.find(t => t.dbId === id);
+          
+          // If not found, try by the tier's logical id
+          if (!tier) {
+            tier = loyaltyTiers.find(t => t.id === id);
+          }
+          
           if (tier) {
+            console.log("Deleting tier with document ID:", tier.dbId);
             confirmDelete(tier.dbId);
+          } else {
+            console.error("Could not find tier with ID:", id);
           }
         }}
-        onEdit={(tier) => setSelectedTier(tier)}
+        onEdit={(tier) => {
+          console.log("Editing tier:", tier);
+          if (tier && tier.dbId) {
+            setSelectedTier(tier);
+          } else {
+            console.error("Tier is missing document ID (dbId):", tier);
+            setNotification({
+              isOpen: true,
+              message: "Error: Cannot edit tier - missing document reference.",
+              title: "Error",
+              status: "error"
+            });
+          }
+        }}
       />
       
       <DeleteConfirmationModal
