@@ -6,6 +6,7 @@ import MaterialManagement from "./components/Management/Materials/MaterialManage
 import DieManagement from "./components/Management/Dies/DieManagement"
 import StandardRateManagement from "./components/Management/StandardRates/StandardRateManagement"
 import OverheadManagement from "./components/Management/Overheads/OverheadManagement"
+import LoyaltyTierManagement from "./components/Management/LoyaltyTierManagement/LoyaltyTierManagement"
 import ClientManagement from "./components/Clients/ClientManagement";
 import Header from "./components/Header";
 import Login from "./components/Login/login";
@@ -160,6 +161,16 @@ function App() {
               element={
                 <ProtectedRoute>
                   <OverheadManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
+            {/* Add new route for loyalty tier management */}
+            <Route 
+              path="/material-stock/loyalty-tiers" 
+              element={
+                <ProtectedRoute>
+                  <LoyaltyTierManagement />
                 </ProtectedRoute>
               } 
             />

@@ -184,6 +184,18 @@ const Header = () => {
                 >
                   Overheads Management
                 </button>
+                
+                {/* Add Loyalty Program Management menu item */}
+                {isMenuItemVisible('loyaltyProgram') && (
+                  <button
+                    onClick={() => navigateToNewTab('/material-stock/loyalty-tiers')}
+                    className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
+                      isActive('/material-stock/loyalty-tiers') ? "bg-gray-200 font-semibold" : ""
+                    }`}
+                  >
+                    Loyalty Program Management
+                  </button>
+                )}
               </div>
             </div>
           )}
