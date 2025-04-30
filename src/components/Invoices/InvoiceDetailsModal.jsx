@@ -8,7 +8,7 @@ import InvoiceTemplate from './InvoiceTemplate';
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext"; // Added Auth context import
 
-const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
+const InvoiceDetailsModal = ({ order, onClose, onStageUpdate }) => {
   const [activeView, setActiveView] = useState('details');
   const [isDownloading, setIsDownloading] = useState(false);
   const [isUpdatingStage, setIsUpdatingStage] = useState(false);
@@ -922,4 +922,4 @@ const OrderDetailsModal = ({ order, onClose, onStageUpdate }) => {
   );
 };
 
-export default OrderDetailsModal;
+export default InvoiceDetailsModal;

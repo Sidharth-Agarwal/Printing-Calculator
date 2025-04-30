@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { collection, doc, updateDoc, onSnapshot, addDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import OrderDetailsModal from './OrderDetailsModal';
-import ClientOrderGroup from './ClientOrderGroup';
+import InvoiceDetailsModal from './InvoiceDetailsModal'
+import ClientInvoiceGroup from './ClientInvoiceGroup';
 import NewInvoiceModal from './NewInvoiceModal';
-import { useAuth } from "../Login/AuthContext"; // Add auth context
+import { useAuth } from "../Login/AuthContext";
 
 const InvoicesPage = () => {
   const { userRole, currentUser } = useAuth(); // Get user role and current user
@@ -481,7 +481,7 @@ const InvoicesPage = () => {
         <div className="space-y-3">
           {/* List of client groups */}
           {Object.values(clientGroups).map((client) => (
-            <ClientOrderGroup
+            <ClientInvoiceGroup
               key={client.id}
               client={client}
               isExpanded={expandedClientId === client.id}
@@ -499,7 +499,7 @@ const InvoicesPage = () => {
 
       {/* Order Details Modal */}
       {isOrderDetailsModalOpen && selectedOrder && (
-        <OrderDetailsModal
+        <InvoiceDetailsModal
           order={selectedOrder}
           onClose={() => {
             setIsOrderDetailsModalOpen(false);
