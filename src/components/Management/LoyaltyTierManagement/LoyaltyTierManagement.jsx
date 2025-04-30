@@ -44,19 +44,30 @@ const LoyaltyTierManagement = () => {
   }, [isAdmin]);
 
   // Check if tier ID is unique
-  const isTierIdUnique = async (tierId, excludeDocId = null) => {
+  const isTierIdUnique = async (tierId, currentDocId = null) => {
     try {
       const tiersCollection = collection(db, "loyaltyTiers");
       const q = query(tiersCollection, where("id", "==", tierId));
       const querySnapshot = await getDocs(q);
       
+      // If no matches found, the ID is unique
       if (querySnapshot.empty) return true;
       
-      // If we're updating an existing tier, check if the only match is the current document
-      if (excludeDocId) {
-        return querySnapshot.docs.length === 1 && querySnapshot.docs[0].id === excludeDocId;
+      // If we're updating an existing tier, we need to check if the only match
+      // is the current document we're updating
+      if (currentDocId) {
+        // Check each matching document to see if it's the one we're currently updating
+        for (const doc of querySnapshot.docs) {
+          // If this is not our current document, then the ID is used by another tier
+          if (doc.id !== currentDocId) {
+            return false;
+          }
+        }
+        // If we got here, all matches were our current document, so the ID is effectively unique
+        return true;
       }
       
+      // If we're adding a new tier, any match means the ID is not unique
       return false;
     } catch (error) {
       console.error("Error checking tier ID uniqueness:", error);
@@ -81,6 +92,7 @@ const LoyaltyTierManagement = () => {
           title: "Error",
           status: "error"
         });
+        setIsSubmitting(false);
         return;
       }
       
@@ -118,17 +130,24 @@ const LoyaltyTierManagement = () => {
     setIsSubmitting(true);
     
     try {
-      // Check if updated tier ID is unique (excluding the current document)
-      const isUnique = await isTierIdUnique(updatedData.id, dbId);
+      // Only check for uniqueness if the ID has changed from the original
+      const originalTier = loyaltyTiers.find(tier => tier.dbId === dbId);
+      const idHasChanged = originalTier && originalTier.id !== updatedData.id;
       
-      if (!isUnique) {
-        setNotification({
-          isOpen: true,
-          message: `Tier ID "${updatedData.id}" already exists. Please use a unique ID.`,
-          title: "Error",
-          status: "error"
-        });
-        return;
+      // Check if updated tier ID is unique only if the ID has changed
+      if (idHasChanged) {
+        const isUnique = await isTierIdUnique(updatedData.id);
+        
+        if (!isUnique) {
+          setNotification({
+            isOpen: true,
+            message: `Tier ID "${updatedData.id}" already exists. Please use a unique ID.`,
+            title: "Error",
+            status: "error"
+          });
+          setIsSubmitting(false);
+          return;
+        }
       }
       
       const tierRef = doc(db, "loyaltyTiers", dbId);
@@ -143,6 +162,9 @@ const LoyaltyTierManagement = () => {
         title: "Success",
         status: "success"
       });
+      
+      // Clear selected tier after successful update
+      setSelectedTier(null);
     } catch (error) {
       console.error("Error updating loyalty tier:", error);
       
