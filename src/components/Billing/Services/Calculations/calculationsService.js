@@ -17,8 +17,12 @@ import {
   calculateMarkup,
   calculateGST,
   calculateSandwichCosts,
-  calculateMagnetCosts       // New calculator
+  calculateMagnetCosts,       // New calculator
+  calculateNotebookCosts      // New notebook calculator
 } from './Calculators';
+
+// Import loyalty service functions
+import { getClientCurrentTier, applyLoyaltyDiscount } from '../../../../utils/LoyaltyService';
 
 /**
  * Performs all necessary calculations based on the form state
@@ -43,6 +47,22 @@ export const performCalculations = async (state) => {
     
     // Add paper results to the total results
     Object.assign(results, paperResults);
+
+    // Add paper calculations to state for notebook calculator to use
+    const stateWithPaperCalcs = {
+      ...state,
+      paperCalculations: paperResults
+    };
+
+    // Check if this is a notebook job type and notebook details are used
+    if (state.orderAndPaper.jobType === "Notebook" && state.notebookDetails?.isNotebookUsed) {
+      const notebookResults = await calculateNotebookCosts(stateWithPaperCalcs);
+      if (notebookResults.error) {
+        console.warn("Notebook calculation error:", notebookResults.error);
+      } else {
+        Object.assign(results, notebookResults);
+      }
+    }
 
     // Production services calculations
     if (state.lpDetails?.isLPUsed) {
@@ -194,13 +214,9 @@ export const performCalculations = async (state) => {
  * 7. Add misc costs (if selected)
  * 8. Apply markup to get final cost
  * 9. Apply GST based on job type to get total with tax
- * 
- * @param {Object} state - The complete form state
- * @param {Number} miscChargePerCard - Miscellaneous charge per card (optional, will fetch from DB if null)
- * @param {Number} markupPercentage - Markup percentage to apply
- * @param {String} markupType - Markup type to apply
- * @returns {Promise<Object>} - Complete calculation results
- */
+ * 10. Apply loyalty discount if applicable (NEW)
+ **/
+
 export const performCompleteCalculations = async (
   state, 
   miscChargePerCard = null,
@@ -235,6 +251,7 @@ export const performCompleteCalculations = async (
       'embCostPerCard',
       'screenPrintCostPerCard',
       'digiCostPerCard',
+      'notebookCostPerCard', // New notebook cost field
     ];
     
     const postProductionFields = [
@@ -419,16 +436,8 @@ export const performCompleteCalculations = async (
     const gstAmount = parseFloat(gstResult.gstAmount);
     const totalWithGST = parseFloat(gstResult.totalWithGST);
     
-    console.log("Final cost calculation with GST:", {
-      totalCostPerCard,
-      quantity: state.orderAndPaper?.quantity,
-      totalCost,
-      gstAmount,
-      totalWithGST
-    });
-
-    // Return all calculations in one comprehensive object
-    const results = {
+    // 5. NEW: Apply loyalty discount if applicable
+    let finalCalculations = {
       // Original base calculations
       ...baseCalculations,
       
@@ -473,9 +482,28 @@ export const performCompleteCalculations = async (
       totalWithGST: gstResult.totalWithGST // Total for all cards including GST
     };
     
-    console.log("Complete calculation results:", results);
+    // Check for loyalty discount only if this is for an actual client (not just preview)
+    if (state.client?.clientId && state.isLoyaltyEligible) {
+      try {
+        // Try to fetch client's current loyalty tier
+        const clientTier = await getClientCurrentTier(state.client.clientId);
+        
+        // If client has a tier with a discount, apply it
+        if (clientTier && clientTier.discount > 0) {
+          console.log("Applying loyalty discount:", clientTier.discount + "%");
+          
+          // Apply loyalty discount to calculations
+          finalCalculations = applyLoyaltyDiscount(finalCalculations, clientTier);
+        }
+      } catch (loyaltyError) {
+        console.error("Error applying loyalty discount:", loyaltyError);
+        // Continue without loyalty discount
+      }
+    }
     
-    return results;
+    console.log("Complete calculation results:", finalCalculations);
+    
+    return finalCalculations;
   } catch (error) {
     console.error("Error in comprehensive calculations:", error);
     return { error: "Error calculating complete costs. Please try again." };
@@ -493,6 +521,7 @@ export const performCompleteCalculations = async (
  * @param {Number} quantity - Total quantity of cards
  * @param {String} markupType - Markup type
  * @param {String} jobType - Job type for GST calculations
+ * @param {Object} clientLoyaltyTier - Client's loyalty tier info (optional)
  * @returns {Promise<Object>} - Updated calculations with new totals
  */
 export const recalculateTotals = async (
@@ -501,7 +530,8 @@ export const recalculateTotals = async (
   markupPercentage, 
   quantity,
   markupType = "MARKUP TIMELESS",
-  jobType = "Card"
+  jobType = "Card",
+  clientLoyaltyTier = null
 ) => {
   try {
     // Define production and post-production cost fields
@@ -512,6 +542,7 @@ export const recalculateTotals = async (
       'embCostPerCard',
       'screenPrintCostPerCard',
       'digiCostPerCard',
+      'notebookCostPerCard', // New notebook cost field
     ];
     
     const postProductionFields = [
@@ -587,8 +618,8 @@ export const recalculateTotals = async (
     const gstAmount = parseFloat(gstResult.gstAmount);
     const totalWithGST = parseFloat(gstResult.totalWithGST);
     
-    // Return updated calculations
-    return {
+    // Prepare updated calculations
+    let updatedCalculations = {
       ...baseCalculations, // Preserve original base calculations
       
       productionCost: productionCost.toFixed(2),
@@ -630,6 +661,13 @@ export const recalculateTotals = async (
       totalCost: totalCost.toFixed(2),
       totalWithGST: gstResult.totalWithGST
     };
+    
+    // Apply loyalty discount if applicable
+    if (clientLoyaltyTier && clientLoyaltyTier.discount > 0) {
+      updatedCalculations = applyLoyaltyDiscount(updatedCalculations, clientLoyaltyTier);
+    }
+    
+    return updatedCalculations;
   } catch (error) {
     console.error("Error recalculating totals:", error);
     
@@ -666,7 +704,8 @@ export const recalculateTotals = async (
     const gstAmount = totalCost * (DEFAULT_GST_RATE / 100);
     const totalWithGST = totalCost + gstAmount;
     
-    return {
+    // Apply loyalty discount if applicable
+    let updatedCalculations = {
       ...baseCalculations, // Preserve original base calculations
       error: "Error recalculating with database values, using fallback calculations.",
       baseCost: baseCost.toFixed(2),
@@ -691,5 +730,28 @@ export const recalculateTotals = async (
       gstAmount: gstAmount.toFixed(2),
       totalWithGST: totalWithGST.toFixed(2)
     };
+    
+    // Apply loyalty discount if applicable
+    if (clientLoyaltyTier && clientLoyaltyTier.discount > 0) {
+      const discountPercent = clientLoyaltyTier.discount;
+      const discountAmount = totalCost * (discountPercent / 100);
+      const discountedTotal = totalCost - discountAmount;
+      const newGstAmount = discountedTotal * (DEFAULT_GST_RATE / 100);
+      const newTotalWithGST = discountedTotal + newGstAmount;
+      
+      updatedCalculations = {
+        ...updatedCalculations,
+        loyaltyTierId: clientLoyaltyTier.dbId,
+        loyaltyTierName: clientLoyaltyTier.name,
+        loyaltyDiscount: discountPercent,
+        loyaltyDiscountAmount: discountAmount.toFixed(2),
+        discountedTotalCost: discountedTotal.toFixed(2),
+        originalTotalCost: totalCost.toFixed(2),
+        gstAmount: newGstAmount.toFixed(2),
+        totalWithGST: newTotalWithGST.toFixed(2)
+      };
+    }
+    
+    return updatedCalculations;
   }
 };

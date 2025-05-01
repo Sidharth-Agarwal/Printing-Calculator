@@ -7,6 +7,7 @@ export { calculateFSCosts } from './productionCalculator/fsCalculator';
 export { calculateEMBCosts } from './productionCalculator/embCalculator';
 export { calculateScreenPrintCosts } from './productionCalculator/screenCalculator';
 export { calculateDigiDetailsCosts } from './productionCalculator/digiCalculator';
+export { calculateNotebookCosts } from './productionCalculator/notebookCalculator';
 
 // Post-production service calculators
 export { calculateDieCuttingCosts } from './postProductionCalculator/dieCuttingCalculator';

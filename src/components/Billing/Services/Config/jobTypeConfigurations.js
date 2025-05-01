@@ -35,13 +35,13 @@ export const jobTypeConfigurations = {
         defaultValues: { /* Packaging-specific defaults */ }
     },
     "Notebook": {
-        productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["DC", "QC", "PACKING", "MISC"],
+        productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN", "NOTEBOOK"],
+        postProductionServices: ["DC", "POST DC", "FOLD & PASTE", "DST PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
         defaultValues: { /* Notebook-specific defaults */ }
     },
     "Custom": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["DC", "POST DC", "FOLD & PASTE", "DST PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"], // Added MAGNET service
+        postProductionServices: ["DC", "POST DC", "FOLD & PASTE", "DST PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
         defaultValues: { /* Custom defaults - likely all enabled */ }
     }
 };
