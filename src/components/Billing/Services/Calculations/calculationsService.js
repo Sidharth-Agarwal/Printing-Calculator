@@ -17,7 +17,8 @@ import {
   calculateMarkup,
   calculateGST,
   calculateSandwichCosts,
-  calculateMagnetCosts       // New calculator
+  calculateMagnetCosts,       // New calculator
+  calculateNotebookCosts      // New notebook calculator
 } from './Calculators';
 
 // Import loyalty service functions
@@ -46,6 +47,22 @@ export const performCalculations = async (state) => {
     
     // Add paper results to the total results
     Object.assign(results, paperResults);
+
+    // Add paper calculations to state for notebook calculator to use
+    const stateWithPaperCalcs = {
+      ...state,
+      paperCalculations: paperResults
+    };
+
+    // Check if this is a notebook job type and notebook details are used
+    if (state.orderAndPaper.jobType === "Notebook" && state.notebookDetails?.isNotebookUsed) {
+      const notebookResults = await calculateNotebookCosts(stateWithPaperCalcs);
+      if (notebookResults.error) {
+        console.warn("Notebook calculation error:", notebookResults.error);
+      } else {
+        Object.assign(results, notebookResults);
+      }
+    }
 
     // Production services calculations
     if (state.lpDetails?.isLPUsed) {
@@ -234,6 +251,7 @@ export const performCompleteCalculations = async (
       'embCostPerCard',
       'screenPrintCostPerCard',
       'digiCostPerCard',
+      'notebookCostPerCard', // New notebook cost field
     ];
     
     const postProductionFields = [
@@ -524,6 +542,7 @@ export const recalculateTotals = async (
       'embCostPerCard',
       'screenPrintCostPerCard',
       'digiCostPerCard',
+      'notebookCostPerCard', // New notebook cost field
     ];
     
     const postProductionFields = [

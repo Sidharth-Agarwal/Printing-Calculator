@@ -260,6 +260,46 @@ const ReviewAndSubmit = ({
     );
   };
 
+  // Render Notebook details section
+  const renderNotebookSection = () => {
+    if (!localCalculations || !state.notebookDetails?.isNotebookUsed) {
+      return null;
+    }
+    
+    return (
+      <div className="space-y-1 border-b pb-2 mb-2">
+        <CostItem label="Notebook" value={localCalculations.notebookCostPerCard} isTotal />
+        {localCalculations.notebookPagesCostPerCard && (
+          <CostItem label="Notebook Pages Cost" value={localCalculations.notebookPagesCostPerCard} isSubItem />
+        )}
+        {localCalculations.notebookBindingCostPerCard && (
+          <CostItem label="Notebook Binding Cost" value={localCalculations.notebookBindingCostPerCard} isSubItem />
+        )}
+        {/* Additional notebook information */}
+        {localCalculations.possibleNumberOfForma && (
+          <div className="pl-6 text-sm text-gray-600">
+            Forma per notebook: {localCalculations.possibleNumberOfForma}
+          </div>
+        )}
+        {localCalculations.totalPages && (
+          <div className="pl-6 text-sm text-gray-600">
+            Total pages: {localCalculations.totalPages}
+          </div>
+        )}
+        {localCalculations.totalFormaRequired && (
+          <div className="pl-6 text-sm text-gray-600">
+            Total forma required: {localCalculations.totalFormaRequired}
+          </div>
+        )}
+        {localCalculations.totalSheets && (
+          <div className="pl-6 text-sm text-gray-600">
+            Total sheets: {localCalculations.totalSheets}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render Production Services section
   const renderProductionServices = () => {
     if (!localCalculations) return null;
@@ -269,8 +309,9 @@ const ReviewAndSubmit = ({
     const hasEMB = state.embDetails?.isEMBUsed;
     const hasScreenPrint = state.screenPrintDetails?.isScreenPrintUsed || state.screenPrint?.isScreenPrintUsed;
     const hasDigi = state.digiDetails?.isDigiUsed;
+    const hasNotebook = state.orderAndPaper.jobType === "Notebook" && state.notebookDetails?.isNotebookUsed;
     
-    if (!hasLP && !hasFS && !hasEMB && !hasScreenPrint && !hasDigi) {
+    if (!hasLP && !hasFS && !hasEMB && !hasScreenPrint && !hasDigi && !hasNotebook) {
       return null;
     }
     
@@ -282,6 +323,9 @@ const ReviewAndSubmit = ({
         bgColor="bg-green-50"
       >
         <div className="space-y-3">
+          {/* Notebook Section */}
+          {hasNotebook && localCalculations.notebookCostPerCard && renderNotebookSection()}
+          
           {/* LP Section */}
           {hasLP && localCalculations.lpCostPerCard && (
             <div className="space-y-1 border-b pb-2 mb-2">
