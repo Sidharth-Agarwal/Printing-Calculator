@@ -55,13 +55,19 @@ const calculateMaxCardsPerSheet = (dieSize, paperSize) => {
  */
 export const calculatePaperAndCuttingCosts = async (state) => {
   try {
-    const { orderAndPaper } = state;
+    const { orderAndPaper, notebookDetails } = state;
     const paperName = orderAndPaper.paperName;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
+    const jobType = orderAndPaper.jobType;
+    
+    // Check if we're dealing with a notebook job type
+    const isNotebookJob = jobType === "Notebook" && notebookDetails?.isNotebookUsed;
     
     // Validate required inputs
-    if (!paperName || !totalCards || !orderAndPaper.dieSize.length || !orderAndPaper.dieSize.breadth) {
+    if (!paperName || !totalCards || 
+        (!isNotebookJob && (!orderAndPaper.dieSize.length || !orderAndPaper.dieSize.breadth)) ||
+        (isNotebookJob && (!notebookDetails.calculatedLength || !notebookDetails.calculatedBreadth))) {
       return { 
         error: "Missing required information for paper calculations",
         paperCostPerCard: "0.00",
@@ -89,11 +95,22 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     const marginValue = await fetchOverheadValue('MARGIN');
     const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
 
-    // 4. Convert die size from inches to cm and add margin
-    const dieSize = {
-      length: (parseFloat(orderAndPaper.dieSize.length) * 2.54) + margin,
-      breadth: (parseFloat(orderAndPaper.dieSize.breadth) * 2.54) + margin,
-    };
+    // 4. Get dimensions based on job type
+    let dieSize = {};
+    
+    if (isNotebookJob) {
+      // For notebooks, use the calculated dimensions from notebook details
+      dieSize = {
+        length: (parseFloat(notebookDetails.calculatedLength) * 2.54) + margin,
+        breadth: (parseFloat(notebookDetails.calculatedBreadth) * 2.54) + margin,
+      };
+    } else {
+      // For regular jobs, use the die dimensions
+      dieSize = {
+        length: (parseFloat(orderAndPaper.dieSize.length) * 2.54) + margin,
+        breadth: (parseFloat(orderAndPaper.dieSize.breadth) * 2.54) + margin,
+      };
+    }
 
     // 5. Get paper dimensions (already in cm)
     const paperSize = {
@@ -104,36 +121,36 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     // 6. Calculate maximum cards per sheet
     const maxCardsPerSheet = calculateMaxCardsPerSheet(dieSize, paperSize);
     
-    // NEW STEP: Fetch die details to get frags
-    let dieDetails = null;
-    let fragsPerDie = 1; // Default to 1 if not found
+    // 7. Determine frags per die
+    let fragsPerDie = 1; // Default to 1
     
-    if (dieCode) {
-      dieDetails = await fetchDieDetails(dieCode);
-      console.log("Die details : ",dieDetails)
+    if (isNotebookJob) {
+      // For notebooks, hardcode fragsPerDie to 1
+      fragsPerDie = 1;
+    } else if (dieCode) {
+      // For other job types, fetch die details to get frags
+      const dieDetails = await fetchDieDetails(dieCode);
       if (dieDetails && dieDetails.frags) {
         fragsPerDie = parseInt(dieDetails.frags) || 1;
-        console.log("fragss per die : ", fragsPerDie)
       }
     }
 
     // Calculate total frags per sheet
-    const totalFragsPerSheet = maxCardsPerSheet * fragsPerDie
+    const totalFragsPerSheet = maxCardsPerSheet * fragsPerDie;
     
-    // 7. Calculate total sheets required, now considering frags if available
-    const totalSheetsRequired = Math.ceil(totalCards / (totalFragsPerSheet));
-    console.log("Total sheet required ", totalSheetsRequired);
+    // 8. Calculate total sheets required
+    const totalSheetsRequired = Math.ceil(totalCards / totalFragsPerSheet);
 
-    // 8. Calculate costs
+    // 9. Calculate costs
     const paperCost = totalSheetsRequired * parseFloat(paperDetails.finalRate);
     const gilCutCost = gilCutCostPerSheet * totalSheetsRequired;
     
-    // 9. Calculate per card costs
+    // 10. Calculate per card costs
     const paperCostPerCard = paperCost / totalCards;
     const gilCutCostPerCard = gilCutCost / totalCards;
     const paperAndCuttingCostPerCard = paperCostPerCard + gilCutCostPerCard;
 
-    // 10. Return the final calculations
+    // 11. Return the final calculations
     return {
       paperCostPerCard: paperCostPerCard.toFixed(2),
       gilCutCostPerCard: gilCutCostPerCard.toFixed(2),
@@ -141,8 +158,10 @@ export const calculatePaperAndCuttingCosts = async (state) => {
       // Additional info for debugging or display
       maxCardsPerSheet,
       totalSheetsRequired,
+      totalFragsPerSheet, // Pass this for notebook calculator
       paperRate: parseFloat(paperDetails.finalRate).toFixed(2),
-      gilCutRate: gilCutCostPerSheet.toFixed(2)
+      gilCutRate: gilCutCostPerSheet.toFixed(2),
+      fragsPerDie
     };
   } catch (error) {
     console.error("Error calculating paper and cutting costs:", error);

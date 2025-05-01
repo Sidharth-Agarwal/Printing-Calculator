@@ -5,13 +5,19 @@ const EstimateCard = ({
   estimateNumber,
   onViewDetails,
   onMoveToOrders,
-  onCancelEstimate
+  onCancelEstimate,
+  onDeleteEstimate,
+  isAdmin
 }) => {
   const [isMoving, setIsMoving] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const isMovedToOrders = estimate.movedToOrders;
   const isCanceled = estimate.isCanceled;
+  
+  // Check if this client is eligible for loyalty benefits (B2B client)
+  const isLoyaltyEligible = estimate.clientInfo?.clientType === "B2B";
 
   // Handle moving estimate to orders
   const handleMoveToOrders = async (e) => {
@@ -47,29 +53,73 @@ const EstimateCard = ({
     }
   };
 
+  // Handle deleting estimate
+  const handleDeleteEstimate = async (e) => {
+    e.stopPropagation();
+    
+    if (!window.confirm("Are you sure you want to delete this estimate? This action cannot be undone.")) {
+      return;
+    }
+    
+    try {
+      setIsDeleting(true);
+      await onDeleteEstimate(estimate);
+    } catch (error) {
+      console.error("Error deleting estimate:", error);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   return (
     <div
       onClick={() => onViewDetails(estimate)}
       className="border rounded-md p-2 bg-white transition cursor-pointer shadow-sm hover:shadow-md"
     >
-      {/* Header with Status Badge */}
+      {/* Header with Status Badge and Admin Delete Button */}
       <div className="flex justify-between items-center mb-1">
         <div className="font-medium text-sm text-blue-700">
           #{estimateNumber}: {estimate?.jobDetails?.jobType || "Unknown Job"}
+          
+          {/* Add loyalty badge for B2B clients */}
+          {isLoyaltyEligible && (
+            <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">
+              B2B
+            </span>
+          )}
         </div>
-        <span className={`px-2 py-0.5 text-xs rounded-full ${
-          isMovedToOrders
-            ? "bg-green-100 text-green-800"
-            : isCanceled
-            ? "bg-red-100 text-red-800"
-            : "bg-yellow-100 text-yellow-800"
-        }`}>
-          {isMovedToOrders 
-            ? "Moved" 
-            : isCanceled 
-            ? "Cancelled" 
-            : "Pending"}
-        </span>
+        <div className="flex items-center gap-2">
+          {/* Status Badge - Now First */}
+          <span className={`px-2 py-0.5 text-xs rounded-full ${
+            isMovedToOrders
+              ? "bg-green-100 text-green-800"
+              : isCanceled
+              ? "bg-red-100 text-red-800"
+              : "bg-yellow-100 text-yellow-800"
+          }`}>
+            {isMovedToOrders 
+              ? "Moved" 
+              : isCanceled 
+              ? "Cancelled" 
+              : "Pending"}
+          </span>
+          
+          {/* Admin Delete Button - Now Second */}
+          {isAdmin && (
+            <button
+              onClick={handleDeleteEstimate}
+              disabled={isDeleting}
+              className={`p-1 rounded-full ${isDeleting 
+                ? 'bg-red-100 text-red-300 cursor-wait' 
+                : 'bg-red-50 text-red-500 hover:bg-red-100 hover:text-red-700'}`}
+              title="Delete Estimate"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Brief Details */}
@@ -79,7 +129,6 @@ const EstimateCard = ({
           <span>Version: {estimate?.versionId || "1"}</span>
         </div>
         <div className="truncate">{estimate?.projectName || "No Project"}</div>
-        {/* <div className="truncate">{estimate?.jobDetails?.paperName || "No Paper"}</div> */}
       </div>
 
       {/* Processing Types */}
@@ -92,6 +141,13 @@ const EstimateCard = ({
           <span className="bg-purple-100 text-purple-800 text-xs px-1.5 py-0.5 rounded-full">EMB</span>}
         {estimate?.digiDetails?.isDigiUsed && 
           <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded-full">DIGI</span>}
+        
+        {/* Add loyalty discount badge if available for B2B client */}
+        {isLoyaltyEligible && estimate.clientInfo?.loyaltyDiscount > 0 && (
+          <span className="bg-green-100 text-green-800 text-xs px-1.5 py-0.5 rounded-full">
+            {estimate.clientInfo.loyaltyDiscount}% Off
+          </span>
+        )}
       </div>
 
       {/* Buttons Section - Horizontal Layout */}

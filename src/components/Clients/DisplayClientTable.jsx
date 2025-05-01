@@ -15,8 +15,8 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
       searchTerm === "" ||
       client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       client.clientCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase());
+      client.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      client.phone?.toLowerCase().includes(searchTerm.toLowerCase());
 
     // Handle the filtering for client type
     let matchesClientType = false;
@@ -50,6 +50,21 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     return date.toLocaleDateString("en-IN");
   };
 
+  // Helper function for tier color styling
+  const getTierStyles = (client) => {
+    const isB2B = client.clientType && (client.clientType.toUpperCase() === "B2B");
+    const isEnrolled = isB2B && client.loyaltyTierId;
+    const tierColor = isEnrolled ? client.loyaltyTierColor || "#9f7aea" : "";
+    
+    if (!isEnrolled) return {}; // No styling for non-enrolled clients
+    
+    return {
+      backgroundColor: `${tierColor}15`, // 15% opacity for background
+      transition: 'background-color 0.2s ease',
+      borderLeft: `4px solid ${tierColor}`, // Solid left border with tier color
+    };
+  };
+
   return (
     <div className="bg-white p-4 rounded shadow">
       <h2 className="text-lg font-semibold mb-4">Clients</h2>
@@ -59,7 +74,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
         <div className="flex-1">
           <input
             type="text"
-            placeholder="Search by name, code, email, or contact person..."
+            placeholder="Search by name, code, or contact person..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="w-full px-4 py-2 border rounded-sm"
@@ -92,77 +107,111 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Name</th>
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Client Type</th>
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Contact Person</th>
-              <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Email</th>
+              {/* Email column removed as requested */}
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Phone</th>
+              {/* Loyalty Status Column */}
+              <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Loyalty Status</th>
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
             {filteredClients.length > 0 ? (
-              filteredClients.map((client) => (
-                <tr key={client.id} className="border-t hover:bg-gray-50">
-                  <td className="px-4 py-2">{client.clientCode}</td>
-                  <td className="px-4 py-2 font-medium">
-                    {client.name}
-                    {client.hasAccount && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                        Account
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-4 py-2">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${
-                      client.clientType === "B2B" || client.clientType === "b2b"
-                        ? "bg-purple-100 text-purple-800" 
-                        : "bg-blue-100 text-blue-800"
-                    }`}>
-                      {(client.clientType || "Direct").toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-4 py-2">{client.contactPerson}</td>
-                  <td className="px-4 py-2">{client.email}</td>
-                  <td className="px-4 py-2">{client.phone}</td>
-                  <td className="px-4 py-2">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => onEdit(client)}
-                        className="text-blue-600 hover:text-blue-800"
-                      >
-                        Edit
-                      </button>
-                      <span className="text-gray-300">|</span>
-                      <button
-                        onClick={() => onDelete(client.id)}
-                        className="text-red-600 hover:text-red-800"
-                      >
-                        Delete
-                      </button>
-
-                      {/* Only show the Credentials and Activate buttons for B2B clients */}
-                      {isAdmin && (client.clientType === "B2B" || client.clientType === "b2b") && (
-                        <>
-                          <span className="text-gray-300">|</span>
-                          {client.hasAccount ? (
-                            <button
-                              onClick={() => onManageCredentials(client)}
-                              className="text-purple-600 hover:text-purple-800"
-                            >
-                              Credentials
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => onActivateClient(client)}
-                              className="text-green-600 hover:text-green-800"
-                            >
-                              Activate
-                            </button>
-                          )}
-                        </>
+              filteredClients.map((client) => {
+                // Determine if client is enrolled in loyalty program
+                const isB2B = client.clientType && (client.clientType.toUpperCase() === "B2B");
+                const isEnrolled = isB2B && client.loyaltyTierId;
+                
+                return (
+                  <tr 
+                    key={client.id} 
+                    className="border-t hover:bg-gray-50"
+                    style={getTierStyles(client)}
+                  >
+                    <td className="px-4 py-2">{client.clientCode}</td>
+                    <td className="px-4 py-2 font-medium">
+                      {client.name}
+                      {client.hasAccount && (
+                        <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                          Account
+                        </span>
                       )}
-                    </div>
-                  </td>
-                </tr>
-              ))
+                    </td>
+                    <td className="px-4 py-2">
+                      <span className={`px-2 py-1 rounded text-xs font-medium ${
+                        client.clientType?.toUpperCase() === "B2B"
+                          ? "bg-purple-100 text-purple-800" 
+                          : "bg-blue-100 text-blue-800"
+                      }`}>
+                        {(client.clientType || "Direct").toUpperCase()}
+                      </span>
+                    </td>
+                    <td className="px-4 py-2">{client.contactPerson}</td>
+                    {/* Email column removed */}
+                    <td className="px-4 py-2">{client.phone}</td>
+                    {/* Loyalty Status Display with client's tier color */}
+                    <td className="px-4 py-2">
+                      {isB2B ? (
+                        client.loyaltyTierName ? (
+                          <div>
+                            <span 
+                              className="px-2 py-1 rounded text-xs font-medium text-white"
+                              style={{ 
+                                backgroundColor: client.loyaltyTierColor || "#9f7aea",
+                                boxShadow: "0 1px 2px rgba(0,0,0,0.1)" 
+                              }}
+                            >
+                              {client.loyaltyTierName}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-500 text-sm">Not enrolled</span>
+                        )
+                      ) : (
+                        <span className="text-gray-500 text-sm">N/A</span>
+                      )}
+                    </td>
+                    <td className="px-4 py-2">
+                      <div className="flex space-x-2">
+                        <button
+                          onClick={() => onEdit(client)}
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          Edit
+                        </button>
+                        <span className="text-gray-300">|</span>
+                        <button
+                          onClick={() => onDelete(client.id)}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          Delete
+                        </button>
+
+                        {/* Only show the Credentials and Activate buttons for B2B clients */}
+                        {isAdmin && (client.clientType === "B2B" || client.clientType === "b2b") && (
+                          <>
+                            <span className="text-gray-300">|</span>
+                            {client.hasAccount ? (
+                              <button
+                                onClick={() => onManageCredentials(client)}
+                                className="text-purple-600 hover:text-purple-800"
+                              >
+                                Credentials
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => onActivateClient(client)}
+                                className="text-green-600 hover:text-green-800"
+                              >
+                                Activate
+                              </button>
+                            )}
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
             ) : (
               <tr>
                 <td colSpan="7" className="px-4 py-8 text-center text-gray-500">

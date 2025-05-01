@@ -1,119 +1,139 @@
 /**
- * Utility functions to normalize data between estimates and orders
+ * Normalize estimate data for consistent order processing
+ * Adds compatibility for B2B loyalty program
+ * 
+ * @param {Object} estimate - The estimate data from Firestore
+ * @returns {Object} - Normalized data for order creation
  */
-
-/**
- * Normalizes an estimate object before converting to an order
- * Ensures all service flags are properly set based on calculation data
- * @param {Object} estimate - The estimate data object
- * @returns {Object} - Normalized estimate data
- */
-export function normalizeDataForOrders(estimate) {
-    // Make a deep copy to avoid modifying original
-    const normalized = JSON.parse(JSON.stringify(estimate));
-    
-    // Define all possible services and their toggle flags
-    const serviceFlags = [
-      { key: 'lpDetails', flag: 'isLPUsed' },
-      { key: 'fsDetails', flag: 'isFSUsed' },
-      { key: 'embDetails', flag: 'isEMBUsed' },
-      { key: 'digiDetails', flag: 'isDigiUsed' },
-      { key: 'screenPrint', flag: 'isScreenPrintUsed' },
-      { key: 'dieCutting', flag: 'isDieCuttingUsed' },
-      { key: 'postDC', flag: 'isPostDCUsed' },
-      { key: 'foldAndPaste', flag: 'isFoldAndPasteUsed' },
-      { key: 'dstPaste', flag: 'isDstPasteUsed' },
-      { key: 'qc', flag: 'isQCUsed' },
-      { key: 'packing', flag: 'isPackingUsed' },
-      { key: 'misc', flag: 'isMiscUsed' },
-      { key: 'sandwich', flag: 'isSandwichComponentUsed' },
-      { key: 'magnet', flag: 'isMagnetUsed' }
-    ];
-    
-    // Check calculations exists
-    if (!normalized.calculations) {
-      normalized.calculations = {};
-    }
-    
-    // Normalize each service
-    serviceFlags.forEach(({ key, flag }) => {
-      // Generate the cost key (e.g., 'lpDetails' -> 'lpCostPerCard')
-      const costKey = `${key.replace('Details', '')}CostPerCard`;
-      
-      // If calculation exists but service doesn't, create it
-      if (normalized.calculations[costKey] && !normalized[key]) {
-        normalized[key] = { [flag]: true };
-        console.log(`Normalizing data: Created missing service ${key} with ${flag}=true`);
-      }
-      // If service exists but flag is undefined, set it to true if cost exists
-      else if (normalized[key] && normalized[key][flag] === undefined) {
-        if (normalized.calculations[costKey]) {
-          normalized[key][flag] = true;
-          console.log(`Normalizing data: Set undefined flag ${flag} to true for ${key}`);
-        } else {
-          normalized[key][flag] = false;
-          console.log(`Normalizing data: Set undefined flag ${flag} to false for ${key}`);
-        }
-      }
-      // If service exists but flag is false, check if cost exists (potential mismatch)
-      else if (normalized[key] && normalized[key][flag] === false && normalized.calculations[costKey]) {
-        normalized[key][flag] = true;
-        console.log(`Normalizing data: Fixed mismatched flag for ${key} (had cost but flag was false)`);
-      }
-    });
-    
-    return normalized;
+export const normalizeDataForOrders = (estimate) => {
+  if (!estimate) {
+    return null;
   }
   
-  /**
-   * Normalize any display data for consistent UI rendering
-   * This function can be used in the modal component
-   * @param {Object} data - The data object (estimate, order, or invoice)
-   * @returns {Object} - Normalized data for display
-   */
-  export function normalizeDataForDisplay(data) {
-    if (!data) return data;
+  // Initialize normalized structure
+  const normalizedData = {
+    // Preserve original estimate ID for reference
+    estimateId: estimate.id,
     
-    // Make a deep copy to avoid modifying original
-    const normalizedCopy = JSON.parse(JSON.stringify(data));
+    // Client information
+    clientId: estimate.clientId || null,
+    clientInfo: estimate.clientInfo || null,
+    clientName: estimate.clientName || null,
     
-    // Define all possible services and their toggle flags
-    const serviceFlags = [
-      { key: 'lpDetails', flag: 'isLPUsed' },
-      { key: 'fsDetails', flag: 'isFSUsed' },
-      { key: 'embDetails', flag: 'isEMBUsed' },
-      { key: 'digiDetails', flag: 'isDigiUsed' },
-      { key: 'screenPrint', flag: 'isScreenPrintUsed' },
-      { key: 'dieCutting', flag: 'isDieCuttingUsed' },
-      { key: 'postDC', flag: 'isPostDCUsed' },
-      { key: 'foldAndPaste', flag: 'isFoldAndPasteUsed' },
-      { key: 'dstPaste', flag: 'isDstPasteUsed' },
-      { key: 'qc', flag: 'isQCUsed' },
-      { key: 'packing', flag: 'isPackingUsed' },
-      { key: 'misc', flag: 'isMiscUsed' },
-      { key: 'sandwich', flag: 'isSandwichComponentUsed' },
-      { key: 'magnet', flag: 'isMagnetUsed' }
-    ];
+    // Project information
+    projectName: estimate.projectName || null,
+    date: new Date().toISOString(),
+    deliveryDate: estimate.deliveryDate || null,
     
-    // Ensure each service exists and has its toggle flag
-    serviceFlags.forEach(({ key, flag }) => {
-      // Get the corresponding cost key
-      const costKey = `${key.replace('Details', '')}CostPerCard`;
-      
-      // If the service doesn't exist but should be enabled based on calculations
-      if (!normalizedCopy[key] && normalizedCopy.calculations?.[costKey]) {
-        // Create the service with the proper flag
-        normalizedCopy[key] = { [flag]: true };
-      }
-      // If the service exists but has no flag, ensure it's properly flagged
-      else if (normalizedCopy[key] && normalizedCopy[key][flag] === undefined) {
-        normalizedCopy[key][flag] = !!normalizedCopy.calculations?.[costKey];
-      }
-      // Fix mismatched flags (service is marked as not used but has a cost)
-      else if (normalizedCopy[key] && normalizedCopy[key][flag] === false && normalizedCopy.calculations?.[costKey]) {
-        normalizedCopy[key][flag] = true;
-      }
-    });
+    // Track order status
+    stage: "Not started yet",
+    status: "In Progress",
     
-    return normalizedCopy;
-}
+    // Form data fields - ensure consistent structure
+    jobDetails: estimate.jobDetails || {},
+    dieDetails: estimate.dieDetails || {},
+    lpDetails: estimate.lpDetails || null,
+    fsDetails: estimate.fsDetails || null,
+    embDetails: estimate.embDetails || null,
+    digiDetails: estimate.digiDetails || null,
+    screenPrint: estimate.screenPrint || null,
+    dieCutting: estimate.dieCutting || null,
+    postDC: estimate.postDC || null,
+    qc: estimate.qc || null,
+    packing: estimate.packing || null,
+    misc: estimate.misc || null,
+    sandwich: estimate.sandwich || null,
+    foldAndPaste: estimate.foldAndPaste || null,
+    dstPaste: estimate.dstPaste || null,
+    magnet: estimate.magnet || null,
+    
+    // Calculations/costs
+    calculations: estimate.calculations || {},
+    
+    // NEW: Loyalty information fields
+    isLoyaltyEligible: false, // Will be set to true for B2B clients
+    loyaltyInfo: null, // Will hold loyalty tier and discount details
+    
+    // Track history
+    created: {
+      at: new Date().toISOString(),
+      from: "estimate",
+      estimateId: estimate.id
+    },
+    
+    // Timestamp for sorting/filtering
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  
+  // Check if B2B client based on client type
+  if (estimate.clientInfo && estimate.clientInfo.clientType === "B2B") {
+    normalizedData.isLoyaltyEligible = true;
+  }
+  
+  return normalizedData;
+};
+
+/**
+ * Normalize data for consistent display in details modals
+ * Adds compatibility for loyalty program display
+ * 
+ * @param {Object} data - The data to normalize (estimate, order, etc.)
+ * @returns {Object} - Normalized data for display
+ */
+export const normalizeDataForDisplay = (data) => {
+  if (!data) {
+    return null;
+  }
+  
+  // Make a copy to avoid modifying original
+  const normalizedData = { ...data };
+  
+  // Ensure client info exists
+  if (!normalizedData.clientInfo) {
+    normalizedData.clientInfo = {
+      name: normalizedData.clientName || "Unknown Client"
+    };
+  }
+  
+  // Ensure calculations object exists
+  if (!normalizedData.calculations) {
+    normalizedData.calculations = {};
+  }
+  
+  // Normalize loyalty information for display
+  if (normalizedData.loyaltyInfo) {
+    // Copy loyalty discount info to calculations for display in cost breakdown
+    if (!normalizedData.calculations.loyaltyDiscount && normalizedData.loyaltyInfo.discount) {
+      normalizedData.calculations.loyaltyDiscount = normalizedData.loyaltyInfo.discount;
+    }
+    
+    if (!normalizedData.calculations.loyaltyDiscountAmount && normalizedData.loyaltyInfo.discountAmount) {
+      normalizedData.calculations.loyaltyDiscountAmount = normalizedData.loyaltyInfo.discountAmount;
+    }
+    
+    if (!normalizedData.calculations.loyaltyTierName && normalizedData.loyaltyInfo.tierName) {
+      normalizedData.calculations.loyaltyTierName = normalizedData.loyaltyInfo.tierName;
+    }
+  }
+  
+  return normalizedData;
+};
+
+/**
+ * Format loyalty tier information for display
+ * 
+ * @param {Object} tier - The loyalty tier object
+ * @returns {Object} - Formatted tier information
+ */
+export const formatTierForDisplay = (tier) => {
+  if (!tier) return null;
+  
+  return {
+    id: tier.id || tier.dbId,
+    name: tier.name,
+    discount: tier.discount || 0,
+    color: tier.color || "#CCCCCC",
+    orderThreshold: tier.orderThreshold
+  };
+};

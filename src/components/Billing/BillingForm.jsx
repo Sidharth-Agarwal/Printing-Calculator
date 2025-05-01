@@ -1,6 +1,6 @@
 import React, { useReducer, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
-import { collection, addDoc, query, where, getDocs, doc, getDoc } from "firebase/firestore";
+import { collection, addDoc, query, where, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { performCompleteCalculations, recalculateTotals } from "./Services/Calculations/calculationsService";
 import { ChevronDown, ChevronUp } from 'lucide-react';
@@ -15,6 +15,7 @@ import FSDetails from "./Sections/Production/FSDetails";
 import EMBDetails from "./Sections/Production/EMBDetails";
 import DigiDetails from "./Sections/Production/DigiDetails";
 import ScreenPrint from "./Sections/Production/ScreenPrint";
+import NotebookDetails from "./Sections/Production/NotebookDetails";
 import DieCutting from "./Sections/Post Production/DieCutting";
 import PostDC from "./Sections/Post Production/PostDC";
 import FoldAndPaste from "./Sections/Post Production/FoldAndPaste";
@@ -76,6 +77,18 @@ const initialFormState = {
     isDigiUsed: false,
     digiDie: "",
     digiDimensions: { length: "", breadth: "" },
+  },
+  notebookDetails: {
+    isNotebookUsed: false,
+    orientation: "",
+    length: "",
+    breadth: "",
+    calculatedLength: "",
+    calculatedBreadth: "",
+    numberOfPages: "",
+    bindingType: "",
+    bindingTypeConcatenated: "",
+    paperName: ""
   },
   screenPrint: {
     isScreenPrintUsed: false
@@ -153,6 +166,8 @@ const reducer = (state, action) => {
       return { ...state, embDetails: { ...state.embDetails, ...action.payload } };
     case "UPDATE_DIGI_DETAILS":
       return { ...state, digiDetails: { ...state.digiDetails, ...action.payload } };
+    case "UPDATE_NOTEBOOK_DETAILS":
+      return { ...state, notebookDetails: { ...state.notebookDetails, ...action.payload } };
     case "UPDATE_SCREEN_PRINT":
       return { ...state, screenPrint: { ...state.screenPrint, ...action.payload } };
     case "UPDATE_DIE_CUTTING":
@@ -195,7 +210,8 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     screenPrint, 
     dieCutting, 
     sandwich,
-    magnet // Added magnet to destructuring
+    magnet,
+    notebookDetails // Add notebookDetails to destructuring
   } = state;
 
   // Helper function to sanitize objects for Firebase
@@ -257,10 +273,11 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     fsDetails: fsDetails.isFSUsed ? sanitizeForFirestore(fsDetails) : null,
     embDetails: embDetails.isEMBUsed ? sanitizeForFirestore(embDetails) : null,
     digiDetails: digiDetails.isDigiUsed ? sanitizeForFirestore(digiDetails) : null,
+    notebookDetails: notebookDetails?.isNotebookUsed ? sanitizeForFirestore(notebookDetails) : null,
     screenPrint: screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(screenPrint) : null,
     dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
     sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
-    magnet: magnet?.isMagnetUsed ? sanitizeForFirestore(magnet) : null, // Added magnet to Firestore data
+    magnet: magnet?.isMagnetUsed ? sanitizeForFirestore(magnet) : null,
     
     // Include other details based on what's enabled
     postDC: state.postDC?.isPostDCUsed ? sanitizeForFirestore(state.postDC) : null,
@@ -352,6 +369,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [defaultMarkup, setDefaultMarkup] = useState({ type: "MARKUP TIMELESS", percentage: 50 });
   const [selectedMarkupType, setSelectedMarkupType] = useState("MARKUP TIMELESS");
   const [markupPercentage, setMarkupPercentage] = useState(50);
+  const [papers, setPapers] = useState([]);
   
   // Success notification state
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
@@ -366,6 +384,19 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [linkedClientData, setLinkedClientData] = useState(null);
 
   const formRef = useRef(null);
+  
+  // Fetch papers from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
+      const paperData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPapers(paperData);
+    });
+
+    return () => unsubscribe();
+  }, []);
   
   // Add CSS for success notification animations
   useEffect(() => {
@@ -1021,6 +1052,33 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
   
+  const toggleNotebookUsage = () => {
+    const isCurrentlyUsed = state.notebookDetails?.isNotebookUsed || false;
+    
+    dispatch({
+      type: "UPDATE_NOTEBOOK_DETAILS",
+      payload: { 
+        isNotebookUsed: !isCurrentlyUsed,
+        ...((!isCurrentlyUsed) && {
+          orientation: "",
+          length: "",
+          breadth: "",
+          calculatedLength: "",
+          calculatedBreadth: "",
+          numberOfPages: "",
+          bindingType: "",
+          bindingTypeConcatenated: "",
+          paperName: papers.length > 0 ? papers[0].paperName : ""
+        })
+      }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("notebook");
+    }
+  };
+  
   const toggleScreenPrintUsage = () => {
     const isCurrentlyUsed = state.screenPrint?.isScreenPrintUsed || false;
     
@@ -1455,6 +1513,26 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 onToggleUsage={toggleDigiUsage}
               >
                 <DigiDetails 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+            
+            {/* NOTEBOOK Section - Only visible for Notebook job type */}
+            {isServiceVisible("NOTEBOOK") && (
+              <FormSection 
+                title="NOTEBOOK DETAILS" 
+                id="notebook"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.notebookDetails?.isNotebookUsed || false}
+                onToggleUsage={toggleNotebookUsage}
+              >
+                <NotebookDetails 
                   state={state} 
                   dispatch={dispatch} 
                   onNext={() => {}} 

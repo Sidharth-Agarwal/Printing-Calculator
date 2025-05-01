@@ -3,6 +3,7 @@ import FSDetails from '../../Sections/Production/FSDetails';
 import EMBDetails from '../../Sections/Production/EMBDetails';
 import DigiDetails from '../../Sections/Production/DigiDetails';
 import ScreenPrint from '../../Sections/Production/ScreenPrint';
+import NotebookDetails from '../../Sections/Production/NotebookDetails';
 import DieCutting from '../../Sections/Post Production/DieCutting';
 import PostDC from '../../Sections/Post Production/PostDC';
 import FoldAndPaste from '../../Sections/Post Production/FoldAndPaste';
@@ -56,6 +57,14 @@ export const serviceRegistry = {
     toggleField: "isScreenPrintUsed",
     group: "production"
   },
+  "NOTEBOOK": {  // Add the new Notebook service
+    id: "notebook",
+    title: "NOTEBOOK DETAILS",
+    component: NotebookDetails,
+    stateKey: "notebookDetails",
+    toggleField: "isNotebookUsed",
+    group: "production"
+  },
 
   // Post-Production Services
   "DC": {
@@ -90,7 +99,7 @@ export const serviceRegistry = {
     toggleField: "isDstPasteUsed",
     group: "postProduction"
   },
-  "MAGNET": {   // Added Magnet component
+  "MAGNET": {
     id: "magnet",
     title: "MAGNET",
     component: Magnet,
