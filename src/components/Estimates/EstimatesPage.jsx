@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, query, where, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, addDoc, where, getDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import EstimateCard from "./EstimateCard";
