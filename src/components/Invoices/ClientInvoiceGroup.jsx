@@ -1,7 +1,7 @@
 import React from 'react';
 import OrderCard from './OrderCard';
 
-const ClientOrderGroup = ({ 
+const ClientInvoiceGroup = ({ 
   client, 
   isExpanded, 
   onToggle, 
@@ -126,4 +126,4 @@ const ClientOrderGroup = ({
   );
 };
 
-export default ClientOrderGroup;
+export default ClientInvoiceGroup;

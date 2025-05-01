@@ -123,18 +123,20 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                     )}
                   </td>
                   <td className="px-4 py-2">
-                    <button
-                      onClick={() => onEditDie(die)}
-                      className="text-blue-600 hover:underline mr-2"
-                    >
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDeleteDie(die.id)}
-                      className="text-red-600 hover:underline"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex space-x-2">
+                      <button
+                        onClick={() => onEditDie(die)}
+                        className="px-2 py-1 text-sm bg-blue-100 text-blue-600 rounded hover:bg-blue-200"
+                      >
+                        Edit
+                      </button>
+                      <button
+                        onClick={() => onDeleteDie(die.id)}
+                        className="px-2 py-1 text-sm bg-red-100 text-red-600 rounded hover:bg-red-200"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </td>
                 </tr>
               ))}

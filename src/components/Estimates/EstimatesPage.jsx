@@ -1,19 +1,20 @@
 import React, { useState, useEffect } from "react";
-import { collection, getDocs, doc, updateDoc, addDoc, query, where, getDoc } from "firebase/firestore";
+import { collection, getDocs, doc, updateDoc, query, where, getDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import EstimateCard from "./EstimateCard";
-import EstimateDetailsModal from "./EstimateDetailsModal";
+import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
 import PreviewModal from "./PreviewModal";
 import GroupedJobTicket from "./GroupedJobTicket";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { createRoot } from "react-dom/client";
-import { useAuth } from "../Login/AuthContext"; // Add auth context
+import { useAuth } from "../Login/AuthContext";
+import { normalizeDataForOrders } from "../../utils/normalizeDataForOrders";
 
 const EstimatesPage = () => {
   const navigate = useNavigate();
-  const { userRole, currentUser } = useAuth(); // Get user role and current user
+  const { userRole, currentUser } = useAuth();
   const [isB2BClient, setIsB2BClient] = useState(false);
   const [linkedClientId, setLinkedClientId] = useState(null);
   
@@ -203,14 +204,19 @@ const EstimatesPage = () => {
     setIsModalOpen(true);
   };
 
-  // Handle moving estimate to orders
+  // Handle moving estimate to orders - Using the new normalized approach
   const handleMoveToOrders = async (estimate) => {
     try {
+      // Normalize the data to ensure proper structure
+      console.log("Moving estimate to orders, normalizing data first...");
+      const normalizedEstimate = normalizeDataForOrders(estimate);
+      
+      // Add the key that marks this as an order
+      normalizedEstimate.stage = "Not started yet";
+      normalizedEstimate.status = "In Progress";
+      
       // Add to orders collection
-      await addDoc(collection(db, "orders"), {
-        ...estimate,
-        stage: "Not started yet",
-      });
+      await addDoc(collection(db, "orders"), normalizedEstimate);
 
       // Update the estimate
       const estimateRef = doc(db, "estimates", estimate.id);
@@ -221,11 +227,13 @@ const EstimatesPage = () => {
         prev.map(est => est.id === estimate.id ? { ...est, movedToOrders: true } : est)
       );
       
+      console.log("Successfully moved estimate to orders");
+      
       // Navigate to orders page
       navigate('/orders');
     } catch (error) {
       console.error("Error moving estimate to orders:", error);
-      alert("Failed to move estimate to orders.");
+      alert("Failed to move estimate to orders. See console for details.");
     }
   };
 
@@ -524,14 +532,16 @@ const EstimatesPage = () => {
         </div>
       )}
 
-      {/* Modals */}
+      {/* Using Unified Modal Component instead of EstimateDetailsModal */}
       {isModalOpen && selectedEstimate && (
-        <EstimateDetailsModal
-          estimate={selectedEstimate}
+        <UnifiedDetailsModal
+          data={selectedEstimate}
+          dataType="estimate"
           onClose={() => setIsModalOpen(false)}
         />
       )}
 
+      {/* Preview Modal */}
       {isPreviewOpen && (
         <PreviewModal
           isOpen={isPreviewOpen}

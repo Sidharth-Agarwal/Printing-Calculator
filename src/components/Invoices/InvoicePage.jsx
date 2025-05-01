@@ -1,10 +1,10 @@
 import React, { useEffect, useState } from 'react';
 import { collection, doc, updateDoc, onSnapshot, addDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import OrderDetailsModal from './OrderDetailsModal';
-import ClientOrderGroup from './ClientOrderGroup';
+import UnifiedDetailsModal from '../Shared/UnifiedDetailsModal'; 
+import ClientInvoiceGroup from './ClientInvoiceGroup';
 import NewInvoiceModal from './NewInvoiceModal';
-import { useAuth } from "../Login/AuthContext"; // Add auth context
+import { useAuth } from "../Login/AuthContext";
 
 const InvoicesPage = () => {
   const { userRole, currentUser } = useAuth(); // Get user role and current user
@@ -481,7 +481,7 @@ const InvoicesPage = () => {
         <div className="space-y-3">
           {/* List of client groups */}
           {Object.values(clientGroups).map((client) => (
-            <ClientOrderGroup
+            <ClientInvoiceGroup
               key={client.id}
               client={client}
               isExpanded={expandedClientId === client.id}
@@ -497,16 +497,15 @@ const InvoicesPage = () => {
         </div>
       )}
 
-      {/* Order Details Modal */}
+      {/* Using Unified Modal Component for Order Details */}
       {isOrderDetailsModalOpen && selectedOrder && (
-        <OrderDetailsModal
-          order={selectedOrder}
+        <UnifiedDetailsModal
+          data={selectedOrder}
+          dataType="invoice"
           onClose={() => {
             setIsOrderDetailsModalOpen(false);
             setSelectedOrder(null);
           }}
-          onStageUpdate={(newStage) => updateOrderStage(selectedOrder.id, newStage)}
-          stages={stages}
         />
       )}
 
