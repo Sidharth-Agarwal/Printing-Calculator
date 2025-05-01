@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { collection, doc, updateDoc, onSnapshot, query, where, getDocs, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import OrderDetailsModal from './OrderDetailsModal';
+import UnifiedDetailsModal from '../Shared/UnifiedDetailsModal';
 import ProductionAssignmentModal from './ProductionAssignmentModal';
 import { useAuth } from "../Login/AuthContext";
 
 const OrdersPage = () => {
-  const { userRole, currentUser } = useAuth(); // Get user role and current user
+  const { userRole, currentUser } = useAuth();
   const [isB2BClient, setIsB2BClient] = useState(false);
   const [linkedClientId, setLinkedClientId] = useState(null);
   const [orders, setOrders] = useState([]);
@@ -650,18 +650,12 @@ const OrdersPage = () => {
         </div>
       )}
 
-      {/* Order Details Modal */}
+      {/* Using Unified Modal Component */}
       {selectedOrder && (
-        <OrderDetailsModal
-          order={selectedOrder}
+        <UnifiedDetailsModal
+          data={selectedOrder}
+          dataType="order"
           onClose={() => setSelectedOrder(null)}
-          onStageUpdate={(newStage) => {
-            // Allow admin, staff, and production to update stages
-            if (canEditStages) {
-              handleStageUpdateRequest(selectedOrder.id, selectedOrder.stage, newStage);
-            }
-          }}
-          canEditStages={canEditStages} // Pass this prop to the modal
         />
       )}
 
