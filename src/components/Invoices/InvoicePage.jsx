@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { collection, doc, updateDoc, onSnapshot, addDoc, query, where, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
-import InvoiceDetailsModal from './InvoiceDetailsModal'
+import UnifiedDetailsModal from '../Shared/UnifiedDetailsModal'; 
 import ClientInvoiceGroup from './ClientInvoiceGroup';
 import NewInvoiceModal from './NewInvoiceModal';
 import { useAuth } from "../Login/AuthContext";
@@ -497,16 +497,15 @@ const InvoicesPage = () => {
         </div>
       )}
 
-      {/* Order Details Modal */}
+      {/* Using Unified Modal Component for Order Details */}
       {isOrderDetailsModalOpen && selectedOrder && (
-        <InvoiceDetailsModal
-          order={selectedOrder}
+        <UnifiedDetailsModal
+          data={selectedOrder}
+          dataType="invoice"
           onClose={() => {
             setIsOrderDetailsModalOpen(false);
             setSelectedOrder(null);
           }}
-          onStageUpdate={(newStage) => updateOrderStage(selectedOrder.id, newStage)}
-          stages={stages}
         />
       )}
 
