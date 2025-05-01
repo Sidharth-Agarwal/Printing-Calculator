@@ -1,5 +1,8 @@
 import React, { useState, useEffect } from "react";
 import useBindingTypes from "../../../../hooks/useBindingTypes";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../../../../firebaseConfig";
+import SearchablePaperDropdown from "../Fixed/SearchablePaperDropdown";
 
 const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const notebookDetails = state.notebookDetails || {
@@ -11,15 +14,40 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
     calculatedBreadth: "",
     numberOfPages: "",
     bindingType: "",
-    bindingTypeConcatenated: ""
+    bindingTypeConcatenated: "",
+    paperName: ""
   };
 
   const [errors, setErrors] = useState({});
+  const [papers, setPapers] = useState([]);
   
   // Use the custom hook to fetch binding types
   const { bindingTypes, loading: isLoading } = useBindingTypes();
   
   console.log("Binding types from hook:", bindingTypes);
+  
+  // Fetch papers from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
+      const paperData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPapers(paperData);
+      
+      // If papers are loaded and no paper name is selected yet, set the first paper
+      if (paperData.length > 0 && !notebookDetails.paperName) {
+        dispatch({
+          type: "UPDATE_NOTEBOOK_DETAILS",
+          payload: {
+            paperName: paperData[0].paperName
+          },
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [dispatch, notebookDetails.paperName]);
 
   // Calculate dimensions based on orientation
   useEffect(() => {
@@ -104,6 +132,9 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
       if (!notebookDetails.bindingType) {
         newErrors.bindingType = "Binding type is required";
       }
+      if (!notebookDetails.paperName) {
+        newErrors.paperName = "Paper name is required";
+      }
     }
 
     setErrors(newErrors);
@@ -125,6 +156,19 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Paper Name - Using Searchable Dropdown */}
+        <div>
+          <div className="mb-1 text-sm">Paper Name:</div>
+          <SearchablePaperDropdown 
+            papers={papers}
+            selectedPaper={notebookDetails.paperName || (papers.length > 0 ? papers[0].paperName : "")}
+            onChange={handleChange}
+          />
+          {errors.paperName && (
+            <p className="text-red-500 text-sm">{errors.paperName}</p>
+          )}
+        </div>
+
         {/* Orientation */}
         <div>
           <div className="mb-1 text-sm">Orientation:</div>
@@ -141,24 +185,6 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
           </select>
           {errors.orientation && (
             <p className="text-red-500 text-sm">{errors.orientation}</p>
-          )}
-        </div>
-
-        {/* Number of Pages */}
-        <div>
-          <div className="mb-1 text-sm">Number of Pages:</div>
-          <input
-            type="number"
-            id="numberOfPages"
-            name="numberOfPages"
-            placeholder="Enter number of pages"
-            value={notebookDetails.numberOfPages || ""}
-            onChange={handleChange}
-            className="border rounded-md p-2 w-full text-sm"
-            min="1"
-          />
-          {errors.numberOfPages && (
-            <p className="text-red-500 text-sm">{errors.numberOfPages}</p>
           )}
         </div>
 
@@ -198,8 +224,8 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
           )}
         </div>
 
-        {/* Calculated Dimensions (Display Only) */}
-        {notebookDetails.orientation && notebookDetails.length && notebookDetails.breadth && (
+        {/* Calculated Dimensions (Display Only) - Shown when we have orientation and dimensions */}
+        {notebookDetails.orientation && (
           <>
             <div>
               <div className="mb-1 text-sm">Calculated Length (inches):</div>
@@ -215,6 +241,24 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
             </div>
           </>
         )}
+
+        {/* Number of Pages */}
+        <div>
+          <div className="mb-1 text-sm">Number of Pages:</div>
+          <input
+            type="number"
+            id="numberOfPages"
+            name="numberOfPages"
+            placeholder="Enter number of pages"
+            value={notebookDetails.numberOfPages || ""}
+            onChange={handleChange}
+            className="border rounded-md p-2 w-full text-sm"
+            min="1"
+          />
+          {errors.numberOfPages && (
+            <p className="text-red-500 text-sm">{errors.numberOfPages}</p>
+          )}
+        </div>
 
         {/* Binding Type */}
         <div className="md:col-span-2">
