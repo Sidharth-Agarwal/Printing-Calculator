@@ -248,15 +248,15 @@ const Header = () => {
             </button>
           )}
 
-          {/* B2B Dashboard */}
-          {userRole === "b2b" && (
+          {/* NEW: Loyalty Dashboard - Moved to main navigation */}
+          {isMenuItemVisible('loyaltyProgram') && (
             <button
-              onClick={() => navigate("/b2b-dashboard")}
+              onClick={() => navigateToNewTab('/loyalty-dashboard')}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/b2b-dashboard')
+                getActiveClass('/loyalty-dashboard')
               }`}
             >
-              Dashboard
+              Loyalty Dashboard
             </button>
           )}
 
@@ -269,6 +269,18 @@ const Header = () => {
               }`}
             >
               Transactions
+            </button>
+          )}
+
+          {/* B2B Dashboard */}
+          {userRole === "b2b" && (
+            <button
+              onClick={() => navigate("/b2b-dashboard")}
+              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
+                getActiveClass('/b2b-dashboard')
+              }`}
+            >
+              Dashboard
             </button>
           )}
          

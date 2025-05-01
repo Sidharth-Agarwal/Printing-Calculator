@@ -20,7 +20,7 @@ const InvoicesPage = () => {
   // State for filtering and search
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState(''); // All orders by default
-  const [viewMode, setViewMode] = useState('all'); // 'active', 'completed', 'all'
+  const [viewMode, setViewMode] = useState('active'); // 'active', 'completed', 'all'
   const [sortBy, setSortBy] = useState('date-desc'); // Default sort
   
   // State for expanded clients and selection

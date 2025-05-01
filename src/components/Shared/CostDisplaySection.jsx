@@ -1,13 +1,10 @@
 import React from 'react';
 
-/**
- * CostDisplaySection - A component to consistently display cost sections across modals
- * This ensures costs are displayed in the same order and format in all modals
- */
 const CostDisplaySection = ({ 
   data, 
   calculations, 
-  canViewDetailedCosts = true
+  canViewDetailedCosts = true,
+  dataType = 'estimate'
 }) => {
   if (!calculations) return null;
   
@@ -360,6 +357,35 @@ const CostDisplaySection = ({
     );
   };
 
+  // NEW: Render loyalty discount section
+  const renderLoyaltyDiscount = () => {
+    if (!calculations.loyaltyDiscount || !calculations.loyaltyDiscountAmount) {
+      return null;
+    }
+    
+    return (
+      <div className="mt-2 border-t border-blue-100 pt-2">
+        <div className="flex justify-between items-center text-blue-700">
+          <span className="font-medium">
+            B2B Loyalty Discount ({calculations.loyaltyTierName || 'Member'}: {calculations.loyaltyDiscount}%):
+          </span>
+          <span className="font-medium">
+            -{formatCurrency(calculations.loyaltyDiscountAmount)}
+          </span>
+        </div>
+        
+        {calculations.discountedTotalCost && (
+          <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
+            <span className="text-lg font-bold text-gray-700">Discounted Total:</span>
+            <span className="text-lg font-bold text-blue-700">
+              {formatCurrency(calculations.discountedTotalCost)}
+            </span>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   // Render cost summary
   const renderCostSummary = () => {
     const calculations = data.calculations;
@@ -402,6 +428,9 @@ const CostDisplaySection = ({
             {formatCurrency(calculations.totalCost)}
           </span>
         </div>
+        
+        {/* NEW: Loyalty Discount Section */}
+        {renderLoyaltyDiscount()}
         
         {/* GST Section */}
         {calculations.gstRate && (
@@ -448,13 +477,19 @@ const CostDisplaySection = ({
     const markupPercentage = calculations.markupPercentage || 0;
     const markupType = calculations.markupType || 'Standard';
     
+    // NEW: Get loyalty discount info
+    const hasLoyaltyDiscount = calculations.loyaltyDiscount && calculations.loyaltyDiscountAmount;
+    const loyaltyDiscount = hasLoyaltyDiscount ? parseFloat(calculations.loyaltyDiscount) : 0;
+    const loyaltyDiscountAmount = hasLoyaltyDiscount ? parseFloat(calculations.loyaltyDiscountAmount) : 0;
+    const discountedTotal = hasLoyaltyDiscount ? parseFloat(calculations.discountedTotalCost) : totalCost;
+    
     return (
       <div className="mt-6 bg-blue-50 p-4 rounded-md border border-blue-200">
         <h3 className="text-lg font-bold text-gray-800 mb-4">Cost Summary</h3>
         
         <div className="space-y-4">
           <div className="flex justify-between items-center text-lg">
-            <span className="font-medium">Total Cost per Card:</span>
+            <span className="font-medium">Unit Cost:</span>
             <span className="font-bold">
               {formatCurrency(totalCostPerCard)}
             </span>
@@ -462,12 +497,33 @@ const CostDisplaySection = ({
           
           <div className="flex justify-between items-center pt-3 border-t border-blue-300 text-xl">
             <span className="font-bold text-gray-700">
-              Total Cost ({quantity} pcs):
+              Total ({quantity} pcs):
             </span>
             <span className="font-bold text-blue-700">
               {formatCurrency(totalCost)}
             </span>
           </div>
+          
+          {/* NEW: B2B Loyalty Discount Section */}
+          {hasLoyaltyDiscount && (
+            <>
+              <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-3">
+                <span className="font-medium text-green-700">
+                  Your Loyalty Discount ({loyaltyDiscount}%):
+                </span>
+                <span className="font-bold text-green-700">
+                  -{formatCurrency(loyaltyDiscountAmount)}
+                </span>
+              </div>
+              
+              <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-2">
+                <span className="font-medium">Discounted Total:</span>
+                <span className="font-bold text-blue-700">
+                  {formatCurrency(discountedTotal)}
+                </span>
+              </div>
+            </>
+          )}
           
           {/* GST Section for B2B View */}
           <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-3 mt-2">

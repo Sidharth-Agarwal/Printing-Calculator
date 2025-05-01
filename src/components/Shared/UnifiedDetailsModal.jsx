@@ -4,10 +4,6 @@ import { useAuth } from "../Login/AuthContext";
 import CostDisplaySection from "./CostDisplaySection";
 import { normalizeDataForDisplay } from "../../utils/normalizeDataForOrders";
 
-/**
- * UnifiedDetailsModal - A consistent modal for displaying estimate, order, or invoice details
- * Includes data normalization to ensure consistent display across all data types
- */
 const UnifiedDetailsModal = ({ 
   data, 
   dataType, // 'estimate', 'order', or 'invoice'
@@ -28,6 +24,7 @@ const UnifiedDetailsModal = ({
   const [expandedSections, setExpandedSections] = useState({
     basicInfo: true,
     productionStatus: dataType === 'order', // Auto-expand for orders
+    loyaltyInfo: true, // Auto-expand loyalty info
     costs: true
   });
   
@@ -215,7 +212,7 @@ const UnifiedDetailsModal = ({
                 {isCurrentStage && (
                   <span className="ml-2 inline-block">
                     <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </span>
                 )}
@@ -223,6 +220,75 @@ const UnifiedDetailsModal = ({
             );
           })}
         </div>
+      </CollapsibleSection>
+    );
+  };
+
+  // NEW: Render loyalty information section
+  const renderLoyaltySection = () => {
+    // Only show for B2B clients that have loyalty info
+    if (!displayData.isLoyaltyEligible && !displayData.loyaltyInfo) return null;
+    
+    const loyaltyInfo = displayData.loyaltyInfo || {};
+    const calculations = displayData.calculations || {};
+    
+    return (
+      <CollapsibleSection
+        title="Loyalty Program Information"
+        isExpanded={expandedSections.loyaltyInfo}
+        onToggle={() => toggleSection('loyaltyInfo')}
+        bgColor="bg-purple-50"
+      >
+        {loyaltyInfo.tierName ? (
+          <div className="space-y-3">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-full flex items-center justify-center" 
+                   style={{ backgroundColor: loyaltyInfo.tierColor || '#9f7aea' }}>
+                <span className="text-white text-sm font-semibold">B2B</span>
+              </div>
+              <div>
+                <h4 className="text-lg font-semibold text-purple-800">{loyaltyInfo.tierName}</h4>
+                <p className="text-sm text-gray-600">Order #{loyaltyInfo.clientOrderCount || '?'}</p>
+              </div>
+            </div>
+            
+            <div className="bg-white p-3 rounded-md border border-purple-100">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-600">Discount Rate</span>
+                  <span className="text-lg font-bold text-green-600">{loyaltyInfo.discount}%</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-sm text-gray-600">Discount Amount</span>
+                  <span className="text-lg font-bold text-green-600">
+                    ₹ {parseFloat(loyaltyInfo.discountAmount || calculations.loyaltyDiscountAmount || 0).toFixed(2)}
+                  </span>
+                </div>
+              </div>
+            </div>
+            
+            {loyaltyInfo.tierChanged && (
+              <div className="mt-2 bg-green-50 text-green-800 p-2 rounded-md text-sm">
+                <div className="flex items-center">
+                  <svg className="w-4 h-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                  </svg>
+                  <span className="font-medium">Tier Upgraded!</span>
+                </div>
+                <p className="mt-1 ml-5">
+                  Client has reached a new loyalty tier with this order.
+                </p>
+              </div>
+            )}
+          </div>
+        ) : (
+          <div className="p-4 bg-gray-50 rounded-md text-center">
+            <p className="text-purple-700 mb-2">B2B Client - Eligible for Loyalty Program</p>
+            <p className="text-sm text-gray-600">
+              This client is eligible for the B2B loyalty program but hasn't reached any tier yet.
+            </p>
+          </div>
+        )}
       </CollapsibleSection>
     );
   };
@@ -295,6 +361,9 @@ const UnifiedDetailsModal = ({
 
             {/* Production Status - Only for Orders */}
             {renderProductionStatus()}
+            
+            {/* NEW: Loyalty Information - Only for applicable orders */}
+            {renderLoyaltySection()}
 
             {/* Cost Information */}
             <CollapsibleSection
