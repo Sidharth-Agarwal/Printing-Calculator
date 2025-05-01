@@ -12,7 +12,8 @@ export const ROUTE_ACCESS = {
   '/material-stock/dies-db': ['admin', 'staff'],
   '/material-stock/standard-rates-db': ['admin', 'staff'],
   '/material-stock/overheads': ['admin', 'staff'],
-  '/material-stock/loyalty-tiers': ['admin', 'staff'], // New route for loyalty tiers management
+  '/material-stock/loyalty-tiers': ['admin', 'staff'], // Route for loyalty tiers management
+  '/loyalty-dashboard': ['admin', 'staff'], // NEW: Route for loyalty dashboard
   '/b2b-dashboard': ['b2b']
 };
 
@@ -26,5 +27,5 @@ export const MENU_ACCESS = {
   invoices: ['admin', 'staff'],
   transactions: ['admin'],
   userManagement: ['admin'],
-  loyaltyProgram: ['admin', 'staff'] // New menu access for loyalty program
+  loyaltyProgram: ['admin', 'staff'] // Menu access for loyalty program and dashboard
 };
