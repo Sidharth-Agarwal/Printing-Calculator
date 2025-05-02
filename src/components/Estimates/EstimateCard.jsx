@@ -57,6 +57,9 @@ const EstimateCard = ({
   const handleDeleteEstimate = async (e) => {
     e.stopPropagation();
     
+    // Don't allow deletion if estimate has been moved to orders
+    if (isMovedToOrders) return;
+    
     if (!window.confirm("Are you sure you want to delete this estimate? This action cannot be undone.")) {
       return;
     }
@@ -104,8 +107,8 @@ const EstimateCard = ({
               : "Pending"}
           </span>
           
-          {/* Admin Delete Button - Now Second */}
-          {isAdmin && (
+          {/* Admin Delete Button - Only show if NOT moved to orders */}
+          {isAdmin && !isMovedToOrders && (
             <button
               onClick={handleDeleteEstimate}
               disabled={isDeleting}
