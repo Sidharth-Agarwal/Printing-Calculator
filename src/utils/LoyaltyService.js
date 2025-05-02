@@ -120,12 +120,13 @@ export const updateClientOrderCountAndTier = async (clientId) => {
     const tierChanged = (!clientData.loyaltyTierId && newTier) || 
                         (clientData.loyaltyTierId !== (newTier?.dbId || null));
     
-    // Update client document
+    // Update client document with loyalty tier information including color
     await updateDoc(clientRef, {
       orderCount: newOrderCount,
       loyaltyTierId: newTier?.dbId || null,
       loyaltyTierName: newTier?.name || null,
-      loyaltyDiscount: newTier?.discount || 0,
+      loyaltyTierColor: newTier?.color || "#9f7aea", // Include tier color
+      loyaltyTierDiscount: newTier?.discount || 0, // Use consistent naming
       updatedAt: new Date().toISOString()
     });
     
@@ -177,7 +178,8 @@ export const applyLoyaltyDiscount = (calculations, tier) => {
       ...calculations,
       loyaltyTierId: tier.dbId,
       loyaltyTierName: tier.name,
-      loyaltyDiscount: discountPercent,
+      loyaltyTierColor: tier.color || "#9f7aea", // Include tier color
+      loyaltyTierDiscount: discountPercent, // Use consistent naming
       loyaltyDiscountAmount: discountAmount.toFixed(2),
       discountedTotalCost: discountedTotal.toFixed(2),
       originalTotalCost: totalCost.toFixed(2),
