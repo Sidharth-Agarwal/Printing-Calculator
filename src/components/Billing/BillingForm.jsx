@@ -1868,7 +1868,7 @@ const initialFormState = {
     dieSize: { length: "", breadth: "" },
     productSize: { length: "", breadth: "" },
     image: "",
-    hsnCode: "", // Add HSN code field to initial state
+    hsnCode: "", // Added HSN code field
   },
   lpDetails: {
     isLPUsed: false,
@@ -2074,7 +2074,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
       quantity: orderAndPaper.quantity,
       paperProvided: orderAndPaper.paperProvided,
       paperName: orderAndPaper.paperName,
-      hsnCode: orderAndPaper.hsnCode, // Include HSN code in Firebase structure
+      hsnCode: orderAndPaper.hsnCode || "", // Include HSN code
     }),
     
     // Die details with product size directly from orderAndPaper
@@ -2188,7 +2188,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [selectedMarkupType, setSelectedMarkupType] = useState("MARKUP TIMELESS");
   const [markupPercentage, setMarkupPercentage] = useState(50);
   const [papers, setPapers] = useState([]);
-  const [hsnRates, setHsnRates] = useState([]); // Store HSN rates from standard_rates collection
+  const [hsnRates, setHsnRates] = useState([]); // Store HSN rates from standard_rates
   
   // Success notification state
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
@@ -2203,25 +2203,29 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [linkedClientData, setLinkedClientData] = useState(null);
 
   const formRef = useRef(null);
-
+  
   // Fetch HSN codes from standard_rates collection
   useEffect(() => {
     const fetchHsnCodes = async () => {
       try {
+        console.log("Fetching HSN codes from standard_rates collection...");
         const standardRatesCollection = collection(db, "standard_rates");
+        
         const unsubscribe = onSnapshot(standardRatesCollection, (snapshot) => {
           const ratesData = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           }));
           
-          // Filter only HSN related rates
-          const fetchedHsnRates = ratesData.filter(rate => rate.group === "HSN");
-          setHsnRates(fetchedHsnRates);
+          // Filter only for HSN rates where group is "HSN"
+          const hsnCodesData = ratesData.filter(rate => rate.group === "HSN");
+          console.log(`Fetched ${hsnCodesData.length} HSN codes from standard_rates`);
           
-          // If job type is already selected, set the HSN code
-          if (state.orderAndPaper.jobType && fetchedHsnRates.length > 0) {
-            updateHsnCodeForJobType(state.orderAndPaper.jobType, fetchedHsnRates);
+          setHsnRates(hsnCodesData);
+          
+          // If job type is already selected, update HSN code immediately
+          if (state.orderAndPaper.jobType && hsnCodesData.length > 0) {
+            updateHsnCodeForJobType(state.orderAndPaper.jobType, hsnCodesData);
           }
         });
         
@@ -2233,6 +2237,41 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     fetchHsnCodes();
   }, []);
+  
+  // Function to update HSN code when job type changes
+  const updateHsnCodeForJobType = (jobType, ratesArray = null) => {
+    // Use passed rates array or state's hsnRates
+    const ratesToUse = ratesArray || hsnRates;
+    
+    if (!ratesToUse || ratesToUse.length === 0) {
+      console.log("No HSN rates available");
+      return;
+    }
+    
+    // Find matching HSN code
+    const matchingHsn = ratesToUse.find(rate => 
+      rate.type.toUpperCase() === jobType.toUpperCase()
+    );
+    
+    if (matchingHsn) {
+      const hsnCode = matchingHsn.finalRate || "";
+      console.log(`Found HSN code ${hsnCode} for job type ${jobType}`);
+      
+      // Update HSN code in state
+      dispatch({
+        type: "UPDATE_HSN_CODE",
+        payload: hsnCode
+      });
+    } else {
+      console.log(`No HSN code found for job type ${jobType}`);
+      
+      // Reset HSN code if no matching code found
+      dispatch({
+        type: "UPDATE_HSN_CODE",
+        payload: ""
+      });
+    }
+  };
   
   // Fetch papers from Firestore
   useEffect(() => {
@@ -2384,52 +2423,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     fetchDefaultMarkup();
   }, [isB2BClient]);
-
-  // This useEffect specifically fetches HSN codes from the standard_rates database
-  useEffect(() => {
-    const fetchHsnCodes = async () => {
-      try {
-        console.log("Fetching HSN codes from standard_rates collection...");
-        
-        // Create a reference to the standard_rates collection in Firestore
-        const standardRatesCollection = collection(db, "standard_rates");
-        
-        // Set up a real-time listener to get updates when rates change
-        const unsubscribe = onSnapshot(standardRatesCollection, (snapshot) => {
-          // Map the document snapshots to data objects with IDs
-          const ratesData = snapshot.docs.map((doc) => ({
-            id: doc.id,
-            ...doc.data(),
-          }));
-          
-          // Filter only rates with group "HSN" - these are our HSN codes
-          const fetchedHsnRates = ratesData.filter(rate => rate.group === "HSN");
-          
-          console.log(`Fetched ${fetchedHsnRates.length} HSN codes from standard_rates:`, 
-            fetchedHsnRates.map(rate => `${rate.type}: ${rate.finalRate}`));
-          
-          // Store the HSN rates in component state for later use
-          setHsnRates(fetchedHsnRates);
-          
-          // If job type is already selected, update the HSN code immediately
-          if (state.orderAndPaper.jobType && fetchedHsnRates.length > 0) {
-            // Find the matching HSN code for the current job type
-            const jobType = state.orderAndPaper.jobType;
-            updateHsnCodeForJobType(jobType, fetchedHsnRates);
-          }
-        });
-        
-        // Return cleanup function to unsubscribe when component unmounts
-        return () => unsubscribe();
-      } catch (error) {
-        console.error("Error fetching HSN codes from standard_rates:", error);
-      }
-    };
-    
-    // Execute the fetch function
-    fetchHsnCodes();
-  }, []); // Empty dependency array to run only once on component mount
-    
+  
   // Initialize form with data if in edit mode
   useEffect(() => {
     if (initialState && isEditMode) {
@@ -2472,8 +2466,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       if (initialState.calculations?.markupPercentage) {
         setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
       }
-
-      // If HSN code is set in the initialState, use it
+      
+      // Set HSN code if it exists in initialState
       if (initialState.jobDetails?.hsnCode) {
         dispatch({
           type: "UPDATE_HSN_CODE",
@@ -2508,48 +2502,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     });
     
     // Update HSN code when job type changes
-    updateHsnCodeForJobType(jobType);
-    
-  }, [state.orderAndPaper.jobType]);
-
-  // Function to update HSN code based on job type
-  const updateHsnCodeForJobType = (jobType, ratesArray = null) => {
-    // Use the passed rates array or the state's hsnRates
-    const ratesToUse = ratesArray || hsnRates;
-    
-    if (!ratesToUse || ratesToUse.length === 0) {
-      console.log("No HSN rates available to match against job type");
-      return;
+    if (hsnRates.length > 0) {
+      updateHsnCodeForJobType(jobType);
     }
     
-    // Find matching HSN code for job type by matching the "type" field
-    // The standard_rates database should have records where:
-    // - group = "HSN"
-    // - type = job type (like "CARD", "BIZ CARD", "ENVELOPE", etc.)
-    // - finalRate = the actual HSN code value to use
-    const matchingHsn = ratesToUse.find(rate => 
-      rate.type.toUpperCase() === jobType.toUpperCase()
-    );
-    
-    if (matchingHsn) {
-      // Extract the HSN code from the finalRate field
-      const hsnCode = matchingHsn.finalRate || "";
-      console.log(`Found HSN code ${hsnCode} for job type ${jobType}`);
-      
-      // Update the HSN code in the form state
-      dispatch({
-        type: "UPDATE_HSN_CODE",
-        payload: hsnCode
-      });
-    } else {
-      console.log(`No HSN code found for job type ${jobType} in rates:`, ratesToUse);
-      // Reset HSN code if no match found
-      dispatch({
-        type: "UPDATE_HSN_CODE",
-        payload: ""
-      });
-    }
-  };
+  }, [state.orderAndPaper.jobType, hsnRates]);
 
   // Calculate costs when form data changes
   useEffect(() => {
@@ -2827,10 +2784,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       payload: { jobType: value }
     });
     
-    // Update the HSN code for the newly selected job type
-    updateHsnCodeForJobType(value);
-    
-    // The useEffect will handle updating the visible services
+    // The useEffect will handle updating the visible services and HSN code
   };
   
   // Generate client code function - needed for when creating new clients
@@ -3026,7 +2980,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       setActiveSection("notebook");
     }
   };
-  
+
   const toggleScreenPrintUsage = () => {
     const isCurrentlyUsed = state.screenPrint?.isScreenPrintUsed || false;
     
@@ -3269,11 +3223,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     );
   };
 
-  // Add a function to display HSN code in the UI if needed
-  const getHsnCodeDisplay = () => {
-    return state.orderAndPaper.hsnCode || "Not available";
-  };
-
   return (
     <div className="bg-white rounded-lg">
       <div className="max-w-screen-xl mx-auto p-4">
@@ -3390,7 +3339,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               onJobTypeChange={handleJobTypeChange}
             />
             
-            {/* Display HSN Code - Added to show the HSN code value in the UI */}
+            {/* Display HSN Code */}
             {state.orderAndPaper.jobType && (
               <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
                 <div className="flex items-center">

@@ -58,8 +58,12 @@ export const calculateEMBCosts = async (state) => {
       }
     } else {
       // Otherwise use the provided plate dimensions
-      const providedLength = embDetails.plateDimensions.length;
-      const providedBreadth = embDetails.plateDimensions.breadth;
+      const providedLength = parseFloat(embDetails.plateDimensions.length);
+      const providedBreadth = parseFloat(embDetails.plateDimensions.breadth);
+      console.log(providedLength)
+      console.log(providedLength + margin)
+      console.log(providedBreadth)
+      console.log(providedBreadth + margin)
       plateArea = (providedLength + margin) * (providedBreadth + margin);
     }
 
