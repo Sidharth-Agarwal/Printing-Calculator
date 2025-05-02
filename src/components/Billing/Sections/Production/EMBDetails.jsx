@@ -8,7 +8,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
   const {
     isEMBUsed = false,
     plateSizeType = "",
-    plateDimensions = { length: "", breadth: "" },
+    plateDimensions = { length: "", breadth: "", lengthInInches: "", breadthInInches: "" },
     plateTypeMale = "",
     plateTypeFemale = "",
     embMR = "",
@@ -110,12 +110,17 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
 
     // Handle automatic dimension updates for plate size
     if (name === "plateSizeType" && value === "Auto") {
+      const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+      const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+      
       dispatch({
         type: "UPDATE_EMB_DETAILS",
         payload: {
           plateDimensions: {
-            length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-            breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+            length: lengthCm,
+            breadth: breadthCm,
+            lengthInInches: dieSize.length || "",
+            breadthInInches: dieSize.breadth || ""
           },
         },
       });
@@ -125,20 +130,37 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
       dispatch({
         type: "UPDATE_EMB_DETAILS",
         payload: {
-          plateDimensions: { length: "", breadth: "" },
+          plateDimensions: { 
+            length: "", 
+            breadth: "",
+            lengthInInches: "",
+            breadthInInches: ""
+          },
         },
       });
     }
   };
 
   const handleDimensionChange = (field, value) => {
+    // Store both the original inches value and the converted cm value
+    let updatedDimensions = { ...plateDimensions };
+    
+    if (field === "length") {
+      // Store the original inches value
+      updatedDimensions.lengthInInches = value;
+      // Convert to cm for storage
+      updatedDimensions.length = value ? inchesToCm(value).toFixed(2) : "";
+    } else if (field === "breadth") {
+      // Store the original inches value
+      updatedDimensions.breadthInInches = value;
+      // Convert to cm for storage
+      updatedDimensions.breadth = value ? inchesToCm(value).toFixed(2) : "";
+    }
+    
     dispatch({
       type: "UPDATE_EMB_DETAILS",
       payload: {
-        plateDimensions: {
-          ...plateDimensions,
-          [field]: value,
-        },
+        plateDimensions: updatedDimensions,
       },
     });
   };
@@ -148,8 +170,8 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     if (isEMBUsed) {
       if (!plateSizeType) validationErrors.plateSizeType = "Plate Size Type is required.";
       if (plateSizeType === "Manual") {
-        if (!plateDimensions.length) validationErrors.length = "Length is required.";
-        if (!plateDimensions.breadth) validationErrors.breadth = "Breadth is required.";
+        if (!plateDimensions.lengthInInches) validationErrors.length = "Length is required.";
+        if (!plateDimensions.breadthInInches) validationErrors.breadth = "Breadth is required.";
       }
       if (!plateTypeMale) validationErrors.plateTypeMale = "Plate Type Male is required.";
       if (!plateTypeFemale) validationErrors.plateTypeFemale = "Plate Type Female is required.";
@@ -169,14 +191,21 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
   useEffect(() => {
     if (isEMBUsed && plateSizeType === "Auto") {
       // Update plate dimensions when die size changes (for Auto mode)
+      const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+      const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+      
       const updatedDimensions = {
-        length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-        breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+        length: lengthCm,
+        breadth: breadthCm,
+        lengthInInches: dieSize.length || "",
+        breadthInInches: dieSize.breadth || ""
       };
 
       const needsUpdate = 
         plateDimensions.length !== updatedDimensions.length || 
-        plateDimensions.breadth !== updatedDimensions.breadth;
+        plateDimensions.breadth !== updatedDimensions.breadth ||
+        plateDimensions.lengthInInches !== updatedDimensions.lengthInInches ||
+        plateDimensions.breadthInInches !== updatedDimensions.breadthInInches;
 
       if (needsUpdate) {
         dispatch({
@@ -220,13 +249,13 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
           <>
             <div>
               <label htmlFor="length" className="block mb-1">
-                Length (cm):
+                Length (inches):
               </label>
               <input
                 type="number"
                 id="length"
-                placeholder="(cm)"
-                value={plateDimensions.length || ""}
+                placeholder="(inches)"
+                value={plateDimensions.lengthInInches || ""}
                 onChange={(e) =>
                   plateSizeType === "Manual"
                     ? handleDimensionChange("length", e.target.value)
@@ -237,17 +266,20 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
                 } ${errors.length ? "border-red-500" : ""}`}
                 readOnly={plateSizeType === "Auto"}
               />
+              <div className="text-xs text-gray-500 mt-1">
+                {plateDimensions.length ? `${plateDimensions.length} cm` : ""}
+              </div>
               {errors.length && <p className="text-red-500 text-sm">{errors.length}</p>}
             </div>
             <div>
               <label htmlFor="breadth" className="block mb-1">
-                Breadth (cm):
+                Breadth (inches):
               </label>
               <input
                 type="number"
                 id="breadth"
-                placeholder="(cm)"
-                value={plateDimensions.breadth || ""}
+                placeholder="(inches)"
+                value={plateDimensions.breadthInInches || ""}
                 onChange={(e) =>
                   plateSizeType === "Manual"
                     ? handleDimensionChange("breadth", e.target.value)
@@ -258,6 +290,9 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
                 } ${errors.breadth ? "border-red-500" : ""}`}
                 readOnly={plateSizeType === "Auto"}
               />
+              <div className="text-xs text-gray-500 mt-1">
+                {plateDimensions.breadth ? `${plateDimensions.breadth} cm` : ""}
+              </div>
               {errors.breadth && <p className="text-red-500 text-sm">{errors.breadth}</p>}
             </div>
           </>

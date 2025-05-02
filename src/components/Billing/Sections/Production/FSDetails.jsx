@@ -142,11 +142,16 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         }
 
         // Create new detail with proper defaults
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+        
         return {
           blockSizeType: "Auto",
           blockDimension: {
-            length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-            breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : ""
+            length: lengthCm,
+            breadth: breadthCm,
+            lengthInInches: dieSize.length || "",
+            breadthInInches: dieSize.breadth || ""
           },
           foilType: defaultFoilType,
           blockType: defaultBlockType,
@@ -181,20 +186,40 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
       updatedFoilDetails[index].blockSizeType = value;
 
       if (value === "Manual") {
-        updatedFoilDetails[index].blockDimension = { length: "", breadth: "" };
+        updatedFoilDetails[index].blockDimension = { 
+          length: "", 
+          breadth: "",
+          lengthInInches: "",
+          breadthInInches: ""
+        };
       }
 
       if (value === "Auto") {
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+        
         updatedFoilDetails[index].blockDimension = {
-          length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-          breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+          length: lengthCm,
+          breadth: breadthCm,
+          lengthInInches: dieSize.length || "",
+          breadthInInches: dieSize.breadth || ""
         };
       }
     } else if (field === "blockDimension") {
-      updatedFoilDetails[index].blockDimension = {
-        ...updatedFoilDetails[index].blockDimension,
-        ...value,
-      };
+      // Handle input values as inches
+      if (value.length !== undefined) {
+        // Store original inches value
+        updatedFoilDetails[index].blockDimension.lengthInInches = value.length;
+        // Convert to cm for the standard length field
+        updatedFoilDetails[index].blockDimension.length = value.length ? inchesToCm(value.length).toFixed(2) : "";
+      }
+      
+      if (value.breadth !== undefined) {
+        // Store original inches value
+        updatedFoilDetails[index].blockDimension.breadthInInches = value.breadth;
+        // Convert to cm for the standard breadth field
+        updatedFoilDetails[index].blockDimension.breadth = value.breadth ? inchesToCm(value.breadth).toFixed(2) : "";
+      }
     } else if (field === "foilType") {
       // Special handling for foil type to ensure it is correctly set
       updatedFoilDetails[index].foilType = value;
@@ -241,10 +266,10 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
           newErrors[`blockSizeType-${index}`] = "Block Size Type is required.";
         }
         if (foil.blockSizeType === "Manual") {
-          if (!foil.blockDimension?.length) {
+          if (!foil.blockDimension?.lengthInInches) {
             newErrors[`blockLength-${index}`] = "Block Length is required.";
           }
-          if (!foil.blockDimension?.breadth) {
+          if (!foil.blockDimension?.breadthInInches) {
             newErrors[`blockBreadth-${index}`] = "Block Breadth is required.";
           }
         }
@@ -319,7 +344,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                 <div className="flex flex-wrap gap-4 text-sm">
                   {/* Block Size Type */}
                   <div className="flex-1">
-                    <div className="mb-1">Block Size (cm):</div>
+                    <div className="mb-1">Block Size:</div>
                     <select
                       value={foil.blockSizeType || "Auto"}
                       onChange={(e) =>
@@ -340,13 +365,13 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                     <div className="flex flex-wrap gap-4 flex-1">
                       <div className="flex-1">
                         <label htmlFor={`length-${index}`} className="block mb-1">
-                          Length:
+                          Length (inches):
                         </label>
                         <input
                           type="number"
                           id={`length-${index}`}
-                          placeholder="(cm)"
-                          value={foil.blockDimension?.length || ""}
+                          placeholder="(inches)"
+                          value={foil.blockDimension?.lengthInInches || ""}
                           onChange={(e) =>
                             handleFoilDetailsChange(index, "blockDimension", {
                               length: e.target.value,
@@ -357,6 +382,10 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           }`}
                           readOnly={foil.blockSizeType === "Auto"}
                         />
+                        {/* Display the converted cm value */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {foil.blockDimension?.length ? `${foil.blockDimension.length} cm` : ""}
+                        </div>
                         {errors[`blockLength-${index}`] && (
                           <p className="text-red-500 text-sm">{errors[`blockLength-${index}`]}</p>
                         )}
@@ -364,13 +393,13 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                       <div className="flex-1">
                         <label htmlFor={`breadth-${index}`} className="block mb-1">
-                          Breadth:
+                          Breadth (inches):
                         </label>
                         <input
                           type="number"
                           id={`breadth-${index}`}
-                          placeholder="(cm)"
-                          value={foil.blockDimension?.breadth || ""}
+                          placeholder="(inches)"
+                          value={foil.blockDimension?.breadthInInches || ""}
                           onChange={(e) =>
                             handleFoilDetailsChange(index, "blockDimension", {
                               breadth: e.target.value,
@@ -381,6 +410,10 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           }`}
                           readOnly={foil.blockSizeType === "Auto"}
                         />
+                        {/* Display the converted cm value */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {foil.blockDimension?.breadth ? `${foil.blockDimension.breadth} cm` : ""}
+                        </div>
                         {errors[`blockBreadth-${index}`] && (
                           <p className="text-red-500 text-sm">{errors[`blockBreadth-${index}`]}</p>
                         )}

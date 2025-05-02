@@ -10,7 +10,7 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
   const [expandedRows, setExpandedRows] = useState({});
   
   // State for view type (compact or detailed)
-  const [viewType, setViewType] = useState('detailed');
+  const [viewType, setViewType] = useState('compact');
   
   // Toggle expanded state for a row
   const toggleRowExpand = (id) => {
