@@ -10,7 +10,7 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
   const [expandedRows, setExpandedRows] = useState({});
   
   // State for view type (compact or detailed)
-  const [viewType, setViewType] = useState('compact');
+  const [viewType, setViewType] = useState('detailed');
   
   // Toggle expanded state for a row
   const toggleRowExpand = (id) => {
@@ -38,8 +38,8 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
     calculations: [
       { name: "Freight/KG", key: "freightPerKg", width: "w-20" },
       { name: "Rate/Gram", key: "ratePerGram", width: "w-20" },
-      { name: "1 Sqcm in Gram", key: "oneSqcmInGram", width: "w-24" },
-      { name: "GSM/Sheet", key: "gsmPerSheet", width: "w-20" },
+      { name: "1 Sqcm in Gram", key: "oneSqcmInGram", width: "w-28" },
+      { name: "GSM/Sheet", key: "gsmPerSheet", width: "w-24" },
       { name: "Freight/Sheet", key: "freightPerSheet", width: "w-24" }
     ]
   };
@@ -159,7 +159,15 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
               {/* Main Info Headers */}
               {columnGroups.main.map((col) => (
                 <th key={`head-${col.key}`} className={`px-2 py-2 border font-medium text-gray-700 text-left ${col.width}`}>
-                  {col.name}
+                  {col.name.includes('/') ? (
+                    <>
+                      {col.name.split('/')[0]}/
+                      <br />
+                      {col.name.split('/')[1]}
+                    </>
+                  ) : (
+                    col.name
+                  )}
                 </th>
               ))}
               
@@ -173,7 +181,21 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
               {/* Calculations Headers */}
               {columnGroups.calculations.map((col) => (
                 <th key={`head-${col.key}`} className={`px-2 py-2 border font-medium text-gray-700 text-left ${col.width}`}>
-                  {col.name}
+                  {col.name.includes('/') ? (
+                    <>
+                      {col.name.split('/')[0]}/
+                      <br />
+                      {col.name.split('/')[1]}
+                    </>
+                  ) : col.name.includes(' in ') ? (
+                    <>
+                      {col.name.split(' in ')[0]} in
+                      <br />
+                      {col.name.split(' in ')[1]}
+                    </>
+                  ) : (
+                    col.name
+                  )}
                 </th>
               ))}
             </tr>
