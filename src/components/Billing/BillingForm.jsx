@@ -1525,21 +1525,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               singlePageMode={true}
               onJobTypeChange={handleJobTypeChange}
             />
-            
-            {/* Display HSN Code */}
-            {state.orderAndPaper.jobType && (
-              <div className="mt-4 p-3 bg-blue-50 rounded border border-blue-200">
-                <div className="flex items-center">
-                  <span className="font-medium text-gray-700">HSN Code:</span>
-                  <span className="ml-2 font-bold">{state.orderAndPaper.hsnCode || "Not available"}</span>
-                  {!state.orderAndPaper.hsnCode && (
-                    <span className="ml-2 text-xs text-red-500">
-                      No HSN code found for selected job type
-                    </span>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Production Services Section */}
