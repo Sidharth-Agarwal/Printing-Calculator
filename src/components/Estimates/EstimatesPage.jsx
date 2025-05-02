@@ -6,6 +6,7 @@ import EstimateCard from "./EstimateCard";
 import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
 import PreviewModal from "./PreviewModal";
 import GroupedJobTicket from "./GroupedJobTicket";
+import EditEstimateModal from "./EditEstimateModal";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { createRoot } from "react-dom/client";
@@ -47,6 +48,10 @@ const EstimatesPage = () => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [previewData, setPreviewData] = useState(null);
   const [pdfError, setPdfError] = useState(null);
+  
+  // Edit estimate modal state
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [estimateToEdit, setEstimateToEdit] = useState(null);
   
   // Loyalty status update notification state
   const [loyaltyNotification, setLoyaltyNotification] = useState(null);
@@ -251,6 +256,56 @@ const EstimatesPage = () => {
     setSelectedEstimate(estimate);
     setIsModalOpen(true);
   };
+
+  // Handle edit estimate
+  const handleEditEstimate = (estimate) => {
+    // Only allow editing estimates that haven't been moved to orders or canceled
+    if (estimate.movedToOrders || estimate.isCanceled) {
+      alert("Estimates that have been moved to orders or canceled cannot be edited.");
+      return;
+    }
+    
+    setEstimateToEdit(estimate);
+    setIsEditModalOpen(true);
+  };
+
+  // Handle save edited estimate
+  const handleSaveEditedEstimate = async (editedEstimate) => {
+    try {
+      // Ensure we have an estimate object to work with
+      if (!editedEstimate) {
+        throw new Error("No estimate data provided");
+      }
+      
+      // Log the estimate we're about to save
+      console.log("Saving edited estimate:", editedEstimate);
+      
+      // Verify clientName exists before updating
+      if (!editedEstimate.clientName) {
+        console.warn("clientName is missing, setting default value");
+        editedEstimate.clientName = editedEstimate.clientInfo?.name || "Unknown Client";
+      }
+      
+      // Update the estimate in Firestore
+      const estimateRef = doc(db, "estimates", editedEstimate.id);
+      await updateDoc(estimateRef, editedEstimate);
+      
+      // Update local state
+      setAllEstimates(prev => prev.map(est => 
+        est.id === editedEstimate.id ? editedEstimate : est
+      ));
+      
+      // Close edit modal
+      setIsEditModalOpen(false);
+      setEstimateToEdit(null);
+      
+      // Show success message
+      alert("Estimate updated successfully!");
+    } catch (error) {
+      console.error("Error updating estimate:", error);
+      alert(`Failed to update estimate: ${error.message}`);
+    }
+  };  
 
   // Handle moving estimate to orders - Updated to handle loyalty with auto-redirect
   const handleMoveToOrders = async (estimate) => {
@@ -709,7 +764,7 @@ const EstimatesPage = () => {
                       </button>
                     ))}
                   </div>
-                  
+
                   {/* Version Estimates */}
                   {selectedVersions[client.id] && (
                     <div>
@@ -738,7 +793,8 @@ const EstimatesPage = () => {
                             onViewDetails={() => handleViewEstimate(estimate)}
                             onMoveToOrders={() => handleMoveToOrders(estimate)}
                             onCancelEstimate={() => handleCancelEstimate(estimate)}
-                            onDeleteEstimate={handleDeleteEstimate}
+                            onDeleteEstimate={() => handleDeleteEstimate(estimate)}
+                            onEditEstimate={() => handleEditEstimate(estimate)} // Add this line
                             isAdmin={userRole === "admin"}
                           />
                         ))}
@@ -778,6 +834,18 @@ const EstimatesPage = () => {
             />
           )}
         </PreviewModal>
+      )}
+
+      {/* Edit Estimate Modal */}
+      {isEditModalOpen && estimateToEdit && (
+        <EditEstimateModal
+          estimate={estimateToEdit}
+          onClose={() => {
+            setIsEditModalOpen(false);
+            setEstimateToEdit(null);
+          }}
+          onSave={handleSaveEditedEstimate}
+        />
       )}
     </div>
   );
