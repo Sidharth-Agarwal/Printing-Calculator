@@ -3,7 +3,7 @@ import { collection, getDocs } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import { useAuth } from "../../../Login/AuthContext";
 
-const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, generateClientCode }) => {
+const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, generateClientCode, isEditMode = false }) => {
   const [clients, setClients] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState("");
@@ -50,6 +50,9 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
 
   // Handle client selection
   const handleClientSelect = (client) => {
+    // Don't allow client selection in edit mode
+    if (isEditMode) return;
+    
     onClientSelect({
       clientId: client.id,
       clientInfo: client
@@ -125,15 +128,18 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
             <span className="ml-2 text-lg">{selectedClient.name}</span>
             {getClientTypeBadge(selectedClient)}
           </div>
-          <button
-            onClick={() => {
-              onClientSelect(null);
-              setSelectedClient(null);
-            }}
-            className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
-          >
-            Change Client
-          </button>
+          {/* Only show change client button if not in edit mode */}
+          {!isEditMode && (
+            <button
+              onClick={() => {
+                onClientSelect(null);
+                setSelectedClient(null);
+              }}
+              className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+            >
+              Change Client
+            </button>
+          )}
         </div>
         <div className="text-sm text-gray-600">
           <p><strong>Code:</strong> {selectedClient.clientCode}</p>
@@ -148,7 +154,15 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     );
   }
 
-  // Client selection interface
+  // Client selection interface - only shown if not in edit mode
+  if (isEditMode) {
+    return (
+      <div className="p-4 bg-blue-50 rounded border border-blue-200">
+        <p className="text-sm text-gray-600 italic">Client selection is not available in edit mode</p>
+      </div>
+    );
+  }
+
   const filteredClients = getFilteredClients();
 
   return (

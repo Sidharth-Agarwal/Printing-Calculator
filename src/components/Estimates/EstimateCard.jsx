@@ -7,6 +7,7 @@ const EstimateCard = ({
   onMoveToOrders,
   onCancelEstimate,
   onDeleteEstimate,
+  onEditEstimate, // Add edit function prop
   isAdmin
 }) => {
   const [isMoving, setIsMoving] = useState(false);
@@ -74,6 +75,19 @@ const EstimateCard = ({
     }
   };
 
+  // Handle editing estimate
+  const handleEditEstimate = (e) => {
+    e.stopPropagation();
+    
+    // Don't allow editing if estimate has been moved to orders or canceled
+    if (isMovedToOrders || isCanceled) {
+      alert("Estimates that have been moved to orders or canceled cannot be edited.");
+      return;
+    }
+    
+    onEditEstimate(estimate);
+  };
+
   return (
     <div
       onClick={() => onViewDetails(estimate)}
@@ -132,6 +146,10 @@ const EstimateCard = ({
           <span>Version: {estimate?.versionId || "1"}</span>
         </div>
         <div className="truncate">{estimate?.projectName || "No Project"}</div>
+        {/* Display HSN code if available */}
+        {estimate?.jobDetails?.hsnCode && (
+          <div className="text-xs text-gray-500">HSN: {estimate.jobDetails.hsnCode}</div>
+        )}
       </div>
 
       {/* Processing Types */}
@@ -153,7 +171,7 @@ const EstimateCard = ({
         )}
       </div>
 
-      {/* Buttons Section - Horizontal Layout */}
+      {/* Buttons Section - now with Edit button */}
       <div className="flex gap-1">
         <button
           onClick={(e) => {
@@ -168,6 +186,19 @@ const EstimateCard = ({
           </svg>
           View
         </button>
+
+        {/* Edit Button - Only show if not moved to orders or canceled */}
+        {!isMovedToOrders && !isCanceled && (
+          <button
+            onClick={handleEditEstimate}
+            className="text-xs flex-1 px-1 py-1 rounded-md bg-indigo-100 hover:bg-indigo-200 text-indigo-800 flex items-center justify-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+              <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+            </svg>
+            Edit
+          </button>
+        )}
 
         {!isCanceled && (
           <button
