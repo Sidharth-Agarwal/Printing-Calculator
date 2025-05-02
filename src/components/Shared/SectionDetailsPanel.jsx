@@ -13,49 +13,6 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
     return `${length} × ${breadth}`;
   };
 
-  // Helper to transform keys to readable labels
-  const getLabel = (key) => {
-    return key
-      .replace(/([a-z])([A-Z])/g, "$1 $2")
-      .replace(/([A-Z])([A-Z][a-z])/g, "$1 $2")
-      .replace(/([a-z])([0-9])/g, "$1 $2")
-      .replace(/([0-9])([a-z])/g, "$1 $2")
-      .replace(/([A-Z][a-z]+)/g, (match) => match.charAt(0).toUpperCase() + match.slice(1))
-      .trim();
-  };
-
-  // Helper to render value based on type
-  const renderValue = (key, value) => {
-    if (value === null || value === undefined || value === "") {
-      return "Not Provided";
-    }
-
-    if (key.toLowerCase().includes("date") && value) {
-      try {
-        const date = new Date(value);
-        return date.toLocaleString("en-GB", {
-          day: "2-digit",
-          month: "2-digit",
-          year: "numeric",
-        });
-      } catch (error) {
-        return value || "Not Provided";
-      }
-    }
-
-    if (key.toLowerCase() === "image" && value) {
-      return (
-        <img
-          src={value}
-          alt="Reference Image"
-          className="max-w-full max-h-36 object-contain border rounded-md"
-        />
-      );
-    }
-
-    return value.toString();
-  };
-
   // Handle rendering LP details (Letterpress)
   const renderLPDetailsTable = () => {
     if (!data || !data.isLPUsed) return null;

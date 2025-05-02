@@ -117,18 +117,6 @@ const UnifiedDetailsModal = ({
     return value.toString();
   };
 
-  // Format dimensions for display
-  const formatDimensions = (dimensions) => {
-    if (!dimensions) return "Not specified";
-    if (typeof dimensions === "string") return dimensions;
-    
-    const length = dimensions.length || "";
-    const breadth = dimensions.breadth || "";
-    
-    if (!length && !breadth) return "Not specified";
-    return `${length} × ${breadth}`;
-  };
-
   // Section header component
   const SectionHeader = ({ title, isExpanded, onToggle, bgColor = "bg-gray-50" }) => (
     <div 
