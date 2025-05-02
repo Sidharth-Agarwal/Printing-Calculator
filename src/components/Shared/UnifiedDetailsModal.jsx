@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
 import CostDisplaySection from "./CostDisplaySection";
+import SectionDetailsPanel from "./SectionDetailsPanel";
 import { normalizeDataForDisplay } from "../../utils/normalizeDataForOrders";
 
 const UnifiedDetailsModal = ({ 
@@ -25,7 +26,9 @@ const UnifiedDetailsModal = ({
     basicInfo: true,
     productionStatus: dataType === 'order', // Auto-expand for orders
     loyaltyInfo: true, // Auto-expand loyalty info
-    costs: true
+    costs: true,
+    productionDetails: true, // New section for production details
+    postProductionDetails: true // New section for post-production details
   });
   
   // Common field labels across all data types
@@ -114,6 +117,46 @@ const UnifiedDetailsModal = ({
     return value.toString();
   };
 
+  // Format dimensions for display
+  const formatDimensions = (dimensions) => {
+    if (!dimensions) return "Not specified";
+    if (typeof dimensions === "string") return dimensions;
+    
+    const length = dimensions.length || "";
+    const breadth = dimensions.breadth || "";
+    
+    if (!length && !breadth) return "Not specified";
+    return `${length} × ${breadth}`;
+  };
+
+  // Section header component
+  const SectionHeader = ({ title, isExpanded, onToggle, bgColor = "bg-gray-50" }) => (
+    <div 
+      className={`flex justify-between items-center p-3 ${bgColor} rounded-t cursor-pointer`}
+      onClick={onToggle}
+    >
+      <h3 className="font-semibold text-gray-700">{title}</h3>
+      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+    </div>
+  );
+
+  // Collapsible section component
+  const CollapsibleSection = ({ title, isExpanded, onToggle, children, bgColor }) => (
+    <div className="border rounded-md mb-3 overflow-hidden">
+      <SectionHeader 
+        title={title} 
+        isExpanded={isExpanded} 
+        onToggle={onToggle} 
+        bgColor={bgColor}
+      />
+      {isExpanded && (
+        <div className="p-3">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+
   // Render section in grid layout
   const renderSectionInGrid = (heading, sectionData, excludedFields = []) => {
     if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
@@ -155,37 +198,9 @@ const UnifiedDetailsModal = ({
     );
   };
 
-  // Section header component
-  const SectionHeader = ({ title, isExpanded, onToggle, bgColor = "bg-gray-50" }) => (
-    <div 
-      className={`flex justify-between items-center p-3 ${bgColor} rounded-t cursor-pointer`}
-      onClick={onToggle}
-    >
-      <h3 className="font-semibold text-gray-700">{title}</h3>
-      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-    </div>
-  );
-
-  // Collapsible section component
-  const CollapsibleSection = ({ title, isExpanded, onToggle, children, bgColor }) => (
-    <div className="border rounded-md mb-3 overflow-hidden">
-      <SectionHeader 
-        title={title} 
-        isExpanded={isExpanded} 
-        onToggle={onToggle} 
-        bgColor={bgColor}
-      />
-      {isExpanded && (
-        <div className="p-3">
-          {children}
-        </div>
-      )}
-    </div>
-  );
-
   // Render production status (for order type only)
   const renderProductionStatus = () => {
-    if (dataType !== 'order' || !data.stage) return null;
+    if (dataType !== 'order' || !displayData.stage) return null;
     
     const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
     
@@ -198,7 +213,7 @@ const UnifiedDetailsModal = ({
       >
         <div className="flex flex-wrap gap-2 mt-2">
           {stages.map((stage) => {
-            const isCurrentStage = stage === data.stage;
+            const isCurrentStage = stage === displayData.stage;
             return (
               <div 
                 key={stage}
@@ -224,7 +239,7 @@ const UnifiedDetailsModal = ({
     );
   };
 
-  // NEW: Render loyalty information section
+  // Render loyalty information section
   const renderLoyaltySection = () => {
     // Only show for B2B clients that have loyalty info
     if (!displayData.isLoyaltyEligible && !displayData.loyaltyInfo) return null;
@@ -289,6 +304,89 @@ const UnifiedDetailsModal = ({
             </p>
           </div>
         )}
+      </CollapsibleSection>
+    );
+  };
+
+  // Determine which production processes are used
+  const getUsedProductionProcesses = () => {
+    const processes = [];
+    
+    if (displayData.lpDetails?.isLPUsed) processes.push('lpDetails');
+    if (displayData.fsDetails?.isFSUsed) processes.push('fsDetails');
+    if (displayData.embDetails?.isEMBUsed) processes.push('embDetails');
+    if (displayData.digiDetails?.isDigiUsed) processes.push('digiDetails');
+    if (displayData.screenPrint?.isScreenPrintUsed) processes.push('screenPrint');
+    if (displayData.notebookDetails?.isNotebookUsed) processes.push('notebookDetails');
+    
+    return processes;
+  };
+  
+  // Determine which post-production processes are used
+  const getUsedPostProductionProcesses = () => {
+    const processes = [];
+    
+    if (displayData.dieCutting?.isDieCuttingUsed) processes.push('dieCutting');
+    if (displayData.postDC?.isPostDCUsed) processes.push('postDC');
+    if (displayData.foldAndPaste?.isFoldAndPasteUsed) processes.push('foldAndPaste');
+    if (displayData.dstPaste?.isDstPasteUsed) processes.push('dstPaste');
+    if (displayData.magnet?.isMagnetUsed) processes.push('magnet');
+    if (displayData.qc?.isQCUsed) processes.push('qc');
+    if (displayData.packing?.isPackingUsed) processes.push('packing');
+    if (displayData.misc?.isMiscUsed) processes.push('misc');
+    if (displayData.sandwich?.isSandwichComponentUsed) processes.push('sandwich');
+    
+    return processes;
+  };
+
+  // Render production details section
+  const renderProductionDetailsSection = () => {
+    const usedProcesses = getUsedProductionProcesses();
+    
+    if (usedProcesses.length === 0) return null;
+    
+    return (
+      <CollapsibleSection
+        title="Production Details"
+        isExpanded={expandedSections.productionDetails}
+        onToggle={() => toggleSection('productionDetails')}
+        bgColor="bg-blue-50"
+      >
+        <div className="space-y-4">
+          {usedProcesses.map(process => (
+            <SectionDetailsPanel 
+              key={process}
+              data={displayData[process]}
+              sectionType={process}
+            />
+          ))}
+        </div>
+      </CollapsibleSection>
+    );
+  };
+  
+  // Render post-production details section
+  const renderPostProductionDetailsSection = () => {
+    const usedProcesses = getUsedPostProductionProcesses();
+    
+    if (usedProcesses.length === 0) return null;
+    
+    return (
+      <CollapsibleSection
+        title="Post-Production Details"
+        isExpanded={expandedSections.postProductionDetails}
+        onToggle={() => toggleSection('postProductionDetails')}
+        bgColor="bg-purple-50"
+      >
+        <div className="space-y-4">
+          {usedProcesses.map(process => (
+            <SectionDetailsPanel 
+              key={process}
+              data={displayData[process]}
+              sectionType={process}
+            />
+          ))}
+        </div>
       </CollapsibleSection>
     );
   };
@@ -362,7 +460,7 @@ const UnifiedDetailsModal = ({
             {/* Production Status - Only for Orders */}
             {renderProductionStatus()}
             
-            {/* NEW: Loyalty Information - Only for applicable orders */}
+            {/* Loyalty Information - Only for applicable orders */}
             {renderLoyaltySection()}
 
             {/* Cost Information */}
@@ -379,6 +477,12 @@ const UnifiedDetailsModal = ({
                 dataType={dataType} // Pass dataType to display correct format
               />
             </CollapsibleSection>
+            
+            {/* Production Details Section */}
+            {renderProductionDetailsSection()}
+            
+            {/* Post-Production Details Section */}
+            {renderPostProductionDetailsSection()}
           </div>
         </div>
       </div>
