@@ -36,21 +36,41 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
       // Reset plate dimensions when switching to Manual
       if (value === "Manual") {
-        updatedDetails[index].plateDimensions = { length: "", breadth: "" };
+        updatedDetails[index].plateDimensions = { 
+          length: "", 
+          breadth: "",
+          lengthInInches: "",
+          breadthInInches: ""
+        };
       }
 
       // Populate dimensions when switching to Auto
       if (value === "Auto") {
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+        
         updatedDetails[index].plateDimensions = {
-          length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-          breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+          length: lengthCm,
+          breadth: breadthCm,
+          lengthInInches: dieSize.length || "",
+          breadthInInches: dieSize.breadth || ""
         };
       }
     } else if (field === "plateDimensions") {
-      updatedDetails[index].plateDimensions = {
-        ...updatedDetails[index].plateDimensions,
-        ...value,
-      };
+      // Handle dimensions in inches and convert to cm for storage
+      if (value.length !== undefined) {
+        // Store the original inches value
+        updatedDetails[index].plateDimensions.lengthInInches = value.length;
+        // Convert to cm for the standard database field
+        updatedDetails[index].plateDimensions.length = value.length ? inchesToCm(value.length).toFixed(2) : "";
+      }
+      
+      if (value.breadth !== undefined) {
+        // Store the original inches value
+        updatedDetails[index].plateDimensions.breadthInInches = value.breadth;
+        // Convert to cm for the standard database field
+        updatedDetails[index].plateDimensions.breadth = value.breadth ? inchesToCm(value.breadth).toFixed(2) : "";
+      }
     } else {
       updatedDetails[index][field] = value;
 
@@ -81,17 +101,24 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     // Get the default plate type from the fetched list, or fallback to "Polymer Plate"
     const defaultPlateType = plateTypes.length > 0 ? plateTypes[0].materialName : "Polymer Plate";
 
-    const details = Array.from({ length: noOfColors }, (_, index) => ({
-      plateSizeType: lpDetails.colorDetails[index]?.plateSizeType || "Auto", // Default to "Auto"
-      plateDimensions: lpDetails.colorDetails[index]?.plateDimensions || {
-        length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-        breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
-      },
-      pantoneType: lpDetails.colorDetails[index]?.pantoneType || "",
-      plateType: lpDetails.colorDetails[index]?.plateType || defaultPlateType, // Use first plate type from API
-      mrType: lpDetails.colorDetails[index]?.mrType || defaultMRType.type, // Use first MR type from API
-      mrTypeConcatenated: lpDetails.colorDetails[index]?.mrTypeConcatenated || defaultMRType.concatenated // Store concatenated version
-    }));
+    const details = Array.from({ length: noOfColors }, (_, index) => {
+      const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+      const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+      
+      return {
+        plateSizeType: lpDetails.colorDetails[index]?.plateSizeType || "Auto", // Default to "Auto"
+        plateDimensions: lpDetails.colorDetails[index]?.plateDimensions || {
+          length: lengthCm,
+          breadth: breadthCm,
+          lengthInInches: dieSize.length || "",
+          breadthInInches: dieSize.breadth || ""
+        },
+        pantoneType: lpDetails.colorDetails[index]?.pantoneType || "",
+        plateType: lpDetails.colorDetails[index]?.plateType || defaultPlateType, // Use first plate type from API
+        mrType: lpDetails.colorDetails[index]?.mrType || defaultMRType.type, // Use first MR type from API
+        mrTypeConcatenated: lpDetails.colorDetails[index]?.mrTypeConcatenated || defaultMRType.concatenated // Store concatenated version
+      }
+    });
     
     dispatch({
       type: "UPDATE_LP_DETAILS",
@@ -112,10 +139,10 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
           newErrors[`plateSizeType_${index}`] = "Plate size type is required.";
         }
         if (color.plateSizeType === "Manual") {
-          if (!color.plateDimensions?.length) {
+          if (!color.plateDimensions?.lengthInInches) {
             newErrors[`plateLength_${index}`] = "Plate length is required.";
           }
-          if (!color.plateDimensions?.breadth) {
+          if (!color.plateDimensions?.breadthInInches) {
             newErrors[`plateBreadth_${index}`] = "Plate breadth is required.";
           }
         }
@@ -149,11 +176,16 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     if (lpDetails.isLPUsed) {
       const updatedDetails = lpDetails.colorDetails.map((color) => {
         if (color.plateSizeType === "Auto") {
+          const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+          const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+          
           return {
             ...color,
             plateDimensions: {
-              length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-              breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+              length: lengthCm,
+              breadth: breadthCm,
+              lengthInInches: dieSize.length || "",
+              breadthInInches: dieSize.breadth || ""
             },
           };
         }
@@ -252,7 +284,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
               <div className="flex flex-wrap gap-4 text-sm">
                 {/* Plate Size Type */}
                 <div className="flex-1">
-                  <div className="mb-1">Plate Size (cm):</div>
+                  <div className="mb-1">Plate Size:</div>
                   <select
                     value={lpDetails.colorDetails[index]?.plateSizeType || "Auto"}
                     onChange={(e) =>
@@ -279,15 +311,15 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   <div className="flex flex-wrap gap-4 flex-1">
                     <div className="flex-1">
                       <label htmlFor={`length_${index}`} className="block mb-1">
-                        Length:
+                        Length (inches):
                       </label>
                       <input
                         id={`length_${index}`}
                         type="number"
                         name="length"
-                        placeholder="(cm)"
+                        placeholder="(inches)"
                         value={
-                          lpDetails.colorDetails[index]?.plateDimensions?.length || ""
+                          lpDetails.colorDetails[index]?.plateDimensions?.lengthInInches || ""
                         }
                         onChange={(e) =>
                           handleColorDetailsChange(index, "plateDimensions", {
@@ -303,6 +335,11 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           lpDetails.colorDetails[index]?.plateSizeType === "Auto"
                         }
                       />
+                      {/* Display converted cm value for reference */}
+                      <div className="text-xs text-gray-500 mt-1">
+                        {lpDetails.colorDetails[index]?.plateDimensions?.length ? 
+                          `${lpDetails.colorDetails[index].plateDimensions.length} cm` : ""}
+                      </div>
                       {errors[`plateLength_${index}`] && (
                         <p className="text-red-500 text-sm">
                           {errors[`plateLength_${index}`]}
@@ -312,15 +349,15 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                     <div className="flex-1">
                       <label htmlFor={`breadth_${index}`} className="block mb-1">
-                        Breadth:
+                        Breadth (inches):
                       </label>
                       <input
                         id={`breadth_${index}`}
                         type="number"
                         name="breadth"
-                        placeholder="(cm)"
+                        placeholder="(inches)"
                         value={
-                          lpDetails.colorDetails[index]?.plateDimensions?.breadth || ""
+                          lpDetails.colorDetails[index]?.plateDimensions?.breadthInInches || ""
                         }
                         onChange={(e) =>
                           handleColorDetailsChange(index, "plateDimensions", {
@@ -336,6 +373,11 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           lpDetails.colorDetails[index]?.plateSizeType === "Auto"
                         }
                       />
+                      {/* Display converted cm value for reference */}
+                      <div className="text-xs text-gray-500 mt-1">
+                        {lpDetails.colorDetails[index]?.plateDimensions?.breadth ? 
+                          `${lpDetails.colorDetails[index].plateDimensions.breadth} cm` : ""}
+                      </div>
                       {errors[`plateBreadth_${index}`] && (
                         <p className="text-red-500 text-sm">
                           {errors[`plateBreadth_${index}`]}

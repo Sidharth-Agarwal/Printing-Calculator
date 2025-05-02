@@ -111,7 +111,9 @@ export const calculateFSCosts = async (state) => {
         }
       } else {
         // Otherwise use the provided block dimensions
-        blockArea = parseFloat(foilDetail.blockDimension.length) * parseFloat(foilDetail.blockDimension.breadth);
+        const providedLength = parseFloat(foilDetail.blockDimension.length)
+        const providedBreadth = parseFloat(foilDetail.blockDimension.breadth)
+        blockArea = (providedLength + margin) * (providedBreadth + margin);
       }
       
       // 2. Fetch block material details

@@ -11,6 +11,13 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
     productSizeB: "",
     dieSizeL: "",
     dieSizeB: "",
+    // New calculated fields
+    dieSizeL_CM: "",  // L (CM) for PAPER
+    dieSizeB_CM: "",  // B (CM) for PAPER
+    plateSizeL: "",   // PLATE Size (L Inch)
+    plateSizeB: "",   // PLATE Size (B Inch)
+    clsdPrntSizeL_CM: "", // CLSD PRNT Size (L CM)
+    clsdPrntSizeB_CM: "", // CLSD PRNT Size (B CM)
     imageUrl: "",
   });
 
@@ -20,12 +27,53 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
 
   useEffect(() => {
     if (editingDie) {
-      setFormData(editingDie);
+      // Calculate fields if they don't exist in the editing die data
+      const updatedDie = {
+        ...editingDie,
+        dieSizeL_CM: editingDie.dieSizeL_CM || calculateCM(editingDie.dieSizeL),
+        dieSizeB_CM: editingDie.dieSizeB_CM || calculateCM(editingDie.dieSizeB),
+        plateSizeL: editingDie.plateSizeL || editingDie.productSizeL || "",
+        plateSizeB: editingDie.plateSizeB || editingDie.productSizeB || "",
+        clsdPrntSizeL_CM: editingDie.clsdPrntSizeL_CM || calculateCM(editingDie.productSizeL),
+        clsdPrntSizeB_CM: editingDie.clsdPrntSizeB_CM || calculateCM(editingDie.productSizeB),
+      };
+      setFormData(updatedDie);
       setImage(null); // Reset the selected image when editing
     } else {
       resetForm();
     }
   }, [editingDie]);
+
+  // Calculate CM from inches
+  const calculateCM = (inches) => {
+    if (!inches || isNaN(inches)) return "";
+    return (parseFloat(inches) * 2.54).toFixed(2);
+  };
+
+  // Update calculated fields whenever input fields change
+  useEffect(() => {
+    // Calculate L (CM) for PAPER and B (CM) for PAPER
+    const dieSizeL_CM = calculateCM(formData.dieSizeL);
+    const dieSizeB_CM = calculateCM(formData.dieSizeB);
+    
+    // PLATE Size is the same as Product Size
+    const plateSizeL = formData.productSizeL;
+    const plateSizeB = formData.productSizeB;
+    
+    // Calculate CLSD PRNT Size in CM
+    const clsdPrntSizeL_CM = calculateCM(formData.productSizeL);
+    const clsdPrntSizeB_CM = calculateCM(formData.productSizeB);
+    
+    setFormData(prev => ({
+      ...prev,
+      dieSizeL_CM,
+      dieSizeB_CM,
+      plateSizeL,
+      plateSizeB,
+      clsdPrntSizeL_CM,
+      clsdPrntSizeB_CM,
+    }));
+  }, [formData.dieSizeL, formData.dieSizeB, formData.productSizeL, formData.productSizeB]);
 
   const resetForm = () => {
     setFormData({
@@ -37,6 +85,12 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
       productSizeB: "",
       dieSizeL: "",
       dieSizeB: "",
+      dieSizeL_CM: "",
+      dieSizeB_CM: "",
+      plateSizeL: "",
+      plateSizeB: "",
+      clsdPrntSizeL_CM: "",
+      clsdPrntSizeB_CM: "",
       imageUrl: "",
     });
     setImage(null);
@@ -133,6 +187,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
       )}
       
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        {/* Original input fields */}
         {[
           { label: "Job Type", name: "jobType", type: "select", options: jobTypeOptions },
           { label: "Type", name: "type", type: "text", placeholder: "Enter the type of the die" },
@@ -175,6 +230,30 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             )}
           </div>
         ))}
+        
+        {/* Calculated fields (read-only) */}
+        {[
+          { label: "L (CM) for PAPER", name: "dieSizeL_CM", type: "text", placeholder: "Auto-calculated" },
+          { label: "B (CM) for PAPER", name: "dieSizeB_CM", type: "text", placeholder: "Auto-calculated" },
+          { label: "PLATE Size (L Inch)", name: "plateSizeL", type: "text", placeholder: "Auto-calculated" },
+          { label: "PLATE Size (B Inch)", name: "plateSizeB", type: "text", placeholder: "Auto-calculated" },
+          { label: "CLSD PRNT Size (L CM)", name: "clsdPrntSizeL_CM", type: "text", placeholder: "Auto-calculated" },
+          { label: "CLSD PRNT Size (B CM)", name: "clsdPrntSizeB_CM", type: "text", placeholder: "Auto-calculated" },
+        ].map((field, idx) => (
+          <div key={`calc-${idx}`}>
+            <label className="block text-sm font-medium text-gray-700">{field.label}:</label>
+            <input
+              type={field.type}
+              name={field.name}
+              value={formData[field.name] || ""}
+              readOnly
+              placeholder={field.placeholder}
+              className="text-md mt-3 block w-full border-gray-300 rounded-sm shadow-sm bg-gray-100"
+              disabled={true}
+            />
+          </div>
+        ))}
+        
         <div>
           <label className="block text-sm font-medium text-gray-700">Image:</label>
           <input 
