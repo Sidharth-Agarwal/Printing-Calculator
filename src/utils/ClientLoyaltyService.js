@@ -41,11 +41,12 @@ export const syncAllClientLoyaltyTiers = async () => {
               (clientData.loyaltyTierId !== (appropriateTier?.dbId || null));
             
             if (needsUpdate) {
-              // Update client document
+              // Update client document with tier information including color
               const updatePromise = updateDoc(doc(db, "clients", clientId), {
                 loyaltyTierId: appropriateTier?.dbId || null,
                 loyaltyTierName: appropriateTier?.name || null,
-                loyaltyDiscount: appropriateTier?.discount || 0,
+                loyaltyTierColor: appropriateTier?.color || "#9f7aea", // Add tier color
+                loyaltyTierDiscount: appropriateTier?.discount || 0, // Rename to keep consistent naming
                 updatedAt: new Date().toISOString()
               });
               
@@ -56,6 +57,7 @@ export const syncAllClientLoyaltyTiers = async () => {
                 clientName: clientData.name,
                 oldTierId: clientData.loyaltyTierId || null,
                 newTierId: appropriateTier?.dbId || null,
+                newTierColor: appropriateTier?.color || "#9f7aea",
                 orderCount: currentOrderCount
               });
             }
@@ -104,7 +106,8 @@ export const getLoyaltyStatusReport = async () => {
         orderCount: data.orderCount || 0,
         currentTierId: data.loyaltyTierId,
         currentTierName: data.loyaltyTierName,
-        discount: data.loyaltyDiscount || 0
+        color: data.loyaltyTierColor || "#9f7aea", // Include color in client data
+        discount: data.loyaltyTierDiscount || 0
       };
     });
     
@@ -116,7 +119,8 @@ export const getLoyaltyStatusReport = async () => {
         tierName: tier.name,
         clientCount: clientsInTier.length,
         orderThreshold: tier.orderThreshold,
-        discount: tier.discount
+        discount: tier.discount,
+        color: tier.color || "#9f7aea" // Include color in tier summary
       };
     });
     
@@ -127,7 +131,8 @@ export const getLoyaltyStatusReport = async () => {
       tierName: "No Tier",
       clientCount: clientsWithNoTier.length,
       orderThreshold: 0,
-      discount: 0
+      discount: 0,
+      color: "#cccccc" // Default color for "No Tier"
     });
     
     return {
@@ -219,12 +224,14 @@ export const getClientLoyaltyHistory = async (clientId) => {
         orderCount: clientData.orderCount || 0,
         currentTierId: clientData.loyaltyTierId,
         currentTierName: clientData.loyaltyTierName,
-        currentDiscount: clientData.loyaltyDiscount || 0
+        currentTierColor: clientData.loyaltyTierColor || "#9f7aea", // Include color in client info
+        currentDiscount: clientData.loyaltyTierDiscount || 0
       },
       nextTier: nextTier ? {
         id: nextTier.dbId,
         name: nextTier.name,
         discount: nextTier.discount,
+        color: nextTier.color || "#9f7aea", // Include color in next tier info
         ordersRequired: ordersUntilNextTier
       } : null,
       totalSavings: totalSavings.toFixed(2),
@@ -233,5 +240,83 @@ export const getClientLoyaltyHistory = async (clientId) => {
   } catch (error) {
     console.error("Error getting client loyalty history:", error);
     return null;
+  }
+};
+
+/**
+ * Update a single client's loyalty tier based on order count
+ * @param {string} clientId - Client's document ID
+ * @param {number} orderCount - Current order count
+ * @returns {Promise<Object>} - Result of the update operation
+ */
+export const updateClientLoyaltyTier = async (clientId, orderCount) => {
+  try {
+    if (!clientId) {
+      throw new Error("Client ID is required");
+    }
+    
+    // Get the client document
+    const clientRef = doc(db, "clients", clientId);
+    const clientSnap = await getDoc(clientRef);
+    
+    if (!clientSnap.exists()) {
+      throw new Error("Client not found");
+    }
+    
+    const clientData = clientSnap.data();
+    
+    // Only update B2B clients
+    if (!clientData.clientType || clientData.clientType.toUpperCase() !== "B2B") {
+      return {
+        success: false,
+        message: "Only B2B clients can be enrolled in loyalty program"
+      };
+    }
+    
+    // Get appropriate tier for this order count
+    const appropriateTier = await getTierByOrderCount(orderCount);
+    
+    // If no appropriate tier found, clear loyalty info
+    if (!appropriateTier) {
+      await updateDoc(clientRef, {
+        loyaltyTierId: null,
+        loyaltyTierName: null,
+        loyaltyTierColor: null, // Clear color
+        loyaltyTierDiscount: 0,
+        updatedAt: new Date().toISOString()
+      });
+      
+      return {
+        success: true,
+        message: "Client not eligible for any loyalty tier",
+        tierInfo: null
+      };
+    }
+    
+    // Update client with tier information
+    await updateDoc(clientRef, {
+      loyaltyTierId: appropriateTier.dbId,
+      loyaltyTierName: appropriateTier.name,
+      loyaltyTierColor: appropriateTier.color || "#9f7aea", // Set tier color
+      loyaltyTierDiscount: appropriateTier.discount,
+      updatedAt: new Date().toISOString()
+    });
+    
+    return {
+      success: true,
+      message: `Client updated to tier: ${appropriateTier.name}`,
+      tierInfo: {
+        id: appropriateTier.dbId,
+        name: appropriateTier.name,
+        color: appropriateTier.color || "#9f7aea",
+        discount: appropriateTier.discount
+      }
+    };
+  } catch (error) {
+    console.error("Error updating client loyalty tier:", error);
+    return {
+      success: false,
+      message: `Error: ${error.message}`
+    };
   }
 };

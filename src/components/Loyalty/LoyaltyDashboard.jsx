@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { getLoyaltyStatusReport, syncAllClientLoyaltyTiers } from "../../utils/ClientLoyaltyService"
+import { getLoyaltyStatusReport, syncAllClientLoyaltyTiers } from "../../utils/ClientLoyaltyService";
 import { getLoyaltyTiers } from "../../utils/LoyaltyService";
 import { useAuth } from "../Login/AuthContext";
 
@@ -22,7 +22,9 @@ const LoyaltyDashboard = () => {
         
         // Fetch loyalty tiers
         const tiersData = await getLoyaltyTiers();
-        setTiers(tiersData);
+        // Sort by order threshold
+        const sortedTiers = tiersData.sort((a, b) => a.orderThreshold - b.orderThreshold);
+        setTiers(sortedTiers);
         
         // Fetch loyalty report
         const reportData = await getLoyaltyStatusReport();
@@ -154,9 +156,15 @@ const LoyaltyDashboard = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {report?.tierSummary.map((tier) => (
-                <tr key={tier.tierName}>
+                <tr key={tier.tierId}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{tier.tierName}</div>
+                    <div className="flex items-center">
+                      <div 
+                        className="w-4 h-4 rounded-full mr-2" 
+                        style={{ backgroundColor: tier.color }}
+                      ></div>
+                      <div className="text-sm font-medium text-gray-900">{tier.tierName}</div>
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-500">
@@ -167,7 +175,18 @@ const LoyaltyDashboard = () => {
                     <div className="text-sm font-medium text-green-600">{tier.discount}%</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">{tier.clientCount}</div>
+                    <div className="flex items-center">
+                      <div className="w-full bg-gray-200 rounded-full h-2.5">
+                        <div
+                          className="h-2.5 rounded-full" 
+                          style={{ 
+                            width: `${(tier.clientCount / report.totalB2BClients) * 100}%`,
+                            backgroundColor: tier.color
+                          }}
+                        ></div>
+                      </div>
+                      <span className="ml-2 text-sm text-gray-900">{tier.clientCount}</span>
+                    </div>
                   </td>
                 </tr>
               ))}
@@ -199,7 +218,10 @@ const LoyaltyDashboard = () => {
                 const ordersUntilNextTier = nextTier ? nextTier.orderThreshold - client.orderCount : null;
                 
                 return (
-                  <tr key={client.id}>
+                  <tr key={client.id} className="hover:bg-gray-50" style={{
+                    borderLeft: client.currentTierId ? `4px solid ${client.color}` : '',
+                    backgroundColor: client.currentTierId ? `${client.color}10` : ''
+                  }}>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-gray-900">{client.name}</div>
                     </td>
@@ -207,9 +229,25 @@ const LoyaltyDashboard = () => {
                       <div className="text-sm text-gray-900">{client.orderCount}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">
-                        {client.currentTierName || "No Tier"}
-                      </div>
+                      {client.currentTierName ? (
+                        <div className="flex items-center">
+                          <div 
+                            className="w-3 h-3 rounded-full mr-2" 
+                            style={{ backgroundColor: client.color }}
+                          ></div>
+                          <span 
+                            className="px-2 py-1 rounded text-xs font-medium text-white"
+                            style={{ 
+                              backgroundColor: client.color,
+                              boxShadow: "0 1px 2px rgba(0,0,0,0.1)" 
+                            }}
+                          >
+                            {client.currentTierName}
+                          </span>
+                        </div>
+                      ) : (
+                        <div className="text-sm text-gray-500">No Tier</div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm font-medium text-green-600">

@@ -50,7 +50,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     return date.toLocaleDateString("en-IN");
   };
 
-  // Helper function for tier color styling
+  // Enhanced helper function for tier color styling with better hover handling
   const getTierStyles = (client) => {
     const isB2B = client.clientType && (client.clientType.toUpperCase() === "B2B");
     const isEnrolled = isB2B && client.loyaltyTierId;
@@ -60,9 +60,16 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     
     return {
       backgroundColor: `${tierColor}15`, // 15% opacity for background
-      transition: 'background-color 0.2s ease',
       borderLeft: `4px solid ${tierColor}`, // Solid left border with tier color
     };
+  };
+
+  // Get appropriate row class based on enrollment status
+  const getRowClassName = (client) => {
+    const isB2B = client.clientType && (client.clientType.toUpperCase() === "B2B");
+    const isEnrolled = isB2B && client.loyaltyTierId;
+    
+    return `border-t ${isEnrolled ? "hover:bg-opacity-70" : "hover:bg-gray-50"}`;
   };
 
   return (
@@ -107,9 +114,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Name</th>
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Client Type</th>
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Contact Person</th>
-              {/* Email column removed as requested */}
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Phone</th>
-              {/* Loyalty Status Column */}
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Loyalty Status</th>
               <th className="px-4 py-2 border font-medium text-gray-700 uppercase text-left">Actions</th>
             </tr>
@@ -120,11 +125,12 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                 // Determine if client is enrolled in loyalty program
                 const isB2B = client.clientType && (client.clientType.toUpperCase() === "B2B");
                 const isEnrolled = isB2B && client.loyaltyTierId;
+                const tierColor = isEnrolled ? client.loyaltyTierColor || "#9f7aea" : "";
                 
                 return (
                   <tr 
                     key={client.id} 
-                    className="border-t hover:bg-gray-50"
+                    className={getRowClassName(client)}
                     style={getTierStyles(client)}
                   >
                     <td className="px-4 py-2">{client.clientCode}</td>
@@ -146,22 +152,30 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                       </span>
                     </td>
                     <td className="px-4 py-2">{client.contactPerson}</td>
-                    {/* Email column removed */}
                     <td className="px-4 py-2">{client.phone}</td>
-                    {/* Loyalty Status Display with client's tier color */}
+                    {/* Enhanced Loyalty Status Display with client's tier color */}
                     <td className="px-4 py-2">
                       {isB2B ? (
                         client.loyaltyTierName ? (
-                          <div>
+                          <div className="flex items-center">
+                            <div 
+                              className="w-3 h-3 rounded-full mr-2" 
+                              style={{ backgroundColor: tierColor }}
+                            ></div>
                             <span 
                               className="px-2 py-1 rounded text-xs font-medium text-white"
                               style={{ 
-                                backgroundColor: client.loyaltyTierColor || "#9f7aea",
+                                backgroundColor: tierColor,
                                 boxShadow: "0 1px 2px rgba(0,0,0,0.1)" 
                               }}
                             >
                               {client.loyaltyTierName}
                             </span>
+                            {client.loyaltyTierDiscount && (
+                              <span className="ml-2 text-xs text-green-600 font-medium">
+                                {client.loyaltyTierDiscount}% off
+                              </span>
+                            )}
                           </div>
                         ) : (
                           <span className="text-gray-500 text-sm">Not enrolled</span>
