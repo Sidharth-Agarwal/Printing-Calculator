@@ -71,7 +71,9 @@ export const calculateLPCosts = async (state) => {
         }
       } else {
         // Otherwise use the provided plate dimensions
-        plateArea = parseFloat(colorDetail.plateDimensions.length) * parseFloat(colorDetail.plateDimensions.breadth);
+        const providedLength = colorDetail.plateDimensions.length
+        const providedBreadth = colorDetail.plateDimensions.breadth
+        plateArea = (providedLength + margin) * (providedBreadth + margin);
       }
       
       // 2. Fetch plate material details

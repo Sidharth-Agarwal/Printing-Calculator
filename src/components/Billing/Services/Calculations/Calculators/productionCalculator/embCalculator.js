@@ -58,7 +58,9 @@ export const calculateEMBCosts = async (state) => {
       }
     } else {
       // Otherwise use the provided plate dimensions
-      plateArea = parseFloat(embDetails.plateDimensions.length) * parseFloat(embDetails.plateDimensions.breadth);
+      const providedLength = embDetails.plateDimensions.length;
+      const providedBreadth = embDetails.plateDimensions.breadth;
+      plateArea = (providedLength + margin) * (providedBreadth + margin);
     }
 
     // 2. Fetch male plate material details
