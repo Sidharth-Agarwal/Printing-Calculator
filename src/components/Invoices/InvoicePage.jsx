@@ -4,6 +4,7 @@ import { db } from '../../firebaseConfig';
 import UnifiedDetailsModal from '../Shared/UnifiedDetailsModal'; 
 import ClientInvoiceGroup from './ClientInvoiceGroup';
 import NewInvoiceModal from './NewInvoiceModal';
+import JobTicketModal from './JobTicketModal';
 import { useAuth } from "../Login/AuthContext";
 
 const InvoicesPage = () => {
@@ -31,6 +32,7 @@ const InvoicesPage = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isOrderDetailsModalOpen, setIsOrderDetailsModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
+  const [isJobTicketModalOpen, setIsJobTicketModalOpen] = useState(false);
   
   // Available stages for orders - added "Completed" as final stage
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
@@ -119,7 +121,13 @@ const InvoicesPage = () => {
               digiDetails: data.digiDetails || null,
               dieCutting: data.dieCutting || null,
               sandwich: data.sandwich || null,
-              pasting: data.pasting || {}
+              pasting: data.pasting || {},
+              postDC: data.postDC || null,
+              foldAndPaste: data.foldAndPaste || null,
+              dstPaste: data.dstPaste || null,
+              qc: data.qc || null,
+              packing: data.packing || null,
+              misc: data.misc || null
             };
           });
           
@@ -300,6 +308,17 @@ const InvoicesPage = () => {
     setIsInvoiceModalOpen(true);
   };
 
+  // Handle job ticket generation for selected orders
+  const handleGenerateJobTicket = () => {
+    if (selectedOrders.length === 0) {
+      alert("Please select at least one order to generate a job ticket.");
+      return;
+    }
+    
+    // Open job ticket modal
+    setIsJobTicketModalOpen(true);
+  };
+
   // Handle view order details
   const handleViewOrderDetails = (order) => {
     setSelectedOrder(order);
@@ -439,6 +458,12 @@ const InvoicesPage = () => {
               Generate Invoice
             </button>
             <button
+              onClick={handleGenerateJobTicket}
+              className="px-2 py-1 text-xs bg-green-600 text-white rounded-md hover:bg-green-700"
+            >
+              Generate Job Ticket
+            </button>
+            <button
               onClick={clearSelection}
               className="px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded-md hover:bg-gray-300"
             >
@@ -515,6 +540,15 @@ const InvoicesPage = () => {
           selectedOrderIds={selectedOrders}
           orders={allOrders.filter(order => selectedOrders.includes(order.id))}
           onClose={() => setIsInvoiceModalOpen(false)}
+        />
+      )}
+
+      {/* Job Ticket Modal */}
+      {isJobTicketModalOpen && (
+        <JobTicketModal
+          selectedOrderIds={selectedOrders}
+          orders={allOrders.filter(order => selectedOrders.includes(order.id))}
+          onClose={() => setIsJobTicketModalOpen(false)}
         />
       )}
     </div>
