@@ -113,7 +113,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
           lengthInInches: dieSize.length || "",
           breadthInInches: dieSize.breadth || ""
         },
-        pantoneType: lpDetails.colorDetails[index]?.pantoneType || "",
+        pantoneType: lpDetails.colorDetails[index]?.pantoneType || "Not sure", // Pre-filled with "Not sure"
         plateType: lpDetails.colorDetails[index]?.plateType || defaultPlateType, // Use first plate type from API
         mrType: lpDetails.colorDetails[index]?.mrType || defaultMRType.type, // Use first MR type from API
         mrTypeConcatenated: lpDetails.colorDetails[index]?.mrTypeConcatenated || defaultMRType.concatenated // Store concatenated version
@@ -392,7 +392,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   <div className="mb-1">Pantone Type:</div>
                   <input
                     type="text"
-                    value={lpDetails.colorDetails[index]?.pantoneType || ""}
+                    value={lpDetails.colorDetails[index]?.pantoneType || "Not sure"}
                     onChange={(e) =>
                       handleColorDetailsChange(
                         index,

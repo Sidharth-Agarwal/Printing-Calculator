@@ -397,7 +397,7 @@ const CostDisplaySection = ({
         
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="font-medium text-gray-700">Subtotal per Card:</span>
+            <span className="font-medium text-gray-700">Subtotal per Item:</span>
             <span className="text-gray-900">
               {formatCurrency(calculations.subtotalPerCard)}
             </span>
@@ -413,7 +413,7 @@ const CostDisplaySection = ({
           </div>
           
           <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-            <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
+            <span className="text-lg font-bold text-gray-700">Total Cost per Item:</span>
             <span className="text-lg font-bold text-gray-900">
               {formatCurrency(calculations.totalCostPerCard)}
             </span>

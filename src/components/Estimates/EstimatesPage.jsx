@@ -618,6 +618,47 @@ const EstimatesPage = () => {
     navigate('/orders');
   };
 
+  const handleDuplicateEstimate = async (estimate) => {
+    try {
+      // Create a new object from the original estimate
+      const duplicatedEstimate = {
+        ...estimate
+      };
+      
+      // Remove the id completely instead of setting it to undefined
+      delete duplicatedEstimate.id;
+      
+      // Update timestamps and reset flags
+      duplicatedEstimate.createdAt = new Date().toISOString();
+      duplicatedEstimate.updatedAt = new Date().toISOString();
+      duplicatedEstimate.movedToOrders = false;
+      duplicatedEstimate.isCanceled = false;
+      
+      // Append "- Copy" to project name for easy identification
+      duplicatedEstimate.projectName = `${estimate.projectName || "Unnamed Project"} - Copy`;
+  
+      // Add the duplicated estimate to Firestore
+      const docRef = await addDoc(collection(db, "estimates"), duplicatedEstimate);
+      
+      // Get the new document with its ID
+      const newEstimate = {
+        ...duplicatedEstimate,
+        id: docRef.id
+      };
+      
+      // Update local state to include the new estimate
+      setAllEstimates(prev => [...prev, newEstimate]);
+      
+      // Show success message
+      alert("Estimate duplicated successfully!");
+      
+      return newEstimate;
+    } catch (error) {
+      console.error("Error duplicating estimate:", error);
+      throw error; // Rethrow to be caught in the EstimateCard component
+    }
+  };
+
   return (
     <div className="p-3 max-w-screen-xl mx-auto">
       {/* Header Section - More compact */}
@@ -785,19 +826,20 @@ const EstimatesPage = () => {
                       </div>
                       
                       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
-                        {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
-                          <EstimateCard
-                            key={estimate.id}
-                            estimate={estimate}
-                            estimateNumber={index + 1}
-                            onViewDetails={() => handleViewEstimate(estimate)}
-                            onMoveToOrders={() => handleMoveToOrders(estimate)}
-                            onCancelEstimate={() => handleCancelEstimate(estimate)}
-                            onDeleteEstimate={() => handleDeleteEstimate(estimate)}
-                            onEditEstimate={() => handleEditEstimate(estimate)} // Add this line
-                            isAdmin={userRole === "admin"}
-                          />
-                        ))}
+                      {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
+                        <EstimateCard
+                          key={estimate.id}
+                          estimate={estimate}
+                          estimateNumber={index + 1}
+                          onViewDetails={() => handleViewEstimate(estimate)}
+                          onMoveToOrders={() => handleMoveToOrders(estimate)}
+                          onCancelEstimate={() => handleCancelEstimate(estimate)}
+                          onDeleteEstimate={() => handleDeleteEstimate(estimate)}
+                          onEditEstimate={() => handleEditEstimate(estimate)}
+                          onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
+                          isAdmin={userRole === "admin"}
+                        />
+                      ))}
                       </div>
                     </div>
                   )}

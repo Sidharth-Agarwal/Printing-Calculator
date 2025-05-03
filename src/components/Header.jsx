@@ -13,12 +13,12 @@ const Header = () => {
   const [displayName, setDisplayName] = useState("");
   const [clientData, setClientData] = useState(null);
 
-  // Helper function to navigate to a new tab or current window
-  const navigateToNewTab = (path, isB2BRoute = false) => {
-    if (isB2BRoute && userRole === 'b2b') {
-      navigate(path);
-    } else {
-      window.open(path, '_blank', 'noopener noreferrer');
+  // Modified function to navigate within the SPA instead of opening new tabs
+  const navigateTo = (path) => {
+    navigate(path);
+    // Close profile menu if it's open
+    if (showProfileMenu) {
+      setShowProfileMenu(false);
     }
   };
 
@@ -111,7 +111,7 @@ const Header = () => {
         <h1 className="text-lg font-bold whitespace-nowrap">
           {userRole === "b2b" ? (
             <button 
-              onClick={() => navigate("/b2b-dashboard")} 
+              onClick={() => navigateTo("/b2b-dashboard")} 
               className="hover:text-blue-300 transition"
             >
               FAMOUS LETTER PRESS
@@ -124,7 +124,7 @@ const Header = () => {
           {/* New Bill */}
           {isMenuItemVisible('newBill') && (
             <button
-              onClick={() => navigateToNewTab('/new-bill')}
+              onClick={() => navigateTo('/new-bill')}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
                 getActiveClass('/new-bill')
               }`}
@@ -145,7 +145,7 @@ const Header = () => {
               </button>
               <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10 left-0 min-w-max">
                 <button
-                  onClick={() => navigateToNewTab('/material-stock/paper-db')}
+                  onClick={() => navigateTo('/material-stock/paper-db')}
                   className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
                     isActive('/material-stock/paper-db') ? "bg-gray-200 font-semibold" : ""
                   }`}
@@ -153,7 +153,7 @@ const Header = () => {
                   Paper Management
                 </button>
                 <button
-                  onClick={() => navigateToNewTab('/material-stock/material-db')}
+                  onClick={() => navigateTo('/material-stock/material-db')}
                   className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
                     isActive('/material-stock/material-db') ? "bg-gray-200 font-semibold" : ""
                   }`}
@@ -161,7 +161,7 @@ const Header = () => {
                   Material Management
                 </button>
                 <button
-                  onClick={() => navigateToNewTab('/material-stock/dies-db')}
+                  onClick={() => navigateTo('/material-stock/dies-db')}
                   className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
                     isActive('/material-stock/dies-db') ? "bg-gray-200 font-semibold" : ""
                   }`}
@@ -169,7 +169,7 @@ const Header = () => {
                   Die Management
                 </button>
                 <button
-                  onClick={() => navigateToNewTab('/material-stock/standard-rates-db')}
+                  onClick={() => navigateTo('/material-stock/standard-rates-db')}
                   className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
                     isActive('/material-stock/standard-rates-db') ? "bg-gray-200 font-semibold" : ""
                   }`}
@@ -177,7 +177,7 @@ const Header = () => {
                   Standard Rate Management
                 </button>
                 <button
-                  onClick={() => navigateToNewTab('/material-stock/overheads')}
+                  onClick={() => navigateTo('/material-stock/overheads')}
                   className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
                     isActive('/material-stock/overheads') ? "bg-gray-200 font-semibold" : ""
                   }`}
@@ -188,7 +188,7 @@ const Header = () => {
                 {/* Add Loyalty Program Management menu item */}
                 {isMenuItemVisible('loyaltyProgram') && (
                   <button
-                    onClick={() => navigateToNewTab('/material-stock/loyalty-tiers')}
+                    onClick={() => navigateTo('/material-stock/loyalty-tiers')}
                     className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
                       isActive('/material-stock/loyalty-tiers') ? "bg-gray-200 font-semibold" : ""
                     }`}
@@ -203,7 +203,7 @@ const Header = () => {
           {/* Clients */}
           {isMenuItemVisible('clients') && (
             <button
-              onClick={() => navigateToNewTab('/clients')}
+              onClick={() => navigateTo('/clients')}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
                 getActiveClass('/clients')
               }`}
@@ -215,7 +215,7 @@ const Header = () => {
           {/* Estimates */}
           {isMenuItemVisible('estimates') && (
             <button
-              onClick={() => navigateToNewTab('/material-stock/estimates-db', true)}
+              onClick={() => navigateTo('/material-stock/estimates-db')}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
                 getActiveClass('/material-stock/estimates-db')
               }`}
@@ -227,7 +227,7 @@ const Header = () => {
           {/* Orders */}
           {isMenuItemVisible('orders') && (
             <button
-              onClick={() => navigateToNewTab('/orders', true)}
+              onClick={() => navigateTo('/orders')}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
                 getActiveClass('/orders')
               }`}
@@ -239,7 +239,7 @@ const Header = () => {
           {/* Invoices */}
           {isMenuItemVisible('invoices') && (
             <button
-              onClick={() => navigateToNewTab('/invoices', true)}
+              onClick={() => navigateTo('/invoices')}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
                 getActiveClass('/invoices')
               }`}
@@ -251,7 +251,7 @@ const Header = () => {
           {/* NEW: Loyalty Dashboard - Moved to main navigation */}
           {isMenuItemVisible('loyaltyProgram') && (
             <button
-              onClick={() => navigateToNewTab('/loyalty-dashboard')}
+              onClick={() => navigateTo('/loyalty-dashboard')}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
                 getActiveClass('/loyalty-dashboard')
               }`}
@@ -263,7 +263,7 @@ const Header = () => {
           {/* Transactions */}
           {isMenuItemVisible('transactions') && (
             <button
-              onClick={() => navigateToNewTab('/transactions')}
+              onClick={() => navigateTo('/transactions')}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
                 getActiveClass('/transactions')
               }`}
@@ -275,7 +275,7 @@ const Header = () => {
           {/* B2B Dashboard */}
           {userRole === "b2b" && (
             <button
-              onClick={() => navigate("/b2b-dashboard")}
+              onClick={() => navigateTo("/b2b-dashboard")}
               className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
                 getActiveClass('/b2b-dashboard')
               }`}
@@ -318,10 +318,7 @@ const Header = () => {
                 {/* User Management - Only for Admin */}
                 {isMenuItemVisible('userManagement') && (
                   <button
-                    onClick={() => {
-                      setShowProfileMenu(false);
-                      navigateToNewTab('/user-management');
-                    }}
+                    onClick={() => navigateTo('/user-management')}
                     className={`block w-full text-left px-4 py-2 hover:bg-gray-200 ${
                       isActive('/user-management') ? "bg-gray-200 font-semibold" : ""
                     }`}
@@ -332,10 +329,7 @@ const Header = () => {
                
                 {/* Change Password - Always Visible */}
                 <button
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    navigate('/change-password');
-                  }}
+                  onClick={() => navigateTo('/change-password')}
                   className={`block w-full text-left px-4 py-2 hover:bg-gray-200 ${
                     isActive('/change-password') ? "bg-gray-200 font-semibold" : ""
                   }`}

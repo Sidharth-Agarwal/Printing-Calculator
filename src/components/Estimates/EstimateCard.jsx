@@ -7,12 +7,14 @@ const EstimateCard = ({
   onMoveToOrders,
   onCancelEstimate,
   onDeleteEstimate,
-  onEditEstimate, // Add edit function prop
+  onEditEstimate,
+  onDuplicateEstimate, // Duplicate functionality prop
   isAdmin
 }) => {
   const [isMoving, setIsMoving] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDuplicating, setIsDuplicating] = useState(false); // State for duplicate operation
 
   const isMovedToOrders = estimate.movedToOrders;
   const isCanceled = estimate.isCanceled;
@@ -88,12 +90,27 @@ const EstimateCard = ({
     onEditEstimate(estimate);
   };
 
+  // Handle duplicating estimate
+  const handleDuplicateEstimate = async (e) => {
+    e.stopPropagation();
+    
+    try {
+      setIsDuplicating(true);
+      await onDuplicateEstimate(estimate);
+    } catch (error) {
+      console.error("Error duplicating estimate:", error);
+      alert("Failed to duplicate estimate. Please try again.");
+    } finally {
+      setIsDuplicating(false);
+    }
+  };
+
   return (
     <div
       onClick={() => onViewDetails(estimate)}
       className="border rounded-md p-2 bg-white transition cursor-pointer shadow-sm hover:shadow-md"
     >
-      {/* Header with Status Badge and Admin Delete Button */}
+      {/* Header with Status Badge, Duplicate Button and Admin Delete Button */}
       <div className="flex justify-between items-center mb-1">
         <div className="font-medium text-sm text-blue-700">
           #{estimateNumber}: {estimate?.jobDetails?.jobType || "Unknown Job"}
@@ -106,7 +123,7 @@ const EstimateCard = ({
           )}
         </div>
         <div className="flex items-center gap-2">
-          {/* Status Badge - Now First */}
+          {/* Status Badge */}
           <span className={`px-2 py-0.5 text-xs rounded-full ${
             isMovedToOrders
               ? "bg-green-100 text-green-800"
@@ -120,6 +137,28 @@ const EstimateCard = ({
               ? "Cancelled" 
               : "Pending"}
           </span>
+          
+          {/* Duplicate Button - NOW IN THE TOP ROW */}
+          <button
+            onClick={handleDuplicateEstimate}
+            disabled={isDuplicating}
+            className={`p-1 rounded-full ${isDuplicating 
+              ? 'bg-amber-100 text-amber-300 cursor-wait' 
+              : 'bg-amber-50 text-amber-500 hover:bg-amber-100 hover:text-amber-700'}`}
+            title="Duplicate Estimate"
+          >
+            {isDuplicating ? (
+              <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                <path d="M7 9a2 2 0 012-2h6a2 2 0 012 2v6a2 2 0 01-2 2H9a2 2 0 01-2-2V9z" />
+                <path d="M5 3a2 2 0 00-2 2v6a2 2 0 002 2V5h8a2 2 0 00-2-2H5z" />
+              </svg>
+            )}
+          </button>
           
           {/* Admin Delete Button - Only show if NOT moved to orders */}
           {isAdmin && !isMovedToOrders && (
@@ -171,7 +210,7 @@ const EstimateCard = ({
         )}
       </div>
 
-      {/* Buttons Section - now with Edit button */}
+      {/* Buttons Section - removed duplicate button from here */}
       <div className="flex gap-1">
         <button
           onClick={(e) => {

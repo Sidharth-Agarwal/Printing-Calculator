@@ -736,7 +736,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           parseInt(state.orderAndPaper?.quantity, 10) || 0,
           markupType
         );
-        
+
         if (result.error) {
           console.error("Error recalculating with new markup:", result.error);
         } else {
@@ -850,6 +850,47 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     handleSubmit(new Event('submit'));
   };
 
+  // Function to perform a partial reset of the form, keeping client, version, and order info
+  const partialResetForm = () => {
+    const partialReset = {
+      ...initialFormState,
+      // Keep client information
+      client: { ...state.client },
+      // Keep version information
+      versionId: state.versionId,
+      // Keep order and paper information
+      orderAndPaper: { ...state.orderAndPaper }
+    };
+    
+    dispatch({ type: "INITIALIZE_FORM", payload: partialReset });
+    setCalculations(null);
+    setActiveSection("reviewAndSubmit");
+  };
+
+  // Function for full reset (used by the reset button)
+  const fullResetForm = () => {
+    dispatch({ type: "RESET_FORM" });
+    setActiveSection(null);
+    setValidationErrors({});
+    setCalculations(null);
+    
+    // Don't reset client for B2B users, they should always use their own client
+    if (!isB2BClient) {
+      setSelectedClient(null);
+    }
+    
+    setSelectedVersion("");
+    
+    // Reset markup to defaults
+    setSelectedMarkupType(defaultMarkup.type);
+    setMarkupPercentage(defaultMarkup.percentage);
+    
+    // Scroll to top of form
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -889,18 +930,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       } else {
         await addDoc(collection(db, "estimates"), formattedData);
         
-        // Show success notification instead of alert
+        // Show success notification
         setShowSuccessNotification(true);
         
-        // Reset form after a brief delay to allow user to see the success notification
-        setTimeout(() => {
-          dispatch({ type: "RESET_FORM" });
-          setSelectedClient(null);
-          setSelectedVersion("");
-          
-          // Navigate to estimates page after notification disappears
-          navigate('/material-stock/estimates-db');
-        }, 2000);
+        // Instead of fully resetting and navigating away, only reset production and post-production sections
+        partialResetForm();
       }
     } catch (error) {
       console.error("Error handling estimate:", error);
@@ -1374,27 +1408,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   };
 
   const confirmResetForm = () => {
-    dispatch({ type: "RESET_FORM" });
+    fullResetForm();
     setShowResetConfirmation(false);
-    setActiveSection(null);
-    setValidationErrors({});
-    setCalculations(null);
-    
-    // Don't reset client for B2B users, they should always use their own client
-    if (!isB2BClient) {
-      setSelectedClient(null);
-    }
-    
-    setSelectedVersion("");
-    
-    // Reset markup to defaults
-    setSelectedMarkupType(defaultMarkup.type);
-    setMarkupPercentage(defaultMarkup.percentage);
-    
-    // Scroll to top of form
-    if (formRef.current) {
-      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
   };
 
   // Check if a service is visible for the current job type
@@ -1427,10 +1442,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
         {/* Success Notification Component */}
         <SuccessNotification
-          message="Estimate Created!"
+          message="Estimate Created Successfully! You can create another estimate with the same client and project details."
           isVisible={showSuccessNotification}
           onClose={closeSuccessNotification}
-          duration={2000}
+          duration={3000}
         />
 
         {/* Reset Confirmation Modal */}
@@ -1582,7 +1597,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 onToggleUsage={toggleEMBUsage}
               >
                 <EMBDetails 
-                  state={state} 
+                  state={state}
                   dispatch={dispatch} 
                   onNext={() => {}} 
                   onPrevious={() => {}} 
