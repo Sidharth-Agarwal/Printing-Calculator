@@ -118,9 +118,23 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           <div>
             <h2 className="text-sm font-semibold text-gray-700 mb-1">Bill To:</h2>
             <div className="font-medium">{clientInfo.name || "Unknown Client"}</div>
-            {clientInfo?.clientCode && (
-              <div className="text-gray-600 text-sm">Client Code: {clientInfo.clientCode}</div>
+            {/* Display address line 1 if available */}
+            {clientInfo?.address?.line1 && (
+              <div className="text-gray-600 text-sm">{clientInfo.address.line1}</div>
             )}
+            {/* Display address line 2 if available */}
+            {clientInfo?.address?.line2 && (
+              <div className="text-gray-600 text-sm">{clientInfo.address.line2}</div>
+            )}
+            {/* Display city and state together with comma separator */}
+            {(clientInfo?.address?.city || clientInfo?.address?.state) && (
+              <div className="text-gray-600 text-sm">
+                {clientInfo.address.city || ""}
+                {clientInfo.address.city && clientInfo.address.state && ", "}
+                {clientInfo.address.state || ""}
+              </div>
+            )}
+            <div className="text-gray-600 text-sm">Client Code: {clientInfo?.clientCode || "N/A"}</div>
           </div>
           
           {/* Date Information */}
@@ -193,6 +207,10 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
                 <td className="py-1 px-2 border border-gray-300 text-center">
                   {item.loyaltyDiscount > 0 && (
                     <div className="flex items-center justify-center">
+                      <div 
+                        className="w-2 h-2 rounded-full mr-1" 
+                        style={{ backgroundColor: item.loyaltyTierColor }}
+                      ></div>
                       <span>{item.loyaltyDiscount}%</span>
                     </div>
                   )}
@@ -249,43 +267,25 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       {/* HSN Summary */}
       <div className="mb-3">
         <div className="font-medium text-sm mb-1">HSN Summary:</div>
-        <div className="text-xs">
-          <table className="w-full border-collapse">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-1 px-2 border border-gray-300 text-left">HSN Code</th>
-                <th className="py-1 px-2 border border-gray-300 text-left">Job Types</th>
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="py-1 px-4 border border-gray-300 text-left">HSN Code</th>
+              <th className="py-1 px-4 border border-gray-300 text-left">Job Types</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
+              <tr key={idx}>
+                <td className="py-1 px-4 border border-gray-300 font-mono">{hsnCode}</td>
+                <td className="py-1 px-4 border border-gray-300">{data.jobTypes.join(', ')}</td>
               </tr>
-            </thead>
-            <tbody>
-              {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
-                <tr key={idx} className="border-b border-gray-200">
-                  <td className="py-1 px-2 font-mono">{hsnCode}</td>
-                  <td className="py-1 px-2">{data.jobTypes.join(', ')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+            ))}
+          </tbody>
+        </table>
       </div>
       
-      {/* Amount in Words */}
-      <div className="mb-3 border-t border-b border-gray-200 py-2">
-        <div className="text-xs text-gray-600">Amount in Words:</div>
-        <div className="font-medium text-sm">
-          Indian Rupees {lineItems.reduce((sum, item) => sum + item.finalTotal, 0).toFixed(2)}
-        </div>
-      </div>
-      
-      {/* Notes */}
-      {invoiceData.notes && (
-        <div className="mb-3">
-          <div className="font-medium text-gray-700 mb-1 text-xs">Notes:</div>
-          <div className="text-gray-600 text-xs">{invoiceData.notes}</div>
-        </div>
-      )}
-      
-      {/* Footer */}
+      {/* Footer - Declaration */}
       <div className="mt-4 pt-2 border-t border-gray-200">
         <div className="grid grid-cols-2">
           <div>

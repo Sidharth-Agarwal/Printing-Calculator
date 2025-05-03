@@ -18,9 +18,12 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
   
   // Get client info (all orders should be from the same client)
   const clientInfo = orders.length > 0 ? {
-    name: orders[0].clientName,
-    id: orders[0].clientId
-  } : { name: 'Unknown Client', id: 'unknown' };
+    name: orders[0].clientName || orders[0].clientInfo?.name,
+    clientCode: orders[0].clientInfo?.clientCode || 'N/A',
+    address: orders[0].clientInfo?.address || {},
+    id: orders[0].clientId,
+    clientType: orders[0].clientInfo?.clientType || 'Direct'
+  } : { name: 'Unknown Client', id: 'unknown', clientCode: 'N/A', address: {} };
   
   // Handle input change
   const handleInputChange = (e) => {
@@ -31,9 +34,10 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }));
   };
   
-  // Calculate totals for all orders with GST
+  // Calculate totals for all orders with GST and loyalty discounts
   const calculateTotals = () => {
     let subtotal = 0;
+    let loyaltyDiscountTotal = 0;
     let totalQuantity = 0;
     let totalGstAmount = 0;
     
@@ -46,28 +50,36 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
       const quantity = parseInt(order.jobDetails?.quantity) || 0;
       totalQuantity += quantity;
       
-      // Calculate item total
+      // Calculate item total (before loyalty discount)
       const itemTotal = costPerCard * quantity;
       subtotal += itemTotal;
       
+      // Apply loyalty discount if available
+      const loyaltyDiscountAmount = parseFloat(order.loyaltyInfo?.discountAmount || calculations.loyaltyDiscountAmount || 0);
+      loyaltyDiscountTotal += loyaltyDiscountAmount;
+      
+      // Get discounted total
+      const discountedTotal = parseFloat(calculations.discountedTotalCost || (itemTotal - loyaltyDiscountAmount));
+      
       // Get GST info from calculations
       const gstRate = calculations.gstRate || 18;
-      const gstAmount = invoiceData.showTax ? parseFloat(calculations.gstAmount || (itemTotal * gstRate / 100)) : 0;
+      const gstAmount = invoiceData.showTax ? parseFloat(calculations.gstAmount || (discountedTotal * gstRate / 100)) : 0;
       totalGstAmount += gstAmount;
     });
     
-    // Calculate discount amount
-    const discountAmount = (subtotal * (invoiceData.discount / 100)) || 0;
+    // Calculate discount amount (from invoice discount percentage, not loyalty)
+    const invoiceDiscountAmount = (subtotal * (invoiceData.discount / 100)) || 0;
     
-    // Apply discount to subtotal
-    const taxableAmount = subtotal - discountAmount;
+    // Apply discounts to subtotal
+    const taxableAmount = subtotal - loyaltyDiscountTotal - invoiceDiscountAmount;
     
     // Calculate total with GST
     const total = taxableAmount + totalGstAmount;
     
     return {
       subtotal: parseFloat(subtotal.toFixed(2)),
-      discount: parseFloat(discountAmount.toFixed(2)),
+      loyaltyDiscount: parseFloat(loyaltyDiscountTotal.toFixed(2)),
+      discount: parseFloat(invoiceDiscountAmount.toFixed(2)),
       taxableAmount: parseFloat(taxableAmount.toFixed(2)),
       tax: parseFloat(totalGstAmount.toFixed(2)),
       total: parseFloat(total.toFixed(2)),
@@ -291,6 +303,18 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                 />
               </div>
               
+              <div>
+                <label className="block text-xs font-medium text-gray-700">Notes</label>
+                <textarea
+                  name="notes"
+                  value={invoiceData.notes}
+                  onChange={handleInputChange}
+                  rows="2"
+                  className="mt-1 block w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  placeholder="Payment terms, delivery notes, etc."
+                ></textarea>
+              </div>
+              
               {/* HSN Summary */}
               <div className="mt-4 bg-gray-50 p-3 rounded-lg text-xs">
                 <h4 className="font-medium text-gray-700 mb-2">HSN Codes</h4>
@@ -311,18 +335,28 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                     <span>Subtotal:</span>
                     <span className="font-mono">{formatCurrency(totals.subtotal)}</span>
                   </div>
+                  
+                  {totals.loyaltyDiscount > 0 && (
+                    <div className="flex justify-between text-red-600">
+                      <span>Loyalty Discount:</span>
+                      <span className="font-mono">-{formatCurrency(totals.loyaltyDiscount)}</span>
+                    </div>
+                  )}
+                  
                   {invoiceData.discount > 0 && (
                     <div className="flex justify-between text-red-600">
-                      <span>Discount ({invoiceData.discount}%):</span>
+                      <span>Invoice Discount ({invoiceData.discount}%):</span>
                       <span className="font-mono">-{formatCurrency(totals.discount)}</span>
                     </div>
                   )}
+                  
                   {invoiceData.showTax && (
                     <div className="flex justify-between">
-                      <span>GST:</span>
+                      <span>GST Amount:</span>
                       <span className="font-mono">{formatCurrency(totals.tax)}</span>
                     </div>
                   )}
+                  
                   <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
                     <span>Total:</span>
                     <span className="font-mono">{formatCurrency(totals.total)}</span>
