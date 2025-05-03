@@ -93,6 +93,9 @@ const OrderAndPaper = ({
   };
 
   const handleDieSelect = (dieData) => {
+    console.log("OrderAndPaper receiving die data:", dieData);
+    
+    // Pass the die data directly to the state without any modification
     dispatch({
       type: "UPDATE_ORDER_AND_PAPER",
       payload: dieData
@@ -298,6 +301,7 @@ const OrderAndPaper = ({
               selectedDie={{
                 dieCode: orderAndPaper.dieCode || "",
                 dieSize: orderAndPaper.dieSize || { length: "", breadth: "" },
+                productSize: orderAndPaper.productSize || { length: "", breadth: "" },
                 image: orderAndPaper.image || ""
               }}
               onDieSelect={handleDieSelect}

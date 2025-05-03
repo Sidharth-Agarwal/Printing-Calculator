@@ -38,7 +38,6 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
         const querySnapshot = await getDocs(collection(db, "dies"));
         const fetchedDies = querySnapshot.docs.map((doc) => {
           const data = doc.data();
-          console.log(`Die ${doc.id} data:`, data); // Log each die's data
           return {
             id: doc.id,
             ...data
@@ -205,22 +204,22 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   };
 
   const handleSelectDie = (die) => {
-    // Create the base die selection object
+    // Create the die selection object directly from the die data
     const dieSelection = {
       dieSelection: die.dieName || "",
       dieCode: die.dieCode || "",
-      dieSize: { length: die.dieSizeL || "", breadth: die.dieSizeB || "" },
+      dieSize: { 
+        length: die.dieSizeL || "", 
+        breadth: die.dieSizeB || "" 
+      },
+      productSize: { 
+        length: die.productSizeL || "", 
+        breadth: die.productSizeB || "" 
+      },
       image: die.imageUrl || "",
     };
     
-    // Only add productSize if both dimensions exist
-    if (die.productSizeL || die.productSizeB) {
-      dieSelection.productSize = { 
-        length: die.productSizeL || "", 
-        breadth: die.productSizeB || "" 
-      };
-    }
-    
+    // Pass the selection to the parent component
     onDieSelect(dieSelection);
     
     // Hide selection UI after die is selected
@@ -642,7 +641,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
           </div>
         </>
       ) : (
-        // Selected Die Display - Compact View with Change Button
+        // Selected Die Display - Clean version without hardcoded values
         <div className="p-3 bg-white border rounded-md">
           <div className="flex justify-between items-center">
             <h4 className="text-sm font-medium">Selected Die:</h4>
@@ -675,7 +674,6 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
               </div>
             )}
             <div className="flex flex-col">
-              {/* Display section for the selected die */}
               <div className="text-sm">
                 <strong>Die Code:</strong> {selectedDie.dieCode}
               </div>
@@ -683,12 +681,11 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                 <strong>Die Size:</strong> {selectedDie.dieSize.length}" × {selectedDie.dieSize.breadth}"
               </div>
               <div className="text-xs text-gray-600">
-                <strong>Product Size:</strong> {
-                  selectedDie.dieCode === "C200" ? "7.75\" × 5.25\"" : 
-                  (selectedDie.productSize && (selectedDie.productSize.length || selectedDie.productSize.breadth)) ? 
-                  `${selectedDie.productSize.length || "N/A"}\" × ${selectedDie.productSize.breadth || "N/A"}\"` : 
-                  "N/A"
-                }
+                <strong>Product Size:</strong> 
+                {selectedDie.productSize && 
+                (selectedDie.productSize.length || selectedDie.productSize.breadth) 
+                  ? `${selectedDie.productSize.length || ""}\" × ${selectedDie.productSize.breadth || ""}\"` 
+                  : "N/A"}
               </div>
             </div>
           </div>
