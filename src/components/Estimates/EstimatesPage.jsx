@@ -5,7 +5,7 @@ import { useNavigate } from "react-router-dom";
 import EstimateCard from "./EstimateCard";
 import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
 import PreviewModal from "./PreviewModal";
-import GroupedJobTicket from "./GroupedJobTicket";
+import EstimateTemplate from "./EsimateTemplate";
 import EditEstimateModal from "./EditEstimateModal";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -524,7 +524,7 @@ const EstimatesPage = () => {
       const root = createRoot(tempDiv);
       await new Promise(resolve => {
         root.render(
-          <GroupedJobTicket
+          <EstimateTemplate
             estimates={previewData.estimates}
             clientInfo={previewData.clientInfo}
             version={previewData.version}
@@ -869,7 +869,7 @@ const EstimatesPage = () => {
           error={pdfError}
         >
           {previewData && previewData.estimates.length > 0 && (
-            <GroupedJobTicket
+            <EstimateTemplate
               estimates={previewData.estimates}
               clientInfo={previewData.clientInfo}
               version={previewData.version}

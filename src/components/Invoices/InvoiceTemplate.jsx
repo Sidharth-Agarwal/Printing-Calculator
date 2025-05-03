@@ -107,7 +107,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
   }, {});
 
   return (
-    <div className="bg-white p-4 print:p-0" style={{ maxWidth: '750px', margin: '0 auto', fontSize: '90%' }}>
+    <div className="bg-white p-4 print:p-0" style={{ maxWidth: '750px', margin: '0 auto', fontSize: '85%' }}>
       {/* Header with Title and Logo */}
       <div className="flex justify-between mb-1">
         <div>
@@ -144,16 +144,6 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
               <div className="text-gray-600">Due Date: {formatDate(invoiceData.dueDate)}</div>
             </div>
           </div>
-
-          {/* Bank Details as simple text */}
-          <div className="mb-4">
-            <div className="text-sm">
-              <div className="font-medium">Bank Details</div>
-              <div className="text-gray-600">A/C No: 912020005432066</div>
-              <div className="text-gray-600">IFSC Code: UTIB0000378</div>
-              <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
-            </div>
-          </div>
         </div>
         <div className="text-right">
           <img 
@@ -171,6 +161,16 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           <div className="text-gray-600 text-sm">GSTIN: 13ALFPA2458Q2ZO</div>
           <div className="text-gray-600 text-sm">Phone: +919233152718</div>
           <div className="text-gray-600 text-sm">Email: info@famousletterpress.com</div>
+          
+          {/* Bank Details moved to right side, below company info */}
+          <div className="my-2">
+            <div className="text-sm">
+              <div className="font-medium">Bank Details</div>
+              <div className="text-gray-600">A/C No: 912020005432066</div>
+              <div className="text-gray-600">IFSC Code: UTIB0000378</div>
+              <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
+            </div>
+          </div>
         </div>
       </div>
       
