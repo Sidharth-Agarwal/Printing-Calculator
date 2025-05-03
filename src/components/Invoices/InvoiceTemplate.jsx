@@ -207,10 +207,6 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
                 <td className="py-1 px-2 border border-gray-300 text-center">
                   {item.loyaltyDiscount > 0 && (
                     <div className="flex items-center justify-center">
-                      <div 
-                        className="w-2 h-2 rounded-full mr-1" 
-                        style={{ backgroundColor: item.loyaltyTierColor }}
-                      ></div>
                       <span>{item.loyaltyDiscount}%</span>
                     </div>
                   )}
