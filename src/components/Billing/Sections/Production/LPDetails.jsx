@@ -311,7 +311,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   <div className="flex flex-wrap gap-4 flex-1">
                     <div className="flex-1">
                       <label htmlFor={`length_${index}`} className="block mb-1">
-                        Length (inches):
+                        Length:
                       </label>
                       <input
                         id={`length_${index}`}
@@ -349,7 +349,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                     <div className="flex-1">
                       <label htmlFor={`breadth_${index}`} className="block mb-1">
-                        Breadth (inches):
+                        Breadth:
                       </label>
                       <input
                         id={`breadth_${index}`}

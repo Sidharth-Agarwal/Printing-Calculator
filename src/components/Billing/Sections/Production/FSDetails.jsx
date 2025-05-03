@@ -365,7 +365,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                     <div className="flex flex-wrap gap-4 flex-1">
                       <div className="flex-1">
                         <label htmlFor={`length-${index}`} className="block mb-1">
-                          Length (inches):
+                          Length:
                         </label>
                         <input
                           type="number"
@@ -393,7 +393,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                       <div className="flex-1">
                         <label htmlFor={`breadth-${index}`} className="block mb-1">
-                          Breadth (inches):
+                          Breadth:
                         </label>
                         <input
                           type="number"

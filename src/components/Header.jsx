@@ -174,7 +174,7 @@ const Header = () => {
                     isActive('/material-stock/standard-rates-db') ? "bg-gray-200 font-semibold" : ""
                   }`}
                 >
-                  Standard Rate Management
+                  Labour Management
                 </button>
                 <button
                   onClick={() => navigateTo('/material-stock/overheads')}
