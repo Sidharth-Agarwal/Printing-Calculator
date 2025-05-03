@@ -186,7 +186,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 text-sm">
         {/* Original input fields */}
         {[
           { label: "Job Type", name: "jobType", type: "select", options: jobTypeOptions },

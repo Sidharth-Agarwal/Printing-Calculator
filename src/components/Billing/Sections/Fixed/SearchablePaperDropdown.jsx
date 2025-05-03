@@ -51,7 +51,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange }) => {
           <span>{selectedPaper || "Select Paper"}</span>
           {selectedPaperObj && (
             <span className="text-xs text-gray-500">
-              {selectedPaperObj.company} | {selectedPaperObj.gsm}gsm | {selectedPaperObj.finalRate} INR
+              {selectedPaperObj.company} | {selectedPaperObj.gsm}gsm
             </span>
           )}
         </div>

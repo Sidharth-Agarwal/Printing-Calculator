@@ -680,7 +680,7 @@ const ReviewAndSubmit = ({
               
               <div className="space-y-4">
                 <div className="flex justify-between items-center text-lg">
-                  <span className="font-medium">Total Cost per Card:</span>
+                  <span className="font-medium">Total Cost per Item:</span>
                   <span className="font-bold">
                     ₹ {parseFloat(localCalculations.totalCostPerCard || 0).toFixed(2)}
                   </span>
@@ -772,7 +772,7 @@ const ReviewAndSubmit = ({
                 
                 <div className="space-y-2">
                   <div className="flex justify-between items-center">
-                    <span className="font-medium text-gray-700">Subtotal per Card:</span>
+                    <span className="font-medium text-gray-700">Subtotal per Item:</span>
                     <span className="text-gray-900">
                       ₹ {parseFloat(localCalculations.subtotalPerCard || 0).toFixed(2)}
                     </span>
@@ -788,7 +788,7 @@ const ReviewAndSubmit = ({
                   </div>
                   
                   <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-                    <span className="text-lg font-bold text-gray-700">Total Cost per Card:</span>
+                    <span className="text-lg font-bold text-gray-700">Total Cost per Item:</span>
                     <span className="text-lg font-bold text-gray-900">
                       ₹ {parseFloat(localCalculations.totalCostPerCard || 0).toFixed(2)}
                     </span>

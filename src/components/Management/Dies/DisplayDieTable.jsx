@@ -32,26 +32,99 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
 
   // Filter dies based on search term
   const filteredDies = dies.filter((die) => {
+    // If search is empty, return all dies
+    if (!searchTerm.trim()) {
+      return true;
+    }
+    
+    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    
+    // Check if search contains dimension patterns
+    const productLPattern = lowerSearchTerm.match(/l:([0-9.]+)/i);
+    const productBPattern = lowerSearchTerm.match(/b:([0-9.]+)/i);
+    const dieLPattern = lowerSearchTerm.match(/dl:([0-9.]+)/i);
+    const dieBPattern = lowerSearchTerm.match(/db:([0-9.]+)/i);
+    
+    // With dimension patterns - check dimensions specifically
+    if (productLPattern || productBPattern || dieLPattern || dieBPattern) {
+      let isProductLMatch = true;
+      let isProductBMatch = true;
+      let isDieLMatch = true;
+      let isDieBMatch = true;
+
+      // Product L dimension search
+      if (productLPattern && productLPattern[1]) {
+        const lValue = productLPattern[1];
+        isProductLMatch = (die.productSizeL && die.productSizeL.toString().includes(lValue));
+      }
+
+      // Product B dimension search
+      if (productBPattern && productBPattern[1]) {
+        const bValue = productBPattern[1];
+        isProductBMatch = (die.productSizeB && die.productSizeB.toString().includes(bValue));
+      }
+      
+      // Die L dimension search
+      if (dieLPattern && dieLPattern[1]) {
+        const dlValue = dieLPattern[1];
+        isDieLMatch = (die.dieSizeL && die.dieSizeL.toString().includes(dlValue));
+      }
+
+      // Die B dimension search
+      if (dieBPattern && dieBPattern[1]) {
+        const dbValue = dieBPattern[1];
+        isDieBMatch = (die.dieSizeB && die.dieSizeB.toString().includes(dbValue));
+      }
+
+      // Return true if all specified conditions are met
+      return isProductLMatch && isProductBMatch && isDieLMatch && isDieBMatch;
+    }
+    
+    // Search in all relevant fields, including product and die dimensions
     const searchFields = [
       die.jobType || "",
       die.type || "",
       die.dieCode || "",
+      die.productSizeL?.toString() || "",
+      die.productSizeB?.toString() || "",
+      // If the product size exists as a combined field (like "3.34×2.12"), check it too
+      `${die.productSizeL || ""}×${die.productSizeB || ""}`,
+      // Also check die sizes
+      die.dieSizeL?.toString() || "",
+      die.dieSizeB?.toString() || "", 
+      `${die.dieSizeL || ""}×${die.dieSizeB || ""}`,
+      // Include frags
+      die.frags?.toString() || ""
     ];
     
     return searchFields.some(field => 
-      field.toLowerCase().includes(searchTerm.toLowerCase())
+      field.toLowerCase().includes(lowerSearchTerm)
     );
   });
 
   // Sort dies based on sort field and direction
   const sortedDies = [...filteredDies].sort((a, b) => {
-    const aValue = (a[sortField] || "").toString().toLowerCase();
-    const bValue = (b[sortField] || "").toString().toLowerCase();
-    
-    if (sortDirection === "asc") {
-      return aValue.localeCompare(bValue);
-    } else {
-      return bValue.localeCompare(aValue);
+    // For die code, use alphanumeric sorting
+    if (sortField === 'dieCode') {
+      const aValue = (a[sortField] || "").toString();
+      const bValue = (b[sortField] || "").toString();
+      
+      if (sortDirection === "asc") {
+        return aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' });
+      } else {
+        return bValue.localeCompare(aValue, undefined, { numeric: true, sensitivity: 'base' });
+      }
+    }
+    // For other fields, use the existing text sorting
+    else {
+      const aValue = (a[sortField] || "").toString().toLowerCase();
+      const bValue = (b[sortField] || "").toString().toLowerCase();
+      
+      if (sortDirection === "asc") {
+        return aValue.localeCompare(bValue);
+      } else {
+        return bValue.localeCompare(aValue);
+      }
     }
   });
 
@@ -121,10 +194,10 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
         <table className="text-sm w-full text-left border-collapse">
           <thead>
             <tr className="bg-gray-100">
-              <th className="px-3 py-2 border font-medium text-gray-700">Job Type</th>
-              <th className="px-3 py-2 border font-medium text-gray-700">Type</th>
-              <th className="px-3 py-2 border font-medium text-gray-700">Die Code</th>
-              <th className="px-3 py-2 border font-medium text-gray-700">Frags</th>
+              <SortableHeader field="jobType" label="Job Type" />
+              <SortableHeader field="type" label="Type" />
+              <SortableHeader field="dieCode" label="Die Code" />
+              <SortableHeader field="frags" label="Frags" />
               <th className="px-3 py-2 border font-medium text-gray-700">Product Size (L×B)</th>
               <th className="px-3 py-2 border font-medium text-gray-700">Die Size (L×B)</th>
               <th className="px-3 py-2 border font-medium text-gray-700">Image</th>
@@ -464,7 +537,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
       <div className="flex justify-between items-center mb-4">
         <h2 className="text-lg font-medium">Available Dies</h2>
         <div className="flex space-x-2">
-          <div className="w-48 mr-2">
+          <div className="w-64 mr-2">
             <input
               type="text"
               placeholder="Search dies..."

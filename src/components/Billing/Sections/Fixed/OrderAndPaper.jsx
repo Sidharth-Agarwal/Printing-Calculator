@@ -65,7 +65,7 @@ const OrderAndPaper = ({
       const today = new Date();
       // Set delivery date to 7 days from today by default
       const deliveryDate = new Date();
-      deliveryDate.setDate(today.getDate() + 7);
+      deliveryDate.setDate(today.getDate() + 15);
       dispatch({
         type: "UPDATE_ORDER_AND_PAPER",
         payload: {
