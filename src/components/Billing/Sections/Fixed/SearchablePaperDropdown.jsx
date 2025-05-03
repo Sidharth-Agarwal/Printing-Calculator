@@ -87,7 +87,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange }) => {
                   <div className="flex flex-col">
                     <span className="font-medium">{paper.paperName}</span>
                     <span className="text-xs text-gray-500">
-                      {paper.company} | {paper.gsm}gsm | {paper.finalRate} INR
+                      {paper.company} | {paper.gsm}gsm
                     </span>
                   </div>
                 </div>
