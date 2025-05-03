@@ -11,7 +11,7 @@ const formatCurrency = (amount) => {
 };
 
 // Main Job Ticket component
-const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) => {
+const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) => {
   const [isReady, setIsReady] = useState(false);
   const [logoLoaded, setLogoLoaded] = useState(false);
 
@@ -102,10 +102,10 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
       const gstAmount = parseFloat(calc.gstAmount || (totalCost * gstRate / 100)) || 0;
       const finalTotal = totalCost + gstAmount;
       
-      // Product dimensions
+      // Product dimensions - format as single line
       const productSize = dieDetails?.productSize || {};
       const productDimensions = productSize.length && productSize.breadth 
-        ? `${productSize.length}" × ${productSize.breadth}"`
+        ? productSize.length + "″ × " + productSize.breadth + "″"
         : "";
       
       return {
@@ -142,7 +142,7 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
   }, [onRenderComplete, logoLoaded]);
 
   return (
-    <div className="bg-white p-4 print:p-0" style={{ maxWidth: '750px', margin: '0 auto', fontSize: '90%' }}>
+    <div className="bg-white p-4 print:p-0" style={{ maxWidth: '750px', margin: '0 auto', fontSize: '85%' }}>
       {/* Loading indicator */}
       {!isReady && (
         <div className="flex justify-center items-center h-32">
@@ -180,16 +180,6 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
                 <div className="text-gray-600">Tentative Delivery Date: {formatDate(estimates[0]?.deliveryDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000))}</div>
               </div>
             </div>
-
-            {/* Bank Details as simple text */}
-            <div className="mb-4">
-              <div className="text-sm">
-                <div className="font-medium">Bank Details</div>
-                <div className="text-gray-600">A/C No: 912020005432066</div>
-                <div className="text-gray-600">IFSC Code: UTIB0000378</div>
-                <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
-              </div>
-            </div>
           </div>
           <div className="text-right">
             <img 
@@ -208,6 +198,16 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
             <div className="text-gray-600 text-sm">GSTIN: 13ALFPA2458Q2ZO</div>
             <div className="text-gray-600 text-sm">Phone: +919233152718</div>
             <div className="text-gray-600 text-sm">Email: info@famousletterpress.com</div>
+            
+            {/* Bank Details moved to right side, below company info */}
+            <div className="my-2">
+              <div className="text-sm">
+                <div className="font-medium">Bank Details</div>
+                <div className="text-gray-600">A/C No: 912020005432066</div>
+                <div className="text-gray-600">IFSC Code: UTIB0000378</div>
+                <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
+              </div>
+            </div>
           </div>
         </div>
         
@@ -218,7 +218,6 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
               <tr className="bg-gray-100 text-gray-700">
                 <th className="py-1 px-2 border border-gray-300 text-center">S.No</th>
                 <th className="py-1 px-2 border border-gray-300 text-left">Item</th>
-                <th className="py-1 px-2 border border-gray-300 text-center">HSN</th>
                 <th className="py-1 px-2 border border-gray-300 text-center">Job Type</th>
                 <th className="py-1 px-2 border border-gray-300 text-center">Paper</th>
                 <th className="py-1 px-2 border border-gray-300 text-center">Size</th>
@@ -240,10 +239,9 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
                       <div className="text-xs text-gray-500">{item.description}</div>
                     )}
                   </td>
-                  <td className="py-1 px-2 border border-gray-300 text-center font-mono">{item.hsnCode}</td>
                   <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
                   <td className="py-1 px-2 border border-gray-300 text-center">{item.paperName}</td>
-                  <td className="py-1 px-2 border border-gray-300 text-center">{item.productDimensions}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-center whitespace-nowrap">{item.productDimensions}</td>
                   <td className="py-1 px-2 border border-gray-300 text-center">{item.quantity}</td>
                   <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
                   <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.total.toFixed(2)}</td>
@@ -280,6 +278,45 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
               </div>
             </div>
           </div>
+        </div>
+        
+        {/* HSN Summary */}
+        <div className="mb-3">
+          <div className="font-medium text-sm mb-1">HSN Summary:</div>
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="py-1 px-4 border border-gray-300 text-left">HSN Code</th>
+                <th className="py-1 px-4 border border-gray-300 text-left">Job Types</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(() => {
+                // Collect HSN codes from line items
+                const hsnSummary = lineItems.reduce((acc, item) => {
+                  if (!acc[item.hsnCode]) {
+                    acc[item.hsnCode] = {
+                      jobTypes: [item.jobType],
+                      count: 1
+                    };
+                  } else {
+                    if (!acc[item.hsnCode].jobTypes.includes(item.jobType)) {
+                      acc[item.hsnCode].jobTypes.push(item.jobType);
+                    }
+                    acc[item.hsnCode].count++;
+                  }
+                  return acc;
+                }, {});
+                
+                return Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
+                  <tr key={idx}>
+                    <td className="py-1 px-4 border border-gray-300 font-mono">{hsnCode}</td>
+                    <td className="py-1 px-4 border border-gray-300">{data.jobTypes.join(', ')}</td>
+                  </tr>
+                ));
+              })()}
+            </tbody>
+          </table>
         </div>
         
         {/* Terms and Conditions */}
@@ -321,4 +358,4 @@ const GroupedJobTicket = ({ estimates, clientInfo, version, onRenderComplete }) 
   );
 };
 
-export default GroupedJobTicket;
+export default EstimateTemplate;
