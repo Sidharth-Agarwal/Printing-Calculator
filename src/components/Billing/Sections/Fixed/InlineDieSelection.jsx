@@ -146,6 +146,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     setFilteredDies(matches);
   };
 
+  // UPDATED: Modified to search in both die size AND product size
   const performSearch = (dimensions) => {
     const { length, breadth } = dimensions;
     
@@ -180,23 +181,36 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     else {
       // Case 1: Both length and breadth provided
       if (length && breadth) {
-        matches = baseSet.filter(
-          (die) =>
+        matches = baseSet.filter(die => {
+          // Check against die dimensions
+          const dieMatch = 
             parseFloat(die.dieSizeL) === parseFloat(length) &&
-            parseFloat(die.dieSizeB) === parseFloat(breadth)
-        );
+            parseFloat(die.dieSizeB) === parseFloat(breadth);
+          
+          // Check against product dimensions
+          const productMatch = 
+            parseFloat(die.productSizeL) === parseFloat(length) &&
+            parseFloat(die.productSizeB) === parseFloat(breadth);
+          
+          // Return true if either die size or product size matches
+          return dieMatch || productMatch;
+        });
       }
       // Case 2: Only length provided
       else if (length && !breadth) {
-        matches = baseSet.filter(
-          (die) => parseFloat(die.dieSizeL) === parseFloat(length)
-        );
+        matches = baseSet.filter(die => {
+          // Check either die length or product length
+          return parseFloat(die.dieSizeL) === parseFloat(length) || 
+                 parseFloat(die.productSizeL) === parseFloat(length);
+        });
       }
       // Case 3: Only breadth provided
       else if (!length && breadth) {
-        matches = baseSet.filter(
-          (die) => parseFloat(die.dieSizeB) === parseFloat(breadth)
-        );
+        matches = baseSet.filter(die => {
+          // Check either die breadth or product breadth
+          return parseFloat(die.dieSizeB) === parseFloat(breadth) || 
+                 parseFloat(die.productSizeB) === parseFloat(breadth);
+        });
       }
     }
 
@@ -567,10 +581,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
 
           <div className="text-xs text-gray-500 mb-2">- OR -</div>
           
-          {/* Search by dimensions */}
+          {/* Search by dimensions - updated label to indicate unified search */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div>
-              <label className="block text-sm mb-1">Length (inches)</label>
+              <label className="block text-sm mb-1">Length (inches) - Die or Product</label>
               <input
                 type="number"
                 name="length"
@@ -582,7 +596,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
               />
             </div>
             <div>
-              <label className="block text-sm mb-1">Breadth (inches)</label>
+              <label className="block text-sm mb-1">Breadth (inches) - Die or Product</label>
               <input
                 type="number"
                 name="breadth"
