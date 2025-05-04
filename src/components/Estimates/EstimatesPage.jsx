@@ -86,7 +86,7 @@ const EstimatesPage = () => {
     fetchB2BClientData();
   }, [userRole, currentUser]);
 
-  // Handle timer for auto-redirect
+  // Handle timer for auto-dismiss without redirecting
   useEffect(() => {
     // If loyalty notification is shown, start the timer
     if (loyaltyNotification) {
@@ -101,10 +101,9 @@ const EstimatesPage = () => {
       const timerId = setInterval(() => {
         setRedirectTimer(prev => {
           if (prev <= 1) {
-            // Time's up, clear the interval and redirect
+            // Time's up, clear the interval and dismiss the notification without redirecting
             clearInterval(timerId);
             setLoyaltyNotification(null);
-            navigate('/orders');
             return 0;
           }
           return prev - 1;
@@ -117,7 +116,7 @@ const EstimatesPage = () => {
       // Cleanup function to clear timer if component unmounts
       return () => clearInterval(timerId);
     }
-  }, [loyaltyNotification, navigate]);
+  }, [loyaltyNotification]);
 
   // Fetch all estimates on mount
   useEffect(() => {
@@ -307,7 +306,7 @@ const EstimatesPage = () => {
     }
   };  
 
-  // Handle moving estimate to orders - Updated to handle loyalty with auto-redirect
+  // Handle moving estimate to orders - Updated to stay on estimates page
   const handleMoveToOrders = async (estimate) => {
     try {
       // Normalize the data to ensure proper structure
@@ -399,7 +398,7 @@ const EstimatesPage = () => {
       
       console.log("Successfully moved estimate to orders");
       
-      // Show popup if tier changed, otherwise redirect immediately
+      // Show popup if tier changed, but don't redirect
       if (tierChanged && loyaltyUpdate && loyaltyUpdate.tier) {
         // Get client info for the popup
         const clientDoc = await getDoc(doc(db, "clients", clientId));
@@ -412,11 +411,9 @@ const EstimatesPage = () => {
           newTier: loyaltyUpdate.tier.name,
           newDiscount: loyaltyUpdate.tier.discount
         });
-        
-        // Timer for auto-redirect is handled in the useEffect
       } else {
-        // No tier change, redirect immediately
-        navigate('/orders');
+        // Show success message
+        alert("Estimate successfully moved to orders!");
       }
     } catch (error) {
       console.error("Error moving estimate to orders:", error);
@@ -470,6 +467,18 @@ const EstimatesPage = () => {
       console.error("Error deleting estimate:", error);
       alert("Failed to delete estimate. Please try again.");
     }
+  };
+
+  // Dismiss loyalty notification without navigating away
+  const handleDismissLoyaltyNotification = () => {
+    // Clear the timer
+    if (redirectTimerId) {
+      clearInterval(redirectTimerId);
+      setRedirectTimerId(null);
+    }
+    
+    // Close notification without navigating away
+    setLoyaltyNotification(null);
   };
 
   // Handle preview job ticket for a specific client version
@@ -604,19 +613,6 @@ const EstimatesPage = () => {
       setIsGeneratingPDF(false);
     }
   };
-  
-  // Dismiss loyalty notification and navigate to orders
-  const handleDismissLoyaltyNotification = () => {
-    // Clear the timer
-    if (redirectTimerId) {
-      clearInterval(redirectTimerId);
-      setRedirectTimerId(null);
-    }
-    
-    // Close notification and navigate
-    setLoyaltyNotification(null);
-    navigate('/orders');
-  };
 
   const handleDuplicateEstimate = async (estimate) => {
     try {
@@ -715,13 +711,13 @@ const EstimatesPage = () => {
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
-                <p className="text-sm text-gray-500">Redirecting to orders in {redirectTimer} seconds...</p>
+                <p className="text-sm text-gray-500">Notification will close in {redirectTimer} seconds...</p>
               </div>
               <button
                 onClick={handleDismissLoyaltyNotification}
                 className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
               >
-                Continue Now
+                Dismiss
               </button>
             </div>
           </div>

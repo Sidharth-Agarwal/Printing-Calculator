@@ -81,17 +81,7 @@ export const getAvailableMarkupTypes = async () => {
     const q = query(overheadsCollection, where("name", "like", "MARKUP%"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-    // For now, return a hardcoded list based on your screenshot
-    // return [
-    //   { name: "MARKUP WED INDIA", percentage: 100 },
-    //   { name: "MARKUP WED B2B", percentage: 100 },
-    //   { name: "MARKUP B2B MERCH", percentage: 100 },
-    //   { name: "MARKUP ZERO", percentage: 1 },
-    //   { name: "MARKUP BIZ CARD", percentage: 100 },
-    //   { name: "MARKUP FACTORY MERCH", percentage: 30 },
-    //   { name: "MARKUP TIMELESS", percentage: 50 }
-    // ];
+
   } catch (error) {
     console.error("Error fetching markup types:", error);
     return [];

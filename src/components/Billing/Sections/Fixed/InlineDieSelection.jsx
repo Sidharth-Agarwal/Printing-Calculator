@@ -231,6 +231,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
         breadth: die.productSizeB || "" 
       },
       image: die.imageUrl || "",
+      frags: die.frags || "" // Include frags in the selection
     };
     
     // Pass the selection to the parent component
@@ -629,6 +630,9 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                     <p className="text-xs text-gray-600">
                       Type: {die.type || "Not specified"}
                     </p>
+                    <p className="text-xs text-gray-600">
+                      Frags: {die.frags || "N/A"}
+                    </p>
                     {selectedJobType === "Custom" && (
                       <p className="text-xs text-gray-500">
                         Job Type: {die.jobType || "Not specified"}
@@ -655,7 +659,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
           </div>
         </>
       ) : (
-        // Selected Die Display - Clean version without hardcoded values
+        // Selected Die Display - Now displays frags information
         <div className="p-3 bg-white border rounded-md">
           <div className="flex justify-between items-center">
             <h4 className="text-sm font-medium">Selected Die:</h4>
@@ -700,6 +704,9 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                 (selectedDie.productSize.length || selectedDie.productSize.breadth) 
                   ? `${selectedDie.productSize.length || ""}\" × ${selectedDie.productSize.breadth || ""}\"` 
                   : "N/A"}
+              </div>
+              <div className="text-xs text-gray-600">
+                <strong>Frags:</strong> {selectedDie.frags || "N/A"}
               </div>
             </div>
           </div>

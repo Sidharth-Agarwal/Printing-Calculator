@@ -95,10 +95,17 @@ const OrderAndPaper = ({
   const handleDieSelect = (dieData) => {
     console.log("OrderAndPaper receiving die data:", dieData);
     
-    // Pass the die data directly to the state without any modification
+    // Pass all the die data to the state
     dispatch({
       type: "UPDATE_ORDER_AND_PAPER",
-      payload: dieData
+      payload: {
+        dieSelection: dieData.dieSelection || "",
+        dieCode: dieData.dieCode || "",
+        dieSize: dieData.dieSize || { length: "", breadth: "" },
+        productSize: dieData.productSize || { length: "", breadth: "" },
+        image: dieData.image || "",
+        frags: dieData.frags || "" // Make sure frags is included
+      }
     });
   };
 
@@ -302,7 +309,8 @@ const OrderAndPaper = ({
                 dieCode: orderAndPaper.dieCode || "",
                 dieSize: orderAndPaper.dieSize || { length: "", breadth: "" },
                 productSize: orderAndPaper.productSize || { length: "", breadth: "" },
-                image: orderAndPaper.image || ""
+                image: orderAndPaper.image || "",
+                frags: orderAndPaper.frags || "" // Pass the frags to the InlineDieSelection component
               }}
               onDieSelect={handleDieSelect}
             />
