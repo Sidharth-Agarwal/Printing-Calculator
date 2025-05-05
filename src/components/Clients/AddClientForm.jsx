@@ -177,22 +177,18 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
-      <h2 className="text-lg font-bold mb-4">
-        {selectedClient ? "Edit Client" : "Add New Client"}
-      </h2>
-      
+    <form onSubmit={handleSubmit} className="bg-white rounded">
       {/* Basic Information */}
       <div className="mb-6">
-        <h3 className="text-md font-medium mb-4 text-gray-700">Basic Information</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Basic Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Client Code</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Client Code</label>
             <input
               type="text"
               name="clientCode"
               value={formData.clientCode}
-              className="mt-1 text-md block w-full border-gray-300 bg-gray-100 rounded-md shadow-sm cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md cursor-not-allowed"
               readOnly
               placeholder="Auto-generated from client name"
             />
@@ -201,24 +197,24 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Client Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Client Name</label>
             <input
               type="text"
               name="name"
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter client name"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Client Type</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Client Type</label>
             <select
               name="clientType"
               value={formData.clientType}
               onChange={handleChange}
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               required
             >
               <option value="Direct">Direct Client</option>
@@ -226,135 +222,140 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
             </select>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Contact Person</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
             <input
               type="text"
               name="contactPerson"
               value={formData.contactPerson}
               onChange={handleChange}
               placeholder="Enter contact person name"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
             <input
               type="email"
               name="email"
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter client email"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
             <input
               type="tel"
               name="phone"
               value={formData.phone}
               onChange={handleChange}
               placeholder="Enter phone number"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               required
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">GSTIN</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">GSTIN</label>
             <input
               type="text"
               name="gstin"
               value={formData.gstin}
               onChange={handleChange}
               placeholder="Enter GST identification number"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
-          <div className="flex items-center mt-6">
-            <input
-              id="isActive"
-              name="isActive"
-              type="checkbox"
-              checked={formData.isActive}
-              onChange={handleChange}
-              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
-            />
-            <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
-              Client is Active
-            </label>
+          <div className="flex items-center">
+            <div className="flex items-center">
+              <input
+                id="isActive"
+                name="isActive"
+                type="checkbox"
+                checked={formData.isActive}
+                onChange={handleChange}
+                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+              />
+              <div className="ml-2">
+                <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+                  Client is Active
+                </label>
+                <p className="text-xs text-gray-500">Active clients appear in dropdown lists</p>
+              </div>
+            </div>
           </div>
         </div>
       </div>
       
       {/* Primary Address */}
       <div className="mb-6">
-        <h3 className="text-md font-medium mb-4 text-gray-700">Primary Address</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Primary Address</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
           <div>
-            <label className="block text-sm font-medium text-gray-700">Address Line 1</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
             <input
               type="text"
               name="address.line1"
               value={formData.address.line1}
               onChange={handleChange}
               placeholder="Enter address line 1"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Address Line 2</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
             <input
               type="text"
               name="address.line2"
               value={formData.address.line2}
               onChange={handleChange}
               placeholder="Enter address line 2"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">City</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
             <input
               type="text"
               name="address.city"
               value={formData.address.city}
               onChange={handleChange}
               placeholder="Enter city"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">State</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
             <input
               type="text"
               name="address.state"
               value={formData.address.state}
               onChange={handleChange}
               placeholder="Enter state"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
             <input
               type="text"
               name="address.postalCode"
               value={formData.address.postalCode}
               onChange={handleChange}
               placeholder="Enter postal code"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700">Country</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
             <input
               type="text"
               name="address.country"
               value={formData.address.country}
               onChange={handleChange}
               placeholder="Enter country"
-              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
             />
           </div>
         </div>
@@ -363,14 +364,14 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
       {/* Billing Address */}
       <div className="mb-6">
         <div className="flex items-center mb-4">
-          <h3 className="text-md font-medium text-gray-700 mr-4">Billing Address</h3>
-          <div className="flex items-center">
+          <h3 className="text-lg font-medium text-gray-700 border-b border-gray-200 pb-2 flex-grow">Billing Address</h3>
+          <div className="flex items-center ml-4">
             <input
               id="sameAsAddress"
               type="checkbox"
               checked={sameAsAddress}
               onChange={handleSameAddressChange}
-              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
             />
             <label htmlFor="sameAsAddress" className="ml-2 text-sm text-gray-700">
               Same as Primary Address
@@ -379,71 +380,71 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
         </div>
         
         {!sameAsAddress && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
-              <label className="block text-sm font-medium text-gray-700">Address Line 1</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
               <input
                 type="text"
                 name="billingAddress.line1"
                 value={formData.billingAddress.line1}
                 onChange={handleChange}
                 placeholder="Enter address line 1"
-                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Address Line 2</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
               <input
                 type="text"
                 name="billingAddress.line2"
                 value={formData.billingAddress.line2}
                 onChange={handleChange}
                 placeholder="Enter address line 2"
-                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">City</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
               <input
                 type="text"
                 name="billingAddress.city"
                 value={formData.billingAddress.city}
                 onChange={handleChange}
                 placeholder="Enter city"
-                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">State</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
               <input
                 type="text"
                 name="billingAddress.state"
                 value={formData.billingAddress.state}
                 onChange={handleChange}
                 placeholder="Enter state"
-                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Postal Code</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
               <input
                 type="text"
                 name="billingAddress.postalCode"
                 value={formData.billingAddress.postalCode}
                 onChange={handleChange}
                 placeholder="Enter postal code"
-                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700">Country</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
               <input
                 type="text"
                 name="billingAddress.country"
                 value={formData.billingAddress.country}
                 onChange={handleChange}
                 placeholder="Enter country"
-                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
               />
             </div>
           </div>
@@ -452,18 +453,18 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
       
       {/* Notes */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700">Notes</label>
+        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
         <textarea
           name="notes"
           value={formData.notes}
           onChange={handleChange}
           placeholder="Enter any additional notes"
-          className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
           rows="4"
         ></textarea>
       </div>
       
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-3 border-t border-gray-200">
         {selectedClient && (
           <button
             type="button"
