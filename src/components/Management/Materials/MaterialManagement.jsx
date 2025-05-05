@@ -3,12 +3,17 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddMaterialForm from "./AddMaterialForm";
 import DisplayMaterialTable from "./DisplayMaterialTable";
+import Modal from "../../Shared/Modal";
 import ConfirmationModal from "../../Shared/ConfirmationModal";
 import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
+import { useAuth } from "../../Login/AuthContext";
 
 const MaterialManagement = () => {
+  const { userRole } = useAuth();
   const [materials, setMaterials] = useState([]);
   const [selectedMaterial, setSelectedMaterial] = useState(null);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
     itemId: null
@@ -19,6 +24,9 @@ const MaterialManagement = () => {
     title: "",
     status: "success"
   });
+
+  // Check if user is admin
+  const isAdmin = userRole === "admin";
 
   useEffect(() => {
     const materialsCollection = collection(db, "materials");
@@ -34,9 +42,17 @@ const MaterialManagement = () => {
   }, []);
 
   const addMaterial = async (materialData) => {
+    if (!isAdmin) return;
+    
+    setIsSubmitting(true);
     try {
       const materialsCollection = collection(db, "materials");
-      await addDoc(materialsCollection, materialData);
+      await addDoc(materialsCollection, { 
+        ...materialData, 
+        timestamp: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
       
       setNotification({
         isOpen: true,
@@ -44,6 +60,7 @@ const MaterialManagement = () => {
         title: "Success",
         status: "success"
       });
+      setIsFormModalOpen(false);
     } catch (error) {
       console.error("Error adding material:", error);
       
@@ -53,13 +70,21 @@ const MaterialManagement = () => {
         title: "Error",
         status: "error"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   const updateMaterial = async (id, updatedData) => {
+    if (!isAdmin) return;
+    
+    setIsSubmitting(true);
     try {
       const materialDoc = doc(db, "materials", id);
-      await updateDoc(materialDoc, updatedData);
+      await updateDoc(materialDoc, {
+        ...updatedData,
+        updatedAt: new Date()
+      });
       
       setNotification({
         isOpen: true,
@@ -67,6 +92,8 @@ const MaterialManagement = () => {
         title: "Success",
         status: "success"
       });
+      setIsFormModalOpen(false);
+      setSelectedMaterial(null);
     } catch (error) {
       console.error("Error updating material:", error);
       
@@ -76,10 +103,33 @@ const MaterialManagement = () => {
         title: "Error",
         status: "error"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
+  const handleAddClick = () => {
+    if (!isAdmin) return;
+    
+    setSelectedMaterial(null); // Ensure we're not in edit mode
+    setIsFormModalOpen(true);
+  };
+
+  const handleEditClick = (material) => {
+    if (!isAdmin) return;
+    
+    setSelectedMaterial({...material}); // Make a copy to ensure we don't modify the original
+    setIsFormModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsFormModalOpen(false);
+    setSelectedMaterial(null);
+  };
+
   const confirmDelete = (id) => {
+    if (!isAdmin) return;
+    
     setDeleteConfirmation({
       isOpen: true,
       itemId: id
@@ -103,6 +153,8 @@ const MaterialManagement = () => {
   };
 
   const handleDeleteConfirm = async () => {
+    if (!isAdmin) return;
+    
     try {
       await deleteDoc(doc(db, "materials", deleteConfirmation.itemId));
       closeDeleteModal();
@@ -127,32 +179,73 @@ const MaterialManagement = () => {
   };
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Material Management</h1>
-      <AddMaterialForm
-        onSubmit={addMaterial}
-        selectedMaterial={selectedMaterial}
-        onUpdate={updateMaterial}
-        setSelectedMaterial={setSelectedMaterial}
-      />
-      <DisplayMaterialTable
-        materials={materials}
-        onDelete={confirmDelete}
-        onEdit={(material) => setSelectedMaterial(material)}
-      />
-      <DeleteConfirmationModal
-        isOpen={deleteConfirmation.isOpen}
-        onClose={closeDeleteModal}
-        onConfirm={handleDeleteConfirm}
-        itemName="material"
-      />
-      <ConfirmationModal
-        isOpen={notification.isOpen}
-        onClose={closeNotification}
-        message={notification.message}
-        title={notification.title}
-        status={notification.status}
-      />
+    <div className="w-full">
+      {/* Page header */}
+      <div className="rounded bg-gray-900 py-4 mb-4">
+        <h1 className="text-2xl text-white font-bold pl-4">Material Management</h1>
+      </div>
+
+      {/* Main content */}
+      <div className="px-4">
+        {/* Action buttons - only visible to admins */}
+        {isAdmin && (
+          <div className="flex justify-end my-4">
+            <button 
+              onClick={handleAddClick}
+              className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add New Material
+            </button>
+          </div>
+        )}
+
+        {/* Table component - visible to all users */}
+        <DisplayMaterialTable
+          materials={materials}
+          onDelete={isAdmin ? confirmDelete : null}
+          onEdit={isAdmin ? handleEditClick : null}
+        />
+      </div>
+
+      {/* Modals - only rendered for admins */}
+      {isAdmin && (
+        <>
+          {/* Modal for adding/editing material */}
+          <Modal
+            isOpen={isFormModalOpen}
+            onClose={handleCloseModal}
+            title={selectedMaterial ? "Edit Material" : "Add New Material"}
+            size="lg"
+          >
+            <AddMaterialForm
+              onSubmit={addMaterial}
+              selectedMaterial={selectedMaterial}
+              onUpdate={updateMaterial}
+              setSelectedMaterial={setSelectedMaterial}
+              isSubmitting={isSubmitting}
+              onCancel={handleCloseModal}
+            />
+          </Modal>
+
+          <DeleteConfirmationModal
+            isOpen={deleteConfirmation.isOpen}
+            onClose={closeDeleteModal}
+            onConfirm={handleDeleteConfirm}
+            itemName="material"
+          />
+          
+          <ConfirmationModal
+            isOpen={notification.isOpen}
+            onClose={closeNotification}
+            message={notification.message}
+            title={notification.title}
+            status={notification.status}
+          />
+        </>
+      )}
     </div>
   );
 };

@@ -3,12 +3,16 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where
 import { db, storage } from "../../../firebaseConfig";
 import AddDieForm from "./AddDieForm";
 import DisplayDieTable from "./DisplayDieTable";
+import Modal from "../../Shared/Modal";
 import ConfirmationModal from "../../Shared/ConfirmationModal";
 import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
+import { useAuth } from "../../Login/AuthContext";
 
 const DieManagement = () => {
+  const { userRole } = useAuth();
   const [dies, setDies] = useState([]);
-  const [editingDie, setEditingDie] = useState(null);
+  const [selectedDie, setSelectedDie] = useState(null);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
@@ -20,6 +24,9 @@ const DieManagement = () => {
     title: "",
     status: "success"
   });
+
+  // Check if user is admin
+  const isAdmin = userRole === "admin";
 
   useEffect(() => {
     const diesCollection = collection(db, "dies");
@@ -54,6 +61,7 @@ const DieManagement = () => {
   };
 
   const addDie = async (newDie) => {
+    if (!isAdmin) return;
     if (!newDie.dieCode) {
       throw new Error("Die code is required.");
     }
@@ -72,7 +80,12 @@ const DieManagement = () => {
       const { price, ...dieData } = newDie;
       
       const diesCollection = collection(db, "dies");
-      await addDoc(diesCollection, { ...dieData, timestamp: new Date() });
+      await addDoc(diesCollection, { 
+        ...dieData, 
+        timestamp: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
       
       setNotification({
         isOpen: true,
@@ -81,9 +94,18 @@ const DieManagement = () => {
         status: "success"
       });
       
+      setIsFormModalOpen(false);
       return true;
     } catch (error) {
       console.error("Error adding die:", error);
+      
+      setNotification({
+        isOpen: true,
+        message: error.message || "Error adding die. Please try again.",
+        title: "Error",
+        status: "error"
+      });
+      
       throw error; // Re-throw the error so the form can handle it
     } finally {
       setIsSubmitting(false);
@@ -91,6 +113,7 @@ const DieManagement = () => {
   };
 
   const updateDie = async (id, updatedData) => {
+    if (!isAdmin) return;
     if (!updatedData.dieCode) {
       throw new Error("Die code is required.");
     }
@@ -115,7 +138,10 @@ const DieManagement = () => {
       // Remove price field if it exists
       const { price, ...dieData } = updatedData;
       
-      await updateDoc(dieRef, dieData);
+      await updateDoc(dieRef, {
+        ...dieData,
+        updatedAt: new Date()
+      });
       
       setNotification({
         isOpen: true,
@@ -124,20 +150,58 @@ const DieManagement = () => {
         status: "success"
       });
       
+      setIsFormModalOpen(false);
+      setSelectedDie(null);
       return true;
     } catch (error) {
       console.error("Error updating die:", error);
+      
+      setNotification({
+        isOpen: true,
+        message: error.message || "Error updating die. Please try again.",
+        title: "Error",
+        status: "error"
+      });
+      
       throw error; // Re-throw the error so the form can handle it
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  const handleAddClick = () => {
+    if (!isAdmin) return;
+    
+    setSelectedDie(null); // Ensure we're not in edit mode
+    setIsFormModalOpen(true);
+  };
+
+  const handleEditClick = (die) => {
+    if (!isAdmin) return;
+    
+    const { price, ...dieData } = die; // Remove price field if it exists
+    setSelectedDie({...dieData}); // Make a copy to ensure we don't modify the original
+    setIsFormModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsFormModalOpen(false);
+    setSelectedDie(null);
+  };
+
   const confirmDelete = (id) => {
+    if (!isAdmin) return;
+    
     setDeleteConfirmation({
-      isOpen: true,
+      isOpen: false,
       itemId: id
     });
+    setTimeout(() => {
+      setDeleteConfirmation({
+        isOpen: true,
+        itemId: id
+      });
+    }, 0);
   };
 
   const closeDeleteModal = () => {
@@ -157,6 +221,8 @@ const DieManagement = () => {
   };
 
   const handleDeleteConfirm = async () => {
+    if (!isAdmin) return;
+    
     try {
       await deleteDoc(doc(db, "dies", deleteConfirmation.itemId));
       closeDeleteModal();
@@ -180,43 +246,111 @@ const DieManagement = () => {
     }
   };
 
-  // If we have an editing die, make sure to remove the price field before passing it to the form
-  const prepareEditingDie = () => {
-    if (!editingDie) return null;
+  // Custom modal component with reduced padding
+  const CompactModal = ({ isOpen, onClose, title, children }) => {
+    if (!isOpen) return null;
     
-    const { price, ...dieData } = editingDie;
-    return dieData;
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        {/* Backdrop */}
+        <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity backdrop-blur-sm" />
+
+        {/* Modal container */}
+        <div className="flex min-h-full items-center justify-center text-center p-2">
+          {/* Modal content */}
+          <div className="w-full max-w-3xl transform overflow-visible bg-white text-left shadow-xl transition-all rounded-lg">
+            {/* Header - using the dark navy blue color */}
+            <div className="bg-gray-900 px-4 py-2 flex justify-between items-center rounded-t-lg">
+              <h3 className="text-md font-medium text-white">{title}</h3>
+              <button
+                type="button"
+                className="text-white hover:text-gray-300 focus:outline-none transition-colors"
+                onClick={onClose}
+              >
+                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-4">
+              {children}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Die Management</h1>
-      <AddDieForm
-        onAddDie={addDie}
-        onUpdateDie={updateDie}
-        editingDie={prepareEditingDie()}
-        setEditingDie={setEditingDie}
-        storage={storage}
-        isSubmitting={isSubmitting}
-      />
-      <DisplayDieTable
-        dies={dies}
-        onEditDie={setEditingDie}
-        onDeleteDie={confirmDelete}
-      />
-      <DeleteConfirmationModal
-        isOpen={deleteConfirmation.isOpen}
-        onClose={closeDeleteModal}
-        onConfirm={handleDeleteConfirm}
-        itemName="die"
-      />
-      <ConfirmationModal
-        isOpen={notification.isOpen}
-        onClose={closeNotification}
-        message={notification.message}
-        title={notification.title}
-        status={notification.status}
-      />
+    <div className="w-full">
+      {/* Page header */}
+      <div className="rounded bg-gray-900 py-4 mb-4">
+        <h1 className="text-2xl text-white font-bold pl-4">Die Management</h1>
+      </div>
+
+      {/* Main content */}
+      <div className="px-4">
+        {/* Action buttons - only visible to admins */}
+        {isAdmin && (
+          <div className="flex justify-end my-4">
+            <button 
+              onClick={handleAddClick}
+              className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add New Die
+            </button>
+          </div>
+        )}
+
+        {/* Table component - visible to all users */}
+        <DisplayDieTable
+          dies={dies}
+          onEditDie={isAdmin ? handleEditClick : null}
+          onDeleteDie={isAdmin ? confirmDelete : null}
+        />
+      </div>
+
+      {/* Modals - only rendered for admins */}
+      {isAdmin && (
+        <>
+          {/* Using the custom compact modal for the form */}
+          <CompactModal
+            isOpen={isFormModalOpen}
+            onClose={handleCloseModal}
+            title={selectedDie ? "Edit Die" : "Add New Die"}
+          >
+            <AddDieForm
+              onAddDie={addDie}
+              onUpdateDie={updateDie}
+              editingDie={selectedDie}
+              setEditingDie={setSelectedDie}
+              storage={storage}
+              isSubmitting={isSubmitting}
+              onCancel={handleCloseModal}
+            />
+          </CompactModal>
+
+          <DeleteConfirmationModal
+            isOpen={deleteConfirmation.isOpen}
+            onClose={closeDeleteModal}
+            onConfirm={handleDeleteConfirm}
+            itemName="die"
+          />
+          
+          <ConfirmationModal
+            isOpen={notification.isOpen}
+            onClose={closeNotification}
+            message={notification.message}
+            title={notification.title}
+            status={notification.status}
+          />
+        </>
+      )}
     </div>
   );
 };

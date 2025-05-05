@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 
-const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, setSelectedRate }) => {
+const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, isSubmitting, onCancel }) => {
   const [formData, setFormData] = useState({
     group: "",
     type: "",
     concatenate: "",
     finalRate: "",
-    percentage: "", // New field for percentage
+    percentage: "",
   });
 
   useEffect(() => {
@@ -44,55 +44,106 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, setSelectedRate
 
     if (selectedRate) {
       onUpdate(selectedRate.id, formData);
-      setSelectedRate(null);
     } else {
       onSubmit(formData);
     }
-
-    setFormData({
-      group: "",
-      type: "",
-      concatenate: "",
-      finalRate: "",
-      percentage: "",
-    });
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
-      <h2 className="text-lg font-medium mb-4">
-        {selectedRate ? "Edit Standard Rate" : "Add New Standard Rate"}
-      </h2>
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
-        {[
-          { label: "Group", name: "group", placeholder: "Enter group name", type: "text" },
-          { label: "Type", name: "type", placeholder: "Enter type name", type: "text" },
-          { label: "Concatenate", name: "concatenate", type: "text", readOnly: true },
-          { label: "Final Rate (INR)", name: "finalRate", placeholder: "Enter rate", type: "number" },
-          { label: "Percentage (%)", name: "percentage", placeholder: "Enter percentage", type: "number" },
-        ].map((field, idx) => (
-          <div key={idx}>
-            <label className="block text-sm font-medium text-gray-700">{field.label}</label>
+    <form onSubmit={handleSubmit}>
+      <div className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Group</label>
             <input
-              type={field.type}
-              name={field.name}
-              value={formData[field.name] || ""}
-              onChange={!field.readOnly ? handleChange : undefined}
-              placeholder={field.placeholder}
-              readOnly={field.readOnly}
-              className={`text-md mt-3 block w-full border-gray-300 rounded-sm shadow-sm text-sm ${
-                field.readOnly ? "bg-gray-100" : ""
-              }`}
+              type="text"
+              name="group"
+              value={formData.group || ""}
+              onChange={handleChange}
+              placeholder="Enter group name"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
+              required
             />
           </div>
-        ))}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Type</label>
+            <input
+              type="text"
+              name="type"
+              value={formData.type || ""}
+              onChange={handleChange}
+              placeholder="Enter type name"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
+              required
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Concatenate</label>
+            <input
+              type="text"
+              name="concatenate"
+              value={formData.concatenate || ""}
+              readOnly
+              placeholder="Auto-generated"
+              className="w-full p-2 border border-gray-300 rounded text-sm bg-gray-100"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Final Rate (INR)</label>
+            <input
+              type="number"
+              name="finalRate"
+              value={formData.finalRate || ""}
+              onChange={handleChange}
+              placeholder="Enter rate"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Percentage (%)</label>
+            <input
+              type="number"
+              name="percentage"
+              value={formData.percentage || ""}
+              onChange={handleChange}
+              placeholder="Enter percentage"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
+            />
+          </div>
+        </div>
+        <div className="mt-4 text-xs text-gray-500">
+          Note: Enter either a final rate or a percentage
+        </div>
       </div>
-      <div className="mt-4 text-xs text-gray-500">
-        Note: Enter either a final rate or a percentage
+
+      {/* Form buttons */}
+      <div className="flex justify-end space-x-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            </span>
+          ) : (
+            selectedRate ? 'Update Rate' : 'Add Rate'
+          )}
+        </button>
       </div>
-      <button type="submit" className="mt-6 px-3 py-2 bg-blue-500 text-white rounded text-sm">
-        {selectedRate ? "Save Changes" : "Add Rate"}
-      </button>
     </form>
   );
 };
