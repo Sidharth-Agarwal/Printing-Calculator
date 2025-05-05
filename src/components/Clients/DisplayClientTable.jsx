@@ -640,9 +640,9 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
   };
 
   return (
-    <div className="bg-white rounded-lg shadow-md">
+    <div className="bg-white rounded-lg">
       {/* Search and Filter */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-3 p-4 border-b">
+      <div className="flex flex-col md:flex-row justify-between items-center gap-3 py-4 border-b">
         <div className="relative w-full md:w-64">
           <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
             <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
