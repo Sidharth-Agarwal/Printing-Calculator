@@ -3,8 +3,8 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddMaterialForm from "./AddMaterialForm";
 import DisplayMaterialTable from "./DisplayMaterialTable";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
-import ConfirmationModal from "../ConfirmationModal";
+import ConfirmationModal from "../../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 
 const MaterialManagement = () => {
   const [materials, setMaterials] = useState([]);

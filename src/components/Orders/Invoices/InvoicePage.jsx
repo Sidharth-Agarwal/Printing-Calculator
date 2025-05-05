@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { collection, doc, updateDoc, onSnapshot, addDoc, query, where, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import UnifiedDetailsModal from '../Shared/UnifiedDetailsModal'; 
+import { db } from '../../../firebaseConfig';
+import UnifiedDetailsModal from '../../Shared/UnifiedDetailsModal'; 
 import ClientInvoiceGroup from './ClientInvoiceGroup';
-import NewInvoiceModal from './NewInvoiceModal';
+import InvoiceModal from './InvoiceModal';
 import JobTicketModal from './JobTicketModal';
-import { useAuth } from "../Login/AuthContext";
+import { useAuth } from "../../Login/AuthContext";
 
 const InvoicesPage = () => {
   const { userRole, currentUser } = useAuth(); // Get user role and current user
@@ -536,7 +536,7 @@ const InvoicesPage = () => {
 
       {/* Invoice Modal */}
       {isInvoiceModalOpen && (
-        <NewInvoiceModal
+        <InvoiceModal
           selectedOrderIds={selectedOrders}
           orders={allOrders.filter(order => selectedOrders.includes(order.id))}
           onClose={() => setIsInvoiceModalOpen(false)}

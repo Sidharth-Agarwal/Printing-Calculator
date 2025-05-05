@@ -3,8 +3,8 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where
 import { db } from "../../../firebaseConfig";
 import AddLoyaltyTierForm from "./AddLoyaltyTierForm";
 import DisplayLoyaltyTierTable from "./DisplayLoyaltyTierTable";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
-import ConfirmationModal from "../ConfirmationModal";
+import ConfirmationModal from "../../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 import { useAuth } from "../../Login/AuthContext";
 
 const LoyaltyTierManagement = () => {

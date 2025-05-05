@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import InvoiceTemplate from './InvoiceTemplate';
 
-const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
+const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
   const [invoiceData, setInvoiceData] = useState({
     invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
@@ -385,4 +385,4 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
   );
 };
 
-export default NewInvoiceModal;
+export default InvoiceModal;

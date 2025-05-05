@@ -85,12 +85,16 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
       
       // Get processing features
       const features = [];
-      if (estimate?.lpDetails?.isLPUsed) features.push("Letterpress");
-      if (estimate?.fsDetails?.isFSUsed) features.push("Foil Stamping");
-      if (estimate?.embDetails?.isEMBUsed) features.push("Embossing");
-      if (estimate?.digiDetails?.isDigiUsed) features.push("Digital Print");
-      if (estimate?.sandwich?.isSandwichComponentUsed) features.push("Sandwich");
-      if (estimate?.pasting?.isPastingUsed) features.push("Pasting");
+      // if (estimate?.lpDetails?.isLPUsed) features.push("Letterpress");
+      // if (estimate?.fsDetails?.isFSUsed) features.push("Foil Stamping");
+      // if (estimate?.embDetails?.isEMBUsed) features.push("Embossing");
+      // if (estimate?.digiDetails?.isDigiUsed) features.push("Digital Print");
+      // if (estimate?.notebookDetails?.isNotebookUsed) features.push("Notebook");
+      // if (estimate?.screenPrint?.isScreenPrintUsed) features.push("Screen Print");
+      // if (estimate?.dieCutting?.isDieCuttingUsed) features.push("Die Cutting")
+      // if (estimate?.dieCutting?.isDieCuttingUsed) features.push("Die Cutting")
+      // if (estimate?.postDC?.isPastingUsed) features.push("Pasting");
+      // if (estimate?.sandwich?.isSandwichComponentUsed) features.push("Sandwich");
       
       // Get quantities and costs
       const quantity = parseInt(jobDetails.quantity) || 0;

@@ -27,7 +27,7 @@ import Packing from "./Sections/Post Production/Packing";
 import Sandwich from "./Sections/Post Production/Sandwich";
 import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
-import SuccessNotification from "./SuccessNotification"; // Import the success notification component
+import SuccessNotification from "../Shared/SuccessNotification";
 
 // Import service and job type configurations
 import { serviceRegistry } from "./Services/Config/serviceRegistry";

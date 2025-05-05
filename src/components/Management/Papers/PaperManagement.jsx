@@ -3,8 +3,8 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddPaperForm from "./AddPaperForm";
 import DisplayPaperTable from "./DisplayPaperTable";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
-import ConfirmationModal from "../ConfirmationModal";
+import ConfirmationModal from "../../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 
 const PaperManagement = () => {
   const [papers, setPapers] = useState([]);

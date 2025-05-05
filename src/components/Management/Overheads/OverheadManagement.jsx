@@ -3,8 +3,8 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddOverheadForm from "./AddOverheadForm";
 import DisplayOverheadTable from "./DisplayOverheadTable";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
-import ConfirmationModal from "../ConfirmationModal";
+import ConfirmationModal from "../../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 
 const OverheadManagement = () => {
   const [overheads, setOverheads] = useState([]);

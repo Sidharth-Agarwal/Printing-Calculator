@@ -3,8 +3,8 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where
 import { db, storage } from "../../../firebaseConfig";
 import AddDieForm from "./AddDieForm";
 import DisplayDieTable from "./DisplayDieTable";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
-import ConfirmationModal from "../ConfirmationModal";
+import ConfirmationModal from "../../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 
 const DieManagement = () => {
   const [dies, setDies] = useState([]);

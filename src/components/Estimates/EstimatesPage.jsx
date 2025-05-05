@@ -4,7 +4,7 @@ import { db } from "../../firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import EstimateCard from "./EstimateCard";
 import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
-import PreviewModal from "./PreviewModal";
+import EstimatePreviewModal from "./EstimatePreviewModal";
 import EstimateTemplate from "./EsimateTemplate";
 import EditEstimateModal from "./EditEstimateModal";
 import html2canvas from 'html2canvas';
@@ -857,7 +857,7 @@ const EstimatesPage = () => {
 
       {/* Preview Modal */}
       {isPreviewOpen && (
-        <PreviewModal
+        <EstimatePreviewModal
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
           onDownload={handleGenerateJobTicket}
@@ -871,7 +871,7 @@ const EstimatesPage = () => {
               version={previewData.version}
             />
           )}
-        </PreviewModal>
+        </EstimatePreviewModal>
       )}
 
       {/* Edit Estimate Modal */}

@@ -1,6 +1,6 @@
 import React from 'react';
 
-const PreviewModal = ({ isOpen, onClose, onDownload, isGeneratingPDF, error, children }) => {
+const EstimatePreviewModal = ({ isOpen, onClose, onDownload, isGeneratingPDF, error, children }) => {
   if (!isOpen) return null;
 
   return (
@@ -86,4 +86,4 @@ const PreviewModal = ({ isOpen, onClose, onDownload, isGeneratingPDF, error, chi
   );
 };
 
-export default PreviewModal;
+export default EstimatePreviewModal;
