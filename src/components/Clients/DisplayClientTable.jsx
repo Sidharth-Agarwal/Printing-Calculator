@@ -1,8 +1,10 @@
 import React, { useState } from "react";
+import ClientDetailsModal from "./ClientDetailsModal"; // Import the new modal component
 
 const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, onActivateClient, isAdmin }) => {
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClientType, setFilterClientType] = useState("");
+  const [selectedClient, setSelectedClient] = useState(null); // State to track which client is selected for the modal
 
   // Sort clients alphabetically by name
   const sortedClients = [...clients].sort((a, b) => 
@@ -69,7 +71,17 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     const isB2B = client.clientType && (client.clientType.toUpperCase() === "B2B");
     const isEnrolled = isB2B && client.loyaltyTierId;
     
-    return `border-t ${isEnrolled ? "hover:bg-opacity-70" : "hover:bg-gray-50"}`;
+    return `border-t ${isEnrolled ? "hover:bg-opacity-70" : "hover:bg-gray-50"} cursor-pointer`; // Added cursor-pointer for better UX
+  };
+
+  // Function to handle row click and open the modal
+  const handleRowClick = (client) => {
+    setSelectedClient(client);
+  };
+  
+  // Function to close the modal
+  const handleCloseModal = () => {
+    setSelectedClient(null);
   };
 
   return (
@@ -132,6 +144,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                     key={client.id} 
                     className={getRowClassName(client)}
                     style={getTierStyles(client)}
+                    onClick={() => handleRowClick(client)} // Add click handler to open the modal
                   >
                     <td className="px-4 py-2">{client.clientCode}</td>
                     <td className="px-4 py-2 font-medium">
@@ -184,17 +197,23 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                         <span className="text-gray-500 text-sm">N/A</span>
                       )}
                     </td>
-                    <td className="px-4 py-2">
+                    <td className="px-4 py-2" onClick={(e) => e.stopPropagation()}> {/* Stop propagation to prevent modal from opening when clicking action buttons */}
                       <div className="flex space-x-2">
                         <button
-                          onClick={() => onEdit(client)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onEdit(client);
+                          }}
                           className="text-blue-600 hover:text-blue-800"
                         >
                           Edit
                         </button>
                         <span className="text-gray-300">|</span>
                         <button
-                          onClick={() => onDelete(client.id)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            onDelete(client.id);
+                          }}
                           className="text-red-600 hover:text-red-800"
                         >
                           Delete
@@ -206,14 +225,20 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                             <span className="text-gray-300">|</span>
                             {client.hasAccount ? (
                               <button
-                                onClick={() => onManageCredentials(client)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onManageCredentials(client);
+                                }}
                                 className="text-purple-600 hover:text-purple-800"
                               >
                                 Credentials
                               </button>
                             ) : (
                               <button
-                                onClick={() => onActivateClient(client)}
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onActivateClient(client);
+                                }}
                                 className="text-green-600 hover:text-green-800"
                               >
                                 Activate
@@ -236,6 +261,14 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
           </tbody>
         </table>
       </div>
+      
+      {/* Client Details Modal */}
+      {selectedClient && (
+        <ClientDetailsModal 
+          client={selectedClient} 
+          onClose={handleCloseModal} 
+        />
+      )}
     </div>
   );
 };
