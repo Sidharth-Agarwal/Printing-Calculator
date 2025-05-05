@@ -714,9 +714,9 @@ const ReviewAndSubmit = ({
               </div>
               
               {/* Hidden markup info - display read-only for transparency */}
-              <div className="mt-4 pt-3 border-t border-blue-200 text-sm text-gray-600">
+              {/* <div className="mt-4 pt-3 border-t border-blue-200 text-sm text-gray-600">
                 <p>Using B2B Merchant pricing ({markupPercentage}% markup)</p>
-              </div>
+              </div> */}
             </div>
           ) : (
             <>
@@ -830,17 +830,17 @@ const ReviewAndSubmit = ({
       ) : (
         <div className="bg-white p-4 rounded-md">
           <p className="text-red-600 text-center">
-            Unable to fetch calculations. Please fill in the required fields.
+            Please fill in the required fields to do get calculations.
           </p>
         </div>
       )}
 
       {/* Preview Mode Notice */}
       {previewMode ? (
-        <div className="bg-yellow-50 p-4 border border-yellow-200 rounded-md">
-          <div className="flex items-center space-x-2 text-yellow-700">
+        <div>
+          {/* <div className="flex items-center space-x-2 text-yellow-700">
             <p>This is a preview only. Close this preview and submit the form to create the estimate.</p>
-          </div>
+          </div> */}
         </div>
       ) : (
         <div className="mt-6 flex justify-end">
