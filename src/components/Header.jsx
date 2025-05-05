@@ -150,7 +150,7 @@ const Header = () => {
                 >
                   {item.label}
                 </button>
-                <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-lg z-10 left-1/2 transform -translate-x-1/2 min-w-max mt-1 overflow-hidden transition-all duration-300 opacity-0 group-hover:opacity-100 top-6">
+                <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-lg z-10 left-1/2 transform -translate-x-1/2 min-w-max overflow-hidden transition-all duration-300 opacity-0 group-hover:opacity-100" style={{ top: '100%', marginTop: '0' }}>
                   {item.dropdownItems.filter(subItem => subItem.visible !== false).map(subItem => (
                     <button
                       key={subItem.path}
