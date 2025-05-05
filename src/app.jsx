@@ -28,9 +28,10 @@ import "./styles/tailwind.css";
 function App() {
   return (
     <AuthProvider>
-      <div>
+      <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="container mx-auto p-6">
+        {/* Increased padding-top to match the new header height */}
+        <main className="container mx-auto p-6 pt-20 flex-grow">
           <Routes>
             {/* Public routes - these don't require authentication */}
             <Route path="/" element={<Login />} />

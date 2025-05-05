@@ -1,5 +1,4 @@
 export const ROUTE_ACCESS = {
-  // Route paths mapped to allowed roles
   '/transactions': ['admin'],
   '/user-management': ['admin'],
   '/new-bill': ['admin', 'staff', 'b2b'],
@@ -12,13 +11,12 @@ export const ROUTE_ACCESS = {
   '/material-stock/dies-db': ['admin', 'staff'],
   '/material-stock/standard-rates-db': ['admin', 'staff'],
   '/material-stock/overheads': ['admin', 'staff'],
-  '/material-stock/loyalty-tiers': ['admin', 'staff'], // Route for loyalty tiers management
-  '/loyalty-dashboard': ['admin', 'staff'], // NEW: Route for loyalty dashboard
+  '/material-stock/loyalty-tiers': ['admin', 'staff'],
+  '/loyalty-dashboard': ['admin', 'staff'],
   '/b2b-dashboard': ['b2b']
 };
 
 export const MENU_ACCESS = {
-  // Configurable menu visibility
   newBill: ['admin', 'staff', 'b2b'],
   materials: ['admin', 'staff'],
   clients: ['admin', 'staff'],
@@ -27,5 +25,5 @@ export const MENU_ACCESS = {
   invoices: ['admin', 'staff'],
   transactions: ['admin'],
   userManagement: ['admin'],
-  loyaltyProgram: ['admin', 'staff'] // Menu access for loyalty program and dashboard
+  loyaltyProgram: ['admin', 'staff']
 };

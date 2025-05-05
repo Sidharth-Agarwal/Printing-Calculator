@@ -3,7 +3,8 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "./Login/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import { MENU_ACCESS } from "../components/Login/routesConfig"; // Import menu access configuration
+import { MENU_ACCESS } from "../components/Login/routesConfig"; 
+import logo from "../assets/logo.png"; // Import the logo
 
 const Header = () => {
   const { currentUser, userRole, logout } = useAuth();
@@ -12,11 +13,11 @@ const Header = () => {
   const [showProfileMenu, setShowProfileMenu] = useState(false);
   const [displayName, setDisplayName] = useState("");
   const [clientData, setClientData] = useState(null);
+  const [hoverIndex, setHoverIndex] = useState(-1);
 
-  // Modified function to navigate within the SPA instead of opening new tabs
+  // Modified function to navigate within the SPA
   const navigateTo = (path) => {
     navigate(path);
-    // Close profile menu if it's open
     if (showProfileMenu) {
       setShowProfileMenu(false);
     }
@@ -25,11 +26,6 @@ const Header = () => {
   // Helper function to check if a path is active
   const isActive = (path) => {
     return location.pathname === path;
-  };
-
-  // Helper function to get active class
-  const getActiveClass = (path) => {
-    return isActive(path) ? "underline text-blue-300" : "";
   };
 
   // Logout handler
@@ -76,9 +72,9 @@ const Header = () => {
   // Special case for setup-admin page - minimal header
   if (location.pathname === "/setup-admin") {
     return (
-      <header className="bg-blue-600 text-white shadow">
-        <div className="w-full px-6 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold whitespace-nowrap">FAMOUS LETTER PRESS</h1>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black text-white shadow-md">
+        <div className="w-full px-6 py-2 flex items-center justify-center">
+          <img src={logo} alt="Famous Logo" className="h-10 w-10 transition-transform hover:rotate-12 duration-300" />
         </div>
       </header>
     );
@@ -87,9 +83,9 @@ const Header = () => {
   // Return early if user is not authenticated
   if (!currentUser) {
     return (
-      <header className="bg-blue-600 text-white shadow">
-        <div className="w-full px-6 py-3 flex items-center justify-between">
-          <h1 className="text-lg font-bold whitespace-nowrap">FAMOUS LETTER PRESS</h1>
+      <header className="fixed top-0 left-0 right-0 z-50 bg-black text-white shadow-md">
+        <div className="w-full px-6 py-2 flex items-center justify-center">
+          <img src={logo} alt="Famous Logo" className="h-10 w-10 transition-transform hover:rotate-12 duration-300" />
         </div>
       </header>
     );
@@ -105,255 +101,157 @@ const Header = () => {
   const isMenuItemVisible = (menuKey) => 
     MENU_ACCESS[menuKey].includes(userRole);
 
-  return (
-    <header className="bg-blue-600 text-white shadow">
-      <div className="w-full px-6 py-3 flex items-center justify-between">
-        <h1 className="text-lg font-bold whitespace-nowrap">
-          {userRole === "b2b" ? (
-            <button 
-              onClick={() => navigateTo("/b2b-dashboard")} 
-              className="hover:text-blue-300 transition"
-            >
-              FAMOUS LETTER PRESS
-            </button>
-          ) : (
-            "FAMOUS LETTER PRESS"
-          )}
-        </h1>
-        <nav className="flex items-center space-x-6">
-          {/* New Bill */}
-          {isMenuItemVisible('newBill') && (
-            <button
-              onClick={() => navigateTo('/new-bill')}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/new-bill')
-              }`}
-            >
-              New Bill
-            </button>
-          )}
+  // Navigation items array for animated hover effects
+  const navItems = [
+    { key: 'newBill', label: 'New Bill', path: '/new-bill', visible: isMenuItemVisible('newBill') },
+    { key: 'materials', label: 'Material & Stock', path: '/material-stock', visible: isMenuItemVisible('materials'), isDropdown: true,
+      dropdownItems: [
+        { label: 'Paper Management', path: '/material-stock/paper-db' },
+        { label: 'Material Management', path: '/material-stock/material-db' },
+        { label: 'Die Management', path: '/material-stock/dies-db' },
+        { label: 'Labour Management', path: '/material-stock/standard-rates-db' },
+        { label: 'Overheads Management', path: '/material-stock/overheads' },
+        { label: 'Loyalty Program Management', path: '/material-stock/loyalty-tiers', visible: isMenuItemVisible('loyaltyProgram') }
+      ]
+    },
+    { key: 'clients', label: 'Clients', path: '/clients', visible: isMenuItemVisible('clients') },
+    { key: 'estimates', label: 'Estimates', path: '/material-stock/estimates-db', visible: isMenuItemVisible('estimates') },
+    { key: 'orders', label: 'Orders', path: '/orders', visible: isMenuItemVisible('orders') },
+    { key: 'invoices', label: 'Invoices', path: '/invoices', visible: isMenuItemVisible('invoices') },
+    { key: 'loyalty', label: 'Loyalty Dashboard', path: '/loyalty-dashboard', visible: isMenuItemVisible('loyaltyProgram') },
+    { key: 'transactions', label: 'Transactions', path: '/transactions', visible: isMenuItemVisible('transactions') },
+    { key: 'dashboard', label: 'Dashboard', path: '/b2b-dashboard', visible: userRole === "b2b" }
+  ];
 
-          {/* Material and Stock Dropdown */}
-          {isMenuItemVisible('materials') && (
-            <div className="group inline-block relative">
-              <button 
-                className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                  location.pathname.includes('/material-stock') ? "underline text-blue-300" : ""
-                }`}
-              >
-                Material & Stock
-              </button>
-              <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-md z-10 left-0 min-w-max">
-                <button
-                  onClick={() => navigateTo('/material-stock/paper-db')}
-                  className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
-                    isActive('/material-stock/paper-db') ? "bg-gray-200 font-semibold" : ""
+  return (
+    <header className="fixed top-0 left-0 right-0 z-50 bg-black text-white shadow-md">
+      <div className="w-full px-6 py-2 flex items-center justify-between">
+        {/* Logo */}
+        <img 
+          src={logo} 
+          alt="Famous Logo" 
+          className="h-10 w-10 transition-transform hover:rotate-12 duration-300 cursor-pointer" 
+          onClick={() => userRole === "b2b" ? navigateTo("/b2b-dashboard") : navigateTo("/")}
+        />
+        
+        {/* Centered Navigation */}
+        <nav className="flex items-center justify-center flex-1 space-x-8">
+          {navItems.filter(item => item.visible).map((item, index) => (
+            item.isDropdown ? (
+              <div key={item.key} className="group relative inline-block" 
+                onMouseEnter={() => setHoverIndex(index)}
+                onMouseLeave={() => setHoverIndex(-1)}>
+                <button 
+                  className={`text-sm transition-all duration-200 border-b-2 ${
+                    location.pathname.includes(item.path) && !location.pathname.includes('/material-stock/estimates-db')
+                      ? "border-white font-medium" 
+                      : "border-transparent hover:border-gray-400"
                   }`}
                 >
-                  Paper Management
+                  {item.label}
                 </button>
-                <button
-                  onClick={() => navigateTo('/material-stock/material-db')}
-                  className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
-                    isActive('/material-stock/material-db') ? "bg-gray-200 font-semibold" : ""
-                  }`}
-                >
-                  Material Management
-                </button>
-                <button
-                  onClick={() => navigateTo('/material-stock/dies-db')}
-                  className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
-                    isActive('/material-stock/dies-db') ? "bg-gray-200 font-semibold" : ""
-                  }`}
-                >
-                  Die Management
-                </button>
-                <button
-                  onClick={() => navigateTo('/material-stock/standard-rates-db')}
-                  className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
-                    isActive('/material-stock/standard-rates-db') ? "bg-gray-200 font-semibold" : ""
-                  }`}
-                >
-                  Labour Management
-                </button>
-                <button
-                  onClick={() => navigateTo('/material-stock/overheads')}
-                  className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
-                    isActive('/material-stock/overheads') ? "bg-gray-200 font-semibold" : ""
-                  }`}
-                >
-                  Overheads Management
-                </button>
-                
-                {/* Add Loyalty Program Management menu item */}
-                {isMenuItemVisible('loyaltyProgram') && (
-                  <button
-                    onClick={() => navigateTo('/material-stock/loyalty-tiers')}
-                    className={`block w-full text-left px-4 py-2 hover:bg-gray-200 whitespace-nowrap ${
-                      isActive('/material-stock/loyalty-tiers') ? "bg-gray-200 font-semibold" : ""
-                    }`}
-                  >
-                    Loyalty Program Management
-                  </button>
-                )}
+                <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-lg z-10 left-1/2 transform -translate-x-1/2 min-w-max mt-1 overflow-hidden transition-all duration-300 opacity-0 group-hover:opacity-100 top-6">
+                  {item.dropdownItems.filter(subItem => subItem.visible !== false).map(subItem => (
+                    <button
+                      key={subItem.path}
+                      onClick={() => navigateTo(subItem.path)}
+                      className={`block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100 ${
+                        isActive(subItem.path) ? "bg-gray-100 font-medium" : ""
+                      }`}
+                    >
+                      {subItem.label}
+                    </button>
+                  ))}
+                </div>
               </div>
+            ) : (
+              <button
+                key={item.key}
+                onClick={() => navigateTo(item.path)}
+                onMouseEnter={() => setHoverIndex(index)}
+                onMouseLeave={() => setHoverIndex(-1)}
+                className={`text-sm transition-all duration-200 border-b-2 ${
+                  isActive(item.path)
+                    ? "border-white font-medium" 
+                    : "border-transparent hover:border-gray-400"
+                } ${hoverIndex === index ? "transform -translate-y-0.5" : ""}`}
+              >
+                {item.label}
+              </button>
+            )
+          ))}
+        </nav>
+        
+        {/* Profile Dropdown - Right aligned */}
+        <div className="relative">
+          <button
+            onClick={() => setShowProfileMenu(!showProfileMenu)}
+            className="flex items-center transition-colors duration-200 hover:text-gray-300 text-sm"
+          >
+            <span className="max-w-[150px] truncate">{userDisplayText}</span>
+            <svg
+              className={`h-4 w-4 ml-1 transition-transform duration-300 ${showProfileMenu ? "rotate-180" : ""}`}
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+            </svg>
+          </button>
+
+          {showProfileMenu && (
+            <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded shadow-lg z-10 overflow-hidden animate-fadeIn">
+              <div className="p-2 border-b text-xs text-gray-500">
+                Logged in as <span className="font-semibold">{userRole}</span>
+              </div>
+
+              {/* User Management - Only for Admin */}
+              {isMenuItemVisible('userManagement') && (
+                <button
+                  onClick={() => navigateTo('/user-management')}
+                  className="block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100"
+                >
+                  User Management
+                </button>
+              )}
+             
+              {/* Change Password - Always Visible */}
+              <button
+                onClick={() => navigateTo('/change-password')}
+                className="block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100"
+              >
+                Change Password
+              </button>
+             
+              {/* Logout - Always Visible */}
+              <button
+                onClick={() => {
+                  setShowProfileMenu(false);
+                  handleLogout();
+                }}
+                className="block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100 text-red-600"
+              >
+                Logout
+              </button>
             </div>
           )}
-
-          {/* Clients */}
-          {isMenuItemVisible('clients') && (
-            <button
-              onClick={() => navigateTo('/clients')}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/clients')
-              }`}
-            >
-              Clients
-            </button>
-          )}
-
-          {/* Estimates */}
-          {isMenuItemVisible('estimates') && (
-            <button
-              onClick={() => navigateTo('/material-stock/estimates-db')}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/material-stock/estimates-db')
-              }`}
-            >
-              Estimates
-            </button>
-          )}
-
-          {/* Orders */}
-          {isMenuItemVisible('orders') && (
-            <button
-              onClick={() => navigateTo('/orders')}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/orders')
-              }`}
-            >
-              Orders
-            </button>
-          )}
-
-          {/* Invoices */}
-          {isMenuItemVisible('invoices') && (
-            <button
-              onClick={() => navigateTo('/invoices')}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/invoices')
-              }`}
-            >
-              Invoices
-            </button>
-          )}
-
-          {/* NEW: Loyalty Dashboard - Moved to main navigation */}
-          {isMenuItemVisible('loyaltyProgram') && (
-            <button
-              onClick={() => navigateTo('/loyalty-dashboard')}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/loyalty-dashboard')
-              }`}
-            >
-              Loyalty Dashboard
-            </button>
-          )}
-
-          {/* Transactions */}
-          {isMenuItemVisible('transactions') && (
-            <button
-              onClick={() => navigateTo('/transactions')}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/transactions')
-              }`}
-            >
-              Transactions
-            </button>
-          )}
-
-          {/* B2B Dashboard */}
-          {userRole === "b2b" && (
-            <button
-              onClick={() => navigateTo("/b2b-dashboard")}
-              className={`hover:underline hover:text-blue-300 transition whitespace-nowrap ${
-                getActiveClass('/b2b-dashboard')
-              }`}
-            >
-              Dashboard
-            </button>
-          )}
-         
-          {/* Profile Dropdown */}
-          <div className="relative">
-            <button
-              onClick={() => setShowProfileMenu(!showProfileMenu)}
-              className={`flex items-center hover:text-blue-300 transition ${
-                location.pathname === '/change-password' || location.pathname === '/user-management' 
-                  ? "text-blue-300" : ""
-              }`}
-            >
-              <span className="mr-2">{userDisplayText}</span>
-              <svg
-                className="h-4 w-4"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d={showProfileMenu ? "M5 15l7-7 7 7" : "M19 9l-7 7-7-7"}
-                />
-              </svg>
-            </button>
-
-            {showProfileMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white text-black rounded shadow-md z-10">
-                <div className="p-2 border-b text-sm text-gray-500">
-                  Logged in as <span className="font-semibold">{userRole}</span>
-                </div>
-
-                {/* User Management - Only for Admin */}
-                {isMenuItemVisible('userManagement') && (
-                  <button
-                    onClick={() => navigateTo('/user-management')}
-                    className={`block w-full text-left px-4 py-2 hover:bg-gray-200 ${
-                      isActive('/user-management') ? "bg-gray-200 font-semibold" : ""
-                    }`}
-                  >
-                    User Management
-                  </button>
-                )}
-               
-                {/* Change Password - Always Visible */}
-                <button
-                  onClick={() => navigateTo('/change-password')}
-                  className={`block w-full text-left px-4 py-2 hover:bg-gray-200 ${
-                    isActive('/change-password') ? "bg-gray-200 font-semibold" : ""
-                  }`}
-                >
-                  Change Password
-                </button>
-               
-                {/* Logout - Always Visible */}
-                <button
-                  onClick={() => {
-                    setShowProfileMenu(false);
-                    handleLogout();
-                  }}
-                  className="block w-full text-left px-4 py-2 hover:bg-gray-200 text-red-600"
-                >
-                  Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </nav>
+        </div>
       </div>
     </header>
   );
 };
+
+// Add a simple fade-in animation
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  .animate-fadeIn {
+    animation: fadeIn 0.2s ease-out forwards;
+  }
+`;
+document.head.appendChild(style);
 
 export default Header;
