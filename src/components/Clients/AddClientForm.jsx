@@ -26,6 +26,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
       country: "",
     },
     notes: "",
+    isActive: true, // Default to active
   });
 
   const [sameAsAddress, setSameAsAddress] = useState(true);
@@ -36,7 +37,9 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
       setFormData({
         ...selectedClient,
         // Set default clientType if it doesn't exist in the selected client
-        clientType: selectedClient.clientType || "Direct"
+        clientType: selectedClient.clientType || "Direct",
+        // Ensure isActive exists
+        isActive: selectedClient.isActive !== undefined ? selectedClient.isActive : true
       });
       // Check if billing address is the same as primary address
       const isSameAddress = 
@@ -95,6 +98,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
         country: "",
       },
       notes: "",
+      isActive: true,
     });
     setSameAsAddress(true);
   };
@@ -127,6 +131,12 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
           },
         }));
       }
+    } else if (name === "isActive") {
+      // Handle checkbox for isActive status
+      setFormData((prev) => ({
+        ...prev,
+        [name]: e.target.checked,
+      }));
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -168,7 +178,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
 
   return (
     <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
-      <h2 className="text-lg font-medium mb-4">
+      <h2 className="text-lg font-bold mb-4">
         {selectedClient ? "Edit Client" : "Add New Client"}
       </h2>
       
@@ -182,7 +192,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               type="text"
               name="clientCode"
               value={formData.clientCode}
-              className="mt-1 text-md block w-full border-gray-300 bg-gray-100 rounded-sm shadow-sm cursor-not-allowed"
+              className="mt-1 text-md block w-full border-gray-300 bg-gray-100 rounded-md shadow-sm cursor-not-allowed"
               readOnly
               placeholder="Auto-generated from client name"
             />
@@ -198,7 +208,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.name}
               onChange={handleChange}
               placeholder="Enter client name"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               required
             />
           </div>
@@ -208,7 +218,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               name="clientType"
               value={formData.clientType}
               onChange={handleChange}
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               required
             >
               <option value="Direct">Direct Client</option>
@@ -223,7 +233,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.contactPerson}
               onChange={handleChange}
               placeholder="Enter contact person name"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
             />
           </div>
           <div>
@@ -234,7 +244,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.email}
               onChange={handleChange}
               placeholder="Enter client email"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               required
             />
           </div>
@@ -246,7 +256,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.phone}
               onChange={handleChange}
               placeholder="Enter phone number"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               required
             />
           </div>
@@ -258,8 +268,21 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.gstin}
               onChange={handleChange}
               placeholder="Enter GST identification number"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
             />
+          </div>
+          <div className="flex items-center mt-6">
+            <input
+              id="isActive"
+              name="isActive"
+              type="checkbox"
+              checked={formData.isActive}
+              onChange={handleChange}
+              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
+            />
+            <label htmlFor="isActive" className="ml-2 block text-sm text-gray-700">
+              Client is Active
+            </label>
           </div>
         </div>
       </div>
@@ -276,7 +299,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.address.line1}
               onChange={handleChange}
               placeholder="Enter address line 1"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
             />
           </div>
           <div>
@@ -287,7 +310,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.address.line2}
               onChange={handleChange}
               placeholder="Enter address line 2"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
             />
           </div>
           <div>
@@ -298,7 +321,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.address.city}
               onChange={handleChange}
               placeholder="Enter city"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
             />
           </div>
           <div>
@@ -309,7 +332,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.address.state}
               onChange={handleChange}
               placeholder="Enter state"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
             />
           </div>
           <div>
@@ -320,7 +343,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.address.postalCode}
               onChange={handleChange}
               placeholder="Enter postal code"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
             />
           </div>
           <div>
@@ -331,7 +354,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               value={formData.address.country}
               onChange={handleChange}
               placeholder="Enter country"
-              className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+              className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
             />
           </div>
         </div>
@@ -347,7 +370,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               type="checkbox"
               checked={sameAsAddress}
               onChange={handleSameAddressChange}
-              className="h-4 w-4"
+              className="h-4 w-4 text-red-600 focus:ring-red-500 border-gray-300 rounded"
             />
             <label htmlFor="sameAsAddress" className="ml-2 text-sm text-gray-700">
               Same as Primary Address
@@ -365,7 +388,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
                 value={formData.billingAddress.line1}
                 onChange={handleChange}
                 placeholder="Enter address line 1"
-                className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               />
             </div>
             <div>
@@ -376,7 +399,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
                 value={formData.billingAddress.line2}
                 onChange={handleChange}
                 placeholder="Enter address line 2"
-                className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               />
             </div>
             <div>
@@ -387,7 +410,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
                 value={formData.billingAddress.city}
                 onChange={handleChange}
                 placeholder="Enter city"
-                className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               />
             </div>
             <div>
@@ -398,7 +421,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
                 value={formData.billingAddress.state}
                 onChange={handleChange}
                 placeholder="Enter state"
-                className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               />
             </div>
             <div>
@@ -409,7 +432,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
                 value={formData.billingAddress.postalCode}
                 onChange={handleChange}
                 placeholder="Enter postal code"
-                className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               />
             </div>
             <div>
@@ -420,7 +443,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
                 value={formData.billingAddress.country}
                 onChange={handleChange}
                 placeholder="Enter country"
-                className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+                className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
               />
             </div>
           </div>
@@ -435,28 +458,40 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
           value={formData.notes}
           onChange={handleChange}
           placeholder="Enter any additional notes"
-          className="mt-1 text-md block w-full border-gray-300 rounded-sm shadow-sm"
+          className="mt-1 text-md block w-full border-gray-300 rounded-md shadow-sm"
           rows="4"
         ></textarea>
       </div>
       
-      <button 
-        type="submit" 
-        className="px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded text-sm"
-        disabled={submitLoading}
-      >
-        {submitLoading ? "Processing..." : (selectedClient ? "Save Changes" : "Add Client")}
-      </button>
-      
-      {selectedClient && (
-        <button
-          type="button"
-          onClick={() => setSelectedClient(null)}
-          className="ml-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded text-sm"
+      <div className="flex justify-end">
+        {selectedClient && (
+          <button
+            type="button"
+            onClick={() => setSelectedClient(null)}
+            className="mr-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-sm"
+          >
+            Cancel
+          </button>
+        )}
+        
+        <button 
+          type="submit" 
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
+          disabled={submitLoading}
         >
-          Cancel
+          {submitLoading ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            </span>
+          ) : (
+            selectedClient ? 'Update Client' : 'Add Client'
+          )}
         </button>
-      )}
+      </div>
     </form>
   );
 };

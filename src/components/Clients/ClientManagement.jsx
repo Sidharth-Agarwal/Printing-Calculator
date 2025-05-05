@@ -7,12 +7,17 @@ import { useAuth } from "../Login/AuthContext";
 import B2BCredentialsManager from "./B2BCredentialsManager";
 import AdminPasswordModal from "./AdminPasswordModal";
 import ActivateClientModal from "./ActivateClientModal";
+import Modal from "../Shared/Modal";
+import ConfirmationModal from "../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../Shared/DeleteConfirmationModal"
 
 const ClientManagement = () => {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedClientForAuth, setSelectedClientForAuth] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const { userRole, currentUser } = useAuth();
   const [adminCredentials, setAdminCredentials] = useState(null);
   
@@ -21,14 +26,31 @@ const ClientManagement = () => {
   const [pendingClient, setPendingClient] = useState(null);
   const [clientToActivate, setClientToActivate] = useState(null);
 
+  // State for notifications/confirmation modals
+  const [notification, setNotification] = useState({
+    isOpen: false,
+    message: "",
+    title: "",
+    status: "success"
+  });
+  
+  // State for delete confirmation
+  const [deleteConfirmation, setDeleteConfirmation] = useState({
+    isOpen: false,
+    itemId: null,
+    itemName: ""
+  });
+
   useEffect(() => {
     const clientsCollection = collection(db, "clients");
     const unsubscribe = onSnapshot(clientsCollection, (snapshot) => {
       const clientsData = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
-        // Ensure clientType exists for all clients and is uppercase
-        clientType: (doc.data().clientType || "DIRECT").toUpperCase()
+        // Ensure clientType exists for all clients and is uppercase for consistency
+        clientType: (doc.data().clientType || "DIRECT").toUpperCase(),
+        // Ensure isActive exists for all clients
+        isActive: doc.data().isActive !== undefined ? doc.data().isActive : true
       }));
       setClients(clientsData);
       setIsLoading(false);
@@ -106,7 +128,13 @@ const ClientManagement = () => {
     }
   };
 
+  const handleAddClick = () => {
+    setSelectedClient(null); // Ensure we're not in edit mode
+    setIsFormModalOpen(true);
+  };
+
   const addClient = async (clientData) => {
+    setIsSubmitting(true);
     try {
       // If client code not provided or is empty, generate one based on client name
       if (!clientData.clientCode || clientData.clientCode.trim() === "") {
@@ -115,7 +143,13 @@ const ClientManagement = () => {
         // Validate manually entered code is unique
         const exists = await checkClientCodeExists(clientData.clientCode);
         if (exists) {
-          alert("This client code already exists. Please use a different code.");
+          setNotification({
+            isOpen: true,
+            message: "This client code already exists. Please use a different code.",
+            title: "Error",
+            status: "error"
+          });
+          setIsSubmitting(false);
           return false;
         }
       }
@@ -138,22 +172,47 @@ const ClientManagement = () => {
         passwordCreatedAt: null // When the password was created
       });
       
-      alert("Client added successfully!");
+      setNotification({
+        isOpen: true,
+        message: "Client added successfully!",
+        title: "Success",
+        status: "success"
+      });
+      setIsFormModalOpen(false);
+      setIsSubmitting(false);
       return true;
     } catch (error) {
       console.error("Error adding client:", error);
-      alert("Failed to add client");
+      setNotification({
+        isOpen: true,
+        message: "Failed to add client: " + error.message,
+        title: "Error",
+        status: "error"
+      });
+      setIsSubmitting(false);
       return false;
     }
   };
 
+  const handleEditClick = (client) => {
+    setSelectedClient({...client}); // Make a copy to ensure we don't modify the original
+    setIsFormModalOpen(true);
+  };
+
   const updateClient = async (id, updatedData) => {
+    setIsSubmitting(true);
     try {
       // If client code changed, check if the new code is unique
       if (selectedClient.clientCode !== updatedData.clientCode) {
         const exists = await checkClientCodeExists(updatedData.clientCode);
         if (exists) {
-          alert("This client code already exists. Please use a different code.");
+          setNotification({
+            isOpen: true,
+            message: "This client code already exists. Please use a different code.",
+            title: "Error",
+            status: "error"
+          });
+          setIsSubmitting(false);
           return false;
         }
       }
@@ -164,12 +223,53 @@ const ClientManagement = () => {
         updatedAt: new Date(),
       });
       
+      setIsFormModalOpen(false);
       setSelectedClient(null);
-      alert("Client updated successfully!");
+      setNotification({
+        isOpen: true,
+        message: "Client updated successfully!",
+        title: "Success",
+        status: "success"
+      });
+      setIsSubmitting(false);
       return true;
     } catch (error) {
       console.error("Error updating client:", error);
-      alert("Failed to update client");
+      setNotification({
+        isOpen: true,
+        message: "Failed to update client: " + error.message,
+        title: "Error",
+        status: "error"
+      });
+      setIsSubmitting(false);
+      return false;
+    }
+  };
+
+  const toggleClientStatus = async (clientId, newStatus) => {
+    try {
+      const clientDoc = doc(db, "clients", clientId);
+      await updateDoc(clientDoc, {
+        isActive: newStatus,
+        updatedAt: new Date()
+      });
+      
+      setNotification({
+        isOpen: true,
+        message: `Client ${newStatus ? 'activated' : 'deactivated'} successfully!`,
+        title: "Success",
+        status: "success"
+      });
+      
+      return true;
+    } catch (error) {
+      console.error("Error toggling client status:", error);
+      setNotification({
+        isOpen: true,
+        message: "Failed to update client status: " + error.message,
+        title: "Error",
+        status: "error"
+      });
       return false;
     }
   };
@@ -210,37 +310,85 @@ const ClientManagement = () => {
     window.history.pushState({}, "", "/clients");
   };
 
-  const deleteClient = async (id) => {
-    if (window.confirm("Are you sure you want to delete this client? This action cannot be undone.")) {
-      try {
-        // Find the client to check if it has a user account
-        const clientToDelete = clients.find(client => client.id === id);
+  const confirmDelete = (id, name) => {
+    setDeleteConfirmation({
+      isOpen: true,
+      itemId: id,
+      itemName: name
+    });
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteConfirmation({
+      isOpen: false,
+      itemId: null,
+      itemName: ""
+    });
+  };
+
+  const closeNotification = () => {
+    setNotification({
+      isOpen: false,
+      message: "",
+      title: "",
+      status: "success"
+    });
+  };
+
+  const handleCloseFormModal = () => {
+    setIsFormModalOpen(false);
+    setSelectedClient(null);
+  };
+
+  const handleDeleteConfirm = async () => {
+    try {
+      // Find the client to check if it has a user account
+      const clientToDelete = clients.find(client => client.id === deleteConfirmation.itemId);
+      
+      // If the client has a user account, warn about it
+      if (clientToDelete && clientToDelete.hasAccount) {
+        setDeleteConfirmation({
+          isOpen: false,
+          itemId: null,
+          itemName: ""
+        });
         
-        // If the client has a user account, warn about it
-        if (clientToDelete && clientToDelete.hasAccount) {
-          const confirmDelete = window.confirm(
-            "This client has a user account. Deleting this client will NOT delete their authentication account. " +
-            "You should manually disable their account in User Management. Continue with deletion?"
-          );
-          
-          if (!confirmDelete) {
-            return;
-          }
-        }
-        
-        await deleteDoc(doc(db, "clients", id));
-        alert("Client deleted successfully!");
-      } catch (error) {
-        console.error("Error deleting client:", error);
-        alert("Failed to delete client");
+        setNotification({
+          isOpen: true,
+          message: "This client has a user account. Deleting this client will NOT delete their authentication account. " +
+                  "You should manually disable their account in User Management before deleting the client.",
+          title: "Warning",
+          status: "warning"
+        });
+        return;
       }
+      
+      await deleteDoc(doc(db, "clients", deleteConfirmation.itemId));
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Client deleted successfully!",
+        title: "Success",
+        status: "success"
+      });
+    } catch (error) {
+      console.error("Error deleting client:", error);
+      closeDeleteModal();
+      
+      setNotification({
+        isOpen: true,
+        message: "Failed to delete client: " + error.message,
+        title: "Error",
+        status: "error"
+      });
     }
   };
 
-  // Check if user is admin - only admins should be able to manage B2B credentials
+  // Check if user is admin or staff - only they should access this page
   const isAdmin = userRole === "admin";
 
-  // Redirect non-admin users who somehow access this page
+  // Redirect non-authorized users
   if (!isAdmin && userRole !== "staff") {
     return (
       <div className="p-6 text-center">
@@ -251,30 +399,65 @@ const ClientManagement = () => {
   }
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-6">Client Management</h1>
-      <AddClientForm
-        onSubmit={addClient}
-        selectedClient={selectedClient}
-        onUpdate={updateClient}
-        setSelectedClient={setSelectedClient}
-        generateClientCode={generateClientCode}
-      />
-      
-      {isLoading ? (
-        <div className="bg-white p-6 rounded shadow flex justify-center">
-          <p className="text-gray-500">Loading clients...</p>
+    <div className="w-full">
+      {/* Page header */}
+      <div className="rounded bg-gray-900 py-4">
+        <h1 className="text-2xl text-white font-bold pl-4">Client Management</h1>
+      </div>
+
+      {/* Main content */}
+      <div>
+        {/* Action buttons */}
+        <div className="flex justify-end my-4 pr-4">
+          <button 
+            onClick={handleAddClick}
+            className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add New Client
+          </button>
         </div>
-      ) : (
-        <DisplayClientTable
-          clients={clients}
-          onDelete={deleteClient}
-          onEdit={setSelectedClient}
-          onManageCredentials={handleManageCredentials}
-          onActivateClient={handleActivateClient}
-          isAdmin={isAdmin}
+        
+        {/* Table component */}
+        <div className="px-4">
+          {isLoading ? (
+            <div className="bg-white p-6 rounded shadow flex justify-center">
+              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
+            </div>
+          ) : (
+            <DisplayClientTable
+              clients={clients}
+              onDelete={(id) => {
+                const client = clients.find(c => c.id === id);
+                confirmDelete(id, client?.name || "this client");
+              }}
+              onEdit={handleEditClick}
+              onManageCredentials={handleManageCredentials}
+              onActivateClient={handleActivateClient}
+              onToggleStatus={toggleClientStatus}
+              isAdmin={isAdmin}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Add/Edit Client Modal */}
+      <Modal
+        isOpen={isFormModalOpen}
+        onClose={handleCloseFormModal}
+        title={selectedClient ? "Edit Client" : "Add New Client"}
+        size="lg"
+      >
+        <AddClientForm
+          onSubmit={addClient}
+          selectedClient={selectedClient}
+          onUpdate={updateClient}
+          setSelectedClient={setSelectedClient}
+          generateClientCode={generateClientCode}
         />
-      )}
+      </Modal>
 
       {/* B2B Client Credentials Manager Modal */}
       {selectedClientForAuth && (
@@ -303,6 +486,23 @@ const ClientManagement = () => {
           adminEmail={currentUser?.email || ""}
         />
       )}
+
+      {/* Confirmation Modals */}
+      <ConfirmationModal
+        isOpen={notification.isOpen}
+        onClose={closeNotification}
+        message={notification.message}
+        title={notification.title}
+        status={notification.status}
+      />
+      
+      {/* Delete Confirmation Modal */}
+      <DeleteConfirmationModal
+        isOpen={deleteConfirmation.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={handleDeleteConfirm}
+        itemName={deleteConfirmation.itemName}
+      />
     </div>
   );
 };
