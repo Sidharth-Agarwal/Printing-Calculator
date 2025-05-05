@@ -363,12 +363,30 @@ const ClientManagement = () => {
         return;
       }
       
+      // First, get all estimates associated with this client
+      const estimatesQuery = query(
+        collection(db, "estimates"), 
+        where("clientId", "==", deleteConfirmation.itemId)
+      );
+      
+      const estimatesSnapshot = await getDocs(estimatesQuery);
+      
+      // Delete each estimate
+      const estimateDeletePromises = estimatesSnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
+      
+      // Wait for all estimate deletions to complete
+      await Promise.all(estimateDeletePromises);
+      
+      // Now delete the client
       await deleteDoc(doc(db, "clients", deleteConfirmation.itemId));
+      
       closeDeleteModal();
       
       setNotification({
         isOpen: true,
-        message: "Client deleted successfully!",
+        message: `Client and ${estimatesSnapshot.size} associated estimate(s) deleted successfully!`,
         title: "Success",
         status: "success"
       });
