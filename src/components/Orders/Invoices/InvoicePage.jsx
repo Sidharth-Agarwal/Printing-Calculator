@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { collection, doc, updateDoc, onSnapshot, addDoc, query, where, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import UnifiedDetailsModal from '../Shared/UnifiedDetailsModal'; 
+import { db } from '../../../firebaseConfig';
+import UnifiedDetailsModal from '../../Shared/UnifiedDetailsModal'; 
 import ClientInvoiceGroup from './ClientInvoiceGroup';
-import NewInvoiceModal from './NewInvoiceModal';
+import InvoiceModal from './InvoiceModal';
 import JobTicketModal from './JobTicketModal';
-import { useAuth } from "../Login/AuthContext";
+import DeliverySlipModal from './DeliverySlipModal'; // Import the new component
+import { useAuth } from "../../Login/AuthContext";
 
 const InvoicesPage = () => {
   const { userRole, currentUser } = useAuth(); // Get user role and current user
@@ -33,6 +34,7 @@ const InvoicesPage = () => {
   const [isOrderDetailsModalOpen, setIsOrderDetailsModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isJobTicketModalOpen, setIsJobTicketModalOpen] = useState(false);
+  const [isDeliverySlipModalOpen, setIsDeliverySlipModalOpen] = useState(false); // New state for delivery slip modal
   
   // Available stages for orders - added "Completed" as final stage
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
@@ -319,6 +321,17 @@ const InvoicesPage = () => {
     setIsJobTicketModalOpen(true);
   };
 
+  // Handle delivery slip generation for selected orders
+  const handleGenerateDeliverySlip = () => {
+    if (selectedOrders.length === 0) {
+      alert("Please select at least one order to generate a delivery slip.");
+      return;
+    }
+    
+    // Open delivery slip modal
+    setIsDeliverySlipModalOpen(true);
+  };
+
   // Handle view order details
   const handleViewOrderDetails = (order) => {
     setSelectedOrder(order);
@@ -450,7 +463,7 @@ const InvoicesPage = () => {
           <div>
             <span className="font-medium">{selectedOrders.length}</span> orders selected
           </div>
-          <div className="flex gap-1">
+          <div className="flex flex-wrap gap-1">
             <button
               onClick={handleGenerateInvoice}
               className="px-2 py-1 text-xs bg-blue-600 text-white rounded-md hover:bg-blue-700"
@@ -462,6 +475,12 @@ const InvoicesPage = () => {
               className="px-2 py-1 text-xs bg-green-600 text-white rounded-md hover:bg-green-700"
             >
               Generate Job Ticket
+            </button>
+            <button
+              onClick={handleGenerateDeliverySlip}
+              className="px-2 py-1 text-xs bg-purple-600 text-white rounded-md hover:bg-purple-700"
+            >
+              Generate Delivery Slip
             </button>
             <button
               onClick={clearSelection}
@@ -536,7 +555,7 @@ const InvoicesPage = () => {
 
       {/* Invoice Modal */}
       {isInvoiceModalOpen && (
-        <NewInvoiceModal
+        <InvoiceModal
           selectedOrderIds={selectedOrders}
           orders={allOrders.filter(order => selectedOrders.includes(order.id))}
           onClose={() => setIsInvoiceModalOpen(false)}
@@ -549,6 +568,15 @@ const InvoicesPage = () => {
           selectedOrderIds={selectedOrders}
           orders={allOrders.filter(order => selectedOrders.includes(order.id))}
           onClose={() => setIsJobTicketModalOpen(false)}
+        />
+      )}
+
+      {/* Delivery Slip Modal */}
+      {isDeliverySlipModalOpen && (
+        <DeliverySlipModal
+          selectedOrderIds={selectedOrders}
+          orders={allOrders.filter(order => selectedOrders.includes(order.id))}
+          onClose={() => setIsDeliverySlipModalOpen(false)}
         />
       )}
     </div>

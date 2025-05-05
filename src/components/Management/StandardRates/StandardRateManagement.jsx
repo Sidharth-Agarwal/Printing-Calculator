@@ -3,13 +3,16 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddStandardRateForm from "./AddStandardRateForm";
 import DisplayStandardRateTable from "./DisplayStandardRateTable";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
-import ConfirmationModal from "../ConfirmationModal";
+import Modal from "../../Shared/Modal";
+import ConfirmationModal from "../../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 import { useAuth } from "../../Login/AuthContext";
 
 const StandardRateManagement = () => {
   const [rates, setRates] = useState([]);
   const [selectedRate, setSelectedRate] = useState(null);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
     itemId: null
@@ -44,6 +47,7 @@ const StandardRateManagement = () => {
     // Return early if user is not admin
     if (!isAdmin) return;
 
+    setIsSubmitting(true);
     try {
       // Validate that at least one of finalRate or percentage is provided
       if (!rateData.finalRate && !rateData.percentage) {
@@ -53,13 +57,16 @@ const StandardRateManagement = () => {
           title: "Validation Error",
           status: "error"
         });
+        setIsSubmitting(false);
         return;
       }
 
       const ratesCollection = collection(db, "standard_rates");
       await addDoc(ratesCollection, {
         ...rateData,
-        timestamp: new Date()
+        timestamp: new Date(),
+        createdAt: new Date(),
+        updatedAt: new Date()
       });
       
       setNotification({
@@ -68,6 +75,7 @@ const StandardRateManagement = () => {
         title: "Success",
         status: "success"
       });
+      setIsFormModalOpen(false);
     } catch (error) {
       console.error("Error adding rate:", error);
       
@@ -77,6 +85,8 @@ const StandardRateManagement = () => {
         title: "Error",
         status: "error"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -84,6 +94,7 @@ const StandardRateManagement = () => {
     // Return early if user is not admin
     if (!isAdmin) return;
 
+    setIsSubmitting(true);
     try {
       // Validate that at least one of finalRate or percentage is provided
       if (!updatedData.finalRate && !updatedData.percentage) {
@@ -93,11 +104,15 @@ const StandardRateManagement = () => {
           title: "Validation Error",
           status: "error"
         });
+        setIsSubmitting(false);
         return;
       }
 
       const rateDoc = doc(db, "standard_rates", id);
-      await updateDoc(rateDoc, updatedData);
+      await updateDoc(rateDoc, {
+        ...updatedData,
+        updatedAt: new Date()
+      });
       
       setNotification({
         isOpen: true,
@@ -105,6 +120,8 @@ const StandardRateManagement = () => {
         title: "Success",
         status: "success"
       });
+      setIsFormModalOpen(false);
+      setSelectedRate(null);
     } catch (error) {
       console.error("Error updating rate:", error);
       
@@ -114,7 +131,28 @@ const StandardRateManagement = () => {
         title: "Error",
         status: "error"
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleAddClick = () => {
+    if (!isAdmin) return;
+    
+    setSelectedRate(null); // Ensure we're not in edit mode
+    setIsFormModalOpen(true);
+  };
+
+  const handleEditClick = (rate) => {
+    if (!isAdmin) return;
+    
+    setSelectedRate({...rate}); // Make a copy to ensure we don't modify the original
+    setIsFormModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsFormModalOpen(false);
+    setSelectedRate(null);
   };
 
   const confirmDelete = (id) => {
@@ -171,35 +209,64 @@ const StandardRateManagement = () => {
   };
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Standard Rate Management</h1>
+    <div className="w-full">
+      {/* Page header */}
+      <div className="rounded bg-gray-900 py-4 mb-4">
+        <h1 className="text-2xl text-white font-bold pl-4">Labour Management</h1>
+      </div>
+
+      {/* Main content */}
+      <div className="px-4">
+        {/* Action buttons - only visible to admins */}
+        {isAdmin && (
+          <div className="flex justify-end my-4">
+            <button 
+              onClick={handleAddClick}
+              className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add New Rate
+            </button>
+          </div>
+        )}
       
-      {/* Only show the form if user is admin */}
-      {isAdmin && (
-        <AddStandardRateForm
-          onSubmit={addRate}
-          selectedRate={selectedRate}
-          onUpdate={updateRate}
-          setSelectedRate={setSelectedRate}
+        {/* Display table for all users */}
+        <DisplayStandardRateTable
+          rates={rates}
+          onDelete={isAdmin ? confirmDelete : null}
+          onEdit={isAdmin ? handleEditClick : null}
         />
-      )}
+      </div>
       
-      {/* Display table for all users, but pass edit/delete handlers only for admin */}
-      <DisplayStandardRateTable
-        rates={rates}
-        onDelete={isAdmin ? confirmDelete : null}
-        onEdit={isAdmin ? (rate) => setSelectedRate(rate) : null}
-      />
-      
-      {/* Only render modals if user is admin */}
+      {/* Modals - only rendered for admins */}
       {isAdmin && (
         <>
+          {/* Modal for adding/editing rate */}
+          <Modal
+            isOpen={isFormModalOpen}
+            onClose={handleCloseModal}
+            title={selectedRate ? "Edit Standard Rate" : "Add New Standard Rate"}
+            size="lg"
+          >
+            <AddStandardRateForm
+              onSubmit={addRate}
+              selectedRate={selectedRate}
+              onUpdate={updateRate}
+              setSelectedRate={setSelectedRate}
+              isSubmitting={isSubmitting}
+              onCancel={handleCloseModal}
+            />
+          </Modal>
+          
           <DeleteConfirmationModal
             isOpen={deleteConfirmation.isOpen}
             onClose={closeDeleteModal}
             onConfirm={handleDeleteConfirm}
             itemName="rate"
           />
+          
           <ConfirmationModal
             isOpen={notification.isOpen}
             onClose={closeNotification}

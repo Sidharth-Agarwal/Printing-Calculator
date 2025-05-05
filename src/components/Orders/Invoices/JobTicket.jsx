@@ -1,6 +1,6 @@
 import React from 'react';
 
-const CompactJobTicket = ({ order }) => {
+const JobTicket = ({ order }) => {
   // Basic validation
   if (!order || Object.keys(order).length === 0) {
     return <div className="text-center text-red-500 p-2">No order data</div>;
@@ -78,37 +78,30 @@ const CompactJobTicket = ({ order }) => {
         <div className="border rounded p-2">
           <h2 className="font-bold text-sm border-b pb-1 mb-1">Processing Details</h2>
           <div className="text-xs space-y-1">
-            {/* LP Details */}
+            {/* LP Details - Enhanced for multiple colors with Array check */}
             {order.lpDetails?.isLPUsed && (
               <div>
-                <p className="font-medium">LP: {order.lpDetails.noOfColors || '1'} color(s) - 
-                  {order.lpDetails.colorDetails && order.lpDetails.colorDetails[0]?.plateType 
-                    ? ` ${order.lpDetails.colorDetails[0].plateType}` 
-                    : ''}
-                </p>
-                {order.lpDetails.colorDetails && order.lpDetails.colorDetails[0]?.pantoneType && (
-                  <p className="text-gray-600 pl-2">Pantone: {order.lpDetails.colorDetails[0].pantoneType}</p>
-                )}
-                {order.lpDetails.colorDetails && order.lpDetails.colorDetails[0]?.mrType && (
-                  <p className="text-gray-600 pl-2">MR Type: {order.lpDetails.colorDetails[0].mrType}</p>
-                )}
+                <p className="font-medium">LP: {order.lpDetails.noOfColors || '1'} color(s)</p>
+                {Array.isArray(order.lpDetails.colorDetails) && order.lpDetails.colorDetails.map((color, idx) => (
+                  <div key={idx} className="text-gray-600 pl-2 text-xs">
+                    <p>Color {idx+1}: {color.plateType} - {color.pantoneType || 'No Pantone'}</p>
+                    <p>MR Type: {color.mrType}</p>
+                  </div>
+                ))}
               </div>
             )}
             
-            {/* FS Details */}
+            {/* FS Details - Enhanced for multiple foils with Array check */}
             {order.fsDetails?.isFSUsed && (
               <div>
-                <p className="font-medium">FS: {order.fsDetails.fsType || 'Standard'} - 
-                  {order.fsDetails.foilDetails && order.fsDetails.foilDetails[0]?.foilType 
-                    ? ` ${order.fsDetails.foilDetails[0].foilType}` 
-                    : ''}
-                </p>
-                {order.fsDetails.foilDetails && order.fsDetails.foilDetails[0]?.blockType && (
-                  <p className="text-gray-600 pl-2">Block: {order.fsDetails.foilDetails[0].blockType}</p>
-                )}
-                {order.fsDetails.foilDetails && order.fsDetails.foilDetails[0]?.mrType && (
-                  <p className="text-gray-600 pl-2">MR Type: {order.fsDetails.foilDetails[0].mrType}</p>
-                )}
+                <p className="font-medium">FS: {order.fsDetails.fsType || 'Standard'}</p>
+                {Array.isArray(order.fsDetails.foilDetails) && order.fsDetails.foilDetails.map((foil, idx) => (
+                  <div key={idx} className="text-gray-600 pl-2 text-xs">
+                    <p>Foil {idx+1}: {foil.foilType}</p>
+                    <p>Block: {foil.blockType}</p>
+                    <p>MR Type: {foil.mrType}</p>
+                  </div>
+                ))}
               </div>
             )}
             
@@ -173,8 +166,16 @@ const CompactJobTicket = ({ order }) => {
           </div>
         </div>
       </div>
+
+      {/* Notes Section - Only show if notes exist */}
+      {order.notes && order.notes.trim() !== '' && (
+        <div className="mt-3 border-t pt-2">
+          <h2 className="font-bold text-sm border-b pb-1 mb-1">Notes</h2>
+          <p className="text-xs text-gray-700 whitespace-pre-line">{order.notes}</p>
+        </div>
+      )}
     </div>
   );
 };
 
-export default CompactJobTicket;
+export default JobTicket;

@@ -1,18 +1,14 @@
 import React, { useState, useRef } from 'react';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
-import InvoiceTemplate from './InvoiceTemplate';
+import DeliverySlipTemplate from './DeliverySlipTemplate';
 
-const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
+const DeliverySlipModal = ({ orders, onClose, selectedOrderIds }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [invoiceData, setInvoiceData] = useState({
-    invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
+  const [deliveryData, setDeliveryData] = useState({
     date: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
-    notes: '',
-    additionalInfo: '',
-    discount: 0,
-    showTax: true
+    deliveryDate: new Date().toISOString().split('T')[0],
+    notes: ''
   });
   const contentRef = useRef(null);
   
@@ -27,98 +23,11 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
   
   // Handle input change
   const handleInputChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setInvoiceData(prev => ({
+    const { name, value } = e.target;
+    setDeliveryData(prev => ({
       ...prev,
-      [name]: type === 'checkbox' ? checked : type === 'number' ? parseFloat(value) : value
+      [name]: value
     }));
-  };
-  
-  // Calculate totals for all orders with GST and loyalty discounts
-  const calculateTotals = () => {
-    let subtotal = 0;
-    let loyaltyDiscountTotal = 0;
-    let totalQuantity = 0;
-    let totalGstAmount = 0;
-    
-    orders.forEach(order => {
-      // Get cost per card from calculations
-      const calculations = order.calculations || {};
-      const costPerCard = parseFloat(calculations.totalCostPerCard || 0);
-      
-      // Get quantity
-      const quantity = parseInt(order.jobDetails?.quantity) || 0;
-      totalQuantity += quantity;
-      
-      // Calculate item total (before loyalty discount)
-      const itemTotal = costPerCard * quantity;
-      subtotal += itemTotal;
-      
-      // Apply loyalty discount if available
-      const loyaltyDiscountAmount = parseFloat(order.loyaltyInfo?.discountAmount || calculations.loyaltyDiscountAmount || 0);
-      loyaltyDiscountTotal += loyaltyDiscountAmount;
-      
-      // Get discounted total
-      const discountedTotal = parseFloat(calculations.discountedTotalCost || (itemTotal - loyaltyDiscountAmount));
-      
-      // Get GST info from calculations
-      const gstRate = calculations.gstRate || 18;
-      const gstAmount = invoiceData.showTax ? parseFloat(calculations.gstAmount || (discountedTotal * gstRate / 100)) : 0;
-      totalGstAmount += gstAmount;
-    });
-    
-    // Calculate discount amount (from invoice discount percentage, not loyalty)
-    const invoiceDiscountAmount = (subtotal * (invoiceData.discount / 100)) || 0;
-    
-    // Apply discounts to subtotal
-    const taxableAmount = subtotal - loyaltyDiscountTotal - invoiceDiscountAmount;
-    
-    // Calculate total with GST
-    const total = taxableAmount + totalGstAmount;
-    
-    return {
-      subtotal: parseFloat(subtotal.toFixed(2)),
-      loyaltyDiscount: parseFloat(loyaltyDiscountTotal.toFixed(2)),
-      discount: parseFloat(invoiceDiscountAmount.toFixed(2)),
-      taxableAmount: parseFloat(taxableAmount.toFixed(2)),
-      tax: parseFloat(totalGstAmount.toFixed(2)),
-      total: parseFloat(total.toFixed(2)),
-      totalQuantity
-    };
-  };
-  
-  // Format number as currency
-  const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('en-IN', {
-      style: 'currency',
-      currency: 'INR',
-      minimumFractionDigits: 2
-    }).format(amount);
-  };
-  
-  // Get HSN data for display in the modal summary
-  const getHsnSummary = () => {
-    const hsnSummary = {};
-    
-    orders.forEach(order => {
-      // Extract HSN code from the order
-      const hsnCode = order.jobDetails?.hsnCode || 'N/A';
-      const jobType = order.jobDetails?.jobType || 'Unknown';
-      
-      if (!hsnSummary[hsnCode]) {
-        hsnSummary[hsnCode] = {
-          jobTypes: [jobType],
-          count: 1
-        };
-      } else {
-        if (!hsnSummary[hsnCode].jobTypes.includes(jobType)) {
-          hsnSummary[hsnCode].jobTypes.push(jobType);
-        }
-        hsnSummary[hsnCode].count++;
-      }
-    });
-    
-    return hsnSummary;
   };
   
   // Generate PDF
@@ -208,7 +117,7 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
       }
       
       // Save the PDF
-      pdf.save(`Invoice_${clientInfo.name}_${invoiceData.invoiceNumber}.pdf`);
+      pdf.save(`DeliverySlip_${clientInfo.name}_${new Date().toLocaleDateString().replace(/\//g, '-')}.pdf`);
       
       onClose();
     } catch (error) {
@@ -219,11 +128,10 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }
   };
   
-  // Get totals
-  const totals = calculateTotals();
-  
-  // Get HSN summary
-  const hsnSummary = getHsnSummary();
+  // Calculate total quantity
+  const totalQuantity = orders.reduce((total, order) => {
+    return total + (parseInt(order.jobDetails?.quantity) || 0);
+  }, 0);
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -231,7 +139,7 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">
-            Generate Invoice
+            Generate Delivery Slip
           </h2>
           <div className="flex items-center gap-4">
             <button
@@ -248,7 +156,7 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   Generating...
                 </>
               ) : (
-                <>Download Invoice</>
+                <>Download Delivery Slip</>
               )}
             </button>
             <button 
@@ -265,116 +173,76 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
         
         {/* Modal Body */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Invoice Controls - Reduced width */}
+          {/* Delivery Slip Controls - Reduced width */}
           <div className="p-4 md:w-1/4 overflow-y-auto border-r border-gray-200">
             <div className="space-y-3">
-              <h3 className="text-md font-medium">Invoice Details</h3>
-              
-              <div>
-                <label className="block text-xs font-medium text-gray-700">Invoice Number</label>
-                <input
-                  type="text"
-                  name="invoiceNumber"
-                  value={invoiceData.invoiceNumber}
-                  onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-                />
-              </div>
+              <h3 className="text-md font-medium">Delivery Slip Details</h3>
               
               <div>
                 <label className="block text-xs font-medium text-gray-700">Date</label>
                 <input
                   type="date"
                   name="date"
-                  value={invoiceData.date}
+                  value={deliveryData.date}
                   onChange={handleInputChange}
                   className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               
               <div>
-                <label className="block text-xs font-medium text-gray-700">Due Date</label>
+                <label className="block text-xs font-medium text-gray-700">Delivery/Pickup Date</label>
                 <input
                   type="date"
-                  name="dueDate"
-                  value={invoiceData.dueDate}
+                  name="deliveryDate"
+                  value={deliveryData.deliveryDate}
                   onChange={handleInputChange}
                   className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
                 />
               </div>
               
               <div>
-                <label className="block text-xs font-medium text-gray-700">Notes</label>
+                <label className="block text-xs font-medium text-gray-700">Additional Notes</label>
                 <textarea
                   name="notes"
-                  value={invoiceData.notes}
+                  value={deliveryData.notes}
                   onChange={handleInputChange}
                   rows="2"
                   className="mt-1 block w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Payment terms, delivery notes, etc."
+                  placeholder="Any additional delivery instructions"
                 ></textarea>
               </div>
               
-              {/* HSN Summary */}
+              {/* Orders Summary */}
               <div className="mt-4 bg-gray-50 p-3 rounded-lg text-xs">
-                <h4 className="font-medium text-gray-700 mb-2">HSN Codes</h4>
-                <div className="space-y-1">
-                  {Object.entries(hsnSummary).map(([hsnCode, data], index) => (
-                    <div key={index} className="flex justify-between">
-                      <span className="font-mono">{hsnCode}:</span>
-                      <span>{data.jobTypes.join(', ')}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-              
-              <div className="mt-4 bg-gray-50 p-3 rounded-lg text-xs">
-                <h4 className="font-medium text-gray-700 mb-2">Invoice Summary</h4>
+                <h4 className="font-medium text-gray-700 mb-2">Order Summary</h4>
                 <div className="space-y-1">
                   <div className="flex justify-between">
-                    <span>Subtotal:</span>
-                    <span className="font-mono">{formatCurrency(totals.subtotal)}</span>
+                    <span>Total Orders:</span>
+                    <span className="font-mono">{orders.length}</span>
                   </div>
                   
-                  {totals.loyaltyDiscount > 0 && (
-                    <div className="flex justify-between text-red-600">
-                      <span>Loyalty Discount:</span>
-                      <span className="font-mono">-{formatCurrency(totals.loyaltyDiscount)}</span>
-                    </div>
-                  )}
+                  <div className="flex justify-between">
+                    <span>Total Quantity:</span>
+                    <span className="font-mono">{totalQuantity}</span>
+                  </div>
                   
-                  {invoiceData.discount > 0 && (
-                    <div className="flex justify-between text-red-600">
-                      <span>Invoice Discount ({invoiceData.discount}%):</span>
-                      <span className="font-mono">-{formatCurrency(totals.discount)}</span>
-                    </div>
-                  )}
-                  
-                  {invoiceData.showTax && (
-                    <div className="flex justify-between">
-                      <span>GST Amount:</span>
-                      <span className="font-mono">{formatCurrency(totals.tax)}</span>
-                    </div>
-                  )}
-                  
-                  <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
-                    <span>Total:</span>
-                    <span className="font-mono">{formatCurrency(totals.total)}</span>
+                  <div className="flex justify-between">
+                    <span>Client:</span>
+                    <span className="font-mono">{clientInfo.name}</span>
                   </div>
                 </div>
               </div>
             </div>
           </div>
           
-          {/* Invoice Preview - Expanded */}
+          {/* Delivery Slip Preview - Expanded */}
           <div className="flex-1 overflow-y-auto bg-gray-50">
             <div className="p-4">
               <div ref={contentRef} className="bg-white shadow-lg rounded-lg overflow-hidden">
-                <InvoiceTemplate
-                  invoiceData={invoiceData}
+                <DeliverySlipTemplate
+                  deliveryData={deliveryData}
                   orders={orders}
                   clientInfo={clientInfo}
-                  totals={totals}
                 />
               </div>
             </div>
@@ -385,4 +253,4 @@ const NewInvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
   );
 };
 
-export default NewInvoiceModal;
+export default DeliverySlipModal;

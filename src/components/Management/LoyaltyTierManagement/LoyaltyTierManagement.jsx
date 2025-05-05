@@ -3,14 +3,16 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, query, where
 import { db } from "../../../firebaseConfig";
 import AddLoyaltyTierForm from "./AddLoyaltyTierForm";
 import DisplayLoyaltyTierTable from "./DisplayLoyaltyTierTable";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
-import ConfirmationModal from "../ConfirmationModal";
+import Modal from "../../Shared/Modal";
+import ConfirmationModal from "../../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 import { useAuth } from "../../Login/AuthContext";
 
 const LoyaltyTierManagement = () => {
   const { userRole } = useAuth();
   const [loyaltyTiers, setLoyaltyTiers] = useState([]);
   const [selectedTier, setSelectedTier] = useState(null);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
@@ -28,8 +30,6 @@ const LoyaltyTierManagement = () => {
 
   // Fetch loyalty tiers from Firestore
   useEffect(() => {
-    if (!isAdmin) return;
-
     const loyaltyTiersCollection = collection(db, "loyaltyTiers");
     const unsubscribe = onSnapshot(loyaltyTiersCollection, (snapshot) => {
       const tiersData = snapshot.docs.map((doc) => {
@@ -44,7 +44,7 @@ const LoyaltyTierManagement = () => {
     });
 
     return () => unsubscribe();
-  }, [isAdmin]);
+  }, []);
 
   // Check if tier ID is unique
   const isTierIdUnique = async (tierId) => {
@@ -95,6 +95,7 @@ const LoyaltyTierManagement = () => {
         title: "Success",
         status: "success"
       });
+      setIsFormModalOpen(false);
     } catch (error) {
       console.error("Error adding loyalty tier:", error);
       
@@ -187,6 +188,7 @@ const LoyaltyTierManagement = () => {
       
       // Clear selected tier after successful update
       setSelectedTier(null);
+      setIsFormModalOpen(false);
     } catch (error) {
       console.error("Error updating loyalty tier:", error);
       
@@ -201,12 +203,57 @@ const LoyaltyTierManagement = () => {
     }
   };
 
+  const handleAddClick = () => {
+    if (!isAdmin) return;
+    
+    setSelectedTier(null); // Ensure we're not in edit mode
+    setIsFormModalOpen(true);
+  };
+
+  const handleEditClick = (tier) => {
+    if (!isAdmin) return;
+    
+    console.log("Editing tier:", tier);
+    if (tier && tier.dbId) {
+      setSelectedTier(tier);
+      setIsFormModalOpen(true);
+    } else {
+      console.error("Tier is missing document ID (dbId):", tier);
+      setNotification({
+        isOpen: true,
+        message: "Error: Cannot edit tier - missing document reference.",
+        title: "Error",
+        status: "error"
+      });
+    }
+  };
+
+  const handleCloseModal = () => {
+    setIsFormModalOpen(false);
+    setSelectedTier(null);
+  };
+
   // Show delete confirmation
   const confirmDelete = (id) => {
-    setDeleteConfirmation({
-      isOpen: true,
-      itemId: id
-    });
+    if (!isAdmin) return;
+    
+    // First try to find the tier by dbId
+    let tier = loyaltyTiers.find(t => t.dbId === id);
+    
+    // If not found, try by the tier's logical id
+    if (!tier) {
+      tier = loyaltyTiers.find(t => t.id === id);
+    }
+    
+    if (tier) {
+      console.log("Deleting tier with document ID:", tier.dbId);
+      setDeleteConfirmation({
+        isOpen: true,
+        itemId: tier.dbId
+      });
+    } else {
+      console.error("Could not find tier with ID:", id);
+    }
   };
 
   // Close delete confirmation
@@ -265,54 +312,56 @@ const LoyaltyTierManagement = () => {
   }
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">B2B Loyalty Program Management</h1>
+    <div className="w-full">
+      {/* Page header */}
+      <div className="bg-gray-900 rounded py-4 mb-4">
+        <h1 className="text-2xl text-white font-bold pl-4">B2B Loyalty Program Management</h1>
+      </div>
+
+      {/* Main content */}
+      <div className="px-4">
+        {/* Action buttons */}
+        <div className="flex justify-end my-4">
+          <button 
+            onClick={handleAddClick}
+            className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add New Loyalty Tier
+          </button>
+        </div>
       
-      <AddLoyaltyTierForm
-        onSubmit={addLoyaltyTier}
-        selectedTier={selectedTier}
-        onUpdate={(id, data) => {
-          // Ensure we're using the document ID (dbId) for the update operation
-          const docId = selectedTier?.dbId || id;
-          console.log("Updating tier with document ID:", docId);
-          updateLoyaltyTier(docId, data);
-        }}
-        setSelectedTier={setSelectedTier}
-      />
+        {/* Loyalty tier table */}
+        <DisplayLoyaltyTierTable
+          tiers={loyaltyTiers}
+          onDelete={confirmDelete}
+          onEdit={handleEditClick}
+        />
+      </div>
       
-      <DisplayLoyaltyTierTable
-        tiers={loyaltyTiers}
-        onDelete={(id) => {
-          // First try to find the tier by dbId
-          let tier = loyaltyTiers.find(t => t.dbId === id);
-          
-          // If not found, try by the tier's logical id
-          if (!tier) {
-            tier = loyaltyTiers.find(t => t.id === id);
-          }
-          
-          if (tier) {
-            console.log("Deleting tier with document ID:", tier.dbId);
-            confirmDelete(tier.dbId);
-          } else {
-            console.error("Could not find tier with ID:", id);
-          }
-        }}
-        onEdit={(tier) => {
-          console.log("Editing tier:", tier);
-          if (tier && tier.dbId) {
-            setSelectedTier(tier);
-          } else {
-            console.error("Tier is missing document ID (dbId):", tier);
-            setNotification({
-              isOpen: true,
-              message: "Error: Cannot edit tier - missing document reference.",
-              title: "Error",
-              status: "error"
-            });
-          }
-        }}
-      />
+      {/* Modals */}
+      <Modal
+        isOpen={isFormModalOpen}
+        onClose={handleCloseModal}
+        title={selectedTier ? "Edit Loyalty Tier" : "Add New Loyalty Tier"}
+        size="lg"
+      >
+        <AddLoyaltyTierForm
+          onSubmit={addLoyaltyTier}
+          selectedTier={selectedTier}
+          onUpdate={(id, data) => {
+            // Ensure we're using the document ID (dbId) for the update operation
+            const docId = selectedTier?.dbId || id;
+            console.log("Updating tier with document ID:", docId);
+            updateLoyaltyTier(docId, data);
+          }}
+          setSelectedTier={setSelectedTier}
+          isSubmitting={isSubmitting}
+          onCancel={handleCloseModal}
+        />
+      </Modal>
       
       <DeleteConfirmationModal
         isOpen={deleteConfirmation.isOpen}

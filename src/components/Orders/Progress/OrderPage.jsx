@@ -1,9 +1,9 @@
 import React, { useEffect, useState } from 'react';
 import { collection, doc, updateDoc, onSnapshot, query, where, getDocs, getDoc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
-import UnifiedDetailsModal from '../Shared/UnifiedDetailsModal';
+import { db } from '../../../firebaseConfig';
+import UnifiedDetailsModal from '../../Shared/UnifiedDetailsModal';
 import ProductionAssignmentModal from './ProductionAssignmentModal';
-import { useAuth } from "../Login/AuthContext";
+import { useAuth } from "../../Login/AuthContext";
 
 const OrdersPage = () => {
   const { userRole, currentUser } = useAuth();

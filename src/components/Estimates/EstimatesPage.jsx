@@ -4,7 +4,7 @@ import { db } from "../../firebaseConfig";
 import { useNavigate } from "react-router-dom";
 import EstimateCard from "./EstimateCard";
 import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
-import PreviewModal from "./PreviewModal";
+import EstimatePreviewModal from "./EstimatePreviewModal";
 import EstimateTemplate from "./EsimateTemplate";
 import EditEstimateModal from "./EditEstimateModal";
 import html2canvas from 'html2canvas';
@@ -32,10 +32,12 @@ const EstimatesPage = () => {
   // State for data loading
   const [allEstimates, setAllEstimates] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [activeClientsMap, setActiveClientsMap] = useState({});
   
   // State for filtering and search
   const [searchQuery, setSearchQuery] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
+  const [showInactiveClients, setShowInactiveClients] = useState(false);
   
   // State for expanded clients and selected versions
   const [expandedClientId, setExpandedClientId] = useState(null);
@@ -118,6 +120,28 @@ const EstimatesPage = () => {
     }
   }, [loyaltyNotification]);
 
+  // Fetch all clients' active status
+  useEffect(() => {
+    const fetchActiveClients = async () => {
+      try {
+        const clientsSnapshot = await getDocs(collection(db, "clients"));
+        const clientsData = {};
+        
+        clientsSnapshot.docs.forEach(doc => {
+          const data = doc.data();
+          // If isActive is undefined or null, default to true (backward compatibility)
+          clientsData[doc.id] = data.isActive !== false;
+        });
+        
+        setActiveClientsMap(clientsData);
+      } catch (error) {
+        console.error("Error fetching clients active status:", error);
+      }
+    };
+    
+    fetchActiveClients();
+  }, []);
+
   // Fetch all estimates on mount
   useEffect(() => {
     const fetchEstimates = async () => {
@@ -180,15 +204,24 @@ const EstimatesPage = () => {
       }
     }
     
-    // Group by client
+    // Group by client and filter by active status unless showInactiveClients is true
     return filtered.reduce((acc, estimate) => {
       const clientId = estimate.clientId || "unknown";
       const clientName = estimate.clientInfo?.name || estimate.clientName || "Unknown Client";
+      
+      // Check if client is active (default to true if not found for backward compatibility)
+      const isClientActive = clientId === "unknown" ? true : (activeClientsMap[clientId] !== false);
+      
+      // Skip inactive clients unless showInactiveClients is true or if we're a B2B client viewing our own estimates
+      if (!isClientActive && !showInactiveClients && !(isB2BClient && clientId === linkedClientId)) {
+        return acc;
+      }
       
       if (!acc[clientId]) {
         acc[clientId] = {
           id: clientId,
           name: clientName,
+          isActive: isClientActive,
           estimates: [],
           versions: new Map(),
           totalEstimates: 0
@@ -216,7 +249,7 @@ const EstimatesPage = () => {
       
       return acc;
     }, {});
-  }, [allEstimates, searchQuery, filterStatus]);
+  }, [allEstimates, searchQuery, filterStatus, activeClientsMap, showInactiveClients, isB2BClient, linkedClientId]);
 
   // Toggle client expansion
   const toggleClient = (clientId) => {
@@ -655,6 +688,22 @@ const EstimatesPage = () => {
     }
   };
 
+  // Calculate active and inactive client counts
+  const clientCounts = React.useMemo(() => {
+    let activeCount = 0;
+    let inactiveCount = 0;
+    
+    Object.values(clientGroups).forEach(client => {
+      if (client.isActive !== false) {
+        activeCount++;
+      } else {
+        inactiveCount++;
+      }
+    });
+    
+    return { activeCount, inactiveCount };
+  }, [clientGroups]);
+
   return (
     <div className="p-3 max-w-screen-xl mx-auto">
       {/* Header Section - More compact */}
@@ -680,8 +729,38 @@ const EstimatesPage = () => {
             <option value="Moved">Moved to Orders</option>
             <option value="Cancelled">Cancelled</option>
           </select>
+          
+          {/* Only show the inactive clients toggle for admin/staff */}
+          {(userRole === "admin" || userRole === "staff") && (
+            <div className="flex items-center">
+              <input
+                type="checkbox"
+                id="showInactiveClients"
+                checked={showInactiveClients}
+                onChange={(e) => setShowInactiveClients(e.target.checked)}
+                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              />
+              <label htmlFor="showInactiveClients" className="ml-1 text-sm text-gray-700">
+                Show Inactive Clients
+              </label>
+            </div>
+          )}
         </div>
       </div>
+
+      {/* Client Status Summary - Only for admin/staff */}
+      {(userRole === "admin" || userRole === "staff") && (
+        <div className="flex gap-2 mb-4">
+          <div className="bg-green-50 border border-green-100 rounded-md px-3 py-2 text-sm text-green-800">
+            <span className="font-medium">{clientCounts.activeCount}</span> Active Client{clientCounts.activeCount !== 1 ? 's' : ''}
+          </div>
+          {showInactiveClients && (
+            <div className="bg-red-50 border border-red-100 rounded-md px-3 py-2 text-sm text-red-800">
+              <span className="font-medium">{clientCounts.inactiveCount}</span> Inactive Client{clientCounts.inactiveCount !== 1 ? 's' : ''}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Loyalty Tier Upgrade Popup with Timer */}
       {loyaltyNotification && (
@@ -727,7 +806,7 @@ const EstimatesPage = () => {
       {/* Main Content */}
       {isLoading ? (
         <div className="flex justify-center items-center h-48">
-          <div className="animate-spin h-6 w-6 border-3 border-blue-500 rounded-full border-t-transparent"></div>
+          <div className="animate-spin h-6 w-6 border-3 border-red-500 rounded-full border-t-transparent"></div>
         </div>
       ) : Object.keys(clientGroups).length === 0 ? (
         <div className="bg-white rounded-lg shadow p-4 text-center">
@@ -738,33 +817,52 @@ const EstimatesPage = () => {
           <p className="text-sm text-gray-500">
             {isB2BClient 
               ? "You don't have any estimates yet." 
-              : "No estimates match your current search criteria."}
+              : showInactiveClients
+                ? "No estimates match your current search criteria."
+                : "No estimates for active clients match your search criteria."}
           </p>
-          {searchQuery || filterStatus ? (
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setFilterStatus("");
-              }}
-              className="mt-2 text-blue-500 hover:underline text-sm"
-            >
-              Clear Filters
-            </button>
+          {(searchQuery || filterStatus || (!isB2BClient && !showInactiveClients)) ? (
+            <div className="flex flex-wrap justify-center gap-2 mt-3">
+              {(searchQuery || filterStatus) && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setFilterStatus("");
+                  }}
+                  className="text-blue-500 hover:underline text-sm"
+                >
+                  Clear Filters
+                </button>
+              )}
+              {!isB2BClient && !showInactiveClients && (
+                <button
+                  onClick={() => setShowInactiveClients(true)}
+                  className="text-blue-500 hover:underline text-sm"
+                >
+                  Show Inactive Clients
+                </button>
+              )}
+            </div>
           ) : null}
         </div>
       ) : (
         <div className="space-y-3">
           {/* Client Groups */}
           {Object.values(clientGroups).map((client) => (
-            <div key={client.id} className="bg-white rounded-lg shadow overflow-hidden">
+            <div key={client.id} className={`bg-white rounded-lg shadow overflow-hidden ${!client.isActive ? 'border-l-4 border-red-400' : ''}`}>
               {/* Client Header */}
               <div 
                 className={`p-3 ${expandedClientId === client.id ? 'bg-blue-50' : 'bg-gray-50'} cursor-pointer flex justify-between items-center`}
                 onClick={() => toggleClient(client.id)}
               >
-                <div>
+                <div className="flex items-center">
                   <h2 className="text-base font-semibold">{client.name}</h2>
-                  <p className="text-xs text-gray-500">
+                  {!client.isActive && (
+                    <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
+                      Inactive
+                    </span>
+                  )}
+                  <p className="text-xs text-gray-500 ml-2">
                     {client.totalEstimates} Estimate{client.totalEstimates !== 1 ? 's' : ''} • 
                     {client.versions.size} Version{client.versions.size !== 1 ? 's' : ''}
                   </p>
@@ -793,7 +891,7 @@ const EstimatesPage = () => {
                         onClick={() => selectVersion(client.id, versionId)}
                         className={`px-2 py-1 rounded-md text-xs ${
                           selectedVersions[client.id] === versionId
-                            ? 'bg-blue-500 text-white'
+                            ? 'bg-red-600 text-white'
                             : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                         }`}
                       >
@@ -857,7 +955,7 @@ const EstimatesPage = () => {
 
       {/* Preview Modal */}
       {isPreviewOpen && (
-        <PreviewModal
+        <EstimatePreviewModal
           isOpen={isPreviewOpen}
           onClose={() => setIsPreviewOpen(false)}
           onDownload={handleGenerateJobTicket}
@@ -871,7 +969,7 @@ const EstimatesPage = () => {
               version={previewData.version}
             />
           )}
-        </PreviewModal>
+        </EstimatePreviewModal>
       )}
 
       {/* Edit Estimate Modal */}

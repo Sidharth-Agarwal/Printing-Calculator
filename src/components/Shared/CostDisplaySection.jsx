@@ -558,7 +558,6 @@ const CostDisplaySection = ({
       {/* For detailed costs view */}
       {canViewDetailedCosts && (
         <>
-          <h3 className="text-lg font-semibold text-gray-700 mb-2">Cost Breakdown</h3>
           {renderPaperAndCuttingSection()}
           {renderProductionServices()}
           {renderPostProductionServices()}

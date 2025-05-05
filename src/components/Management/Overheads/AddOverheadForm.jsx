@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 
-const AddOverheadForm = ({ onSubmit, selectedOverhead, onUpdate, setSelectedOverhead }) => {
+const AddOverheadForm = ({ onSubmit, selectedOverhead, onUpdate, isSubmitting, onCancel }) => {
   const [formData, setFormData] = useState({
     name: "",
     value: "",
@@ -44,79 +44,95 @@ const AddOverheadForm = ({ onSubmit, selectedOverhead, onUpdate, setSelectedOver
 
     if (selectedOverhead) {
       onUpdate(selectedOverhead.id, formData);
-      setSelectedOverhead(null);
     } else {
       onSubmit(formData);
     }
-
-    // Reset form
-    setFormData({
-      name: "",
-      value: "",
-      percentage: "",
-    });
-    setError("");
   };
 
   return (
-    <form onSubmit={handleSubmit} className="bg-white p-4 rounded shadow mb-4">
-      <h2 className="text-lg font-medium mb-4">
-        {selectedOverhead ? "Edit Overhead" : "Add New Overhead"}
-      </h2>
-      
+    <form onSubmit={handleSubmit}>
       {error && (
         <div className="mb-4 p-2 bg-red-50 border border-red-200 text-red-600 rounded text-sm">
           {error}
         </div>
       )}
       
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
-        {[
-          { 
-            label: "Name", 
-            name: "name", 
-            placeholder: "Enter overhead name", 
-            type: "text",
-            required: true
-          },
-          { 
-            label: "Value (INR)", 
-            name: "value", 
-            placeholder: "Enter value", 
-            type: "number",
-            required: false
-          },
-          { 
-            label: "Percentage (%)", 
-            name: "percentage", 
-            placeholder: "Enter percentage", 
-            type: "number",
-            required: false
-          },
-        ].map((field, idx) => (
-          <div key={idx}>
-            <label className="block text-sm font-medium text-gray-700">
-              {field.label}
-              {field.required && <span className="text-red-500 ml-1">*</span>}
+      <div className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Name <span className="text-red-500">*</span>
             </label>
             <input
-              type={field.type}
-              name={field.name}
-              value={formData[field.name] || ""}
+              type="text"
+              name="name"
+              value={formData.name || ""}
               onChange={handleChange}
-              placeholder={field.placeholder}
-              className="text-md mt-3 block w-full border-gray-300 rounded-sm shadow-sm"
-              required={field.required}
+              placeholder="Enter overhead name"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
+              required
             />
           </div>
-        ))}
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Value (INR)
+            </label>
+            <input
+              type="number"
+              name="value"
+              value={formData.value || ""}
+              onChange={handleChange}
+              placeholder="Enter value"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
+            />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-gray-700 mb-1">
+              Percentage (%)
+            </label>
+            <input
+              type="number"
+              name="percentage"
+              value={formData.percentage || ""}
+              onChange={handleChange}
+              placeholder="Enter percentage"
+              className="w-full p-2 border border-gray-300 rounded text-sm"
+            />
+          </div>
+        </div>
+        <div className="mt-4 text-xs text-gray-500">
+          Note: Enter either a value or a percentage
+        </div>
       </div>
-      <div className="mt-4 text-xs text-gray-500">
-        Note: Enter either a value or a percentage
+
+      {/* Form buttons */}
+      <div className="flex justify-end space-x-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50"
+          disabled={isSubmitting}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
+          disabled={isSubmitting}
+        >
+          {isSubmitting ? (
+            <span className="flex items-center">
+              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Processing...
+            </span>
+          ) : (
+            selectedOverhead ? 'Update Overhead' : 'Add Overhead'
+          )}
+        </button>
       </div>
-      <button type="submit" className="mt-6 px-3 py-2 bg-blue-500 text-white rounded text-sm">
-        {selectedOverhead ? "Save Changes" : "Add Overhead"}
-      </button>
     </form>
   );
 };

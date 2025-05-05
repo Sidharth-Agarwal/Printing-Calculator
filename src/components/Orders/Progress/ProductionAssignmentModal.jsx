@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../../firebaseConfig';
+import { db } from '../../../firebaseConfig';
 
 const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
   const [loading, setLoading] = useState(true);

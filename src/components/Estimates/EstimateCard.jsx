@@ -8,24 +8,34 @@ const EstimateCard = ({
   onCancelEstimate,
   onDeleteEstimate,
   onEditEstimate,
-  onDuplicateEstimate, // Duplicate functionality prop
+  onDuplicateEstimate,
   isAdmin
 }) => {
   const [isMoving, setIsMoving] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
-  const [isDuplicating, setIsDuplicating] = useState(false); // State for duplicate operation
+  const [isDuplicating, setIsDuplicating] = useState(false);
 
   const isMovedToOrders = estimate.movedToOrders;
   const isCanceled = estimate.isCanceled;
   
   // Check if this client is eligible for loyalty benefits (B2B client)
   const isLoyaltyEligible = estimate.clientInfo?.clientType === "B2B";
+  
+  // Check if the client is inactive
+  const isClientInactive = estimate.clientInfo?.isActive === false;
 
   // Handle moving estimate to orders
   const handleMoveToOrders = async (e) => {
     e.stopPropagation();
     if (isMovedToOrders || isCanceled) return;
+    
+    // If client is inactive, show a warning
+    if (isClientInactive) {
+      if (!window.confirm("This client is inactive. Are you sure you want to move this estimate to orders?")) {
+        return;
+      }
+    }
     
     try {
       setIsMoving(true);
@@ -108,7 +118,9 @@ const EstimateCard = ({
   return (
     <div
       onClick={() => onViewDetails(estimate)}
-      className="border rounded-md p-2 bg-white transition cursor-pointer shadow-sm hover:shadow-md"
+      className={`border rounded-md p-2 bg-white transition cursor-pointer shadow-sm hover:shadow-md ${
+        isClientInactive ? 'border-l-4 border-red-400' : ''
+      }`}
     >
       {/* Header with Status Badge, Duplicate Button and Admin Delete Button */}
       <div className="flex justify-between items-center mb-1">
@@ -119,6 +131,13 @@ const EstimateCard = ({
           {isLoyaltyEligible && (
             <span className="ml-2 px-1.5 py-0.5 bg-purple-100 text-purple-800 text-xs rounded-full">
               B2B
+            </span>
+          )}
+          
+          {/* Add inactive badge if client is inactive */}
+          {isClientInactive && (
+            <span className="ml-2 px-1.5 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
+              Inactive Client
             </span>
           )}
         </div>
@@ -138,7 +157,7 @@ const EstimateCard = ({
               : "Pending"}
           </span>
           
-          {/* Duplicate Button - NOW IN THE TOP ROW */}
+          {/* Duplicate Button */}
           <button
             onClick={handleDuplicateEstimate}
             disabled={isDuplicating}
@@ -210,7 +229,7 @@ const EstimateCard = ({
         )}
       </div>
 
-      {/* Buttons Section - removed duplicate button from here */}
+      {/* Buttons Section */}
       <div className="flex gap-1">
         <button
           onClick={(e) => {
@@ -248,6 +267,8 @@ const EstimateCard = ({
                 ? "bg-green-500 text-white cursor-not-allowed"
                 : isMoving
                 ? "bg-blue-400 text-white cursor-wait"
+                : isClientInactive
+                ? "bg-blue-500 bg-opacity-70 text-white hover:bg-blue-600"
                 : "bg-blue-500 text-white hover:bg-blue-600"
             }`}
           >

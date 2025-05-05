@@ -16,8 +16,8 @@ import AdminUser from "./components/Login/AdminUser";
 import UserManagement from "./components/Login/UserManagement";
 import UserCreatedSuccess from "./components/Login/UserCreatedSuccess";
 import EstimatesPage from "./components/Estimates/EstimatesPage";
-import OrdersPage from "./components/Orders/OrderPage";
-import InvoicesPage from "./components/Invoices/InvoicePage";
+import OrdersPage from "./components/Orders/Progress/OrderPage";
+import InvoicesPage from "./components/Orders/Invoices/InvoicePage";
 import TransactionsDashboard from "./components/Transactions/TransactionsDashboard";
 import Unauthorized from "./components/Login/Unauthorized";
 import ProtectedRoute from "./components/Login/ProtectedRoute";
@@ -28,9 +28,10 @@ import "./styles/tailwind.css";
 function App() {
   return (
     <AuthProvider>
-      <div>
+      <div className="flex flex-col min-h-screen">
         <Header />
-        <main className="container mx-auto p-6">
+        {/* Increased padding-top to match the new header height */}
+        <main className="container mx-auto p-6 pt-20 flex-grow">
           <Routes>
             {/* Public routes - these don't require authentication */}
             <Route path="/" element={<Login />} />

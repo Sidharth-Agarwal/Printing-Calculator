@@ -3,12 +3,15 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "fireb
 import { db } from "../../../firebaseConfig";
 import AddPaperForm from "./AddPaperForm";
 import DisplayPaperTable from "./DisplayPaperTable";
-import DeleteConfirmationModal from "../DeleteConfirmationModal";
-import ConfirmationModal from "../ConfirmationModal";
+import Modal from "../../Shared/Modal";
+import ConfirmationModal from "../../Shared/ConfirmationModal";
+import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 
 const PaperManagement = () => {
   const [papers, setPapers] = useState([]);
-  const [editingPaper, setEditingPaper] = useState(null); // Track the paper being edited
+  const [editingPaper, setEditingPaper] = useState(null);
+  const [isFormModalOpen, setIsFormModalOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
     itemId: null
@@ -36,6 +39,7 @@ const PaperManagement = () => {
 
   // Add paper to Firestore
   const addPaper = async (newPaper) => {
+    setIsSubmitting(true);
     try {
       const papersCollection = collection(db, "papers");
       await addDoc(papersCollection, { ...newPaper, timestamp: new Date() });
@@ -46,6 +50,7 @@ const PaperManagement = () => {
         title: "Success",
         status: "success"
       });
+      setIsFormModalOpen(false);
     } catch (error) {
       console.error("Error adding paper:", error);
       
@@ -55,15 +60,17 @@ const PaperManagement = () => {
         title: "Error",
         status: "error"
       });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
   // Update paper in Firestore
   const updatePaper = async (id, updatedData) => {
+    setIsSubmitting(true);
     try {
       const paperDoc = doc(db, "papers", id);
       await updateDoc(paperDoc, updatedData);
-      setEditingPaper(null); // Clear the editing state
       
       setNotification({
         isOpen: true,
@@ -71,6 +78,8 @@ const PaperManagement = () => {
         title: "Success",
         status: "success"
       });
+      setIsFormModalOpen(false);
+      setEditingPaper(null); // Clear the editing state
     } catch (error) {
       console.error("Error updating paper:", error);
       
@@ -80,7 +89,24 @@ const PaperManagement = () => {
         title: "Error",
         status: "error"
       });
+    } finally {
+      setIsSubmitting(false);
     }
+  };
+
+  const handleAddClick = () => {
+    setEditingPaper(null); // Ensure we're not in edit mode
+    setIsFormModalOpen(true);
+  };
+
+  const handleEditClick = (paper) => {
+    setEditingPaper({...paper}); // Make a copy to ensure we don't modify the original
+    setIsFormModalOpen(true);
+  };
+
+  const handleCloseModal = () => {
+    setIsFormModalOpen(false);
+    setEditingPaper(null);
   };
 
   const confirmDelete = (id) => {
@@ -131,25 +157,63 @@ const PaperManagement = () => {
   };
 
   return (
-    <div>
-      <h1 className="text-xl font-bold mb-4">Paper Management</h1>
-      <AddPaperForm
-        onAddPaper={addPaper}
-        onUpdatePaper={updatePaper}
-        editingPaper={editingPaper} // Pass editing paper details
-        setEditingPaper={setEditingPaper} // Allow clearing the edit state
-      />
-      <DisplayPaperTable
-        papers={papers}
-        onEditPaper={setEditingPaper} // Pass the selected paper to edit
-        onDeletePaper={confirmDelete}
-      />
+    <div className="w-full">
+      {/* Page header */}
+      <div className="rounded bg-gray-900 py-4">
+        <h1 className="text-2xl text-white font-bold pl-4">Paper Management</h1>
+      </div>
+
+      {/* Main content */}
+      <div>
+        {/* Action buttons */}
+        <div className="flex justify-end my-4 pr-4">
+          <button 
+            onClick={handleAddClick}
+            className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add New Paper
+          </button>
+        </div>
+
+        {/* Table component */}
+        <div className="px-4">
+          <DisplayPaperTable
+            papers={papers}
+            onEditPaper={handleEditClick}
+            onDeletePaper={confirmDelete}
+          />
+        </div>
+      </div>
+
+      {/* Modal for adding/editing paper - now with lg size */}
+      <Modal
+        isOpen={isFormModalOpen}
+        onClose={handleCloseModal}
+        title={editingPaper ? "Edit Paper" : "Add New Paper"}
+        size="lg" // Using the larger size for the form
+      >
+        <AddPaperForm
+          onSubmit={editingPaper ? 
+            (data) => updatePaper(editingPaper.id, data) : 
+            addPaper
+          }
+          initialData={editingPaper}
+          isSubmitting={isSubmitting}
+          onCancel={handleCloseModal}
+        />
+      </Modal>
+
+      {/* Confirmation modals */}
       <DeleteConfirmationModal
         isOpen={deleteConfirmation.isOpen}
         onClose={closeDeleteModal}
         onConfirm={handleDeleteConfirm}
         itemName="paper"
       />
+      
       <ConfirmationModal
         isOpen={notification.isOpen}
         onClose={closeNotification}

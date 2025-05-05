@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const OrderCard = ({ 
+const InvoiceCard = ({ 
   order, 
   isSelected,
   onSelect,
@@ -261,4 +261,4 @@ const OrderCard = ({
   );
 };
 
-export default OrderCard;
+export default InvoiceCard;
