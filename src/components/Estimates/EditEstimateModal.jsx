@@ -8,6 +8,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
   const [clientInfo, setClientInfo] = useState(null);
   const [isLoadingClient, setIsLoadingClient] = useState(true);
   const [initialFormState, setInitialFormState] = useState(null);
+  const [isClientInactive, setIsClientInactive] = useState(false); // Track client active status
 
   // Enhanced sanitizeEstimateStructure function
   const sanitizeEstimateStructure = (estimateData) => {
@@ -116,6 +117,11 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
             
             setClientInfo(clientData);
             
+            // Check if client is inactive
+            if (clientData.isActive === false) {
+              setIsClientInactive(true);
+            }
+            
             // Sanitize estimate before converting to form state
             const sanitizedEstimate = sanitizeEstimateStructure(estimate);
             
@@ -133,6 +139,11 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         } else if (estimate.clientInfo) {
           // Use the client info already in the estimate
           setClientInfo(estimate.clientInfo);
+          
+          // Check if client is inactive
+          if (estimate.clientInfo.isActive === false) {
+            setIsClientInactive(true);
+          }
           
           const sanitizedEstimate = sanitizeEstimateStructure(estimate);
           const formState = convertEstimateToFormState(sanitizedEstimate, estimate.clientInfo);
@@ -321,6 +332,13 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
   };
 
   const handleSave = async (formData) => {
+    // Show a warning if client is inactive
+    if (isClientInactive) {
+      if (!window.confirm("This client is inactive. Are you sure you want to update this estimate?")) {
+        return;
+      }
+    }
+    
     setIsSaving(true);
     try {
       // Determine client name from available sources, ensuring it's never undefined
@@ -344,6 +362,12 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         createdAt: estimate.createdAt || new Date().toISOString(),
       };
       
+      // Make sure the client active status is included
+      if (formData.client?.clientInfo && typeof formData.client.clientInfo.isActive === 'boolean') {
+        // Preserve active status information to make filtering easier
+        updatedEstimate.clientInfo.isActive = formData.client.clientInfo.isActive;
+      }
+      
       // Sanitize data before saving to Firestore to prevent undefined values
       const sanitizedEstimate = sanitizeForFirestore(updatedEstimate);
       
@@ -365,7 +389,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[60]">
         <div className="bg-white rounded-lg shadow-lg p-6 max-w-md">
           <div className="flex flex-col items-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-red-500 mb-4"></div>
             <p className="text-gray-700">Loading client information...</p>
           </div>
         </div>
@@ -382,7 +406,14 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[60] p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-lg w-full">
         <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-lg font-bold text-gray-700">Edit Estimate</h2>
+          <div className="flex items-center">
+            <h2 className="text-lg font-bold text-gray-700">Edit Estimate</h2>
+            {isClientInactive && (
+              <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
+                Inactive Client
+              </span>
+            )}
+          </div>
           <button
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700 transition-colors"
@@ -392,6 +423,21 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
             </svg>
           </button>
         </div>
+
+        {isClientInactive && (
+          <div className="bg-red-50 p-3 border-b border-red-100">
+            <div className="flex">
+              <svg className="h-5 w-5 text-red-400 mr-2" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+              </svg>
+              <div>
+                <p className="text-sm text-red-700">
+                  <span className="font-medium">Warning:</span> You are editing an estimate for an inactive client.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className="p-4 max-h-[80vh] overflow-y-auto">
           <BillingForm
