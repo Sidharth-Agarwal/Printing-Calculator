@@ -183,9 +183,14 @@ const CostDisplaySection = ({
       toggleField: 'isSandwichComponentUsed',
       bgColor: 'bg-purple-50',
       items: [
+        { key: 'sandwichPaperCostPerCard', label: 'Sandwich Paper Cost' },
         { key: 'lpCostPerCardSandwich', label: 'Sandwich LP Cost' },
         { key: 'fsCostPerCardSandwich', label: 'Sandwich FS Cost' },
         { key: 'embCostPerCardSandwich', label: 'Sandwich EMB Cost' }
+      ],
+      // Add a new metaItems array to display paper info
+      metaItems: [
+        { key: 'sandwichPaperName', label: 'Paper: ' }
       ],
       totalKey: 'sandwichCostPerCard',
       totalLabel: 'Duplex/Sandwich'

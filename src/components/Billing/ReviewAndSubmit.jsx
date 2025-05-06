@@ -581,6 +581,16 @@ const ReviewAndSubmit = ({
           {hasSandwich && (
             <div className="space-y-1">
               <CostItem label="Duplex/Sandwich" value={localCalculations.sandwichCostPerCard || 0} isTotal />
+              {/* Show Sandwich Paper Cost */}
+              {localCalculations.sandwichPaperCostPerCard && (
+                <CostItem label="Sandwich Paper Cost" value={localCalculations.sandwichPaperCostPerCard} isSubItem />
+              )}
+              {/* Display the paper name if available */}
+              {state.sandwich?.paperInfo?.paperName && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Paper: {state.sandwich.paperInfo.paperName}
+                </div>
+              )}
               {/* Sandwich-specific LP */}
               {localCalculations.lpCostPerCardSandwich && (
                 <CostItem label="Sandwich LP Cost" value={localCalculations.lpCostPerCardSandwich} isSubItem />
