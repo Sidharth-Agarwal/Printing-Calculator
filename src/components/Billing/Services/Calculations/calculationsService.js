@@ -259,11 +259,13 @@ export const performCompleteCalculations = async (
       'postDCCostPerCard',
       'foldAndPasteCostPerCard',
       'dstPasteCostPerCard',
+      'magnetCostPerCard',
       'lpCostPerCardSandwich',
       'fsCostPerCardSandwich',
       'embCostPerCardSandwich',
+      'sandwichPaperCostPerCard',
       // Note: QC is handled separately per requirements
-    ];
+    ];    
 
     // Calculate production costs
     const productionCost = productionFields.reduce((acc, key) => {
@@ -550,10 +552,12 @@ export const recalculateTotals = async (
       'postDCCostPerCard',
       'foldAndPasteCostPerCard',
       'dstPasteCostPerCard',
+      'magnetCostPerCard',
       'lpCostPerCardSandwich',
       'fsCostPerCardSandwich',
       'embCostPerCardSandwich',
-    ];
+      'sandwichPaperCostPerCard',
+    ];    
 
     // Calculate production costs
     const productionCost = productionFields.reduce((acc, key) => {

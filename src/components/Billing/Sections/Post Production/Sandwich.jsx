@@ -1,12 +1,18 @@
 import React, { useState, useEffect } from "react";
+import { collection, onSnapshot } from "firebase/firestore";
+import { db } from "../../../../firebaseConfig";
 import useMRTypes from "../../../../hooks/useMRTypes";
 import useMaterialTypes from "../../../../hooks/useMaterialTypes";
+import SearchablePaperDropdown from "../Fixed/SearchablePaperDropdown";
 
 const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
   
   const { 
     isSandwichComponentUsed = false,
+    paperInfo = {
+      paperName: "",
+    },
     lpDetailsSandwich = { 
       isLPUsed: false, 
       noOfColors: 0, 
@@ -20,7 +26,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     embDetailsSandwich = { 
       isEMBUsed: false, 
       plateSizeType: "", 
-      plateDimensions: { length: "", breadth: "" },
+      plateDimensions: { length: "", breadth: "", lengthInInches: "", breadthInInches: "" },
       plateTypeMale: "",
       plateTypeFemale: "",
       embMR: "",
@@ -28,6 +34,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   } = state.sandwich || {};
   
+  const [papers, setPapers] = useState([]);
   const [errors, setErrors] = useState({});
 
   // Use custom hooks to fetch dynamic data
@@ -40,6 +47,31 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   
   const { mrTypes: embMRTypes, loading: embMRTypesLoading } = useMRTypes("EMB MR");
   const { materials: embPlateTypes, loading: embPlateTypesLoading } = useMaterialTypes("Plate Type");
+
+  // Fetch papers from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
+      const paperData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPapers(paperData);
+      
+      // If papers are loaded and no paper name is selected yet, set the first paper
+      if (paperData.length > 0 && !paperInfo.paperName) {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            paperInfo: {
+              paperName: paperData[0].paperName
+            }
+          }
+        });
+      }
+    });
+
+    return () => unsubscribe();
+  }, [dispatch, paperInfo.paperName]);
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
@@ -236,19 +268,25 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   }, [embDetailsSandwich.isEMBUsed, embPlateTypes, embDetailsSandwich, dispatch]);
 
-  // Compute default dimensions when die size changes
+  // Update dimensions when die size changes (for Auto mode)
   useEffect(() => {
     const updates = {};
+    let needsUpdate = false;
 
     // LP Color Details
     if (lpDetailsSandwich.isLPUsed) {
       const updatedColorDetails = lpDetailsSandwich.colorDetails.map(color => {
         if (color.plateSizeType === "Auto") {
+          const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+          const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+          
           return {
             ...color,
             plateDimensions: {
-              length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-              breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+              length: lengthCm,
+              breadth: breadthCm,
+              lengthInInches: dieSize.length || "",
+              breadthInInches: dieSize.breadth || ""
             }
           };
         }
@@ -260,6 +298,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           ...lpDetailsSandwich,
           colorDetails: updatedColorDetails
         };
+        needsUpdate = true;
       }
     }
 
@@ -267,11 +306,16 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     if (fsDetailsSandwich.isFSUsed) {
       const updatedFoilDetails = fsDetailsSandwich.foilDetails.map(foil => {
         if (foil.blockSizeType === "Auto") {
+          const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+          const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+          
           return {
             ...foil,
             blockDimension: {
-              length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-              breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+              length: lengthCm,
+              breadth: breadthCm,
+              lengthInInches: dieSize.length || "",
+              breadthInInches: dieSize.breadth || ""
             }
           };
         }
@@ -283,14 +327,20 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           ...fsDetailsSandwich,
           foilDetails: updatedFoilDetails
         };
+        needsUpdate = true;
       }
     }
 
     // EMB Plate Dimensions
     if (embDetailsSandwich.isEMBUsed && embDetailsSandwich.plateSizeType === "Auto") {
+      const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+      const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+      
       const updatedDimensions = {
-        length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-        breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+        length: lengthCm,
+        breadth: breadthCm,
+        lengthInInches: dieSize.length || "",
+        breadthInInches: dieSize.breadth || ""
       };
 
       if (JSON.stringify(updatedDimensions) !== JSON.stringify(embDetailsSandwich.plateDimensions)) {
@@ -298,11 +348,12 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           ...embDetailsSandwich,
           plateDimensions: updatedDimensions
         };
+        needsUpdate = true;
       }
     }
 
     // Dispatch updates if any
-    if (Object.keys(updates).length > 0) {
+    if (needsUpdate) {
       dispatch({
         type: "UPDATE_SANDWICH",
         payload: updates
@@ -313,6 +364,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   // Helper method to validate fields
   const validateFields = () => {
     const newErrors = {};
+
+    // Validate Paper
+    if (!paperInfo.paperName) {
+      newErrors.paperName = "Paper selection is required for sandwich component.";
+    }
 
     // Validate LP if used
     if (lpDetailsSandwich.isLPUsed) {
@@ -325,10 +381,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           newErrors[`lpPlateSizeType_${index}`] = "Plate size type is required.";
         }
         if (color.plateSizeType === "Manual") {
-          if (!color.plateDimensions?.length) {
+          if (!color.plateDimensions?.lengthInInches) {
             newErrors[`lpPlateLength_${index}`] = "Plate length is required.";
           }
-          if (!color.plateDimensions?.breadth) {
+          if (!color.plateDimensions?.breadthInInches) {
             newErrors[`lpPlateBreadth_${index}`] = "Plate breadth is required.";
           }
         }
@@ -355,10 +411,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           newErrors[`fsBlockSizeType_${index}`] = "Block size type is required.";
         }
         if (foil.blockSizeType === "Manual") {
-          if (!foil.blockDimension?.length) {
+          if (!foil.blockDimension?.lengthInInches) {
             newErrors[`fsBlockLength_${index}`] = "Block length is required.";
           }
-          if (!foil.blockDimension?.breadth) {
+          if (!foil.blockDimension?.breadthInInches) {
             newErrors[`fsBlockBreadth_${index}`] = "Block breadth is required.";
           }
         }
@@ -380,10 +436,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         newErrors.embPlateSizeType = "Plate size type is required.";
       }
       if (embDetailsSandwich.plateSizeType === "Manual") {
-        if (!embDetailsSandwich.plateDimensions?.length) {
+        if (!embDetailsSandwich.plateDimensions?.lengthInInches) {
           newErrors.embPlateLength = "Plate length is required.";
         }
-        if (!embDetailsSandwich.plateDimensions?.breadth) {
+        if (!embDetailsSandwich.plateDimensions?.breadthInInches) {
           newErrors.embPlateBreadth = "Plate breadth is required.";
         }
       }
@@ -409,6 +465,19 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   };
 
+  // Handle paper selection from SearchablePaperDropdown
+  const handlePaperChange = (e) => {
+    dispatch({
+      type: "UPDATE_SANDWICH",
+      payload: {
+        paperInfo: {
+          ...paperInfo,
+          paperName: e.target.value
+        }
+      }
+    });
+  };
+
   // Handle LP Sandwich changes
   const handleLPSandwichChange = (e) => {
     const { name, value } = e.target;
@@ -421,22 +490,32 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             ...lpDetailsSandwich,
             [name]: parseInt(value, 10),
             colorDetails: Array.from({ length: parseInt(value, 10) }, (_, index) => {
-              const currentColor = lpDetailsSandwich.colorDetails[index] || {};
+              // Preserve existing details if available
+              if (index < lpDetailsSandwich.colorDetails.length) {
+                return lpDetailsSandwich.colorDetails[index];
+              }
+
+              // Create new detail with proper defaults
+              const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+              const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+              
               const defaultPlateType = lpPlateTypes.length > 0 ? lpPlateTypes[0].materialName : "Polymer Plate";
               const defaultMRType = lpMRTypes.length > 0 ? 
                 { type: lpMRTypes[0].type, concatenated: lpMRTypes[0].concatenated } : 
                 { type: "SIMPLE", concatenated: "LP MR SIMPLE" };
 
               return {
-                plateSizeType: currentColor.plateSizeType || "Auto",
-                plateDimensions: currentColor.plateDimensions || {
-                  length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-                  breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+                plateSizeType: "Auto",
+                plateDimensions: {
+                  length: lengthCm,
+                  breadth: breadthCm,
+                  lengthInInches: dieSize.length || "",
+                  breadthInInches: dieSize.breadth || ""
                 },
-                pantoneType: currentColor.pantoneType || "",
-                plateType: currentColor.plateType || defaultPlateType,
-                mrType: currentColor.mrType || defaultMRType.type,
-                mrTypeConcatenated: currentColor.mrTypeConcatenated || defaultMRType.concatenated
+                pantoneType: "Not sure",  // Default as in LPDetails
+                plateType: defaultPlateType,
+                mrType: defaultMRType.type,
+                mrTypeConcatenated: defaultMRType.concatenated
               };
             })
           }
@@ -452,19 +531,43 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     if (field === "plateSizeType") {
       updatedColorDetails[index].plateSizeType = value;
       
+      // Reset plate dimensions when switching to Manual
       if (value === "Manual") {
-        updatedColorDetails[index].plateDimensions = { length: "", breadth: "" };
-      } else if (value === "Auto") {
+        updatedColorDetails[index].plateDimensions = { 
+          length: "", 
+          breadth: "",
+          lengthInInches: "",
+          breadthInInches: ""
+        };
+      }
+
+      // Populate dimensions when switching to Auto
+      if (value === "Auto") {
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+        
         updatedColorDetails[index].plateDimensions = {
-          length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-          breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+          length: lengthCm,
+          breadth: breadthCm,
+          lengthInInches: dieSize.length || "",
+          breadthInInches: dieSize.breadth || ""
         };
       }
     } else if (field === "plateDimensions") {
-      updatedColorDetails[index].plateDimensions = {
-        ...updatedColorDetails[index].plateDimensions,
-        ...value
-      };
+      // Handle dimensions in inches and convert to cm for storage
+      if (value.length !== undefined) {
+        // Store the original inches value
+        updatedColorDetails[index].plateDimensions.lengthInInches = value.length;
+        // Convert to cm for the standard database field
+        updatedColorDetails[index].plateDimensions.length = value.length ? inchesToCm(value.length).toFixed(2) : "";
+      }
+      
+      if (value.breadth !== undefined) {
+        // Store the original inches value
+        updatedColorDetails[index].plateDimensions.breadthInInches = value.breadth;
+        // Convert to cm for the standard database field
+        updatedColorDetails[index].plateDimensions.breadth = value.breadth ? inchesToCm(value.breadth).toFixed(2) : "";
+      }
     } else if (field === "mrType" && lpMRTypes.length > 0) {
       const selectedMRType = lpMRTypes.find(type => type.type === value);
       updatedColorDetails[index].mrType = value;
@@ -491,18 +594,20 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     
     if (name === "fsType") {
       const numberOfFoilOptions =
-        value === "FS1"
-          ? 1
-          : value === "FS2"
-          ? 2
-          : value === "FS3"
-          ? 3
-          : value === "FS4"
-          ? 4
-          : 5; // For FS5
+        value === "FS1" ? 1 :
+        value === "FS2" ? 2 :
+        value === "FS3" ? 3 :
+        value === "FS4" ? 4 : 5; // For FS5
           
       const updatedFoilDetails = Array.from({ length: numberOfFoilOptions }, (_, index) => {
-        const currentFoil = fsDetailsSandwich.foilDetails[index] || {};
+        // Preserve existing details if available
+        if (index < fsDetailsSandwich.foilDetails.length) {
+          return fsDetailsSandwich.foilDetails[index];
+        }
+        
+        // Create new detail with proper defaults
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
         
         const defaultMRType = fsMRTypes.length > 0 ? 
           { type: fsMRTypes[0].type, concatenated: fsMRTypes[0].concatenated } : 
@@ -512,15 +617,17 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         const defaultBlockType = blockTypes.length > 0 ? blockTypes[0].materialName : "Magnesium Block 3MM";
 
         return {
-          blockSizeType: currentFoil.blockSizeType || "Auto",
-          blockDimension: currentFoil.blockDimension || { 
-            length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-            breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : ""
+          blockSizeType: "Auto",
+          blockDimension: { 
+            length: lengthCm,
+            breadth: breadthCm,
+            lengthInInches: dieSize.length || "",
+            breadthInInches: dieSize.breadth || ""
           },
-          foilType: currentFoil.foilType || defaultFoilType,
-          blockType: currentFoil.blockType || defaultBlockType,
-          mrType: currentFoil.mrType || defaultMRType.type,
-          mrTypeConcatenated: currentFoil.mrTypeConcatenated || defaultMRType.concatenated
+          foilType: defaultFoilType,
+          blockType: defaultBlockType,
+          mrType: defaultMRType.type,
+          mrTypeConcatenated: defaultMRType.concatenated
         };
       });
       
@@ -554,19 +661,43 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     if (field === "blockSizeType") {
       updatedFoilDetails[index].blockSizeType = value;
       
+      // Reset block dimensions when switching to Manual
       if (value === "Manual") {
-        updatedFoilDetails[index].blockDimension = { length: "", breadth: "" };
-      } else if (value === "Auto") {
+        updatedFoilDetails[index].blockDimension = { 
+          length: "", 
+          breadth: "",
+          lengthInInches: "",
+          breadthInInches: ""
+        };
+      }
+
+      // Populate dimensions when switching to Auto
+      if (value === "Auto") {
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+        
         updatedFoilDetails[index].blockDimension = {
-          length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-          breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+          length: lengthCm,
+          breadth: breadthCm,
+          lengthInInches: dieSize.length || "",
+          breadthInInches: dieSize.breadth || ""
         };
       }
     } else if (field === "blockDimension") {
-      updatedFoilDetails[index].blockDimension = {
-        ...updatedFoilDetails[index].blockDimension,
-        ...value
-      };
+      // Handle input values as inches and convert to cm
+      if (value.length !== undefined) {
+        // Store original inches value
+        updatedFoilDetails[index].blockDimension.lengthInInches = value.length;
+        // Convert to cm for the standard length field
+        updatedFoilDetails[index].blockDimension.length = value.length ? inchesToCm(value.length).toFixed(2) : "";
+      }
+      
+      if (value.breadth !== undefined) {
+        // Store original inches value
+        updatedFoilDetails[index].blockDimension.breadthInInches = value.breadth;
+        // Convert to cm for the standard breadth field
+        updatedFoilDetails[index].blockDimension.breadth = value.breadth ? inchesToCm(value.breadth).toFixed(2) : "";
+      }
     } else if (field === "mrType" && fsMRTypes.length > 0) {
       const selectedMRType = fsMRTypes.find(type => type.type === value);
       updatedFoilDetails[index].mrType = value;
@@ -593,6 +724,9 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     
     if (name === "plateSizeType") {
       if (value === "Auto") {
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+        
         dispatch({
           type: "UPDATE_SANDWICH",
           payload: {
@@ -600,8 +734,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
               ...embDetailsSandwich,
               [name]: value,
               plateDimensions: {
-                length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "",
-                breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "",
+                length: lengthCm,
+                breadth: breadthCm,
+                lengthInInches: dieSize.length || "",
+                breadthInInches: dieSize.breadth || ""
               }
             }
           }
@@ -613,7 +749,28 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             embDetailsSandwich: {
               ...embDetailsSandwich,
               [name]: value,
-              plateDimensions: { length: "", breadth: "" }
+              plateDimensions: { 
+                length: "", 
+                breadth: "",
+                lengthInInches: "",
+                breadthInInches: ""
+              }
+            }
+          }
+        });
+      } else if (value === "Manual") {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            embDetailsSandwich: {
+              ...embDetailsSandwich,
+              [name]: value,
+              plateDimensions: { 
+                length: "", 
+                breadth: "",
+                lengthInInches: "",
+                breadthInInches: ""
+              }
             }
           }
         });
@@ -645,15 +802,26 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
 
   // Handle EMB Sandwich plate dimensions change
   const handleEMBDimensionChange = (field, value) => {
+    const updatedDimensions = { ...embDetailsSandwich.plateDimensions };
+    
+    if (field === "length") {
+      // Store the original inches value
+      updatedDimensions.lengthInInches = value;
+      // Convert to cm for storage
+      updatedDimensions.length = value ? inchesToCm(value).toFixed(2) : "";
+    } else if (field === "breadth") {
+      // Store the original inches value
+      updatedDimensions.breadthInInches = value;
+      // Convert to cm for storage
+      updatedDimensions.breadth = value ? inchesToCm(value).toFixed(2) : "";
+    }
+    
     dispatch({
       type: "UPDATE_SANDWICH",
       payload: {
         embDetailsSandwich: {
           ...embDetailsSandwich,
-          plateDimensions: {
-            ...embDetailsSandwich.plateDimensions,
-            [field]: value
-          }
+          plateDimensions: updatedDimensions
         }
       }
     });
@@ -662,6 +830,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   // Toggle LP Usage in Sandwich
   const toggleLPUsageInSandwich = () => {
     const isCurrentlyUsed = lpDetailsSandwich.isLPUsed;
+    
+    const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+    const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+    
     dispatch({
       type: "UPDATE_SANDWICH",
       payload: {
@@ -674,10 +846,12 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
               {
                 plateSizeType: "Auto",
                 plateDimensions: { 
-                  length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "", 
-                  breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "" 
+                  length: lengthCm, 
+                  breadth: breadthCm,
+                  lengthInInches: dieSize.length || "",
+                  breadthInInches: dieSize.breadth || ""
                 },
-                pantoneType: "",
+                pantoneType: "Not sure",
                 plateType: lpPlateTypes.length > 0 ? lpPlateTypes[0].materialName : "Polymer Plate",
                 mrType: lpMRTypes.length > 0 ? lpMRTypes[0].type : "SIMPLE",
                 mrTypeConcatenated: lpMRTypes.length > 0 ? 
@@ -694,6 +868,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   // Toggle FS Usage in Sandwich
   const toggleFSUsageInSandwich = () => {
     const isCurrentlyUsed = fsDetailsSandwich.isFSUsed;
+    
+    const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+    const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+    
     dispatch({
       type: "UPDATE_SANDWICH",
       payload: {
@@ -706,8 +884,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
               {
                 blockSizeType: "Auto",
                 blockDimension: { 
-                  length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "", 
-                  breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "" 
+                  length: lengthCm, 
+                  breadth: breadthCm,
+                  lengthInInches: dieSize.length || "",
+                  breadthInInches: dieSize.breadth || ""
                 },
                 foilType: foilTypes.length > 0 ? foilTypes[0].materialName : "Gold MTS 220",
                 blockType: blockTypes.length > 0 ? blockTypes[0].materialName : "Magnesium Block 3MM",
@@ -726,6 +906,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   // Toggle EMB Usage in Sandwich
   const toggleEMBUsageInSandwich = () => {
     const isCurrentlyUsed = embDetailsSandwich.isEMBUsed;
+    
+    const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+    const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+    
     dispatch({
       type: "UPDATE_SANDWICH",
       payload: {
@@ -735,8 +919,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           ...((!isCurrentlyUsed) && {
             plateSizeType: "Auto",
             plateDimensions: { 
-              length: dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "", 
-              breadth: dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "" 
+              length: lengthCm, 
+              breadth: breadthCm,
+              lengthInInches: dieSize.length || "",
+              breadthInInches: dieSize.breadth || ""
             },
             plateTypeMale: embPlateTypes.length > 0 ? embPlateTypes[0].materialName : "Polymer Plate",
             plateTypeFemale: embPlateTypes.length > 0 ? embPlateTypes[0].materialName : "Polymer Plate",
@@ -757,6 +943,20 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
+      {/* Paper Selection Section */}
+      <div className="border-b pb-4 mb-4">
+        <h3 className="text-md font-semibold mb-3">Sandwich Paper Selection</h3>
+        <div>
+          <label className="block mb-1 text-sm">Paper Name:</label>
+          <SearchablePaperDropdown 
+            papers={papers}
+            selectedPaper={paperInfo.paperName || (papers.length > 0 ? papers[0].paperName : "")}
+            onChange={handlePaperChange}
+          />
+          {errors.paperName && <p className="text-red-500 text-xs mt-1">{errors.paperName}</p>}
+        </div>
+      </div>
+
       {/* LP Section in Sandwich */}
       <div className="border-t pt-4">
         <div className="flex items-center space-x-3 cursor-pointer mb-4">
@@ -793,7 +993,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                   {/* Plate Size Type */}
                   <div>
-                    <label className="block text-xs mb-1">Plate Size (cm):</label>
+                    <label className="block text-xs mb-1">Plate Size:</label>
                     <select
                       value={color.plateSizeType || "Auto"}
                       onChange={(e) => handleLPColorDetailsChange(index, "plateSizeType", e.target.value)}
@@ -806,29 +1006,67 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                   </div>
 
                   {/* Plate Dimensions */}
-                  {color.plateSizeType === "Manual" && (
+                  {color.plateSizeType === "Manual" ? (
                     <>
                       <div>
                         <label className="block text-xs mb-1">Length:</label>
                         <input
                           type="number"
-                          placeholder="(cm)"
-                          value={color.plateDimensions?.length || ""}
+                          placeholder="(inches)"
+                          value={color.plateDimensions?.lengthInInches || ""}
                           onChange={(e) => handleLPColorDetailsChange(index, "plateDimensions", { length: e.target.value })}
                           className="border rounded-md p-2 w-full text-xs"
                         />
+                        {/* Show the cm conversion for reference */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {color.plateDimensions?.length ? `${color.plateDimensions.length} cm` : ""}
+                        </div>
                         {errors[`lpPlateLength_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateLength_${index}`]}</p>}
                       </div>
                       <div>
                         <label className="block text-xs mb-1">Breadth:</label>
                         <input
                           type="number"
-                          placeholder="(cm)"
-                          value={color.plateDimensions?.breadth || ""}
+                          placeholder="(inches)"
+                          value={color.plateDimensions?.breadthInInches || ""}
                           onChange={(e) => handleLPColorDetailsChange(index, "plateDimensions", { breadth: e.target.value })}
                           className="border rounded-md p-2 w-full text-xs"
                         />
+                        {/* Show the cm conversion for reference */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {color.plateDimensions?.breadth ? `${color.plateDimensions.breadth} cm` : ""}
+                        </div>
                         {errors[`lpPlateBreadth_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateBreadth_${index}`]}</p>}
+                      </div>
+                    </>
+                  ) : (
+                    // Auto mode - show read-only dimensions
+                    <>
+                      <div>
+                        <label className="block text-xs mb-1">Length:</label>
+                        <input
+                          type="number"
+                          placeholder="(inches)"
+                          value={color.plateDimensions?.lengthInInches || ""}
+                          className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                          readOnly
+                        />
+                        <div className="text-xs text-gray-500 mt-1">
+                          {color.plateDimensions?.length ? `${color.plateDimensions.length} cm` : ""}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs mb-1">Breadth:</label>
+                        <input
+                          type="number"
+                          placeholder="(inches)"
+                          value={color.plateDimensions?.breadthInInches || ""}
+                          className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                          readOnly
+                        />
+                        <div className="text-xs text-gray-500 mt-1">
+                          {color.plateDimensions?.breadth ? `${color.plateDimensions.breadth} cm` : ""}
+                        </div>
                       </div>
                     </>
                   )}
@@ -934,7 +1172,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                   {/* Block Size Type */}
                   <div>
-                    <label className="block text-xs mb-1">Block Size (cm):</label>
+                    <label className="block text-xs mb-1">Block Size:</label>
                     <select
                       value={foil.blockSizeType || "Auto"}
                       onChange={(e) => handleFoilDetailsChange(index, "blockSizeType", e.target.value)}
@@ -947,29 +1185,67 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                   </div>
 
                   {/* Block Dimensions */}
-                  {foil.blockSizeType === "Manual" && (
+                  {foil.blockSizeType === "Manual" ? (
                     <>
                       <div>
                         <label className="block text-xs mb-1">Length:</label>
                         <input
                           type="number"
-                          placeholder="(cm)"
-                          value={foil.blockDimension?.length || ""}
+                          placeholder="(inches)"
+                          value={foil.blockDimension?.lengthInInches || ""}
                           onChange={(e) => handleFoilDetailsChange(index, "blockDimension", { length: e.target.value })}
                           className="border rounded-md p-2 w-full text-xs"
                         />
+                        {/* Show the cm conversion for reference */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {foil.blockDimension?.length ? `${foil.blockDimension.length} cm` : ""}
+                        </div>
                         {errors[`fsBlockLength_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockLength_${index}`]}</p>}
                       </div>
                       <div>
                         <label className="block text-xs mb-1">Breadth:</label>
                         <input
                           type="number"
-                          placeholder="(cm)"
-                          value={foil.blockDimension?.breadth || ""}
+                          placeholder="(inches)"
+                          value={foil.blockDimension?.breadthInInches || ""}
                           onChange={(e) => handleFoilDetailsChange(index, "blockDimension", { breadth: e.target.value })}
                           className="border rounded-md p-2 w-full text-xs"
                         />
+                        {/* Show the cm conversion for reference */}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {foil.blockDimension?.breadth ? `${foil.blockDimension.breadth} cm` : ""}
+                        </div>
                         {errors[`fsBlockBreadth_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockBreadth_${index}`]}</p>}
+                      </div>
+                    </>
+                  ) : (
+                    // Auto mode - show read-only dimensions
+                    <>
+                      <div>
+                        <label className="block text-xs mb-1">Length:</label>
+                        <input
+                          type="number"
+                          placeholder="(inches)"
+                          value={foil.blockDimension?.lengthInInches || ""}
+                          className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                          readOnly
+                        />
+                        <div className="text-xs text-gray-500 mt-1">
+                          {foil.blockDimension?.length ? `${foil.blockDimension.length} cm` : ""}
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs mb-1">Breadth:</label>
+                        <input
+                          type="number"
+                          placeholder="(inches)"
+                          value={foil.blockDimension?.breadthInInches || ""}
+                          className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                          readOnly
+                        />
+                        <div className="text-xs text-gray-500 mt-1">
+                          {foil.blockDimension?.breadth ? `${foil.blockDimension.breadth} cm` : ""}
+                        </div>
                       </div>
                     </>
                   )}
@@ -1034,7 +1310,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                         ))
                       )}
                     </select>
-                    {errors[`mrType_${index}`] && <p className="text-red-500 text-xs">{errors[`mrType_${index}`]}</p>}
+                    {errors[`fsMrType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsMrType_${index}`]}</p>}
                   </div>
                 </div>
               </div>
@@ -1077,29 +1353,67 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
               </div>
 
               {/* Plate Dimensions */}
-              {embDetailsSandwich.plateSizeType === "Manual" && (
+              {embDetailsSandwich.plateSizeType === "Manual" ? (
                 <>
                   <div>
-                    <label className="block text-xs mb-1">Length (cm):</label>
+                    <label className="block text-xs mb-1">Length:</label>
                     <input
                       type="number"
-                      placeholder="Length"
-                      value={embDetailsSandwich.plateDimensions.length || ""}
+                      placeholder="(inches)"
+                      value={embDetailsSandwich.plateDimensions?.lengthInInches || ""}
                       onChange={(e) => handleEMBDimensionChange("length", e.target.value)}
                       className={`border rounded-md p-2 w-full text-xs ${errors.embPlateLength ? "border-red-500" : ""}`}
                     />
+                    {/* Show the cm conversion for reference */}
+                    <div className="text-xs text-gray-500 mt-1">
+                      {embDetailsSandwich.plateDimensions?.length ? `${embDetailsSandwich.plateDimensions.length} cm` : ""}
+                    </div>
                     {errors.embPlateLength && <p className="text-red-500 text-xs">{errors.embPlateLength}</p>}
                   </div>
                   <div>
-                    <label className="block text-xs mb-1">Breadth (cm):</label>
+                    <label className="block text-xs mb-1">Breadth:</label>
                     <input
                       type="number"
-                      placeholder="Breadth"
-                      value={embDetailsSandwich.plateDimensions.breadth || ""}
+                      placeholder="(inches)"
+                      value={embDetailsSandwich.plateDimensions?.breadthInInches || ""}
                       onChange={(e) => handleEMBDimensionChange("breadth", e.target.value)}
                       className={`border rounded-md p-2 w-full text-xs ${errors.embPlateBreadth ? "border-red-500" : ""}`}
                     />
+                    {/* Show the cm conversion for reference */}
+                    <div className="text-xs text-gray-500 mt-1">
+                      {embDetailsSandwich.plateDimensions?.breadth ? `${embDetailsSandwich.plateDimensions.breadth} cm` : ""}
+                    </div>
                     {errors.embPlateBreadth && <p className="text-red-500 text-xs">{errors.embPlateBreadth}</p>}
+                  </div>
+                </>
+              ) : embDetailsSandwich.plateSizeType === "Auto" && (
+                // Auto mode - show read-only dimensions
+                <>
+                  <div>
+                    <label className="block text-xs mb-1">Length:</label>
+                    <input
+                      type="number"
+                      placeholder="(inches)"
+                      value={embDetailsSandwich.plateDimensions?.lengthInInches || ""}
+                      className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                      readOnly
+                    />
+                    <div className="text-xs text-gray-500 mt-1">
+                      {embDetailsSandwich.plateDimensions?.length ? `${embDetailsSandwich.plateDimensions.length} cm` : ""}
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-xs mb-1">Breadth:</label>
+                    <input
+                      type="number"
+                      placeholder="(inches)"
+                      value={embDetailsSandwich.plateDimensions?.breadthInInches || ""}
+                      className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                      readOnly
+                    />
+                    <div className="text-xs text-gray-500 mt-1">
+                      {embDetailsSandwich.plateDimensions?.breadth ? `${embDetailsSandwich.plateDimensions.breadth} cm` : ""}
+                    </div>
                   </div>
                 </>
               )}

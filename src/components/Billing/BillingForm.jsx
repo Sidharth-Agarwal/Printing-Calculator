@@ -33,7 +33,7 @@ import SuccessNotification from "../Shared/SuccessNotification";
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
 import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
 
-// Initial state for all steps
+// Original initialFormState
 const initialFormState = {
   // Client information
   client: {
@@ -114,7 +114,7 @@ const initialFormState = {
     isDstPasteUsed: false,
     dstType: "",
   },
-  magnet: {          // Add this new state section
+  magnet: {
     isMagnetUsed: false,
     magnetMaterial: ""
   },
@@ -126,10 +126,13 @@ const initialFormState = {
   },
   misc: {
     isMiscUsed: false,
-    miscCharge: "" // Add this new field to store the editable value
+    miscCharge: ""
   },
   sandwich: {
     isSandwichComponentUsed: false,
+    paperInfo: {
+      paperName: ""
+    },
     lpDetailsSandwich: {
       isLPUsed: false,
       noOfColors: 0,
@@ -143,11 +146,17 @@ const initialFormState = {
     embDetailsSandwich: {
       isEMBUsed: false,
       plateSizeType: "",
-      plateDimensions: { length: "", breadth: "" },
+      plateDimensions: { 
+        length: "", 
+        breadth: "",
+        lengthInInches: "",
+        breadthInInches: ""
+      },
       plateTypeMale: "",
       plateTypeFemale: "",
       embMR: "",
-    },
+      embMRConcatenated: ""
+    }
   }
 };
 
@@ -1365,12 +1374,17 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   
   const toggleSandwichUsage = () => {
     const isCurrentlyUsed = state.sandwich?.isSandwichComponentUsed || false;
+    const defaultPaperName = papers.length > 0 ? papers[0].paperName : "";
     
     dispatch({
       type: "UPDATE_SANDWICH",
       payload: { 
         isSandwichComponentUsed: !isCurrentlyUsed,
         ...((!isCurrentlyUsed) && {
+          // Initialize with the default paper if available
+          paperInfo: {
+            paperName: defaultPaperName
+          },
           lpDetailsSandwich: {
             isLPUsed: false,
             noOfColors: 0,
@@ -1384,10 +1398,16 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           embDetailsSandwich: {
             isEMBUsed: false,
             plateSizeType: "",
-            plateDimensions: { length: "", breadth: "" },
+            plateDimensions: { 
+              length: "", 
+              breadth: "",
+              lengthInInches: "",
+              breadthInInches: "" 
+            },
             plateTypeMale: "",
             plateTypeFemale: "",
-            embMR: ""
+            embMR: "",
+            embMRConcatenated: ""
           }
         })
       }

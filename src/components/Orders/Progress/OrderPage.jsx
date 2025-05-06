@@ -10,7 +10,7 @@ const OrdersPage = () => {
   const [isB2BClient, setIsB2BClient] = useState(false);
   const [linkedClientId, setLinkedClientId] = useState(null);
   const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [filteredOrders, setFilteredOrders] = useState([]);
@@ -52,6 +52,45 @@ const OrdersPage = () => {
     'Delivery': { bg: 'bg-[#10B981]', text: 'text-white' },
     'Completed': { bg: 'bg-[#4F46E5]', text: 'text-white' }
   };
+
+  // Calculate KPI metrics
+  const orderMetrics = React.useMemo(() => {
+    if (orders.length === 0) return {
+      activeCount: 0,
+      completedCount: 0,
+      b2bCount: 0,
+      directCount: 0,
+      totalQuantity: 0,
+      b2bQuantity: 0,
+      directQuantity: 0
+    };
+    
+    // Filter orders for different categories
+    const activeOrders = orders.filter(order => order.stage !== 'Completed');
+    const completedOrders = orders.filter(order => order.stage === 'Completed');
+    const b2bOrders = orders.filter(order => order.isLoyaltyEligible);
+    const directOrders = orders.filter(order => !order.isLoyaltyEligible);
+    
+    // Calculate totals
+    const totalQuantity = orders.reduce((sum, order) => 
+      sum + (parseInt(order.jobDetails?.quantity) || 0), 0);
+    
+    const b2bQuantity = b2bOrders.reduce((sum, order) => 
+      sum + (parseInt(order.jobDetails?.quantity) || 0), 0);
+    
+    const directQuantity = directOrders.reduce((sum, order) => 
+      sum + (parseInt(order.jobDetails?.quantity) || 0), 0);
+    
+    return {
+      activeCount: activeOrders.length,
+      completedCount: completedOrders.length,
+      b2bCount: b2bOrders.length,
+      directCount: directOrders.length,
+      totalQuantity,
+      b2bQuantity,
+      directQuantity
+    };
+  }, [orders]);
 
   // Fetch B2B client data if applicable
   useEffect(() => {
@@ -167,7 +206,7 @@ const OrdersPage = () => {
           console.error("Error processing orders data:", err);
           setError(err);
         } finally {
-          setLoading(false);
+          setIsLoading(false);
         }
       }
     );
@@ -372,19 +411,18 @@ const OrdersPage = () => {
     }
   };
 
-  if (loading) {
+  if (isLoading) {
     return (
-      <div className="p-4">
-        <div className="flex justify-between items-center mb-4">
-          <h1 className="text-xl font-bold">
-            {isB2BClient ? "Your Orders" : "Orders"}
+      <div className="p-4 max-w-screen-xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">
+            {isB2BClient ? "Your Orders" : "Orders Management"}
           </h1>
           <div className="animate-pulse w-64 h-8 bg-gray-200 rounded-md"></div>
         </div>
-        <div className="animate-pulse space-y-3">
-          <div className="h-12 bg-gray-200 rounded-md"></div>
-          <div className="h-12 bg-gray-200 rounded-md"></div>
-          <div className="h-12 bg-gray-200 rounded-md"></div>
+        <div className="animate-pulse space-y-4">
+          <div className="h-24 bg-gray-200 rounded-md"></div>
+          <div className="h-64 bg-gray-200 rounded-md"></div>
         </div>
       </div>
     );
@@ -392,7 +430,7 @@ const OrdersPage = () => {
 
   if (error) {
     return (
-      <div className="p-4">
+      <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-md p-4">
           <h3 className="text-red-800 font-medium">Error loading orders</h3>
           <p className="text-red-600 mt-1">{error.message}</p>
@@ -408,298 +446,409 @@ const OrdersPage = () => {
   }
 
   return (
-    <div className="p-4">
-      {/* Header Section - More Compact */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-        <h1 className="text-xl font-bold">
-          {isB2BClient ? "Your Orders" : "Orders"}
+    <div className="p-4 max-w-screen-xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isB2BClient ? "Your Orders" : "Orders Management"}
         </h1>
-        
-        <div className="flex flex-wrap gap-1 w-full sm:w-auto">
-          {/* View mode selector - Smaller */}
-          <div className="flex rounded-md overflow-hidden border border-gray-300">
-            <button
-              onClick={() => setViewMode('all')}
-              className={`px-2 py-1 text-xs ${
-                viewMode === 'all' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              All
-            </button>
-            <button
-              onClick={() => setViewMode('active')}
-              className={`px-2 py-1 text-xs ${
-                viewMode === 'active' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'bg-white text-gray-700 hover:bg-gray-100'
-              }`}
-            >
-              Active
-            </button>
-            <button
-              onClick={() => setViewMode('completed')}
-              className={`px-2 py-1 text-xs ${
-                viewMode === 'completed' 
-                ? 'bg-blue-500 text-white' 
-                : 'bg-white text-gray-700 hover:bg-gray-100'
-            }`}
-          >
-            Completed
-          </button>
-        </div>
-        
-        {/* Search input - Smaller */}
-        <input
-          type="text"
-          placeholder="Search orders..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="px-2 py-1 text-xs border rounded-md flex-grow sm:w-40 focus:outline-none focus:ring-1 focus:ring-blue-500"
-        />
-        
-        {/* Stage filter dropdown - Smaller */}
-        <select
-          value={stageFilter}
-          onChange={(e) => setStageFilter(e.target.value)}
-          className="px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          <option value="">All Stages</option>
-          {stages.map(stage => (
-            <option key={stage} value={stage}>{stage}</option>
-          ))}
-        </select>
-        
-        {/* Sort dropdown - Smaller */}
-        <select
-          value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
-          className="px-2 py-1 text-xs border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-        >
-          {Object.entries(sortOptions).map(([value, label]) => (
-            <option key={value} value={value}>
-              Sort: {label}
-            </option>
-          ))}
-        </select>
+        <p className="text-gray-600 mt-1">
+          {isB2BClient 
+            ? "View and track the progress of your orders" 
+            : "Manage order workflow, assign production staff, and track progress"}
+        </p>
       </div>
-    </div>
 
-    <div className="bg-white rounded-lg shadow-sm">
-      {filteredOrders.length > 0 ? (
-        <table className="w-full">
-          <thead>
-            <tr className="bg-gray-50 text-xs">
-              {!isB2BClient && (
-                <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                  Client
-                </th>
-              )}
-              <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                Project
-              </th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                Type
-              </th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                Quantity
-              </th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                Delivery
-              </th>
-              {/* Assigned production staff column */}
-              <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                Assigned To
-              </th>
-              <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                Status
-              </th>
-              {/* NEW: Add loyalty column for admins and staff */}
-              {(userRole === "admin" || userRole === "staff") && (
-                <th className="px-3 py-2 text-left font-medium text-gray-500 whitespace-nowrap">
-                  Discount
-                </th>
-              )}
-              {stages.slice(1).map((stage) => (
-                <th key={stage} className="px-2 py-2 text-center font-medium text-gray-500 whitespace-nowrap text-xs">
-                  {stage.split(' ')[0]}
-                </th>
-              ))}
-              {canAssignProduction && (
-                <th className="px-3 py-2 text-center font-medium text-gray-500 whitespace-nowrap">
-                  Actions
-                </th>
-              )}
-            </tr>
-          </thead>
-          <tbody className="text-sm">
-            {filteredOrders.map((order) => (
-              <tr 
-                key={order.id} 
-                className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
-                onClick={() => setSelectedOrder(order)}
-              >
-                {!isB2BClient && (
-                  <td className="px-3 py-2">
-                    <span className="text-blue-600 hover:underline font-medium">
-                      {order.clientName}
-                    </span>
-                  </td>
-                )}
-                <td className="px-3 py-2">
-                  <span>{order.projectName || 'Unnamed Project'}</span>
-                </td>
-                <td className="px-3 py-2">
-                  {order.jobDetails?.jobType || 'N/A'}
-                </td>
-                <td className="px-3 py-2">
-                  {order.jobDetails?.quantity || 'N/A'}
-                </td>
-                <td className="px-3 py-2">
-                  {formatDate(order.deliveryDate)}
-                </td>
-                {/* Assigned production staff cell */}
-                <td className="px-3 py-2">
-                  <span className={`${order.productionAssignments?.assigned ? 'text-teal-600 font-medium' : 'text-gray-500 italic'}`}>
-                    {getAssignedStaffName(order.productionAssignments)}
-                  </span>
-                </td>
-                <td className="px-3 py-2">
-                  <span className={`px-2 py-0.5 text-xs rounded-full text-white inline-block
-                    ${stageColors[order.stage]?.bg || 'bg-gray-100'}`}
-                  >
-                    {order.stage || 'Not started yet'}
-                  </span>
-                </td>
-                {/* NEW: Loyalty column for admins and staff */}
-                {(userRole === "admin" || userRole === "staff") && (
-                  <td className="px-3 py-2">
-                    {order.isLoyaltyEligible ? (
-                      order.loyaltyInfo ? (
-                        <div className="text-xs">
-                          <div className="text-green-600">
-                            <strong> {order.loyaltyInfo.discount}% applied </strong>
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-xs text-purple-700">
-                          B2B Eligible
-                        </span>
-                      )
-                    ) : (
-                      <span className="text-xs text-gray-400">N/A</span>
-                    )}
-                  </td>
-                )}
-                {stages.slice(1).map((stage) => (
-                  <td key={`${order.id}-${stage}`} className="px-2 py-2 text-center">
-                    <StatusCircle 
-                      stage={stage} 
-                      currentStage={order.stage} 
-                      orderId={order.id}
-                    />
-                  </td>
-                ))}
-                {canAssignProduction && (
-                  <td className="px-3 py-2 text-center">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation(); // Prevent row click action
-                        handleOpenAssignmentModal(order);
-                      }}
-                      className="p-1 text-teal-600 hover:text-teal-800 rounded-full hover:bg-teal-100"
-                      title="Assign Production Staff"
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                      </svg>
-                    </button>
-                  </td>
-                )}
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      ) : (
-        <div className="p-6 text-center">
-          <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h2 className="text-lg font-medium text-gray-700 mt-3 mb-1">No Orders Found</h2>
-          <p className="text-sm text-gray-500">
-            {isB2BClient 
-              ? "You don't have any orders yet."
-              : "No orders found matching your criteria."}
-          </p>
-          {(searchQuery || stageFilter || viewMode !== 'all') && (
-            <button
-              onClick={() => {
-                setSearchQuery("");
-                setStageFilter("");
-                setViewMode("all");
-              }}
-              className="mt-3 text-blue-500 hover:underline text-sm"
-            >
-              Clear Filters
-            </button>
-          )}
+      {/* KPI Cards - Only visible to admins and staff */}
+      {(userRole === "admin" || userRole === "staff") && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Active Orders</h3>
+            <p className="text-2xl font-bold text-gray-800">
+              {orderMetrics.activeCount}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {orderMetrics.activeCount > 0 ? 
+                `${Math.round((orderMetrics.activeCount / orders.length) * 100)}% of total orders` : 
+                'No active orders'}
+            </p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Completed Orders</h3>
+            <p className="text-2xl font-bold text-green-600">
+              {orderMetrics.completedCount}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {orderMetrics.completedCount > 0 ? 
+                `${Math.round((orderMetrics.completedCount / orders.length) * 100)}% of total orders` : 
+                'No completed orders'}
+            </p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">B2B Orders</h3>
+            <p className="text-2xl font-bold text-purple-600">
+              {orderMetrics.b2bCount}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {orderMetrics.b2bQuantity > 0 ? 
+                `${orderMetrics.b2bQuantity.toLocaleString()} total items` : 
+                'No B2B orders'}
+            </p>
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Direct Orders</h3>
+            <p className="text-2xl font-bold text-blue-600">
+              {orderMetrics.directCount}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {orderMetrics.directQuantity > 0 ? 
+                `${orderMetrics.directQuantity.toLocaleString()} total items` : 
+                'No direct orders'}
+            </p>
+          </div>
         </div>
       )}
-    </div>
 
-    {/* Confirmation Dialog - Shown to admin, staff, and production users */}
-    {canEditStages && showConfirmation && pendingStageUpdate && (
-      <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-xl p-4 max-w-md">
-          <h3 className="text-lg font-medium mb-3">Confirm Stage Update</h3>
-          <p className="mb-3 text-sm">
-            Are you sure you want to change the stage from
-            <span className="font-medium"> "{pendingStageUpdate.currentStage}" </span>
-            to
-            <span className="font-medium"> "{pendingStageUpdate.newStage}"</span>?
-          </p>
-          <div className="flex justify-end gap-2">
-            <button
-              onClick={cancelStageUpdate}
-              className="px-3 py-1.5 text-sm bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+      {/* Filters Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="relative w-full md:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search orders..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+          
+          <div className="flex flex-wrap gap-3 w-full md:w-auto">
+            <select
+              value={stageFilter}
+              onChange={(e) => setStageFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
             >
-              Cancel
-            </button>
-            <button
-              onClick={updateStage}
-              className="px-3 py-1.5 text-sm bg-blue-600 text-white rounded-md hover:bg-blue-700"
-              disabled={updating}
+              <option value="">All Stages</option>
+              {stages.map(stage => (
+                <option key={stage} value={stage}>{stage}</option>
+              ))}
+            </select>
+            
+            <select
+              value={sortBy}
+              onChange={(e) => setSortBy(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
             >
-              {updating ? 'Updating...' : 'Confirm'}
-            </button>
+              {Object.entries(sortOptions).map(([value, label]) => (
+                <option key={value} value={value}>{label}</option>
+              ))}
+            </select>
+            
+            <div className="flex rounded-md overflow-hidden border border-gray-300">
+              <button
+                onClick={() => setViewMode('all')}
+                className={`px-3 py-2 text-sm ${
+                  viewMode === 'all' 
+                    ? 'bg-red-500 text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                All
+              </button>
+              <button
+                onClick={() => setViewMode('active')}
+                className={`px-3 py-2 text-sm ${
+                  viewMode === 'active' 
+                    ? 'bg-red-500 text-white' 
+                    : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Active
+              </button>
+              <button
+                onClick={() => setViewMode('completed')}
+                className={`px-3 py-2 text-sm ${
+                  viewMode === 'completed' 
+                  ? 'bg-red-500 text-white' 
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                }`}
+              >
+                Completed
+              </button>
+            </div>
           </div>
         </div>
       </div>
-    )}
 
-    {/* Using Unified Modal Component */}
-    {selectedOrder && (
-      <UnifiedDetailsModal
-        data={selectedOrder}
-        dataType="order"
-        onClose={() => setSelectedOrder(null)}
-      />
-    )}
+      {/* Main Content - Table */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        {filteredOrders.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead>
+                <tr className="bg-gray-50 text-xs border-b border-gray-200">
+                  {!isB2BClient && (
+                    <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                      Client
+                    </th>
+                  )}
+                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                    Project
+                  </th>
+                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                    Type
+                  </th>
+                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                    Quantity
+                  </th>
+                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                    Delivery
+                  </th>
+                  {/* Assigned production staff column */}
+                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                    Assigned To
+                  </th>
+                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                    Status
+                  </th>
+                  {/* Loyalty column for admins and staff */}
+                  {(userRole === "admin" || userRole === "staff") && (
+                    <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                      Discount
+                    </th>
+                  )}
+                  {stages.slice(1).map((stage) => (
+                    <th key={stage} className="px-2 py-2.5 text-center font-medium text-gray-500 whitespace-nowrap text-xs">
+                      {stage.split(' ')[0]}
+                    </th>
+                  ))}
+                  {canAssignProduction && (
+                    <th className="px-3 py-2.5 text-center font-medium text-gray-500">
+                      Actions
+                    </th>
+                  )}
+                </tr>
+              </thead>
+              <tbody className="text-sm">
+                {filteredOrders.map((order) => (
+                  <tr 
+                    key={order.id} 
+                    className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
+                    onClick={() => setSelectedOrder(order)}
+                  >
+                    {!isB2BClient && (
+                      <td className="px-3 py-2.5">
+                        <div className="flex items-center">
+                          <span className="text-blue-600 hover:text-blue-800 font-medium">
+                            {order.clientName}
+                          </span>
+                        </div>
+                      </td>
+                    )}
+                    <td className="px-3 py-2.5">
+                      <span className="font-medium text-gray-800">{order.projectName || 'Unnamed Project'}</span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {order.jobDetails?.jobType || 'N/A'}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {order.jobDetails?.quantity || 'N/A'}
+                    </td>
+                    <td className="px-3 py-2.5">
+                      {formatDate(order.deliveryDate)}
+                    </td>
+                    {/* Assigned production staff cell */}
+                    <td className="px-3 py-2.5">
+                      <span className={`${order.productionAssignments?.assigned ? 'text-teal-600 font-medium' : 'text-gray-500 italic'}`}>
+                        {getAssignedStaffName(order.productionAssignments)}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2.5">
+                    <span className={`px-2 py-0.5 text-xs rounded-full text-white inline-block
+                        ${stageColors[order.stage]?.bg || 'bg-gray-100'}`}
+                      >
+                        {order.stage || 'Not started yet'}
+                      </span>
+                    </td>
+                    {/* Loyalty column for admins and staff */}
+                    {(userRole === "admin" || userRole === "staff") && (
+                      <td className="px-3 py-2.5">
+                        {order.isLoyaltyEligible ? (
+                          order.loyaltyInfo ? (
+                            <div className="text-xs">
+                              <div className="text-green-600">
+                                <strong>{order.loyaltyInfo.discount}% applied</strong>
+                              </div>
+                            </div>
+                          ) : (
+                            <span className="text-xs text-purple-700">
+                              B2B Eligible
+                            </span>
+                          )
+                        ) : (
+                          <span className="text-xs text-blue-600">Direct</span>
+                        )}
+                      </td>
+                    )}
+                    {/* Status indicators for each stage */}
+                    {stages.slice(1).map((stage) => (
+                      <td key={`${order.id}-${stage}`} className="px-2 py-2.5 text-center">
+                        <StatusCircle 
+                          stage={stage} 
+                          currentStage={order.stage} 
+                          orderId={order.id}
+                        />
+                      </td>
+                    ))}
+                    {/* Actions column */}
+                    {canAssignProduction && (
+                      <td className="px-3 py-2.5 text-center">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation(); // Prevent row click action
+                            handleOpenAssignmentModal(order);
+                          }}
+                          className="p-1 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50 transition-colors"
+                          title="Assign Production Staff"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                          </svg>
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="p-8 text-center">
+            <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <h2 className="text-lg font-medium text-gray-700 mt-4 mb-2">No Orders Found</h2>
+            <p className="text-sm text-gray-500 max-w-md mx-auto">
+              {isB2BClient 
+                ? "You don't have any orders yet. Check your estimates or contact us." 
+                : "No orders match your current search criteria."}
+            </p>
+            {(searchQuery || stageFilter || viewMode !== 'all') && (
+              <div className="flex flex-wrap justify-center gap-3 mt-4">
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setStageFilter("");
+                    setViewMode("all");
+                  }}
+                  className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  Clear Filters
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
-    {/* Production Assignment Modal - Only for admin and staff */}
-    {canAssignProduction && isAssignmentModalOpen && orderForAssignment && (
-      <ProductionAssignmentModal
-        order={orderForAssignment}
-        onClose={() => {
-          setIsAssignmentModalOpen(false);
-          setOrderForAssignment(null);
-        }}
-        onAssignmentUpdate={handleAssignmentUpdate}
-      />
-    )}
-  </div>
-);
+      {/* Progress Overview - Only for admin and staff */}
+      {(userRole === "admin" || userRole === "staff") && filteredOrders.length > 0 && (
+        <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Order Progress Overview</h3>
+          <div className="grid grid-cols-7 gap-2">
+            {stages.map(stage => {
+              const count = filteredOrders.filter(order => order.stage === stage).length;
+              const percentage = Math.round((count / filteredOrders.length) * 100);
+              const colors = stageColors[stage] || { bg: 'bg-gray-100', text: 'text-gray-800' };
+              
+              return (
+                <div key={stage} className="flex flex-col items-center">
+                  <div className={`${colors.bg} rounded-full w-8 h-8 flex items-center justify-center mb-1`}>
+                    <span className="text-xs text-white font-medium">{count}</span>
+                  </div>
+                  <div className="text-xs text-center">
+                    <div className="font-medium">{stage.split(' ')[0]}</div>
+                    <div className="text-gray-500">{percentage}%</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Dialog */}
+      {canEditStages && showConfirmation && pendingStageUpdate && (
+        <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[60]">
+          <div className="bg-white rounded-lg shadow-lg w-full max-w-md p-6">
+            <h3 className="text-lg font-bold text-gray-700 mb-3">Confirm Stage Update</h3>
+            <p className="mb-4 text-sm text-gray-600">
+              Are you sure you want to change the stage from
+              <span className="font-medium text-gray-800"> "{pendingStageUpdate.currentStage}" </span>
+              to
+              <span className="font-medium text-gray-800"> "{pendingStageUpdate.newStage}"</span>?
+            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={cancelStageUpdate}
+                className="px-4 py-2 text-sm bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={updateStage}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+                disabled={updating}
+              >
+                {updating ? (
+                  <span className="flex items-center">
+                    <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Updating...
+                  </span>
+                ) : 'Confirm'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Order Details Modal */}
+      {selectedOrder && (
+        <UnifiedDetailsModal
+          data={selectedOrder}
+          dataType="order"
+          onClose={() => setSelectedOrder(null)}
+        />
+      )}
+
+      {/* Production Assignment Modal */}
+      {canAssignProduction && isAssignmentModalOpen && orderForAssignment && (
+        <ProductionAssignmentModal
+          order={orderForAssignment}
+          onClose={() => {
+            setIsAssignmentModalOpen(false);
+            setOrderForAssignment(null);
+          }}
+          onAssignmentUpdate={handleAssignmentUpdate}
+        />
+      )}
+    </div>
+  );
 };
 
 export default OrdersPage;

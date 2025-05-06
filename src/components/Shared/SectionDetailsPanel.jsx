@@ -25,20 +25,18 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
     if (!dimensions) return "Not specified";
     if (typeof dimensions === "string") return dimensions;
     
-    // Handle fields with InInches suffix
-    if (dimensions.lengthInInches || dimensions.breadthInInches) {
-      const length = dimensions.lengthInInches || "";
-      const breadth = dimensions.breadthInInches || "";
-      return `${length}" × ${breadth}"`;
+    // Prioritize inches format if available
+    if (dimensions.lengthInInches && dimensions.breadthInInches) {
+      return `${dimensions.lengthInInches}" × ${dimensions.breadthInInches}"`;
     }
     
-    // Standard format
+    // Fall back to standard cm format
     const length = dimensions.length || "";
     const breadth = dimensions.breadth || "";
     
     if (!length && !breadth) return "Not specified";
-    return `${length} × ${breadth}`;
-  };
+    return `${length} × ${breadth} cm`;
+  };  
 
   // Handle rendering LP details (Letterpress)
   const renderLPDetailsTable = () => {
@@ -555,6 +553,32 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
           <h3 className="font-semibold">Duplex/Sandwich Details</h3>
         </div>
         
+        {/* Paper Information */}
+        {data.paperInfo && (
+          <div className="mb-4">
+            <div className="bg-green-50 p-2 rounded-md mb-2 border-l-4 border-green-400 pl-3">
+              <h4 className="font-medium">Sandwich Paper Details</h4>
+            </div>
+            
+            <div className="overflow-x-auto">
+              <table className="min-w-full bg-white border border-gray-200 rounded-md">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
+                    <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-200">
+                  <tr className="hover:bg-gray-50">
+                    <td className="py-2 px-3 text-sm font-medium text-gray-700">Paper Name</td>
+                    <td className="py-2 px-3 text-sm text-gray-500">{data.paperInfo.paperName || "Not specified"}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+        
         {/* Sandwich LP Details */}
         {data.lpDetailsSandwich && data.lpDetailsSandwich.isLPUsed && (
           <div className="mb-4">
@@ -583,7 +607,15 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
                         <td className="py-2 px-3 text-sm text-gray-500">{color.pantoneType || "Not specified"}</td>
                         <td className="py-2 px-3 text-sm text-gray-500">{color.plateType || "Not specified"}</td>
                         <td className="py-2 px-3 text-sm text-gray-500">{color.plateSizeType || "Auto"}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(color.plateDimensions)}</td>
+                        <td className="py-2 px-3 text-sm text-gray-500">
+                          {/* Display the dimensions in both inches and cm if available */}
+                          {color.plateDimensions?.lengthInInches 
+                            ? `${color.plateDimensions.lengthInInches}" × ${color.plateDimensions.breadthInInches}"` 
+                            : formatDimensions(color.plateDimensions)}
+                          {color.plateDimensions?.length && color.plateDimensions?.lengthInInches
+                            ? ` (${color.plateDimensions.length} × ${color.plateDimensions.breadth} cm)`
+                            : ""}
+                        </td>
                         <td className="py-2 px-3 text-sm text-gray-500">{color.mrType || "Not specified"}</td>
                       </tr>
                     ))}
@@ -625,7 +657,15 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
                         <td className="py-2 px-3 text-sm text-gray-500">{foil.foilType || "Not specified"}</td>
                         <td className="py-2 px-3 text-sm text-gray-500">{foil.blockType || "Not specified"}</td>
                         <td className="py-2 px-3 text-sm text-gray-500">{foil.blockSizeType || "Auto"}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(foil.blockDimension)}</td>
+                        <td className="py-2 px-3 text-sm text-gray-500">
+                          {/* Display the dimensions in both inches and cm if available */}
+                          {foil.blockDimension?.lengthInInches 
+                            ? `${foil.blockDimension.lengthInInches}" × ${foil.blockDimension.breadthInInches}"` 
+                            : formatDimensions(foil.blockDimension)}
+                          {foil.blockDimension?.length && foil.blockDimension?.lengthInInches
+                            ? ` (${foil.blockDimension.length} × ${foil.blockDimension.breadth} cm)`
+                            : ""}
+                        </td>
                         <td className="py-2 px-3 text-sm text-gray-500">{foil.mrType || "Not specified"}</td>
                       </tr>
                     ))}
@@ -660,7 +700,15 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
                   </tr>
                   <tr className="hover:bg-gray-50">
                     <td className="py-2 px-3 text-sm font-medium text-gray-700">Plate Dimensions</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(data.embDetailsSandwich.plateDimensions)}</td>
+                    <td className="py-2 px-3 text-sm text-gray-500">
+                      {/* Display the dimensions in both inches and cm if available */}
+                      {data.embDetailsSandwich.plateDimensions?.lengthInInches 
+                        ? `${data.embDetailsSandwich.plateDimensions.lengthInInches}" × ${data.embDetailsSandwich.plateDimensions.breadthInInches}"` 
+                        : formatDimensions(data.embDetailsSandwich.plateDimensions)}
+                      {data.embDetailsSandwich.plateDimensions?.length && data.embDetailsSandwich.plateDimensions?.lengthInInches
+                        ? ` (${data.embDetailsSandwich.plateDimensions.length} × ${data.embDetailsSandwich.plateDimensions.breadth} cm)`
+                        : ""}
+                    </td>
                   </tr>
                   <tr className="hover:bg-gray-50">
                     <td className="py-2 px-3 text-sm font-medium text-gray-700">Male Plate Type</td>
@@ -681,7 +729,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
         )}
       </div>
     );
-  };
+  };  
 
   // Choose the correct rendering method based on section type
   const renderSectionContent = () => {

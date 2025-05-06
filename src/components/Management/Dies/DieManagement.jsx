@@ -14,6 +14,7 @@ const DieManagement = () => {
   const [selectedDie, setSelectedDie] = useState(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
     itemId: null
@@ -28,6 +29,14 @@ const DieManagement = () => {
   // Check if user is admin
   const isAdmin = userRole === "admin";
 
+  // Die statistics
+  const [dieStats, setDieStats] = useState({
+    totalDies: 0,
+    standardDies: 0,
+    customDies: 0,
+    availableDies: 0
+  });
+
   useEffect(() => {
     const diesCollection = collection(db, "dies");
     const unsubscribe = onSnapshot(diesCollection, (snapshot) => {
@@ -40,7 +49,19 @@ const DieManagement = () => {
           ...restData
         };
       });
+      
       setDies(diesData);
+      
+      // Calculate die statistics
+      const stats = {
+        totalDies: diesData.length,
+        standardDies: diesData.filter(die => die.dieType === "Standard").length,
+        customDies: diesData.filter(die => die.dieType === "Custom").length,
+        availableDies: diesData.filter(die => die.isAvailable !== false).length
+      };
+      
+      setDieStats(stats);
+      setIsLoading(false);
     });
 
     return () => unsubscribe();
@@ -193,15 +214,9 @@ const DieManagement = () => {
     if (!isAdmin) return;
     
     setDeleteConfirmation({
-      isOpen: false,
+      isOpen: true,
       itemId: id
     });
-    setTimeout(() => {
-      setDeleteConfirmation({
-        isOpen: true,
-        itemId: id
-      });
-    }, 0);
   };
 
   const closeDeleteModal = () => {
@@ -246,68 +261,106 @@ const DieManagement = () => {
     }
   };
 
-  // Custom modal component with reduced padding
-  const CompactModal = ({ isOpen, onClose, title, children }) => {
-    if (!isOpen) return null;
-    
+  // Redirect non-authorized users
+  if (!isAdmin && userRole !== "staff") {
     return (
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        {/* Backdrop */}
-        <div className="fixed inset-0 bg-black bg-opacity-50 transition-opacity backdrop-blur-sm" />
-
-        {/* Modal container */}
-        <div className="flex min-h-full items-center justify-center text-center p-2">
-          {/* Modal content */}
-          <div className="w-full max-w-3xl transform overflow-visible bg-white text-left shadow-xl transition-all rounded-lg">
-            {/* Header - using the dark navy blue color */}
-            <div className="bg-gray-900 px-4 py-2 flex justify-between items-center rounded-t-lg">
-              <h3 className="text-md font-medium text-white">{title}</h3>
-              <button
-                type="button"
-                className="text-white hover:text-gray-300 focus:outline-none transition-colors"
-                onClick={onClose}
-              >
-                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-
-            {/* Body */}
-            <div className="p-4">
-              {children}
-            </div>
-          </div>
+      <div className="p-4 max-w-screen-xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h2 className="mt-4 text-xl font-bold text-red-800">Unauthorized Access</h2>
+          <p className="mt-2 text-red-600">You don't have permission to access die management.</p>
         </div>
       </div>
     );
-  };
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-4 max-w-screen-xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">Die Management</h1>
+          <div className="animate-pulse w-64 h-8 bg-gray-200 rounded-md"></div>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+          </div>
+          <div className="h-64 bg-gray-200 rounded-lg"></div>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <div className="w-full">
-      {/* Page header */}
-      <div className="rounded bg-gray-900 py-4 mb-4">
-        <h1 className="text-2xl text-white font-bold pl-4">Die Management</h1>
+    <div className="p-4 max-w-screen-xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Die Management</h1>
+        <p className="text-gray-600 mt-1">
+          Manage dies, custom shapes, and templates for your printing processes
+        </p>
       </div>
+      
+      {/* Die Statistics */}
+      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Total Dies</h2>
+          <p className="text-2xl font-bold text-gray-800">{dieStats.totalDies}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {dieStats.availableDies} available for use
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Standard Dies</h2>
+          <p className="text-2xl font-bold text-blue-600">{dieStats.standardDies}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {((dieStats.standardDies / dieStats.totalDies) * 100 || 0).toFixed(1)}% of total dies
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Custom Dies</h2>
+          <p className="text-2xl font-bold text-red-600">{dieStats.customDies}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {((dieStats.customDies / dieStats.totalDies) * 100 || 0).toFixed(1)}% of total dies
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Availability Rate</h2>
+          <p className="text-2xl font-bold text-green-600">
+            {((dieStats.availableDies / dieStats.totalDies) * 100 || 0).toFixed(1)}%
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            Dies ready for production
+          </p>
+        </div>
+      </div> */}
 
-      {/* Main content */}
-      <div className="px-4">
-        {/* Action buttons - only visible to admins */}
-        {isAdmin && (
-          <div className="flex justify-end my-4">
-            <button 
-              onClick={handleAddClick}
-              className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-              </svg>
-              Add New Die
-            </button>
-          </div>
-        )}
+      {/* Action buttons - only visible to admins */}
+      {isAdmin && (
+        <div className="flex justify-end mb-4">
+          <button 
+            onClick={handleAddClick}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add New Die
+          </button>
+        </div>
+      )}
 
-        {/* Table component - visible to all users */}
+      {/* Table component - visible to all users */}
+      <div className="overflow-hidden">
         <DisplayDieTable
           dies={dies}
           onEditDie={isAdmin ? handleEditClick : null}
@@ -318,11 +371,12 @@ const DieManagement = () => {
       {/* Modals - only rendered for admins */}
       {isAdmin && (
         <>
-          {/* Using the custom compact modal for the form */}
-          <CompactModal
+          {/* Modal for adding/editing die */}
+          <Modal
             isOpen={isFormModalOpen}
             onClose={handleCloseModal}
             title={selectedDie ? "Edit Die" : "Add New Die"}
+            size="lg"
           >
             <AddDieForm
               onAddDie={addDie}
@@ -333,7 +387,7 @@ const DieManagement = () => {
               isSubmitting={isSubmitting}
               onCancel={handleCloseModal}
             />
-          </CompactModal>
+          </Modal>
 
           <DeleteConfirmationModal
             isOpen={deleteConfirmation.isOpen}

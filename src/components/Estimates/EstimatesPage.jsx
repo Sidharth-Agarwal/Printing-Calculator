@@ -708,70 +708,90 @@ const EstimatesPage = () => {
   }, [clientGroups]);
 
   return (
-    <div className="p-3 max-w-screen-xl mx-auto">
-      {/* Header Section - More compact */}
-      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-2">
-        <h1 className="text-xl font-bold">
+    <div className="p-4 max-w-screen-xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
           {isB2BClient ? "Your Estimates" : "Estimates Management"}
         </h1>
-        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
-          <input
-            type="text"
-            placeholder="Search estimates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="px-2 py-1 border text-sm rounded-md flex-grow sm:w-48 focus:outline-none focus:ring-1 focus:ring-blue-500"
-          />
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="px-2 py-1 text-sm border rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500"
-          >
-            <option value="">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Moved">Moved to Orders</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-          
-          {/* Only show the inactive clients toggle for admin/staff */}
-          {(userRole === "admin" || userRole === "staff") && (
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="showInactiveClients"
-                checked={showInactiveClients}
-                onChange={(e) => setShowInactiveClients(e.target.checked)}
-                className="h-4 w-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
-              />
-              <label htmlFor="showInactiveClients" className="ml-1 text-sm text-gray-700">
-                Show Inactive Clients
-              </label>
-            </div>
-          )}
-        </div>
+        <p className="text-gray-600 mt-1">
+          {isB2BClient 
+            ? "View and manage your estimate requests" 
+            : "Track, update, and convert estimates into orders"}
+        </p>
       </div>
 
-      {/* Client Status Summary - Only for admin/staff */}
-      {(userRole === "admin" || userRole === "staff") && (
-        <div className="flex gap-2 mb-4">
-          <div className="bg-green-50 border border-green-100 rounded-md px-3 py-2 text-sm text-green-800">
-            <span className="font-medium">{clientCounts.activeCount}</span> Active Client{clientCounts.activeCount !== 1 ? 's' : ''}
-          </div>
-          {showInactiveClients && (
-            <div className="bg-red-50 border border-red-100 rounded-md px-3 py-2 text-sm text-red-800">
-              <span className="font-medium">{clientCounts.inactiveCount}</span> Inactive Client{clientCounts.inactiveCount !== 1 ? 's' : ''}
+      {/* Filters Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="relative w-full md:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
             </div>
-          )}
+            <input
+              type="text"
+              placeholder="Search estimates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+          
+          <div className="flex flex-wrap gap-3 w-full md:w-auto">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+            >
+              <option value="">All Status</option>
+              <option value="Pending">Pending</option>
+              <option value="Moved">Moved to Orders</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+            
+            {/* Only show the inactive clients toggle for admin/staff */}
+            {(userRole === "admin" || userRole === "staff") && (
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="showInactiveClients"
+                  checked={showInactiveClients}
+                  onChange={(e) => setShowInactiveClients(e.target.checked)}
+                  className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                />
+                <label htmlFor="showInactiveClients" className="ml-2 text-sm text-gray-700">
+                  Show Inactive Clients
+                </label>
+              </div>
+            )}
+          </div>
         </div>
-      )}
+        
+        {/* Client Status Summary - Only for admin/staff */}
+        {(userRole === "admin" || userRole === "staff") && (
+          <div className="flex gap-2 mt-4">
+            <div className="bg-green-50 border border-green-100 rounded-md px-3 py-1.5 text-xs font-medium text-green-800">
+              {clientCounts.activeCount} Active Client{clientCounts.activeCount !== 1 ? 's' : ''}
+            </div>
+            {showInactiveClients && clientCounts.inactiveCount > 0 && (
+              <div className="bg-red-50 border border-red-100 rounded-md px-3 py-1.5 text-xs font-medium text-red-800">
+                {clientCounts.inactiveCount} Inactive Client{clientCounts.inactiveCount !== 1 ? 's' : ''}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Loyalty Tier Upgrade Popup with Timer */}
       {loyaltyNotification && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border-l-4 border-green-500">
+          <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border-l-4 border-red-500">
             <div className="flex items-start mb-4">
               <div className="flex-shrink-0 mr-3">
-                <svg className="h-8 w-8 text-green-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <svg className="h-8 w-8 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                 </svg>
               </div>
@@ -782,7 +802,7 @@ const EstimatesPage = () => {
                   <span className="font-medium"> {loyaltyNotification.oldTier}</span> to
                   <span className="font-medium"> {loyaltyNotification.newTier}</span>.
                 </p>
-                <p className="text-green-600 font-medium">
+                <p className="text-red-600 font-medium">
                   New discount: {loyaltyNotification.newDiscount}%
                 </p>
               </div>
@@ -797,7 +817,7 @@ const EstimatesPage = () => {
               </div>
               <button
                 onClick={handleDismissLoyaltyNotification}
-                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
+                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
               >
                 Dismiss
               </button>
@@ -806,115 +826,137 @@ const EstimatesPage = () => {
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Main Content Area */}
       {isLoading ? (
-        <div className="flex justify-center items-center h-48">
-          <div className="animate-spin h-6 w-6 border-3 border-red-500 rounded-full border-t-transparent"></div>
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="animate-spin h-10 w-10 border-4 border-red-500 rounded-full border-t-transparent mb-4"></div>
+          <p className="text-gray-500">Loading estimates...</p>
         </div>
       ) : Object.keys(clientGroups).length === 0 ? (
-        <div className="bg-white rounded-lg shadow p-4 text-center">
-          <svg className="mx-auto h-10 w-10 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <h2 className="text-base font-medium text-gray-700 mt-2 mb-1">No Estimates Found</h2>
-          <p className="text-sm text-gray-500">
+          <h2 className="text-lg font-medium text-gray-700 mt-4 mb-2">No Estimates Found</h2>
+          <p className="text-sm text-gray-500 max-w-md mx-auto">
             {isB2BClient 
-              ? "You don't have any estimates yet." 
+              ? "You don't have any estimates yet. Contact us to request a new estimate." 
               : showInactiveClients
                 ? "No estimates match your current search criteria."
                 : "No estimates for active clients match your search criteria."}
           </p>
-          {(searchQuery || filterStatus || (!isB2BClient && !showInactiveClients)) ? (
-            <div className="flex flex-wrap justify-center gap-2 mt-3">
+          {(searchQuery || filterStatus || (!isB2BClient && !showInactiveClients)) && (
+            <div className="flex flex-wrap justify-center gap-3 mt-4">
               {(searchQuery || filterStatus) && (
                 <button
                   onClick={() => {
                     setSearchQuery("");
                     setFilterStatus("");
                   }}
-                  className="text-blue-500 hover:underline text-sm"
+                  className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md flex items-center"
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
                   Clear Filters
                 </button>
               )}
               {!isB2BClient && !showInactiveClients && (
                 <button
                   onClick={() => setShowInactiveClients(true)}
-                  className="text-blue-500 hover:underline text-sm"
+                  className="px-3 py-1.5 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-md flex items-center"
                 >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                  </svg>
                   Show Inactive Clients
                 </button>
               )}
             </div>
-          ) : null}
+          )}
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-4">
           {/* Client Groups */}
           {Object.values(clientGroups).map((client) => (
-            <div key={client.id} className={`bg-white rounded-lg shadow overflow-hidden ${!client.isActive ? 'border-l-4 border-red-400' : ''}`}>
+            <div key={client.id} className={`bg-white rounded-lg shadow-sm border ${!client.isActive ? 'border-red-300 border-l-4' : 'border-gray-200'} overflow-hidden`}>
               {/* Client Header */}
               <div 
-                className={`p-3 ${expandedClientId === client.id ? 'bg-blue-50' : 'bg-gray-50'} cursor-pointer flex justify-between items-center`}
+                className={`px-4 py-3 ${expandedClientId === client.id ? 'bg-gray-50' : ''} cursor-pointer transition-colors hover:bg-gray-50 flex justify-between items-center`}
                 onClick={() => toggleClient(client.id)}
               >
                 <div className="flex items-center">
-                  <h2 className="text-base font-semibold">{client.name}</h2>
+                  <h2 className="text-base font-medium text-gray-800">{client.name}</h2>
                   {!client.isActive && (
                     <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
                       Inactive
                     </span>
                   )}
-                  <p className="text-xs text-gray-500 ml-2">
-                    {client.totalEstimates} Estimate{client.totalEstimates !== 1 ? 's' : ''} • 
-                    {client.versions.size} Version{client.versions.size !== 1 ? 's' : ''}
-                  </p>
+                  <div className="flex items-center ml-3 text-xs text-gray-500">
+                    <span className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                      </svg>
+                      {client.totalEstimates} Estimate{client.totalEstimates !== 1 ? 's' : ''}
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13 7H7v6h6V7z" />
+                        <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
+                      </svg>
+                      {client.versions.size} Version{client.versions.size !== 1 ? 's' : ''}
+                    </span>
+                  </div>
                 </div>
-                <div>
-                  <svg 
-                    xmlns="http://www.w3.org/2000/svg" 
-                    className={`h-4 w-4 text-gray-500 transform transition-transform ${expandedClientId === client.id ? 'rotate-180' : ''}`} 
-                    fill="none" 
-                    viewBox="0 0 24 24" 
-                    stroke="currentColor"
-                  >
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-                  </svg>
+                <div className="flex items-center">
+                  {expandedClientId === client.id ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                    </svg>
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                    </svg>
+                  )}
                 </div>
               </div>
               
               {/* Expanded Content */}
               {expandedClientId === client.id && (
-                <div className="p-3 border-t border-gray-200">
-                  {/* Version Selection - buttons in a row */}
-                  <div className="flex flex-wrap gap-1 mb-3">
+                <div className="border-t border-gray-200 bg-white">
+                  {/* Version Selection Tabs */}
+                  <div className="flex border-b border-gray-200 overflow-x-auto">
                     {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
                       <button
                         key={versionId}
                         onClick={() => selectVersion(client.id, versionId)}
-                        className={`px-2 py-1 rounded-md text-xs ${
+                        className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
                           selectedVersions[client.id] === versionId
-                            ? 'bg-red-600 text-white'
-                            : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            ? 'border-b-2 border-red-500 text-red-600'
+                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                         }`}
                       >
-                        Version {versionId} ({versionData.count})
+                        Version {versionId} 
+                        <span className="ml-1 text-xs text-gray-500">({versionData.count})</span>
                       </button>
                     ))}
                   </div>
 
                   {/* Version Estimates */}
                   {selectedVersions[client.id] && (
-                    <div>
-                      <div className="flex justify-between items-center mb-2 border-b pb-1">
-                        <h3 className="font-medium text-sm">
+                    <div className="p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h3 className="font-medium text-gray-800">
                           Version {selectedVersions[client.id]} Estimates
                         </h3>
                         <button
                           onClick={() => handlePreviewJobTicket(client.id, selectedVersions[client.id])}
-                          className="px-2 py-1 rounded text-xs bg-blue-50 text-blue-600 hover:bg-blue-100 flex items-center gap-1"
+                          className="px-3 py-1.5 rounded text-sm bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1.5"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" viewBox="0 0 20 20" fill="currentColor">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
                             <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
                           </svg>
@@ -922,7 +964,7 @@ const EstimatesPage = () => {
                         </button>
                       </div>
                       
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-2">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                       {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
                         <EstimateCard
                           key={estimate.id}
@@ -947,7 +989,7 @@ const EstimatesPage = () => {
         </div>
       )}
 
-      {/* Details Modal */}
+      {/* Modals */}
       {isModalOpen && selectedEstimate && (
         <UnifiedDetailsModal
           data={selectedEstimate}
