@@ -41,6 +41,14 @@ const ClientManagement = () => {
     itemName: ""
   });
 
+  // Client statistics
+  const [clientStats, setClientStats] = useState({
+    totalClients: 0,
+    activeClients: 0,
+    b2bClients: 0,
+    directClients: 0
+  });
+
   useEffect(() => {
     const clientsCollection = collection(db, "clients");
     const unsubscribe = onSnapshot(clientsCollection, (snapshot) => {
@@ -53,6 +61,16 @@ const ClientManagement = () => {
         isActive: doc.data().isActive !== undefined ? doc.data().isActive : true
       }));
       setClients(clientsData);
+      
+      // Calculate client statistics
+      const stats = {
+        totalClients: clientsData.length,
+        activeClients: clientsData.filter(client => client.isActive).length,
+        b2bClients: clientsData.filter(client => client.clientType === "B2B").length,
+        directClients: clientsData.filter(client => client.clientType === "DIRECT").length
+      };
+      setClientStats(stats);
+      
       setIsLoading(false);
     });
 
@@ -409,56 +427,96 @@ const ClientManagement = () => {
   // Redirect non-authorized users
   if (!isAdmin && userRole !== "staff") {
     return (
-      <div className="p-6 text-center">
-        <h2 className="text-2xl font-bold mb-4">Unauthorized Access</h2>
-        <p className="text-red-600">You don't have permission to access client management.</p>
+      <div className="p-4 max-w-screen-xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h2 className="mt-4 text-xl font-bold text-red-800">Unauthorized Access</h2>
+          <p className="mt-2 text-red-600">You don't have permission to access client management.</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full">
-      {/* Page header */}
-      <div className="rounded bg-gray-900 py-4">
-        <h1 className="text-2xl text-white font-bold pl-4">Client Management</h1>
+    <div className="p-4 max-w-screen-xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
+        <p className="text-gray-600 mt-1">
+          Add, edit, and manage your clients and their access credentials
+        </p>
       </div>
 
-      {/* Main content */}
-      <div>
-        {/* Action buttons */}
-        <div className="flex justify-end my-4 pr-4">
-          <button 
-            onClick={handleAddClick}
-            className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add New Client
-          </button>
+      {/* Client Statistics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Total Clients</h2>
+          <p className="text-2xl font-bold text-gray-800">{clientStats.totalClients}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {clientStats.activeClients} active clients
+          </p>
         </div>
         
-        {/* Table component */}
-        <div className="px-4">
-          {isLoading ? (
-            <div className="bg-white p-6 rounded shadow flex justify-center">
-              <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
-            </div>
-          ) : (
-            <DisplayClientTable
-              clients={clients}
-              onDelete={(id) => {
-                const client = clients.find(c => c.id === id);
-                confirmDelete(id, client?.name || "this client");
-              }}
-              onEdit={handleEditClick}
-              onManageCredentials={handleManageCredentials}
-              onActivateClient={handleActivateClient}
-              onToggleStatus={toggleClientStatus}
-              isAdmin={isAdmin}
-            />
-          )}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">B2B Clients</h2>
+          <p className="text-2xl font-bold text-red-600">{clientStats.b2bClients}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {((clientStats.b2bClients / clientStats.totalClients) * 100 || 0).toFixed(1)}% of total clients
+          </p>
         </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Direct Clients</h2>
+          <p className="text-2xl font-bold text-blue-600">{clientStats.directClients}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {((clientStats.directClients / clientStats.totalClients) * 100 || 0).toFixed(1)}% of total clients
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Inactive Clients</h2>
+          <p className="text-2xl font-bold text-gray-400">{clientStats.totalClients - clientStats.activeClients}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {((clientStats.totalClients - clientStats.activeClients) / clientStats.totalClients * 100 || 0).toFixed(1)}% of total clients
+          </p>
+        </div>
+      </div>
+
+      {/* Action buttons */}
+      <div className="flex justify-end mb-4">
+        <button 
+          onClick={handleAddClick}
+          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+          Add New Client
+        </button>
+      </div>
+      
+      {/* Table component */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+        {isLoading ? (
+          <div className="p-8 flex justify-center">
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
+          </div>
+        ) : (
+          <DisplayClientTable
+            clients={clients}
+            onDelete={(id) => {
+              const client = clients.find(c => c.id === id);
+              confirmDelete(id, client?.name || "this client");
+            }}
+            onEdit={handleEditClick}
+            onManageCredentials={handleManageCredentials}
+            onActivateClient={handleActivateClient}
+            onToggleStatus={toggleClientStatus}
+            isAdmin={isAdmin}
+          />
+        )}
       </div>
 
       {/* Add/Edit Client Modal */}
