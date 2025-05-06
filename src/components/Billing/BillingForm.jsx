@@ -55,7 +55,7 @@ const initialFormState = {
     dieSize: { length: "", breadth: "" },
     productSize: { length: "", breadth: "" },
     image: "",
-    hsnCode: "", // Added HSN code field
+    hsnCode: "",
   },
   lpDetails: {
     isLPUsed: false,
@@ -107,8 +107,8 @@ const initialFormState = {
   },
   foldAndPaste: {
     isFoldAndPasteUsed: false,
-    dstMaterial: "", // New field
-    dstType: "",     // New field
+    dstMaterial: "",
+    dstType: "",
   },  
   dstPaste: {
     isDstPasteUsed: false,
@@ -1781,7 +1781,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* QC Section */}
             {isServiceVisible("QC") && (
               <FormSection 
-                title="QUALITY CONTROL" 
+                title="QUALITY CHECK" 
                 id="qc"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
