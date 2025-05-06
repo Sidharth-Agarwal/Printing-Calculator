@@ -82,6 +82,11 @@ const OrderAndPaper = ({
     if (name === "jobType" && onJobTypeChange) {
       onJobTypeChange(e);
     } else {
+      // Debug log to track projectName changes
+      if (name === "projectName") {
+        console.log("Updating projectName to:", value);
+      }
+      
       // Normal field update
       dispatch({
         type: "UPDATE_ORDER_AND_PAPER",

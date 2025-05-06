@@ -318,6 +318,9 @@ const EstimatesPage = () => {
         editedEstimate.clientName = editedEstimate.clientInfo?.name || "Unknown Client";
       }
       
+      // Verify projectName exists and is properly set
+      console.log("Project name before saving:", editedEstimate.projectName);
+      
       // Update the estimate in Firestore
       const estimateRef = doc(db, "estimates", editedEstimate.id);
       await updateDoc(estimateRef, editedEstimate);

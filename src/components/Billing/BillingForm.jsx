@@ -202,6 +202,7 @@ const reducer = (state, action) => {
 };
 
 // Map state to Firebase structure with sanitization for undefined values
+// Map state to Firebase structure with sanitization for undefined values
 const mapStateToFirebaseStructure = (state, calculations) => {
   const { 
     client, 
@@ -241,6 +242,9 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     return sanitized;
   };
 
+  // Log project name to help debug
+  console.log("mapStateToFirebaseStructure: processing projectName =", orderAndPaper?.projectName);
+
   // Create the sanitized Firebase data structure
   const firestoreData = {
     // Client reference information
@@ -250,8 +254,8 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     // Version information
     versionId: versionId || "1", // Default to version 1 if not specified
     
-    // Project specific information
-    projectName: orderAndPaper.projectName,
+    // Project specific information - explicitly extract projectName
+    projectName: orderAndPaper.projectName || "",
     date: orderAndPaper.date?.toISOString() || null,
     deliveryDate: orderAndPaper.deliveryDate?.toISOString() || null,
     
@@ -300,6 +304,9 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     updatedAt: new Date().toISOString(),
   };
 
+  // Final verification log
+  console.log("mapStateToFirebaseStructure: final projectName =", firestoreData.projectName);
+  
   return firestoreData;
 };
 

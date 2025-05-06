@@ -183,6 +183,12 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       };
     }
     
+    // Log available project name data for debugging
+    console.log("Converting estimate to form state. Project name from:", {
+      estimateProjectName: estimate.projectName,
+      estimateObject: estimate
+    });
+    
     // Ensure arrays are properly set up
     const colorDetails = Array.isArray(estimate.lpDetails?.colorDetails) ? 
                           estimate.lpDetails.colorDetails : [];
@@ -198,7 +204,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       },
       versionId: estimate.versionId || "1",
       orderAndPaper: {
-        projectName: estimate.projectName || "",
+        projectName: estimate.projectName || "",  // Make sure we're getting the project name
         date: estimate.date ? new Date(estimate.date) : null,
         deliveryDate: estimate.deliveryDate ? new Date(estimate.deliveryDate) : null,
         jobType: estimate.jobDetails?.jobType || "Card",
@@ -341,38 +347,110 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     
     setIsSaving(true);
     try {
+      // Extract the project name with fallbacks to ensure it's never undefined
+      // Check multiple possible locations where the project name might be stored
+      const updatedProjectName = 
+        // Try all possible locations
+        (formData.orderAndPaper && formData.orderAndPaper.projectName) || 
+        formData.projectName ||  // Direct property on formData
+        estimate.projectName ||  // Original estimate value
+        "Untitled Project";      // Last resort fallback
+      
+      // Log for debugging
+      console.log("CRITICAL VALUES - PROJECT NAME EXTRACTION:", {
+        fromOrderAndPaper: formData.orderAndPaper?.projectName,
+        directProjectName: formData.projectName,
+        originalProjectName: estimate.projectName,
+        finalProjectName: updatedProjectName
+      });
+      
       // Determine client name from available sources, ensuring it's never undefined
       const clientName = formData.client?.clientInfo?.name || 
                          estimate.clientInfo?.name || 
                          estimate.clientName || 
                          "Unknown Client";
       
-      // Preserve important metadata when creating updated estimate
+      // Create updated estimate, with special handling to preserve the project name
       const updatedEstimate = {
-        ...formData,
+        // Start with a completely fresh object
         id: estimate.id,
         clientId: formData.client?.clientId || estimate.clientId,
         clientInfo: formData.client?.clientInfo || estimate.clientInfo,
-        clientName: clientName, // Ensure clientName is always defined
-        projectName: formData.orderAndPaper?.projectName || estimate.projectName,
-        // Preserve any status flags from the original estimate
+        clientName: clientName,
+        
+        // EXPLICITLY set project name with the value we extracted above
+        projectName: updatedProjectName,
+        
+        // Extract dates directly from form data or from nested orderAndPaper
+        date: (formData.orderAndPaper?.date || formData.date) ? 
+          ((formData.orderAndPaper?.date || formData.date) instanceof Date ? 
+            (formData.orderAndPaper?.date || formData.date).toISOString() : 
+            (formData.orderAndPaper?.date || formData.date)) : 
+          estimate.date,
+        
+        deliveryDate: (formData.orderAndPaper?.deliveryDate || formData.deliveryDate) ? 
+          ((formData.orderAndPaper?.deliveryDate || formData.deliveryDate) instanceof Date ? 
+            (formData.orderAndPaper?.deliveryDate || formData.deliveryDate).toISOString() : 
+            (formData.orderAndPaper?.deliveryDate || formData.deliveryDate)) : 
+          estimate.deliveryDate,
+        
+        // Format job details from form data - check both direct and nested structures
+        jobDetails: {
+          jobType: (formData.orderAndPaper?.jobType || formData.jobType) || estimate.jobDetails?.jobType || "Card",
+          quantity: (formData.orderAndPaper?.quantity || formData.quantity) || estimate.jobDetails?.quantity || "",
+          paperProvided: (formData.orderAndPaper?.paperProvided || formData.paperProvided) || estimate.jobDetails?.paperProvided || "Yes",
+          paperName: (formData.orderAndPaper?.paperName || formData.paperName) || estimate.jobDetails?.paperName || "",
+          hsnCode: (formData.orderAndPaper?.hsnCode || formData.hsnCode) || estimate.jobDetails?.hsnCode || "",
+        },
+        
+        // Die details - check both direct and nested structures
+        dieDetails: {
+          dieSelection: (formData.orderAndPaper?.dieSelection || formData.dieSelection) || estimate.dieDetails?.dieSelection || "",
+          dieCode: (formData.orderAndPaper?.dieCode || formData.dieCode) || estimate.dieDetails?.dieCode || "",
+          dieSize: (formData.orderAndPaper?.dieSize || formData.dieSize) || estimate.dieDetails?.dieSize || { length: "", breadth: "" },
+          productSize: (formData.orderAndPaper?.productSize || formData.productSize) || estimate.dieDetails?.productSize || { length: "", breadth: "" },
+          image: (formData.orderAndPaper?.image || formData.image) || estimate.dieDetails?.image || "",
+        },
+        
+        // All other processing details from form data
+        lpDetails: formData.lpDetails?.isLPUsed ? formData.lpDetails : estimate.lpDetails,
+        fsDetails: formData.fsDetails?.isFSUsed ? formData.fsDetails : estimate.fsDetails,
+        embDetails: formData.embDetails?.isEMBUsed ? formData.embDetails : estimate.embDetails,
+        digiDetails: formData.digiDetails?.isDigiUsed ? formData.digiDetails : estimate.digiDetails,
+        notebookDetails: formData.notebookDetails?.isNotebookUsed ? formData.notebookDetails : estimate.notebookDetails,
+        screenPrint: formData.screenPrint?.isScreenPrintUsed ? formData.screenPrint : estimate.screenPrint,
+        dieCutting: formData.dieCutting?.isDieCuttingUsed ? formData.dieCutting : estimate.dieCutting,
+        sandwich: formData.sandwich?.isSandwichComponentUsed ? formData.sandwich : estimate.sandwich,
+        magnet: formData.magnet?.isMagnetUsed ? formData.magnet : estimate.magnet,
+        postDC: formData.postDC?.isPostDCUsed ? formData.postDC : estimate.postDC,
+        foldAndPaste: formData.foldAndPaste?.isFoldAndPasteUsed ? formData.foldAndPaste : estimate.foldAndPaste,
+        dstPaste: formData.dstPaste?.isDstPasteUsed ? formData.dstPaste : estimate.dstPaste,
+        qc: formData.qc?.isQCUsed ? formData.qc : estimate.qc,
+        packing: formData.packing?.isPackingUsed ? formData.packing : estimate.packing,
+        misc: formData.misc?.isMiscUsed ? formData.misc : estimate.misc,
+        
+        // Calculations
+        calculations: formData.calculations || estimate.calculations,
+        
+        // Preserve version and flags
+        versionId: formData.versionId || estimate.versionId || "1",
         movedToOrders: estimate.movedToOrders || false,
         isCanceled: estimate.isCanceled || false,
+        
+        // Update timestamps
         updatedAt: new Date().toISOString(),
         createdAt: estimate.createdAt || new Date().toISOString(),
       };
       
-      // Make sure the client active status is included
-      if (formData.client?.clientInfo && typeof formData.client.clientInfo.isActive === 'boolean') {
-        // Preserve active status information to make filtering easier
-        updatedEstimate.clientInfo.isActive = formData.client.clientInfo.isActive;
-      }
+      // Double-check project name is properly set before saving
+      console.log("PROJECT NAME - FINAL VERIFICATION:", updatedEstimate.projectName);
+      console.log("FULL UPDATED ESTIMATE:", updatedEstimate);
       
       // Sanitize data before saving to Firestore to prevent undefined values
       const sanitizedEstimate = sanitizeForFirestore(updatedEstimate);
       
-      // Log the sanitized data to verify clientName is present
-      console.log("Saving estimate with clientName:", sanitizedEstimate.clientName);
+      // Last check on critical fields
+      console.log("FINAL SANITIZED ESTIMATE PROJECT NAME:", sanitizedEstimate.projectName);
       
       await onSave(sanitizedEstimate);
     } catch (error) {
