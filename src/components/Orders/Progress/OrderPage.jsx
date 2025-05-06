@@ -695,7 +695,7 @@ const OrdersPage = () => {
                             </span>
                           )
                         ) : (
-                          <span className="text-xs text-blue-600">Direct</span>
+                          <span className="text-xs text-blue-600"><strong>Direct client</strong></span>
                         )}
                       </td>
                     )}
