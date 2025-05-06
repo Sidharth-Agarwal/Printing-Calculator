@@ -14,6 +14,7 @@ const LoyaltyTierManagement = () => {
   const [selectedTier, setSelectedTier] = useState(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
   const [deleteConfirmation, setDeleteConfirmation] = useState({
     isOpen: false,
     itemId: null
@@ -28,22 +29,64 @@ const LoyaltyTierManagement = () => {
   // Check if user is admin
   const isAdmin = userRole === "admin";
 
+  // Loyalty tier statistics
+  const [tierStats, setTierStats] = useState({
+    totalTiers: 0,
+    totalClients: 0,
+    averageDiscount: 0,
+    maxDiscount: 0
+  });
+
   // Fetch loyalty tiers from Firestore
   useEffect(() => {
-    const loyaltyTiersCollection = collection(db, "loyaltyTiers");
-    const unsubscribe = onSnapshot(loyaltyTiersCollection, (snapshot) => {
-      const tiersData = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          ...data,
-          dbId: doc.id // Store Firestore document ID
-        };
-      });
-      
-      setLoyaltyTiers(tiersData);
-    });
+    const loadData = async () => {
+      try {
+        // Get count of B2B clients
+        const clientsRef = collection(db, "clients");
+        const b2bQuery = query(clientsRef, where("clientType", "==", "B2B"));
+        const clientSnapshot = await getDocs(b2bQuery);
+        const clientCount = clientSnapshot.size;
+        
+        // Fetch loyalty tiers
+        const loyaltyTiersCollection = collection(db, "loyaltyTiers");
+        const unsubscribe = onSnapshot(loyaltyTiersCollection, (snapshot) => {
+          const tiersData = snapshot.docs.map((doc) => {
+            const data = doc.data();
+            return {
+              ...data,
+              dbId: doc.id // Store Firestore document ID
+            };
+          });
+          
+          setLoyaltyTiers(tiersData);
+          
+          // Calculate tier statistics
+          const avgDiscount = tiersData.length > 0
+            ? tiersData.reduce((sum, tier) => sum + (parseFloat(tier.discount) || 0), 0) / tiersData.length
+            : 0;
+            
+          const maxDisc = tiersData.length > 0
+            ? Math.max(...tiersData.map(tier => parseFloat(tier.discount) || 0))
+            : 0;
+          
+          setTierStats({
+            totalTiers: tiersData.length,
+            totalClients: clientCount,
+            averageDiscount: avgDiscount,
+            maxDiscount: maxDisc
+          });
+          
+          setIsLoading(false);
+        });
 
-    return () => unsubscribe();
+        return () => unsubscribe();
+      } catch (error) {
+        console.error("Error loading loyalty tier data:", error);
+        setIsLoading(false);
+      }
+    };
+    
+    loadData();
   }, []);
 
   // Check if tier ID is unique
@@ -304,36 +347,99 @@ const LoyaltyTierManagement = () => {
   // Unauthorized access
   if (!isAdmin) {
     return (
-      <div className="p-6 text-center">
-        <h2 className="text-2xl font-bold mb-4">Unauthorized Access</h2>
-        <p className="text-red-600">You don't have permission to manage loyalty tiers.</p>
+      <div className="p-4 max-w-screen-xl mx-auto">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+          <h2 className="mt-4 text-xl font-bold text-red-800">Unauthorized Access</h2>
+          <p className="mt-2 text-red-600">You don't have permission to manage loyalty tiers.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="p-4 max-w-screen-xl mx-auto">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-2xl font-bold text-gray-900">B2B Loyalty Program Management</h1>
+          <div className="animate-pulse w-64 h-8 bg-gray-200 rounded-md"></div>
+        </div>
+        <div className="animate-pulse space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+          </div>
+          <div className="h-64 bg-gray-200 rounded-lg"></div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="w-full">
-      {/* Page header */}
-      <div className="bg-gray-900 rounded py-4 mb-4">
-        <h1 className="text-2xl text-white font-bold pl-4">B2B Loyalty Program Management</h1>
+    <div className="p-4 max-w-screen-xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">B2B Loyalty Program Management</h1>
+        <p className="text-gray-600 mt-1">
+          Manage loyalty tiers, discounts, and thresholds for B2B clients
+        </p>
       </div>
-
-      {/* Main content */}
-      <div className="px-4">
-        {/* Action buttons */}
-        <div className="flex justify-end my-4">
-          <button 
-            onClick={handleAddClick}
-            className="px-4 py-2 bg-red-600 text-white rounded-md shadow hover:bg-red-700 transition-colors flex items-center"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-            </svg>
-            Add New Loyalty Tier
-          </button>
-        </div>
       
-        {/* Loyalty tier table */}
+      {/* Loyalty Tier Statistics */}
+      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Total Tiers</h2>
+          <p className="text-2xl font-bold text-gray-800">{tierStats.totalTiers}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Active loyalty program tiers
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">B2B Clients</h2>
+          <p className="text-2xl font-bold text-blue-600">{tierStats.totalClients}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Total clients eligible for loyalty program
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Average Discount</h2>
+          <p className="text-2xl font-bold text-red-600">{tierStats.averageDiscount.toFixed(1)}%</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Across all loyalty tiers
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Maximum Discount</h2>
+          <p className="text-2xl font-bold text-green-600">{tierStats.maxDiscount.toFixed(1)}%</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Highest loyalty tier discount
+          </p>
+        </div>
+      </div> */}
+
+      {/* Action buttons */}
+      <div className="flex justify-end mb-4">
+        <button 
+          onClick={handleAddClick}
+          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+          </svg>
+          Add New Loyalty Tier
+        </button>
+      </div>
+    
+      {/* Loyalty tier table */}
+      <div className="overflow-hidden">
         <DisplayLoyaltyTierTable
           tiers={loyaltyTiers}
           onDelete={confirmDelete}
