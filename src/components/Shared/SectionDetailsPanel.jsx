@@ -1,11 +1,38 @@
 import React from 'react';
 
 const SectionDetailsPanel = ({ data, sectionType }) => {
+  // Helper function to convert object with numeric keys to array
+  const objectToArray = (obj) => {
+    if (!obj) return [];
+    if (Array.isArray(obj)) return obj;
+    
+    // If it's an object with numeric keys, convert to array
+    if (typeof obj === 'object') {
+      // Check if it has numeric keys (0, 1, 2, etc.)
+      const keys = Object.keys(obj);
+      const isNumericKeys = keys.every(key => !isNaN(parseInt(key)));
+      
+      if (isNumericKeys) {
+        return Object.values(obj);
+      }
+    }
+    
+    return [];
+  };
+  
   // Helper function for formatting dimensions
   const formatDimensions = (dimensions) => {
     if (!dimensions) return "Not specified";
     if (typeof dimensions === "string") return dimensions;
     
+    // Handle fields with InInches suffix
+    if (dimensions.lengthInInches || dimensions.breadthInInches) {
+      const length = dimensions.lengthInInches || "";
+      const breadth = dimensions.breadthInInches || "";
+      return `${length}" × ${breadth}"`;
+    }
+    
+    // Standard format
     const length = dimensions.length || "";
     const breadth = dimensions.breadth || "";
     
@@ -17,7 +44,8 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderLPDetailsTable = () => {
     if (!data || !data.isLPUsed) return null;
     
-    const colorDetails = data.colorDetails || [];
+    // Convert colorDetails to array if it's an object
+    const colorDetails = objectToArray(data.colorDetails);
     
     return (
       <div className="space-y-4">
@@ -64,7 +92,8 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderFSDetailsTable = () => {
     if (!data || !data.isFSUsed) return null;
     
-    const foilDetails = data.foilDetails || [];
+    // Convert foilDetails to array if it's an object
+    const foilDetails = objectToArray(data.foilDetails);
     
     return (
       <div className="space-y-4">
@@ -529,12 +558,12 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
         {/* Sandwich LP Details */}
         {data.lpDetailsSandwich && data.lpDetailsSandwich.isLPUsed && (
           <div className="mb-4">
-            <div className="bg-blue-50 p-2 rounded-md mb-2">
+            <div className="bg-blue-50 p-2 rounded-md mb-2 border-l-4 border-blue-400 pl-3">
               <h4 className="font-medium">Sandwich LP Details</h4>
               <p className="text-sm text-gray-600">Number of Colors: {data.lpDetailsSandwich.noOfColors || 0}</p>
             </div>
             
-            {data.lpDetailsSandwich.colorDetails && data.lpDetailsSandwich.colorDetails.length > 0 ? (
+            {objectToArray(data.lpDetailsSandwich.colorDetails).length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full bg-white border border-gray-200 rounded-md">
                   <thead className="bg-gray-50">
@@ -548,7 +577,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {data.lpDetailsSandwich.colorDetails.map((color, index) => (
+                    {objectToArray(data.lpDetailsSandwich.colorDetails).map((color, index) => (
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="py-2 px-3 text-sm font-medium text-gray-700">{index + 1}</td>
                         <td className="py-2 px-3 text-sm text-gray-500">{color.pantoneType || "Not specified"}</td>
@@ -570,13 +599,13 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
         {/* Sandwich FS Details */}
         {data.fsDetailsSandwich && data.fsDetailsSandwich.isFSUsed && (
           <div className="mb-4">
-            <div className="bg-yellow-50 p-2 rounded-md mb-2">
+            <div className="bg-yellow-50 p-2 rounded-md mb-2 border-l-4 border-yellow-400 pl-3">
               <h4 className="font-medium">Sandwich FS Details</h4>
               <p className="text-sm text-gray-600">FS Type: {data.fsDetailsSandwich.fsType || "Not specified"}</p>
-              <p className="text-sm text-gray-600">Number of Foils: {data.fsDetailsSandwich.foilDetails?.length || 0}</p>
+              <p className="text-sm text-gray-600">Number of Foils: {objectToArray(data.fsDetailsSandwich.foilDetails).length}</p>
             </div>
             
-            {data.fsDetailsSandwich.foilDetails && data.fsDetailsSandwich.foilDetails.length > 0 ? (
+            {objectToArray(data.fsDetailsSandwich.foilDetails).length > 0 ? (
               <div className="overflow-x-auto">
                 <table className="min-w-full bg-white border border-gray-200 rounded-md">
                   <thead className="bg-gray-50">
@@ -590,7 +619,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
-                    {data.fsDetailsSandwich.foilDetails.map((foil, index) => (
+                    {objectToArray(data.fsDetailsSandwich.foilDetails).map((foil, index) => (
                       <tr key={index} className="hover:bg-gray-50">
                         <td className="py-2 px-3 text-sm font-medium text-gray-700">{index + 1}</td>
                         <td className="py-2 px-3 text-sm text-gray-500">{foil.foilType || "Not specified"}</td>
@@ -612,7 +641,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
         {/* Sandwich EMB Details */}
         {data.embDetailsSandwich && data.embDetailsSandwich.isEMBUsed && (
           <div className="mb-4">
-            <div className="bg-purple-50 p-2 rounded-md mb-2">
+            <div className="bg-purple-50 p-2 rounded-md mb-2 border-l-4 border-purple-400 pl-3">
               <h4 className="font-medium">Sandwich EMB Details</h4>
             </div>
             
