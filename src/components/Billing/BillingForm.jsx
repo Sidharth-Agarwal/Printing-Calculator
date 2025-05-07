@@ -7,10 +7,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
 
 // Import components
-import ClientSelection from "./Sections/Fixed/ClientSelection";
-import ClientReadOnly from './Sections/Fixed/ClientReadOnly';
-import VersionSelection from "./Sections/Fixed/VersionSelection";
-import OrderAndPaper from "./Sections/Fixed/OrderAndPaper";
+import FormSection from "./FormSection";
 import LPDetails from "./Sections/Production/LPDetails";
 import FSDetails from "./Sections/Production/FSDetails";
 import EMBDetails from "./Sections/Production/EMBDetails";
@@ -28,6 +25,7 @@ import Sandwich from "./Sections/Post Production/Sandwich";
 import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
 import SuccessNotification from "../Shared/SuccessNotification";
+import FixedSection from "./Sections/Fixed/FixedSection";
 
 // Import service and job type configurations
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
@@ -317,63 +315,6 @@ const mapStateToFirebaseStructure = (state, calculations) => {
   console.log("mapStateToFirebaseStructure: final projectName =", firestoreData.projectName);
   
   return firestoreData;
-};
-
-// FormSection component with toggle in header
-const FormSection = ({ title, children, id, activeSection, setActiveSection, isUsed = false, onToggleUsage, isDisabled = false, bgColor = "bg-gray-50" }) => {
-  const isActive = activeSection === id;
-  
-  const toggleSection = () => {
-    if (!isDisabled) {
-      setActiveSection(isActive ? null : id);
-    }
-  };
-  
-  // Special handling for the ReviewAndSubmit section (which has no toggle)
-  const isReviewSection = id === "reviewAndSubmit";
-  
-  return (
-    <div className={`mb-6 border rounded-lg overflow-hidden shadow-sm ${isDisabled ? 'opacity-60' : ''}`}>
-      <div 
-        className={`p-3 flex justify-between items-center ${isActive ? (bgColor || 'bg-blue-50') : (bgColor || 'bg-gray-50')} cursor-pointer`}
-        onClick={toggleSection}
-      >
-        <div className="flex items-center space-x-4">
-          {/* Toggle switch in section header - not shown for ReviewAndSubmit */}
-          {!isReviewSection && (
-            <div 
-              className={`flex items-center space-x-2 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent section expansion when clicking toggle
-                if (!isDisabled) {
-                  onToggleUsage();
-                }
-              }}
-            >
-              <div className={`w-5 h-5 flex items-center justify-center border rounded-full ${isDisabled ? 'bg-gray-200 border-gray-300' : 'border-gray-300 bg-gray-200'}`}>
-                {isUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
-              </div>
-            </div>
-          )}
-          
-          {/* Section title */}
-          <h2 
-            className={`text-lg font-semibold ${isDisabled ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer'}`}
-          >
-            {title}
-          </h2>
-        </div>
-        
-        {/* Expand/collapse button */}
-        <span className="text-gray-500">
-          {isActive ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </span>
-      </div>
-      <div className={`transition-all duration-300 ${isActive ? 'block p-4' : 'hidden'}`}>
-        {children}
-      </div>
-    </div>
-  );
 };
 
 const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess = null, onClose = null }) => {
@@ -1451,9 +1392,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     <div className="bg-white rounded-lg">
       <div className="max-w-screen-xl mx-auto p-4">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-gray-700">
-            {isEditMode ? "EDIT ESTIMATE" : "CREATE NEW ESTIMATE"}
-          </h1>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Billing Form
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Create, edit and generate new bills and estimates
+            </p>
+          </div>
           
           <div className="flex space-x-3">
             {/* Reset Form Button */}
@@ -1503,80 +1449,30 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           {/* Client Selection Section - Modified for B2B users */}
-          <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">CLIENT SELECTION</h2>
-            
-            {/* For edit mode, show client info as read-only */}
-            {isEditMode ? (
-              <ClientReadOnly client={state.client.clientInfo} />
-            ) : isB2BClient && linkedClientData ? (
-              /* For B2B clients, show readonly client info */
-              <div className="p-4 bg-blue-50 rounded border border-blue-200">
-                <div className="flex items-center mb-2">
-                  <span className="font-bold">Client:</span>
-                  <span className="ml-2 text-lg">{linkedClientData.name || linkedClientData.clientInfo?.name}</span>
-                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    B2B Client
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  <p>Client Code: {linkedClientData.clientCode || linkedClientData.clientInfo?.clientCode}</p>
-                  {linkedClientData.contactPerson && (
-                    <p>Contact: {linkedClientData.contactPerson}</p>
-                  )}
-                  {linkedClientData.email && (
-                    <p>Email: {linkedClientData.email}</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              /* For admin users creating new estimates, show normal client selection */
-              <ClientSelection 
-                onClientSelect={handleClientSelect}
-                selectedClient={selectedClient}
-                setSelectedClient={setSelectedClient}
-                generateClientCode={generateClientCode}
-                isEditMode={isEditMode}
-              />
-            )}
-            {validationErrors.clientId && (
-              <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.clientId}</p>
-            )}
-          </div>
-
-          {/* Version Selection - Add after client selection */}
-          {state.client.clientId && (
-            <VersionSelection 
-              clientId={state.client.clientId}
-              selectedVersion={selectedVersion}
-              onVersionSelect={handleVersionSelect}
-            />
-          )}
-          {validationErrors.versionId && (
-            <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.versionId}</p>
-          )}
-
-          {/* Order & Paper Section - Now Project Details */}
-          <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">PROJECT & PAPER DETAILS</h2>
-            <OrderAndPaper 
-              state={state} 
-              dispatch={dispatch} 
-              onNext={() => {}} 
-              validationErrors={validationErrors}
-              singlePageMode={true}
-              onJobTypeChange={handleJobTypeChange}
-            />
-          </div>
+          <FixedSection
+            state={state}
+            dispatch={dispatch}
+            isEditMode={isEditMode}
+            selectedClient={selectedClient}
+            setSelectedClient={setSelectedClient}
+            selectedVersion={selectedVersion}
+            handleClientSelect={handleClientSelect}
+            handleVersionSelect={handleVersionSelect}
+            generateClientCode={generateClientCode}
+            isB2BClient={isB2BClient}
+            linkedClientData={linkedClientData}
+            validationErrors={validationErrors}
+            handleJobTypeChange={handleJobTypeChange}
+          />
 
           {/* Production Services Section */}
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">PRODUCTION SERVICES</h2>
+          <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
+            <h2 className="mb-4 border-b border-gray-200 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
             
             {/* LP Section */}
             {isServiceVisible("LP") && (
               <FormSection 
-                title="LETTER PRESS (LP)" 
+                title="Letter Press (LP)" 
                 id="lp"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1593,10 +1489,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
 
-            {/* FS Section */}
+            {/* Other production service sections follow the same pattern */}
             {isServiceVisible("FS") && (
               <FormSection 
-                title="FOIL STAMPING (FS)" 
+                title="Foil Stamping (FS)" 
                 id="fs"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1612,11 +1508,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 />
               </FormSection>
             )}
-
-            {/* EMB Section */}
+            
             {isServiceVisible("EMB") && (
               <FormSection 
-                title="EMBOSSING (EMB)" 
+                title="Embossing (EMB)" 
                 id="emb"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1624,7 +1519,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 onToggleUsage={toggleEMBUsage}
               >
                 <EMBDetails 
-                  state={state}
+                  state={state} 
                   dispatch={dispatch} 
                   onNext={() => {}} 
                   onPrevious={() => {}} 
@@ -1632,11 +1527,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 />
               </FormSection>
             )}
-
-            {/* DIGI Section */}
+            
             {isServiceVisible("DIGI") && (
               <FormSection 
-                title="DIGITAL PRINTING" 
+                title="Digital Printing" 
                 id="digi"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1653,10 +1547,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
             
-            {/* NOTEBOOK Section - Only visible for Notebook job type */}
             {isServiceVisible("NOTEBOOK") && (
               <FormSection 
-                title="NOTEBOOK DETAILS" 
+                title="Notebook Details" 
                 id="notebook"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1673,10 +1566,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
             
-            {/* SCREEN PRINT Section */}
             {isServiceVisible("SCREEN") && (
               <FormSection 
-                title="SCREEN PRINTING" 
+                title="Screen Printing" 
                 id="screenPrint"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1695,13 +1587,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           </div>
 
           {/* Post-Production Services Section */}
-          <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">POST-PRODUCTION SERVICES</h2>
+          <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
+            <h2 className="mb-4 border-b border-gray-200 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
             
             {/* Die Cutting Section */}
             {isServiceVisible("DC") && (
               <FormSection 
-                title="DIE CUTTING" 
+                title="Die Cutting" 
                 id="dieCutting"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1721,7 +1613,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Post DC Section */}
             {isServiceVisible("POST DC") && (
               <FormSection 
-                title="POST DIE CUTTING" 
+                title="Post Die Cutting" 
                 id="postDC"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1741,7 +1633,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Fold & Paste Section */}
             {isServiceVisible("FOLD & PASTE") && (
               <FormSection 
-                title="FOLD & PASTE" 
+                title="Fold & Paste" 
                 id="foldAndPaste"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1801,7 +1693,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* QC Section */}
             {isServiceVisible("QC") && (
               <FormSection 
-                title="QUALITY CHECK" 
+                title="Quality Check" 
                 id="qc"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1821,7 +1713,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Packing Section */}
             {isServiceVisible("PACKING") && (
               <FormSection 
-                title="PACKING" 
+                title="Packing" 
                 id="packing"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1841,7 +1733,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Misc Section */}
             {isServiceVisible("MISC") && (
               <FormSection 
-                title="MISCELLANEOUS" 
+                title="Miscellaneous" 
                 id="misc"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1861,7 +1753,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Sandwich Section */}
             {isServiceVisible("DUPLEX") && (
               <FormSection 
-                title="DUPLEX/SANDWICH" 
+                title="Duplex/Sandwich" 
                 id="sandwich"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}

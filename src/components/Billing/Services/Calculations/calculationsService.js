@@ -413,7 +413,7 @@ export const performCompleteCalculations = async (
     const markupCost = parseFloat(markupResult.markupAmount);
     
     // Calculate total cost per card
-    const totalCostPerCard = costWithMisc + markupCost;
+    const totalCostPerCard = (costWithMisc + markupCost).toFixed(2);
     
     // Total cost for all cards
     const totalCost = totalCostPerCard * (state.orderAndPaper?.quantity || 0);
@@ -479,7 +479,7 @@ export const performCompleteCalculations = async (
       
       // Final totals
       subtotalPerCard: costWithMisc.toFixed(2), // Subtotal is now cost with misc (before markup)
-      totalCostPerCard: totalCostPerCard.toFixed(2), // Total after markup (before GST)
+      totalCostPerCard: totalCostPerCard, // Total after markup (before GST)
       totalCost: totalCost.toFixed(2), // Total for all cards after markup (before GST)
       totalWithGST: gstResult.totalWithGST // Total for all cards including GST
     };

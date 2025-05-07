@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { collection, getDocs, addDoc, updateDoc, doc, query, where } from "firebase/firestore";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
 import { db, storage } from "../../../../firebaseConfig";
 
-const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
+const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
   const [dies, setDies] = useState([]);
   const [filteredDies, setFilteredDies] = useState([]);
   const [searchDimensions, setSearchDimensions] = useState({
@@ -18,7 +18,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
   
-  // New Die Form State - Updated to match AddDieForm
+  // New Die Form State
   const [formData, setFormData] = useState({
     jobType: "",
     type: "",
@@ -71,31 +71,6 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     }));
   }, [formData.dieSizeL, formData.dieSizeB, formData.productSizeL, formData.productSizeB]);
 
-  // Fetch dies from Firestore
-  useEffect(() => {
-    const fetchDies = async () => {
-      try {
-        const querySnapshot = await getDocs(collection(db, "dies"));
-        const fetchedDies = querySnapshot.docs.map((doc) => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data
-          };
-        });
-        
-        console.log("All fetched dies:", fetchedDies);
-        setDies(fetchedDies);
-        
-        // Update filtered dies based on the current job type
-        filterDiesByJobType(fetchedDies, selectedJobType);
-      } catch (error) {
-        console.error("Error fetching dies:", error);
-      }
-    };
-    fetchDies();
-  }, [selectedJobType]);
-
   // When a die is selected (has dieCode), hide selection UI
   useEffect(() => {
     if (selectedDie.dieCode) {
@@ -125,6 +100,30 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
       };
     }
   }, []);
+
+  // Fetch dies from Firestore
+  useEffect(() => {
+    const fetchDies = async () => {
+      try {
+        const querySnapshot = await getDocs(collection(db, "dies"));
+        const fetchedDies = querySnapshot.docs.map((doc) => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data
+          };
+        });
+        
+        setDies(fetchedDies);
+        
+        // Update filtered dies based on the current job type
+        filterDiesByJobType(fetchedDies, selectedJobType);
+      } catch (error) {
+        console.error("Error fetching dies:", error);
+      }
+    };
+    fetchDies();
+  }, [selectedJobType]);
 
   // Filter dies by job type
   const filterDiesByJobType = (dieArray, jobType) => {
@@ -158,7 +157,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     const term = e.target.value.toLowerCase().trim();
     
     if (!term) {
-      // When search term is cleared, show all dies for the current job type (or all dies for Custom)
+      // When search term is cleared, show all dies for the current job type
       filterDiesByJobType(dies, selectedJobType);
       return;
     }
@@ -186,7 +185,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     setFilteredDies(matches);
   };
 
-  // UPDATED: Modified to search in both die size AND product size
+  // Modified to search in both die size AND product size
   const performSearch = (dimensions) => {
     const { length, breadth } = dimensions;
     
@@ -290,7 +289,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
     filterDiesByJobType(dies, selectedJobType);
   };
   
-  // Die Form Handlers - Updated to match AddDieForm
+  // Die Form Handlers
   const handleFormChange = (e) => {
     const { name, value } = e.target;
     setFormData(prev => ({
@@ -487,7 +486,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
   }, [showAddDieForm]);
 
   return (
-    <div className="relative border rounded-md p-3 bg-gray-50">
+    <div className="relative rounded-md bg-white">
       {/* Modal for Add/Edit Die Form */}
       {showAddDieForm && (
         <div 
@@ -517,7 +516,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
               <span className="text-2xl font-bold">&times;</span>
             </button>
             
-            {/* Updated Die Form */}
+            {/* Die Form Content - Keeping the existing form structure */}
             <div className="p-6">
               <div className="mb-5">
                 <h3 className="text-lg font-medium">{editingDie ? 'Edit Die' : 'Add New Die'}</h3>
@@ -532,7 +531,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
 
               <form onSubmit={handleAddDie} className="text-sm">
                 {/* Primary fields - 4 in a row */}
-                <div className="grid grid-cols-4 gap-3 mb-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Job Type:</label>
                     <select
@@ -593,7 +592,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                 </div>
 
                 {/* Dimensions - 4 in a row */}
-                <div className="grid grid-cols-4 gap-3 mb-4">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Product Size L (in):</label>
                     <input
@@ -648,10 +647,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                   </div>
                 </div>
 
-                {/* Calculated fields section - all 6 fields in 2 rows of 3 */}
+                {/* Calculated fields section */}
                 <div className="bg-gray-50 p-3 rounded-lg mb-4">
                   <h3 className="text-xs font-medium text-gray-700 mb-2">Calculated Fields</h3>
-                  <div className="grid grid-cols-3 gap-3 mb-2">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-2">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">L (CM) for PAPER:</label>
                       <input
@@ -680,7 +679,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                       />
                     </div>
                   </div>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">PLATE Size (B Inch):</label>
                       <input
@@ -711,7 +710,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                   </div>
                 </div>
 
-                {/* Image upload - more compact */}
+                {/* Image upload */}
                 <div className="mb-4">
                   <label className="block text-xs font-medium text-gray-700 mb-1">Image:</label>
                   <div className="flex items-center">
@@ -780,93 +779,86 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                     ) : (
                       editingDie ? 'Update Die' : 'Add Die'
                     )}
-                    </button>
-                  </div>
-                </form>
-              </div>
+                  </button>
+                </div>
+              </form>
             </div>
           </div>
-        )}
-  
-        {showSelectionUI ? (
-          // Die Selection UI
-          <>
-            {/* Die list header with info and Add button */}
-            <div className="flex justify-between items-center mb-4">
-              <div className="text-sm text-gray-600">
-                {selectedJobType === "Custom" 
-                  ? `Showing all dies: ${filteredDies.length} found`
-                  : `Showing dies for ${selectedJobType}: ${filteredDies.length} found`
-                }
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setShowAddDieForm(true);
-                  // Initialize with the current job type
-                  setFormData(prev => ({
-                    ...prev,
-                    jobType: selectedJobType
-                  }));
-                }}
-                className="px-2 py-1 bg-green-500 text-white text-xs rounded flex items-center gap-1"
-              >
-                <span>+</span> New Die
-              </button>
+        </div>
+      )}
+
+      {showSelectionUI ? (
+        // Die Selection UI - Keep original structure with search and length/breadth inputs
+        <>
+          <div className="flex justify-between items-center mb-3">
+            <div className="text-xs text-gray-600">
+              Showing dies for {selectedJobType}: {filteredDies.length} found
             </div>
-            
-            {/* Search Fields */}
-            <div className="mb-4">
-              <label className="block text-sm mb-1">Search by Code, Type or Job Type</label>
+            <button
+              type="button"
+              onClick={() => setShowAddDieForm(true)}
+              className="px-2 py-2 bg-red-600 text-white text-xs rounded-md flex items-center gap-1 hover:bg-red-700 transition-colors"
+            >
+              + New Die
+            </button>
+          </div>
+          
+          {/* Search input */}
+          <div className="mb-3 relative">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search by code, type or job type"
+              value={searchTerm}
+              onChange={handleTextSearch}
+              className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            />
+          </div>
+  
+          <div className="text-xs text-center text-gray-500 mb-2">- OR -</div>
+          
+          {/* Length & Breadth inputs - side by side */}
+          <div className="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Length (inches) - Die or Product</label>
               <input
-                type="text"
-                placeholder="Type to search by die code, type or job type"
-                value={searchTerm}
-                onChange={handleTextSearch}
-                className="border text-sm rounded-md p-2 w-full"
+                type="number"
+                name="length"
+                step="0.01"
+                placeholder="Enter Length"
+                value={searchDimensions.length}
+                onChange={handleSearchChange}
+                className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
               />
             </div>
-  
-            <div className="text-xs text-gray-500 mb-2">- OR -</div>
-            
-            {/* Search by dimensions - updated label to indicate unified search */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-              <div>
-                <label className="block text-sm mb-1">Length (inches) - Die or Product</label>
-                <input
-                  type="number"
-                  name="length"
-                  step="0.01"
-                  placeholder="Enter Length"
-                  value={searchDimensions.length}
-                  onChange={handleSearchChange}
-                  className="border text-sm rounded-md p-2 w-full"
-                />
-              </div>
-              <div>
-                <label className="block text-sm mb-1">Breadth (inches) - Die or Product</label>
-                <input
-                  type="number"
-                  name="breadth"
-                  step="0.01"
-                  placeholder="Enter Breadth"
-                  value={searchDimensions.breadth}
-                  onChange={handleSearchChange}
-                  className="border text-sm rounded-md p-2 w-full"
-                />
-              </div>
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Breadth (inches) - Die or Product</label>
+              <input
+                type="number"
+                name="breadth"
+                step="0.01"
+                placeholder="Enter Breadth"
+                value={searchDimensions.breadth}
+                onChange={handleSearchChange}
+                className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+              />
             </div>
+          </div>
   
-            {/* Dies List - Scrollable container showing dies for the selected job type */}
-            <div className="max-h-60 overflow-y-auto border rounded-md bg-white">
-              {filteredDies.length > 0 ? (
-                filteredDies.map((die) => (
-                  <div
-                    key={die.id}
-                    className="flex justify-between items-center p-3 border-b hover:bg-blue-50 cursor-pointer"
-                  >
-                    <div className="flex-grow" onClick={() => handleSelectDie(die)}>
-                      <p className="text-sm font-medium">Die Code: {die.dieCode}</p>
+          {/* Dies List */}
+          <div className="max-h-40 overflow-y-auto rounded-md bg-white">
+            {filteredDies.length > 0 ? (
+              filteredDies.map((die) => (
+                <div
+                  key={die.id}
+                  className="p-2 border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                  onClick={() => handleSelectDie(die)}
+                >
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="text-sm font-medium text-gray-800">Die Code: <span className="text-red-600">{die.dieCode}</span></p>
                       <p className="text-xs text-gray-600">
                         Die Size: {die.dieSizeL}" × {die.dieSizeB}"
                       </p>
@@ -874,16 +866,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                         Product Size: {die.productSizeL || "N/A"}" × {die.productSizeB || "N/A"}"
                       </p>
                       <p className="text-xs text-gray-600">
-                        Type: {die.type || "Not specified"}
+                        Type: {die.type || "N/A"} | Frags: {die.frags || "N/A"}
                       </p>
-                      <p className="text-xs text-gray-600">
-                        Frags: {die.frags || "N/A"}
-                      </p>
-                      {selectedJobType === "Custom" && (
-                        <p className="text-xs text-gray-500">
-                          Job Type: {die.jobType || "Not specified"}
-                        </p>
-                      )}
                     </div>
                     <div className="flex flex-col items-end space-y-2">
                       {die.imageUrl && (
@@ -891,90 +875,83 @@ const InlineDieSelection = ({ selectedDie, onDieSelect }) => {
                           src={die.imageUrl}
                           alt="Die"
                           className="w-16 h-16 object-contain border rounded"
-                          onClick={() => handleSelectDie(die)}
                         />
                       )}
-                      <button 
-                        className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
-                        onClick={() => handleEditDie(die)}
+                      {/* <button 
+                        className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditDie(die);
+                        }}
                       >
                         Edit
-                      </button>
+                      </button> */}
                     </div>
                   </div>
-                ))
-              ) : (
-                <div className="p-3 bg-white border-b text-sm text-gray-600">
-                  {selectedJobType === "Custom" 
-                    ? "No dies found in the database. Create a new die."
-                    : `No dies found for ${selectedJobType}. Create a new die or select a different job type.`
-                  }
                 </div>
-              )}
-            </div>
-          </>
-        ) : (
-          // Selected Die Display
-          <div className="p-3 bg-white border rounded-md">
-            <div className="flex justify-between items-center">
-              <h4 className="text-sm font-medium">Selected Die:</h4>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => {
-                    setShowAddDieForm(true);
-                    setFormData(prev => ({
-                      ...prev,
-                      jobType: selectedJobType
-                    }));
-                  }}
-                  className="px-2 py-1 bg-green-500 hover:bg-green-600 text-white text-xs rounded"
-                >
-                  + New Die
-                </button>
-                <button
-                  onClick={handleChangeDie}
-                  className="px-2 py-1 bg-blue-500 hover:bg-blue-600 text-white text-xs rounded"
-                >
-                  Change Die
-                </button>
+              ))
+            ) : (
+              <div className="p-3 bg-white border-b text-sm text-gray-600 text-center">
+                {selectedJobType === "Custom" 
+                  ? "No dies found matching your search criteria."
+                  : `No dies found for ${selectedJobType} matching your search criteria.`
+                }
               </div>
+            )}
+          </div>
+        </>
+      ) : (
+        // Selected Die Display - SINGLE LINE LAYOUT
+        <div className="flex justify-between items-center bg-white">
+          <div className="flex items-center space-x-2 overflow-hidden flex-grow">
+            <div className="text-sm font-medium flex items-center space-x-2">
+              <span className="text-gray-700">Die Code:</span>
+              <span className="text-red-600">{selectedDie.dieCode || "SS-4"}</span>
             </div>
             
-            <div className="flex items-center mt-2 space-x-4">
-              {selectedDie.image ? (
-                <img
-                  src={selectedDie.image}
-                  alt="Selected Die"
-                  className="w-16 h-16 object-contain border rounded"
-                />
-              ) : (
-                <div className="w-16 h-16 border rounded flex items-center justify-center bg-gray-100 text-gray-400 text-xs">
-                  No image
-                </div>
-              )}
-              <div className="flex flex-col">
-                <div className="text-sm">
-                  <strong>Die Code:</strong> {selectedDie.dieCode}
-                </div>
-                <div className="text-xs text-gray-600">
-                  <strong>Die Size:</strong> {selectedDie.dieSize.length}" × {selectedDie.dieSize.breadth}"
-                </div>
-                <div className="text-xs text-gray-600">
-                  <strong>Product Size:</strong> 
-                  {selectedDie.productSize && 
-                  (selectedDie.productSize.length || selectedDie.productSize.breadth) 
-                    ? `${selectedDie.productSize.length || ""}\" × ${selectedDie.productSize.breadth || ""}\"` 
-                    : "N/A"}
-                </div>
-                <div className="text-xs text-gray-600">
-                  <strong>Frags:</strong> {selectedDie.frags || "N/A"}
-                </div>
-              </div>
+            <div className="border-l border-gray-300 pl-2 text-xs flex-grow overflow-hidden">
+              <span className="inline-block text-gray-700">
+                <span className="font-medium">Die Size:</span> {selectedDie.dieSize?.length || "7"}" × {selectedDie.dieSize?.breadth || "3"}" 
+              </span>
+              <span className="inline-block mx-1 text-gray-400">|</span>
+              <span className="inline-block text-gray-700">
+                <span className="font-medium">Product Size:</span> {selectedDie.productSize?.length || "7"}" × {selectedDie.productSize?.breadth || "3"}"
+              </span>
+              <span className="inline-block mx-1 text-gray-400">|</span>
+              <span className="inline-block text-gray-700">
+                <span className="font-medium">Type:</span> {(selectedDie.type) || "H/circle"}
+              </span>
+              <span className="inline-block mx-1 text-gray-400">|</span>
+              <span className="inline-block text-gray-700">
+                <span className="font-medium">Frags:</span> {selectedDie.frags || "1"}
+              </span>
             </div>
           </div>
-        )}
-      </div>
-    );
-  };
-  
-  export default InlineDieSelection;
+          
+          <div className="flex items-center space-x-2 ml-2">
+            {/* <button
+              onClick={() => setShowAddDieForm(true)}
+              className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
+            >
+              + New
+            </button> */}
+            <button
+              onClick={handleChangeDie}
+              className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded transition-colors"
+            >
+              Change
+            </button>
+            {/* <button
+              onClick={() => handleEditDie(selectedDie)}
+              className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs rounded transition-colors"
+            >
+              Edit
+            </button> */}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default InlineDieSelection;

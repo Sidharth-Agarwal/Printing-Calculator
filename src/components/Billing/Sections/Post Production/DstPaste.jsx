@@ -95,50 +95,55 @@ const DstPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <div className="mb-1 text-sm">DST Type:</div>
-        <select
-          name="dstType"
-          value={dstPaste.dstType || ""}
-          onChange={handleChange}
-          className={`border rounded-md p-2 w-full text-sm ${errors.dstType ? "border-red-500" : ""}`}
-          disabled={dstTypesLoading}
-        >
-          <option value="">
-            {dstTypesLoading ? "Loading DST Types..." : "Select DST Type"}
-          </option>
-          {dstTypes.map((type) => (
-            <option key={type.id} value={type.type}>
-              {`${type.type}`}
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="dstType" className="block text-xs font-medium text-gray-600 mb-1">
+            DST Type:
+          </label>
+          <select
+            id="dstType"
+            name="dstType"
+            value={dstPaste.dstType || ""}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border ${errors.dstType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            disabled={dstTypesLoading}
+          >
+            <option value="">
+              {dstTypesLoading ? "Loading DST Types..." : "Select DST Type"}
             </option>
-          ))}
-        </select>
-        {errors.dstType && (
-          <p className="text-red-500 text-sm">{errors.dstType}</p>
-        )}
-        {dstTypesError && (
-          <p className="text-red-500 text-sm">Failed to load DST types</p>
+            {dstTypes.map((type) => (
+              <option key={type.id} value={type.type}>
+                {`${type.type}`}
+              </option>
+            ))}
+          </select>
+          {errors.dstType && (
+            <p className="text-red-500 text-xs mt-1">{errors.dstType}</p>
+          )}
+          {dstTypesError && (
+            <p className="text-red-500 text-xs mt-1">Failed to load DST types</p>
+          )}
+        </div>
+
+        {!singlePageMode && (
+          <div className="flex justify-between mt-6">
+            <button
+              type="button"
+              onClick={onPrevious}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+            >
+              Previous
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+            >
+              Next
+            </button>
+          </div>
         )}
       </div>
-
-      {!singlePageMode && (
-        <div className="flex justify-between mt-4">
-          <button
-            type="button"
-            onClick={onPrevious}
-            className="bg-gray-500 text-white px-3 py-2 rounded text-sm"
-          >
-            Previous
-          </button>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
-          >
-            Next
-          </button>
-        </div>
-      )}
     </form>
   );
 };

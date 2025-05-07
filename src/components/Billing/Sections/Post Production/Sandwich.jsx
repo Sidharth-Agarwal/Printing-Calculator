@@ -965,7 +965,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             onClick={toggleLPUsageInSandwich}
           >
             <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
-              {lpDetailsSandwich.isLPUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
+              {lpDetailsSandwich.isLPUsed && <div className="w-3 h-3 rounded-full bg-red-500"></div>}
             </div>
             <span className="text-gray-700 font-semibold text-sm">Use LP in Sandwich?</span>
           </label>
@@ -1140,7 +1140,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             onClick={toggleFSUsageInSandwich}
           >
             <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
-              {fsDetailsSandwich.isFSUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
+              {fsDetailsSandwich.isFSUsed && <div className="w-3 h-3 rounded-full bg-red-500"></div>}
             </div>
             <span className="text-gray-700 font-semibold text-sm">Use FS in Sandwich?</span>
           </label>
@@ -1327,7 +1327,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             onClick={toggleEMBUsageInSandwich}
           >
             <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
-              {embDetailsSandwich.isEMBUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
+              {embDetailsSandwich.isEMBUsed && <div className="w-3 h-3 rounded-full bg-red-500"></div>}
             </div>
             <span className="text-gray-700 font-semibold text-sm">Use EMB in Sandwich?</span>
           </label>

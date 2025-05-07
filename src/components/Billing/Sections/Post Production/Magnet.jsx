@@ -98,50 +98,57 @@ const Magnet = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <div className="mb-1 text-sm">Magnet Material:</div>
-        <select
-          name="magnetMaterial"
-          value={magnet.magnetMaterial || ""}
-          onChange={handleChange}
-          className={`border rounded-md p-2 w-full text-sm ${errors.magnetMaterial ? "border-red-500" : ""}`}
-          disabled={magnetMaterialsLoading}
-        >
-          <option value="">
-            {magnetMaterialsLoading ? "Loading Magnet Materials..." : "Select Magnet Material"}
-          </option>
-          {magnetMaterials.map((material) => (
-            <option key={material.id} value={material.materialName}>
-              {material.materialName}
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="magnetMaterial" className="block text-xs font-medium text-gray-600 mb-1">
+            Magnet Material:
+          </label>
+          <select
+            id="magnetMaterial"
+            name="magnetMaterial"
+            value={magnet.magnetMaterial || ""}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border ${
+              errors.magnetMaterial ? "border-red-500" : "border-gray-300"
+            } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            disabled={magnetMaterialsLoading}
+          >
+            <option value="">
+              {magnetMaterialsLoading ? "Loading Magnet Materials..." : "Select Magnet Material"}
             </option>
-          ))}
-        </select>
-        {errors.magnetMaterial && (
-          <p className="text-red-500 text-sm">{errors.magnetMaterial}</p>
-        )}
-        {magnetMaterialsError && (
-          <p className="text-red-500 text-sm">Failed to load Magnet materials</p>
+            {magnetMaterials.map((material) => (
+              <option key={material.id} value={material.materialName}>
+                {material.materialName}
+              </option>
+            ))}
+          </select>
+          {errors.magnetMaterial && (
+            <p className="text-red-500 text-xs mt-1">{errors.magnetMaterial}</p>
+          )}
+          {magnetMaterialsError && (
+            <p className="text-red-500 text-xs mt-1">Failed to load Magnet materials</p>
+          )}
+        </div>
+
+        {!singlePageMode && (
+          <div className="flex justify-between mt-6">
+            <button
+              type="button"
+              onClick={onPrevious}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+            >
+              Previous
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+            >
+              Next
+            </button>
+          </div>
         )}
       </div>
-
-      {!singlePageMode && (
-        <div className="flex justify-between mt-4">
-          <button
-            type="button"
-            onClick={onPrevious}
-            className="bg-gray-500 text-white px-3 py-2 rounded text-sm"
-          >
-            Previous
-          </button>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
-          >
-            Next
-          </button>
-        </div>
-      )}
     </form>
   );
 };

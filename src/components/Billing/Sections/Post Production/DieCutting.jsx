@@ -75,47 +75,53 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <div className="mb-1 text-sm">DC MR Type:</div>
-        <select
-          name="dcMR"
-          value={dieCutting.dcMR}
-          onChange={handleChange}
-          className="border rounded-md p-2 w-full text-sm"
-        >
-          {mrTypesLoading ? (
-            <option value="" disabled>Loading MR Types...</option>
-          ) : (
-            mrTypes.map((type, idx) => (
-              <option key={idx} value={type.type}>
-                {type.type}
-              </option>
-            ))
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-4">
+        <div>
+          <label htmlFor="dcMR" className="block text-xs font-medium text-gray-600 mb-1">
+            DC MR Type:
+          </label>
+          <select
+            id="dcMR"
+            name="dcMR"
+            value={dieCutting.dcMR}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border ${errors.dcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+          >
+            <option value="">Select MR Type</option>
+            {mrTypesLoading ? (
+              <option value="" disabled>Loading MR Types...</option>
+            ) : (
+              mrTypes.map((type, idx) => (
+                <option key={idx} value={type.type}>
+                  {type.type}
+                </option>
+              ))
+            )}
+          </select>
+          {errors.dcMR && (
+            <p className="text-red-500 text-xs mt-1">{errors.dcMR}</p>
           )}
-        </select>
-        {errors.dcMR && (
-          <p className="text-red-500 text-sm">{errors.dcMR}</p>
+        </div>
+        
+        {!singlePageMode && (
+          <div className="flex justify-between mt-6">
+            <button
+              type="button"
+              onClick={onPrevious}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+            >
+              Previous
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+            >
+              Next
+            </button>
+          </div>
         )}
       </div>
-
-      {!singlePageMode && (
-        <div className="flex justify-between mt-4">
-          <button
-            type="button"
-            onClick={onPrevious}
-            className="bg-gray-500 text-white px-3 py-2 rounded text-sm"
-          >
-            Previous
-          </button>
-          <button
-            type="submit"
-            className="bg-blue-500 text-white px-3 py-2 rounded text-sm"
-          >
-            Next
-          </button>
-        </div>
-      )}
     </form>
   );
 };

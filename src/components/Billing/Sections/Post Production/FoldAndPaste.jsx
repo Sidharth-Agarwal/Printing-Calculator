@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
-import { ChevronDown } from 'lucide-react';
 
 // Custom hook to fetch DST Materials from Firestore
 const useDSTMaterials = () => {
@@ -159,73 +158,91 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="flex w-full space-x-4">
-        {/* DST Material Dropdown */}
-        <div className="flex-1">
-          <div className="text-sm mb-1">DST Material:</div>
-          <div className="relative">
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* DST Material Dropdown */}
+          <div>
+            <label htmlFor="dstMaterial" className="block text-xs font-medium text-gray-600 mb-1">
+              DST Material:
+            </label>
             <select
+              id="dstMaterial"
               name="dstMaterial"
               value={foldAndPaste.dstMaterial || ""}
               onChange={handleChange}
-              className={`appearance-none w-full border rounded-md p-2 pr-8 text-sm ${
+              className={`w-full px-3 py-2 border ${
                 errors.dstMaterial ? "border-red-500" : "border-gray-300"
-              }`}
+              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
               disabled={dstMaterialsLoading}
-              required
             >
-              {dstMaterialsLoading ? (
-                <option>Loading DST Materials...</option>
-              ) : (
-                dstMaterials.map((material) => (
-                  <option key={material.id} value={material.materialName}>
-                    {material.materialName}
-                  </option>
-                ))
-              )}
+              <option value="">
+                {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
+              </option>
+              {dstMaterials.map((material) => (
+                <option key={material.id} value={material.materialName}>
+                  {material.materialName}
+                </option>
+              ))}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <ChevronDown size={16} />
-            </div>
+            {errors.dstMaterial && (
+              <p className="text-red-500 text-xs mt-1">{errors.dstMaterial}</p>
+            )}
+            {dstMaterialsError && (
+              <p className="text-red-500 text-xs mt-1">Failed to load DST materials</p>
+            )}
           </div>
-          {errors.dstMaterial && (
-            <p className="text-red-500 text-xs mt-1">{errors.dstMaterial}</p>
-          )}
-        </div>
 
-        {/* DST Type Dropdown */}
-        <div className="flex-1">
-          <div className="text-sm mb-1">DST Type:</div>
-          <div className="relative">
+          {/* DST Type Dropdown */}
+          <div>
+            <label htmlFor="dstType" className="block text-xs font-medium text-gray-600 mb-1">
+              DST Type:
+            </label>
             <select
+              id="dstType"
               name="dstType"
               value={foldAndPaste.dstType || ""}
               onChange={handleChange}
-              className={`appearance-none w-full border rounded-md p-2 pr-8 text-sm ${
+              className={`w-full px-3 py-2 border ${
                 errors.dstType ? "border-red-500" : "border-gray-300"
-              }`}
+              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
               disabled={dstTypesLoading}
-              required
             >
-              {dstTypesLoading ? (
-                <option>Loading DST Types...</option>
-              ) : (
-                dstTypes.map((type) => (
-                  <option key={type.id} value={type.type}>
-                    {type.type}
-                  </option>
-                ))
-              )}
+              <option value="">
+                {dstTypesLoading ? "Loading DST Types..." : "Select DST Type"}
+              </option>
+              {dstTypes.map((type) => (
+                <option key={type.id} value={type.type}>
+                  {type.type}
+                </option>
+              ))}
             </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <ChevronDown size={16} />
-            </div>
+            {errors.dstType && (
+              <p className="text-red-500 text-xs mt-1">{errors.dstType}</p>
+            )}
+            {dstTypesError && (
+              <p className="text-red-500 text-xs mt-1">Failed to load DST types</p>
+            )}
           </div>
-          {errors.dstType && (
-            <p className="text-red-500 text-xs mt-1">{errors.dstType}</p>
-          )}
         </div>
+        
+        {!singlePageMode && (
+          <div className="flex justify-between mt-6">
+            <button
+              type="button"
+              onClick={onPrevious}
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+            >
+              Previous
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+            >
+              Next
+            </button>
+          </div>
+        )}
       </div>
     </form>
   );

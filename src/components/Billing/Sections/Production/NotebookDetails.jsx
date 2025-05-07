@@ -24,8 +24,6 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
   // Use the custom hook to fetch binding types
   const { bindingTypes, loading: isLoading } = useBindingTypes();
   
-  console.log("Binding types from hook:", bindingTypes);
-  
   // Fetch papers from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
@@ -77,16 +75,13 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
 
   const handleChange = (e) => {
     const { name, value } = e.target;
-    console.log(`Handling change for ${name}: ${value}`);
     
     // Special handling for bindingType to also set the concatenated version
     if (name === "bindingType") {
       // Find the selected binding type's concatenated value
       const selectedBinding = bindingTypes.find(binding => binding.type === value);
-      console.log("Selected binding:", selectedBinding);
       
       if (selectedBinding) {
-        console.log(`Setting binding type to ${value} with concatenated value ${selectedBinding.concatenate}`);
         dispatch({
           type: "UPDATE_NOTEBOOK_DETAILS",
           payload: { 
@@ -95,7 +90,6 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
           }
         });
       } else {
-        console.log(`No matching binding found for ${value}`);
         dispatch({
           type: "UPDATE_NOTEBOOK_DETAILS",
           payload: { 
@@ -154,144 +148,177 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Paper Name - Using Searchable Dropdown */}
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-5">
+        {/* Paper Selection */}
         <div>
-          <div className="mb-1 text-sm">Paper Name:</div>
-          <SearchablePaperDropdown 
-            papers={papers}
-            selectedPaper={notebookDetails.paperName || (papers.length > 0 ? papers[0].paperName : "")}
-            onChange={handleChange}
-          />
-          {errors.paperName && (
-            <p className="text-red-500 text-sm">{errors.paperName}</p>
-          )}
-        </div>
-
-        {/* Orientation */}
-        <div>
-          <div className="mb-1 text-sm">Orientation:</div>
-          <select
-            id="orientation"
-            name="orientation"
-            value={notebookDetails.orientation || ""}
-            onChange={handleChange}
-            className="border rounded-md p-2 w-full text-sm"
-          >
-            <option value="">Select Orientation</option>
-            <option value="Length Wise Baby Size">Length Wise Baby Size</option>
-            <option value="Breadth Wise Baby Size">Breadth Wise Baby Size</option>
-          </select>
-          {errors.orientation && (
-            <p className="text-red-500 text-sm">{errors.orientation}</p>
-          )}
-        </div>
-
-        {/* Length */}
-        <div>
-          <div className="mb-1 text-sm">Length (inches):</div>
-          <input
-            type="number"
-            id="length"
-            name="length"
-            placeholder="Enter length"
-            value={notebookDetails.length || ""}
-            onChange={handleChange}
-            className="border rounded-md p-2 w-full text-sm"
-            step="0.01"
-          />
-          {errors.length && (
-            <p className="text-red-500 text-sm">{errors.length}</p>
-          )}
-        </div>
-
-        {/* Breadth */}
-        <div>
-          <div className="mb-1 text-sm">Breadth (inches):</div>
-          <input
-            type="number"
-            id="breadth"
-            name="breadth"
-            placeholder="Enter breadth"
-            value={notebookDetails.breadth || ""}
-            onChange={handleChange}
-            className="border rounded-md p-2 w-full text-sm"
-            step="0.01"
-          />
-          {errors.breadth && (
-            <p className="text-red-500 text-sm">{errors.breadth}</p>
-          )}
-        </div>
-
-        {/* Calculated Dimensions (Display Only) - Shown when we have orientation and dimensions */}
-        {notebookDetails.orientation && (
-          <>
+          <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Paper Configuration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <div className="mb-1 text-sm">Calculated Length (inches):</div>
-              <div className="bg-gray-100 p-2 rounded-md border text-sm">
-                {notebookDetails.calculatedLength || notebookDetails.length}
+              <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
+                Paper Name:
+              </label>
+              <SearchablePaperDropdown 
+                papers={papers}
+                selectedPaper={notebookDetails.paperName || (papers.length > 0 ? papers[0].paperName : "")}
+                onChange={handleChange}
+              />
+              {errors.paperName && (
+                <p className="text-red-500 text-xs mt-1">{errors.paperName}</p>
+              )}
+            </div>
+
+            {/* Orientation */}
+            <div>
+              <label htmlFor="orientation" className="block text-xs font-medium text-gray-600 mb-1">
+                Orientation:
+              </label>
+              <select
+                id="orientation"
+                name="orientation"
+                value={notebookDetails.orientation || ""}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.orientation ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              >
+                <option value="">Select Orientation</option>
+                <option value="Length Wise Baby Size">Length Wise Baby Size</option>
+                <option value="Breadth Wise Baby Size">Breadth Wise Baby Size</option>
+              </select>
+              {errors.orientation && (
+                <p className="text-red-500 text-xs mt-1">{errors.orientation}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Dimensions */}
+        <div>
+          <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Dimensions</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Length */}
+            <div>
+              <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
+                Length (inches):
+              </label>
+              <input
+                type="number"
+                id="length"
+                name="length"
+                placeholder="Enter length"
+                value={notebookDetails.length || ""}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                step="0.01"
+              />
+              {errors.length && (
+                <p className="text-red-500 text-xs mt-1">{errors.length}</p>
+              )}
+            </div>
+
+            {/* Breadth */}
+            <div>
+              <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
+                Breadth (inches):
+              </label>
+              <input
+                type="number"
+                id="breadth"
+                name="breadth"
+                placeholder="Enter breadth"
+                value={notebookDetails.breadth || ""}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                step="0.01"
+              />
+              {errors.breadth && (
+                <p className="text-red-500 text-xs mt-1">{errors.breadth}</p>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Calculated Dimensions (Display Only) */}
+        {notebookDetails.orientation && notebookDetails.length && notebookDetails.breadth && (
+          <div>
+            <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Calculated Dimensions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Final Length (inches):
+                </label>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                  {notebookDetails.calculatedLength || notebookDetails.length || "N/A"}
+                </div>
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">
+                  Final Breadth (inches):
+                </label>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                  {notebookDetails.calculatedBreadth || notebookDetails.breadth || "N/A"}
+                </div>
               </div>
             </div>
-            <div>
-              <div className="mb-1 text-sm">Calculated Breadth (inches):</div>
-              <div className="bg-gray-100 p-2 rounded-md border text-sm">
-                {notebookDetails.calculatedBreadth || notebookDetails.breadth}
-              </div>
-            </div>
-          </>
+          </div>
         )}
 
-        {/* Number of Pages */}
         <div>
-          <div className="mb-1 text-sm">Number of Pages:</div>
-          <input
-            type="number"
-            id="numberOfPages"
-            name="numberOfPages"
-            placeholder="Enter number of pages"
-            value={notebookDetails.numberOfPages || ""}
-            onChange={handleChange}
-            className="border rounded-md p-2 w-full text-sm"
-            min="1"
-          />
-          {errors.numberOfPages && (
-            <p className="text-red-500 text-sm">{errors.numberOfPages}</p>
-          )}
-        </div>
+          <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Notebook Configuration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Number of Pages */}
+            <div>
+              <label htmlFor="numberOfPages" className="block text-xs font-medium text-gray-600 mb-1">
+                Number of Pages:
+              </label>
+              <input
+                type="number"
+                id="numberOfPages"
+                name="numberOfPages"
+                placeholder="Enter number of pages"
+                value={notebookDetails.numberOfPages || ""}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.numberOfPages ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                min="1"
+              />
+              {errors.numberOfPages && (
+                <p className="text-red-500 text-xs mt-1">{errors.numberOfPages}</p>
+              )}
+            </div>
 
-        {/* Binding Type */}
-        <div className="md:col-span-2">
-          <div className="mb-1 text-sm">Binding Type:</div>
-          {console.log("Rendering binding types dropdown with values:", bindingTypes)}
-          {console.log("Current selected binding type:", notebookDetails.bindingType)}
-          <select
-            id="bindingType"
-            name="bindingType"
-            value={notebookDetails.bindingType || ""}
-            onChange={handleChange}
-            className="border rounded-md p-2 w-full text-sm"
-            disabled={isLoading}
-          >
-            <option value="">Select Binding Type</option>
-            {isLoading ? (
-              <option value="" disabled>Loading binding types...</option>
-            ) : bindingTypes.length > 0 ? (
-              bindingTypes.map((binding) => (
-                <option key={binding.id} value={binding.type}>
-                  {binding.type}
-                </option>
-              ))
-            ) : (
-              <option value="" disabled>No binding types found</option>
-            )}
-          </select>
-          {errors.bindingType && (
-            <p className="text-red-500 text-sm">{errors.bindingType}</p>
-          )}
-          {bindingTypes.length === 0 && !isLoading && (
-            <p className="text-amber-500 text-sm mt-1">Warning: No binding types were loaded from the database</p>
-          )}
+            {/* Binding Type */}
+            <div>
+              <label htmlFor="bindingType" className="block text-xs font-medium text-gray-600 mb-1">
+                Binding Type:
+              </label>
+              <select
+                id="bindingType"
+                name="bindingType"
+                value={notebookDetails.bindingType || ""}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.bindingType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                disabled={isLoading}
+              >
+                <option value="">Select Binding Type</option>
+                {isLoading ? (
+                  <option value="" disabled>Loading...</option>
+                ) : bindingTypes.length > 0 ? (
+                  bindingTypes.map((binding) => (
+                    <option key={binding.id} value={binding.type}>
+                      {binding.type}
+                    </option>
+                  ))
+                ) : (
+                  <option value="" disabled>No binding types found</option>
+                )}
+              </select>
+              {errors.bindingType && (
+                <p className="text-red-500 text-xs mt-1">{errors.bindingType}</p>
+              )}
+              {bindingTypes.length === 0 && !isLoading && (
+                <p className="text-amber-500 text-xs mt-1">Warning: No binding types were loaded from the database</p>
+              )}
+            </div>
+          </div>
         </div>
       </div>
     </form>

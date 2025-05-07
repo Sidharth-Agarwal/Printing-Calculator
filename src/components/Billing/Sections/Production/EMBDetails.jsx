@@ -222,156 +222,161 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
-        {/* Plate Size Type */}
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-5">
+        {/* Plate Size Selection */}
         <div>
-          <label htmlFor="plateSizeType" className="block mb-1">
-            Plate Size:
-          </label>
-          <select
-            name="plateSizeType"
-            value={plateSizeType}
-            onChange={handleChange}
-            className={`border rounded-md p-2 w-full ${errors.plateSizeType ? "border-red-500" : ""}`}
-          >
-            <option value="">Select Plate Size Type</option>
-            <option value="Auto">Auto</option>
-            <option value="Manual">Manual</option>
-          </select>
-          {errors.plateSizeType && (
-            <p className="text-red-500 text-sm">{errors.plateSizeType}</p>
-          )}
-        </div>
-
-        {/* Plate Dimensions - Show only when plateSizeType is selected */}
-        {plateSizeType && (
-          <>
+          <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Plate Configuration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label htmlFor="length" className="block mb-1">
-                Length (inches):
+              <label htmlFor="plateSizeType" className="block text-xs font-medium text-gray-600 mb-1">
+                Plate Size:
               </label>
-              <input
-                type="number"
-                id="length"
-                placeholder="(inches)"
-                value={plateDimensions.lengthInInches || ""}
-                onChange={(e) =>
-                  plateSizeType === "Manual"
-                    ? handleDimensionChange("length", e.target.value)
-                    : null
-                }
-                className={`border rounded-md p-2 w-full ${
-                  plateSizeType === "Auto" ? "bg-gray-100" : ""
-                } ${errors.length ? "border-red-500" : ""}`}
-                readOnly={plateSizeType === "Auto"}
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                {plateDimensions.length ? `${plateDimensions.length} cm` : ""}
-              </div>
-              {errors.length && <p className="text-red-500 text-sm">{errors.length}</p>}
+              <select
+                id="plateSizeType"
+                name="plateSizeType"
+                value={plateSizeType}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.plateSizeType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              >
+                <option value="">Select Option</option>
+                <option value="Auto">Auto</option>
+                <option value="Manual">Manual</option>
+              </select>
+              {errors.plateSizeType && (
+                <p className="text-red-500 text-xs mt-1">{errors.plateSizeType}</p>
+              )}
             </div>
+
+            {plateSizeType && (
+              <>
+                <div>
+                  <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
+                    Length (inches):
+                  </label>
+                  <input
+                    type="number"
+                    id="length"
+                    placeholder="Enter length"
+                    value={plateDimensions.lengthInInches || ""}
+                    onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("length", e.target.value) : null}
+                    className={`w-full px-3 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                    readOnly={plateSizeType === "Auto"}
+                  />
+                  {plateDimensions.length && (
+                    <div className="text-xs text-gray-500 mt-1">{plateDimensions.length} cm</div>
+                  )}
+                  {errors.length && <p className="text-red-500 text-xs mt-1">{errors.length}</p>}
+                </div>
+                <div>
+                  <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
+                    Breadth (inches):
+                  </label>
+                  <input
+                    type="number"
+                    id="breadth"
+                    placeholder="Enter breadth"
+                    value={plateDimensions.breadthInInches || ""}
+                    onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("breadth", e.target.value) : null}
+                    className={`w-full px-3 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                    readOnly={plateSizeType === "Auto"}
+                  />
+                  {plateDimensions.breadth && (
+                    <div className="text-xs text-gray-500 mt-1">{plateDimensions.breadth} cm</div>
+                  )}
+                  {errors.breadth && <p className="text-red-500 text-xs mt-1">{errors.breadth}</p>}
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+
+        {/* Plate Types and MR Type */}
+        <div>
+          <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Materials</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {/* Plate Type Male */}
             <div>
-              <label htmlFor="breadth" className="block mb-1">
-                Breadth (inches):
+              <label htmlFor="plateTypeMale" className="block text-xs font-medium text-gray-600 mb-1">
+                Plate Type Male:
               </label>
-              <input
-                type="number"
-                id="breadth"
-                placeholder="(inches)"
-                value={plateDimensions.breadthInInches || ""}
-                onChange={(e) =>
-                  plateSizeType === "Manual"
-                    ? handleDimensionChange("breadth", e.target.value)
-                    : null
-                }
-                className={`border rounded-md p-2 w-full ${
-                  plateSizeType === "Auto" ? "bg-gray-100" : ""
-                } ${errors.breadth ? "border-red-500" : ""}`}
-                readOnly={plateSizeType === "Auto"}
-              />
-              <div className="text-xs text-gray-500 mt-1">
-                {plateDimensions.breadth ? `${plateDimensions.breadth} cm` : ""}
-              </div>
-              {errors.breadth && <p className="text-red-500 text-sm">{errors.breadth}</p>}
+              <select
+                id="plateTypeMale"
+                name="plateTypeMale"
+                value={plateTypeMale}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.plateTypeMale ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              >
+                <option value="">Select Type</option>
+                {plateTypesLoading ? (
+                  <option value="" disabled>Loading...</option>
+                ) : (
+                  plateTypes.map((plateType, idx) => (
+                    <option key={idx} value={plateType.materialName}>
+                      {plateType.materialName}
+                    </option>
+                  ))
+                )}
+              </select>
+              {errors.plateTypeMale && (
+                <p className="text-red-500 text-xs mt-1">{errors.plateTypeMale}</p>
+              )}
             </div>
-          </>
-        )}
 
-        {/* Plate Type Male - Updated to use dynamic plate types */}
-        <div>
-          <label htmlFor="plateTypeMale" className="block mb-1">
-            Plate Type Male:
-          </label>
-          <select
-            name="plateTypeMale"
-            value={plateTypeMale}
-            onChange={handleChange}
-            className={`border rounded-md p-2 w-full ${errors.plateTypeMale ? "border-red-500" : ""}`}
-          >
-            {plateTypesLoading ? (
-              <option value="" disabled>Loading Plate Types...</option>
-            ) : (
-              plateTypes.map((plateType, idx) => (
-                <option key={idx} value={plateType.materialName}>
-                  {plateType.materialName}
-                </option>
-              ))
-            )}
-          </select>
-          {errors.plateTypeMale && (
-            <p className="text-red-500 text-sm">{errors.plateTypeMale}</p>
-          )}
-        </div>
+            {/* Plate Type Female */}
+            <div>
+              <label htmlFor="plateTypeFemale" className="block text-xs font-medium text-gray-600 mb-1">
+                Plate Type Female:
+              </label>
+              <select
+                id="plateTypeFemale"
+                name="plateTypeFemale"
+                value={plateTypeFemale}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.plateTypeFemale ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              >
+                <option value="">Select Type</option>
+                {plateTypesLoading ? (
+                  <option value="" disabled>Loading...</option>
+                ) : (
+                  plateTypes.map((plateType, idx) => (
+                    <option key={idx} value={plateType.materialName}>
+                      {plateType.materialName}
+                    </option>
+                  ))
+                )}
+              </select>
+              {errors.plateTypeFemale && (
+                <p className="text-red-500 text-xs mt-1">{errors.plateTypeFemale}</p>
+              )}
+            </div>
 
-        {/* Plate Type Female - Updated to use dynamic plate types */}
-        <div>
-          <label htmlFor="plateTypeFemale" className="block mb-1">
-            Plate Type Female:
-          </label>
-          <select
-            name="plateTypeFemale"
-            value={plateTypeFemale}
-            onChange={handleChange}
-            className={`border rounded-md p-2 w-full ${errors.plateTypeFemale ? "border-red-500" : ""}`}
-          >
-            {plateTypesLoading ? (
-              <option value="" disabled>Loading Plate Types...</option>
-            ) : (
-              plateTypes.map((plateType, idx) => (
-                <option key={idx} value={plateType.materialName}>
-                  {plateType.materialName}
-                </option>
-              ))
-            )}
-          </select>
-          {errors.plateTypeFemale && (
-            <p className="text-red-500 text-sm">{errors.plateTypeFemale}</p>
-          )}
-        </div>
-
-        {/* EMB MR - Updated to use dynamic MR types and store concatenated version */}
-        <div>
-          <label htmlFor="embMR" className="block mb-1">
-            EMB MR:
-          </label>
-          <select
-            name="embMR"
-            value={embMR}
-            onChange={handleChange}
-            className={`border rounded-md p-2 w-full ${errors.embMR ? "border-red-500" : ""}`}
-          >
-            {mrTypesLoading ? (
-              <option value="" disabled>Loading MR Types...</option>
-            ) : (
-              mrTypes.map((typeOption, idx) => (
-                <option key={idx} value={typeOption.type}>
-                  {typeOption.type}
-                </option>
-              ))
-            )}
-          </select>
-          {errors.embMR && <p className="text-red-500 text-sm">{errors.embMR}</p>}
+            {/* EMB MR Type */}
+            <div>
+              <label htmlFor="embMR" className="block text-xs font-medium text-gray-600 mb-1">
+                EMB MR Type:
+              </label>
+              <select
+                id="embMR"
+                name="embMR"
+                value={embMR}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.embMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              >
+                <option value="">Select Type</option>
+                {mrTypesLoading ? (
+                  <option value="" disabled>Loading...</option>
+                ) : (
+                  mrTypes.map((typeOption, idx) => (
+                    <option key={idx} value={typeOption.type}>
+                      {typeOption.type}
+                    </option>
+                  ))
+                )}
+              </select>
+              {errors.embMR && <p className="text-red-500 text-xs mt-1">{errors.embMR}</p>}
+            </div>
+          </div>
         </div>
       </div>
     </form>
