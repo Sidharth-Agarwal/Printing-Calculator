@@ -12,7 +12,8 @@ const OrderAndPaper = ({
   onNext, 
   validationErrors = {}, 
   singlePageMode = false, 
-  onJobTypeChange = null 
+  onJobTypeChange = null,
+  compact = false // New prop to control display style
 }) => {
   const { orderAndPaper } = state;
 
@@ -109,7 +110,7 @@ const OrderAndPaper = ({
         dieSize: dieData.dieSize || { length: "", breadth: "" },
         productSize: dieData.productSize || { length: "", breadth: "" },
         image: dieData.image || "",
-        frags: dieData.frags || "" // Make sure frags is included
+        frags: dieData.frags || ""
       }
     });
   };
@@ -161,15 +162,15 @@ const OrderAndPaper = ({
     <div>
       <style>{customDatePickerStyles}</style>
       <div>
-        {!singlePageMode && (
+        {!singlePageMode && !compact && (
           <h1 className="text-lg font-bold text-gray-700 mb-4">PROJECT & PAPER DETAILS</h1>
         )}
-        <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Form Fields Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
+        <form onSubmit={handleSubmit} className={compact ? "space-y-4" : "space-y-6"}>
+          {/* Form Fields Grid - More compact grid for the updated design */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
             {/* Project Name */}
-            <div>
-              <label htmlFor="projectName" className="block mb-1">
+            <div className="col-span-2">
+              <label htmlFor="projectName" className="block text-xs font-medium text-gray-600 mb-1">
                 Project Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -190,45 +191,9 @@ const OrderAndPaper = ({
               )}
             </div>
 
-            {/* Date */}
-            <div>
-              <label htmlFor="date" className="block mb-1">
-                Date <span className="text-red-500">*</span>
-              </label>
-              <DatePicker
-                id="date"
-                selected={orderAndPaper.date}
-                onChange={(date) => handleDateChange("date", date)}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full text-sm"
-                required
-                popperClassName="small-calendar"
-                calendarClassName="small-calendar"
-              />
-            </div>
-
-            {/* Delivery Date */}
-            <div>
-              <label htmlFor="deliveryDate" className="block mb-1">
-                Estimated Delivery Date <span className="text-red-500">*</span>
-              </label>
-              <DatePicker
-                id="deliveryDate"
-                selected={orderAndPaper.deliveryDate}
-                onChange={(date) => handleDateChange("deliveryDate", date)}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full text-sm"
-                required
-                popperClassName="small-calendar"
-                calendarClassName="small-calendar"
-              />
-            </div>
-
             {/* Job Type */}
             <div>
-              <label htmlFor="jobType" className="block mb-1">
+              <label htmlFor="jobType" className="block text-xs font-medium text-gray-600 mb-1">
                 Job Type <span className="text-red-500">*</span>
               </label>
               <select
@@ -253,14 +218,14 @@ const OrderAndPaper = ({
 
             {/* Quantity */}
             <div>
-              <label htmlFor="quantity" className="block mb-1">
+              <label htmlFor="quantity" className="block text-xs font-medium text-gray-600 mb-1">
                 Quantity <span className="text-red-500">*</span>
               </label>
               <input
                 id="quantity"
                 type="number"
                 name="quantity"
-                placeholder="Enter the required quantity"
+                placeholder="Quantity"
                 value={orderAndPaper.quantity || ""}
                 onChange={handleChange}
                 className={`border rounded-md p-2 w-full text-sm ${
@@ -273,9 +238,45 @@ const OrderAndPaper = ({
               )}
             </div>
 
+            {/* Date */}
+            <div>
+              <label htmlFor="date" className="block text-xs font-medium text-gray-600 mb-1">
+                Date <span className="text-red-500">*</span>
+              </label>
+              <DatePicker
+                id="date"
+                selected={orderAndPaper.date}
+                onChange={(date) => handleDateChange("date", date)}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="DD/MM/YYYY"
+                className="border rounded-md p-2 w-full text-sm"
+                required
+                popperClassName="small-calendar"
+                calendarClassName="small-calendar"
+              />
+            </div>
+
+            {/* Delivery Date */}
+            <div>
+              <label htmlFor="deliveryDate" className="block text-xs font-medium text-gray-600 mb-1">
+                Delivery Date <span className="text-red-500">*</span>
+              </label>
+              <DatePicker
+                id="deliveryDate"
+                selected={orderAndPaper.deliveryDate}
+                onChange={(date) => handleDateChange("deliveryDate", date)}
+                dateFormat="dd/MM/yyyy"
+                placeholderText="DD/MM/YYYY"
+                className="border rounded-md p-2 w-full text-sm"
+                required
+                popperClassName="small-calendar"
+                calendarClassName="small-calendar"
+              />
+            </div>
+
             {/* Paper Provided */}
             <div>
-              <label htmlFor="paperProvided" className="block mb-1">
+              <label htmlFor="paperProvided" className="block text-xs font-medium text-gray-600 mb-1">
                 Paper Provided <span className="text-red-500">*</span>
               </label>
               <select
@@ -292,21 +293,22 @@ const OrderAndPaper = ({
             </div>
 
             {/* Paper Name - Using Searchable Dropdown */}
-            <div>
-              <label htmlFor="paperName" className="block mb-1">
+            <div className="col-span-2">
+              <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
                 Paper Name <span className="text-red-500">*</span>
               </label>
               <SearchablePaperDropdown 
                 papers={papers}
                 selectedPaper={orderAndPaper.paperName || (papers.length > 0 ? papers[0].paperName : "")}
                 onChange={handleChange}
+                compact={compact}
               />
             </div>
           </div>
 
           {/* Die Selection Section - Inline but without dropdown */}
-          <div className="mt-6 col-span-3">
-            <label className="block mb-1 text-sm font-medium">
+          <div className="mt-4">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
               Die Selection <span className="text-red-500">*</span>
             </label>
             <InlineDieSelection 
@@ -315,9 +317,10 @@ const OrderAndPaper = ({
                 dieSize: orderAndPaper.dieSize || { length: "", breadth: "" },
                 productSize: orderAndPaper.productSize || { length: "", breadth: "" },
                 image: orderAndPaper.image || "",
-                frags: orderAndPaper.frags || "" // Pass the frags to the InlineDieSelection component
+                frags: orderAndPaper.frags || ""
               }}
               onDieSelect={handleDieSelect}
+              compact={compact}
             />
             {validationErrors.dieCode && (
               <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.dieCode}</p>

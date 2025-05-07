@@ -3,10 +3,11 @@ import { collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import ExistingEstimates from "./ExistingEstimates";
 
-const VersionSelection = ({ clientId, selectedVersion, onVersionSelect }) => {
+const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact = false }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [existingEstimates, setExistingEstimates] = useState([]);
   const [availableVersions, setAvailableVersions] = useState([]);
+  const [showEstimates, setShowEstimates] = useState(false);
   
   // Initialize versions on component mount or when clientId changes
   useEffect(() => {
@@ -109,25 +110,17 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect }) => {
     };
     
     setAvailableVersions(prevVersions => [...prevVersions, newVersion]);
-    
-    // Optionally, automatically select the new version
-    // onVersionSelect(newVersion.id);
   };
 
   return (
-    <div className="bg-gray-50 p-5 rounded-lg shadow-sm mt-4">
-      <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">VERSION SELECTION</h2>
-      
-      <div className="mb-4">
-        <div className="flex items-end space-x-2">
+    <div>
+      <div className="mb-2">
+        <div className="flex items-end gap-2">
           <div className="flex-grow">
-            <label className="block text-sm font-medium mb-2">
-              Select Version <span className="text-red-500">*</span>
-            </label>
             <select
               value={selectedVersion}
               onChange={handleVersionChange}
-              className="border rounded-md p-2 w-full text-sm"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm appearance-none"
               disabled={!clientId}
             >
               <option value="">Select a Version</option>
@@ -139,31 +132,36 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect }) => {
             </select>
           </div>
           
-          {/* Add new version button */}
+          {/* Add new version button - Changed to red */}
           <button
             type="button"
             onClick={addNewVersion}
             disabled={!clientId}
-            className="px-3 py-1.5 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
             title={clientId ? "Add a new version" : "Select a client first"}
           >
-            + Add Version
+            + New
           </button>
+          
+          {/* View existing estimates button */}
+          {selectedVersion && existingEstimates.length > 0 && (
+            <button
+              type="button"
+              onClick={() => setShowEstimates(!showEstimates)}
+              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
+            >
+              {showEstimates ? "Hide Estimates" : `View ${existingEstimates.length} Estimates`}
+            </button>
+          )}
         </div>
-        
-        {!clientId && (
-          <p className="text-sm text-gray-500 mt-1">
-            Please select a client first to choose a version.
-          </p>
-        )}
       </div>
 
       {/* Display existing estimates */}
-      {selectedVersion && (
+      {showEstimates && selectedVersion && (
         <div className="mt-4">
           {isLoading ? (
             <div className="text-center p-4">
-              <div className="inline-block animate-spin h-5 w-5 border-2 border-blue-500 rounded-full border-t-transparent"></div>
+              <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
               <p className="mt-2 text-sm text-gray-600">Loading estimates...</p>
             </div>
           ) : (

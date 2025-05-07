@@ -7,10 +7,6 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
 
 // Import components
-import ClientSelection from "./Sections/Fixed/ClientSelection";
-import ClientReadOnly from './Sections/Fixed/ClientReadOnly';
-import VersionSelection from "./Sections/Fixed/VersionSelection";
-import OrderAndPaper from "./Sections/Fixed/OrderAndPaper";
 import LPDetails from "./Sections/Production/LPDetails";
 import FSDetails from "./Sections/Production/FSDetails";
 import EMBDetails from "./Sections/Production/EMBDetails";
@@ -28,6 +24,7 @@ import Sandwich from "./Sections/Post Production/Sandwich";
 import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
 import SuccessNotification from "../Shared/SuccessNotification";
+import FixedSection from "./Sections/Fixed/FixedSection";
 
 // Import service and job type configurations
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
@@ -1503,71 +1500,21 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
           {/* Client Selection Section - Modified for B2B users */}
-          <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">CLIENT SELECTION</h2>
-            
-            {/* For edit mode, show client info as read-only */}
-            {isEditMode ? (
-              <ClientReadOnly client={state.client.clientInfo} />
-            ) : isB2BClient && linkedClientData ? (
-              /* For B2B clients, show readonly client info */
-              <div className="p-4 bg-blue-50 rounded border border-blue-200">
-                <div className="flex items-center mb-2">
-                  <span className="font-bold">Client:</span>
-                  <span className="ml-2 text-lg">{linkedClientData.name || linkedClientData.clientInfo?.name}</span>
-                  <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                    B2B Client
-                  </span>
-                </div>
-                <div className="text-sm text-gray-600">
-                  <p>Client Code: {linkedClientData.clientCode || linkedClientData.clientInfo?.clientCode}</p>
-                  {linkedClientData.contactPerson && (
-                    <p>Contact: {linkedClientData.contactPerson}</p>
-                  )}
-                  {linkedClientData.email && (
-                    <p>Email: {linkedClientData.email}</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              /* For admin users creating new estimates, show normal client selection */
-              <ClientSelection 
-                onClientSelect={handleClientSelect}
-                selectedClient={selectedClient}
-                setSelectedClient={setSelectedClient}
-                generateClientCode={generateClientCode}
-                isEditMode={isEditMode}
-              />
-            )}
-            {validationErrors.clientId && (
-              <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.clientId}</p>
-            )}
-          </div>
-
-          {/* Version Selection - Add after client selection */}
-          {state.client.clientId && (
-            <VersionSelection 
-              clientId={state.client.clientId}
-              selectedVersion={selectedVersion}
-              onVersionSelect={handleVersionSelect}
-            />
-          )}
-          {validationErrors.versionId && (
-            <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.versionId}</p>
-          )}
-
-          {/* Order & Paper Section - Now Project Details */}
-          <div className="bg-gray-50 p-5 rounded-lg shadow-sm">
-            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">PROJECT & PAPER DETAILS</h2>
-            <OrderAndPaper 
-              state={state} 
-              dispatch={dispatch} 
-              onNext={() => {}} 
-              validationErrors={validationErrors}
-              singlePageMode={true}
-              onJobTypeChange={handleJobTypeChange}
-            />
-          </div>
+          <FixedSection
+            state={state}
+            dispatch={dispatch}
+            isEditMode={isEditMode}
+            selectedClient={selectedClient}
+            setSelectedClient={setSelectedClient}
+            selectedVersion={selectedVersion}
+            handleClientSelect={handleClientSelect}
+            handleVersionSelect={handleVersionSelect}
+            generateClientCode={generateClientCode}
+            isB2BClient={isB2BClient}
+            linkedClientData={linkedClientData}
+            validationErrors={validationErrors}
+            handleJobTypeChange={handleJobTypeChange}
+          />
 
           {/* Production Services Section */}
           <div className="mb-8">

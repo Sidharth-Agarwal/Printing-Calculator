@@ -18,44 +18,22 @@ const ExistingEstimates = ({ estimates }) => {
     });
   };
 
-  // NOTE: Cost display is commented out for now
-  // Format currency
-  /*
-  const formatCurrency = (amount) => {
-    if (!amount || isNaN(amount)) return "N/A";
-    
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 0,
-    }).format(amount);
-  };
-  */
-
   return (
-    <div className="border rounded-lg p-4 bg-white">
-      <h3 className="text-md font-semibold mb-3">Existing Estimates in this Version</h3>
+    <div className="border border-gray-200 rounded-md p-4 bg-white">
+      <h3 className="text-sm font-medium text-gray-700 mb-3">Existing Estimates in this Version</h3>
       
       {estimates.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
           {estimates.map(estimate => {
-            // NOTE: Cost calculation is commented out for now
-            /*
-            // Extract the total cost if available
-            const totalCost = 
-              (estimate.calculations?.totalCost) || 
-              (estimate.calculations?.totalCostPerCard && estimate.jobDetails?.quantity 
-                ? estimate.calculations.totalCostPerCard * estimate.jobDetails.quantity 
-                : null);
-            */
-            
             return (
-              <div key={estimate.id} className="px-2 pt-2 bg-gray-50 hover:bg-gray-100 rounded border transition-colors">
-                <div className="flex items-start">
-                  <h4 className="font-medium text-blue-700 text-sm truncate" title={estimate.projectName}>
+              <div key={estimate.id} className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors">
+                <div className="flex items-start justify-between">
+                  <h4 className="font-medium text-red-700 text-sm truncate" title={estimate.projectName}>
                     {estimate.projectName}
                   </h4>
-                  {/* Cost display removed */}
+                  <span className="px-1.5 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                    #{estimate.id.substring(0, 4)}
+                  </span>
                 </div>
                 
                 <div className="text-xs text-gray-600 mt-1 truncate">
@@ -95,7 +73,7 @@ const ExistingEstimates = ({ estimates }) => {
           })}
         </div>
       ) : (
-        <div className="text-center p-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">
+        <div className="text-center p-4 bg-gray-50 rounded-md border border-dashed border-gray-300">
           <p className="text-gray-500">No existing estimates found for this version.</p>
           <p className="text-sm text-gray-400 mt-1">Estimates you create will appear here.</p>
         </div>
