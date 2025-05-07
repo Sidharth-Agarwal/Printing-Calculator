@@ -16,6 +16,85 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   const { mrTypes, loading: mrTypesLoading } = useMRTypes("LP MR");
   const { materials: plateTypes, loading: plateTypesLoading } = useMaterialTypes("Plate Type");
 
+  const inchesToCm = (inches) => parseFloat(inches) * 2.54;
+
+  // Update dimensions when die size changes (for Auto mode)
+  useEffect(() => {
+    if (lpDetails.isLPUsed) {
+      const updatedDetails = lpDetails.colorDetails.map((color) => {
+        if (color.plateSizeType === "Auto") {
+          const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+          const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+          
+          return {
+            ...color,
+            plateDimensions: {
+              length: lengthCm,
+              breadth: breadthCm,
+              lengthInInches: dieSize.length || "",
+              breadthInInches: dieSize.breadth || ""
+            },
+          };
+        }
+        return color;
+      });
+
+      const needsUpdate = JSON.stringify(lpDetails.colorDetails) !== JSON.stringify(updatedDetails);
+
+      if (needsUpdate) {
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { colorDetails: updatedDetails },
+        });
+      }
+    }
+  }, [lpDetails.isLPUsed, dieSize, dispatch, lpDetails.colorDetails]);
+
+  // Set default MR Types when MR types are loaded and colors have null/empty MR types
+  useEffect(() => {
+    if (lpDetails.isLPUsed && mrTypes.length > 0 && lpDetails.colorDetails.length > 0) {
+      const defaultMRType = mrTypes[0];
+      
+      // Check if any color has an empty/missing MR type
+      const needsMRTypeUpdate = lpDetails.colorDetails.some(color => !color.mrType || !color.mrTypeConcatenated);
+      
+      if (needsMRTypeUpdate) {
+        const updatedDetails = lpDetails.colorDetails.map(color => ({
+          ...color,
+          mrType: color.mrType || defaultMRType.type,
+          mrTypeConcatenated: color.mrTypeConcatenated || defaultMRType.concatenated || `LP MR ${defaultMRType.type}`
+        }));
+        
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { colorDetails: updatedDetails },
+        });
+      }
+    }
+  }, [mrTypes, lpDetails.isLPUsed, lpDetails.colorDetails, dispatch]);
+
+  // Set default plate types when plate types are loaded and colors have null/empty plate types
+  useEffect(() => {
+    if (lpDetails.isLPUsed && plateTypes.length > 0 && lpDetails.colorDetails.length > 0) {
+      const defaultPlateType = plateTypes[0].materialName;
+      
+      // Check if any color has an empty/missing plate type
+      const needsPlateTypeUpdate = lpDetails.colorDetails.some(color => !color.plateType);
+      
+      if (needsPlateTypeUpdate) {
+        const updatedDetails = lpDetails.colorDetails.map(color => ({
+          ...color,
+          plateType: color.plateType || defaultPlateType
+        }));
+        
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { colorDetails: updatedDetails },
+        });
+      }
+    }
+  }, [plateTypes, lpDetails.isLPUsed, lpDetails.colorDetails, dispatch]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
 
@@ -169,305 +248,233 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     }
   };
 
-  const inchesToCm = (inches) => parseFloat(inches) * 2.54;
-
-  // Update dimensions when die size changes (for Auto mode)
-  useEffect(() => {
-    if (lpDetails.isLPUsed) {
-      const updatedDetails = lpDetails.colorDetails.map((color) => {
-        if (color.plateSizeType === "Auto") {
-          const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
-          const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
-          
-          return {
-            ...color,
-            plateDimensions: {
-              length: lengthCm,
-              breadth: breadthCm,
-              lengthInInches: dieSize.length || "",
-              breadthInInches: dieSize.breadth || ""
-            },
-          };
-        }
-        return color;
-      });
-
-      const needsUpdate = JSON.stringify(lpDetails.colorDetails) !== JSON.stringify(updatedDetails);
-
-      if (needsUpdate) {
-        dispatch({
-          type: "UPDATE_LP_DETAILS",
-          payload: { colorDetails: updatedDetails },
-        });
-      }
-    }
-  }, [lpDetails.isLPUsed, dieSize, dispatch, lpDetails.colorDetails]);
-
-  // Set default MR Types when MR types are loaded and colors have null/empty MR types
-  useEffect(() => {
-    if (lpDetails.isLPUsed && mrTypes.length > 0 && lpDetails.colorDetails.length > 0) {
-      const defaultMRType = mrTypes[0];
-      
-      // Check if any color has an empty/missing MR type
-      const needsMRTypeUpdate = lpDetails.colorDetails.some(color => !color.mrType || !color.mrTypeConcatenated);
-      
-      if (needsMRTypeUpdate) {
-        const updatedDetails = lpDetails.colorDetails.map(color => ({
-          ...color,
-          mrType: color.mrType || defaultMRType.type,
-          mrTypeConcatenated: color.mrTypeConcatenated || defaultMRType.concatenated || `LP MR ${defaultMRType.type}`
-        }));
-        
-        dispatch({
-          type: "UPDATE_LP_DETAILS",
-          payload: { colorDetails: updatedDetails },
-        });
-      }
-    }
-  }, [mrTypes, lpDetails.isLPUsed, lpDetails.colorDetails, dispatch]);
-
-  // Set default plate types when plate types are loaded and colors have null/empty plate types
-  useEffect(() => {
-    if (lpDetails.isLPUsed && plateTypes.length > 0 && lpDetails.colorDetails.length > 0) {
-      const defaultPlateType = plateTypes[0].materialName;
-      
-      // Check if any color has an empty/missing plate type
-      const needsPlateTypeUpdate = lpDetails.colorDetails.some(color => !color.plateType);
-      
-      if (needsPlateTypeUpdate) {
-        const updatedDetails = lpDetails.colorDetails.map(color => ({
-          ...color,
-          plateType: color.plateType || defaultPlateType
-        }));
-        
-        dispatch({
-          type: "UPDATE_LP_DETAILS",
-          payload: { colorDetails: updatedDetails },
-        });
-      }
-    }
-  }, [plateTypes, lpDetails.isLPUsed, lpDetails.colorDetails, dispatch]);
-
   // When LP is not used, we don't need to show any content
   if (!lpDetails.isLPUsed) {
     return null;
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <div className="mb-1 text-sm">No of Colors:</div>
-        <input
-          type="number"
-          name="noOfColors"
-          value={lpDetails.noOfColors}
-          min="1"
-          max="10"
-          onChange={handleChange}
-          className="border rounded-md p-2 w-full text-sm"
-        />
-        {errors.noOfColors && (
-          <p className="text-red-500 text-sm">{errors.noOfColors}</p>
-        )}
-      </div>
-
-      {lpDetails.noOfColors > 0 && (
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-5">
+        {/* Number of Colors Input */}
         <div>
-          <h3 className="text-md font-semibold mt-4 mb-2">Color Details</h3>
-          {Array.from({ length: lpDetails.noOfColors }, (_, index) => (
-            <div
-              key={index}
-              className="mb-4 p-4 border rounded-md bg-gray-50"
-            >
-              <h4 className="text-sm font-semibold mb-2">Color {index + 1}</h4>
+          <label htmlFor="noOfColors" className="block text-xs font-medium text-gray-600 mb-1">
+            Number of Colors:
+          </label>
+          <input
+            type="number"
+            id="noOfColors"
+            name="noOfColors"
+            value={lpDetails.noOfColors}
+            min="1"
+            max="10"
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+          />
+          {errors.noOfColors && (
+            <p className="text-red-500 text-xs mt-1">{errors.noOfColors}</p>
+          )}
+        </div>
 
-              <div className="flex flex-wrap gap-4 text-sm">
-                {/* Plate Size Type */}
-                <div className="flex-1">
-                  <div className="mb-1">Plate Size:</div>
-                  <select
-                    value={lpDetails.colorDetails[index]?.plateSizeType || "Auto"}
-                    onChange={(e) =>
-                      handleColorDetailsChange(
-                        index,
-                        "plateSizeType",
-                        e.target.value
-                      )
-                    }
-                    className="border rounded-md p-2 w-full"
-                  >
-                    <option value="Auto">Auto</option>
-                    <option value="Manual">Manual</option>
-                  </select>
-                  {errors[`plateSizeType_${index}`] && (
-                    <p className="text-red-500 text-sm">
-                      {errors[`plateSizeType_${index}`]}
-                    </p>
-                  )}
+        {/* Color Details Sections */}
+        {lpDetails.noOfColors > 0 && (
+          <div>
+            <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">Color Details</h3>
+            
+            {/* Loading state */}
+            {mrTypesLoading || plateTypesLoading ? (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                <div className="flex justify-center">
+                  <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
                 </div>
+                <p className="text-center text-sm text-gray-500 mt-2">Loading materials...</p>
+              </div>
+            ) : (
+              /* Color details form for each color */
+              Array.from({ length: lpDetails.noOfColors }, (_, index) => (
+                <div
+                  key={index}
+                  className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-md"
+                >
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">Color {index + 1}</h4>
+                  </div>
 
-                {/* Plate Dimensions */}
-                {lpDetails.colorDetails[index]?.plateSizeType && (
-                  <div className="flex flex-wrap gap-4 flex-1">
-                    <div className="flex-1">
-                      <label htmlFor={`length_${index}`} className="block mb-1">
-                        Length:
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Plate Size Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Plate Size:
                       </label>
-                      <input
-                        id={`length_${index}`}
-                        type="number"
-                        name="length"
-                        placeholder="(inches)"
-                        value={
-                          lpDetails.colorDetails[index]?.plateDimensions?.lengthInInches || ""
-                        }
-                        onChange={(e) =>
-                          handleColorDetailsChange(index, "plateDimensions", {
-                            length: e.target.value,
-                          })
-                        }
-                        className={`border rounded-md p-2 w-full ${
-                          lpDetails.colorDetails[index]?.plateSizeType === "Auto"
-                            ? "bg-gray-100"
-                            : ""
-                        }`}
-                        readOnly={
-                          lpDetails.colorDetails[index]?.plateSizeType === "Auto"
-                        }
-                      />
-                      {/* Display converted cm value for reference */}
-                      <div className="text-xs text-gray-500 mt-1">
-                        {lpDetails.colorDetails[index]?.plateDimensions?.length ? 
-                          `${lpDetails.colorDetails[index].plateDimensions.length} cm` : ""}
-                      </div>
-                      {errors[`plateLength_${index}`] && (
-                        <p className="text-red-500 text-sm">
-                          {errors[`plateLength_${index}`]}
+                      <select
+                        value={lpDetails.colorDetails[index]?.plateSizeType || "Auto"}
+                        onChange={(e) => handleColorDetailsChange(
+                          index,
+                          "plateSizeType",
+                          e.target.value
+                        )}
+                        className={`w-full px-3 py-2 border ${
+                          errors[`plateSizeType_${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                      >
+                        <option value="Auto">Auto</option>
+                        <option value="Manual">Manual</option>
+                      </select>
+                      {errors[`plateSizeType_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`plateSizeType_${index}`]}
                         </p>
                       )}
                     </div>
 
-                    <div className="flex-1">
-                      <label htmlFor={`breadth_${index}`} className="block mb-1">
-                        Breadth:
+                    {/* Plate Dimensions */}
+                    {lpDetails.colorDetails[index]?.plateSizeType && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Length (inches):
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="Enter length"
+                            value={lpDetails.colorDetails[index]?.plateDimensions?.lengthInInches || ""}
+                            onChange={(e) => handleColorDetailsChange(index, "plateDimensions", {
+                              length: e.target.value,
+                            })}
+                            className={`w-full px-3 py-2 border ${
+                              errors[`plateLength_${index}`] ? "border-red-500" : "border-gray-300"
+                            } rounded-md ${
+                              lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
+                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                            readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
+                          />
+                          {lpDetails.colorDetails[index]?.plateDimensions?.length && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {lpDetails.colorDetails[index].plateDimensions.length} cm
+                            </div>
+                          )}
+                          {errors[`plateLength_${index}`] && (
+                            <p className="text-red-500 text-xs mt-1">
+                              {errors[`plateLength_${index}`]}
+                            </p>
+                          )}
+                        </div>
+
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Breadth (inches):
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="Enter breadth"
+                            value={lpDetails.colorDetails[index]?.plateDimensions?.breadthInInches || ""}
+                            onChange={(e) => handleColorDetailsChange(index, "plateDimensions", {
+                              breadth: e.target.value,
+                            })}
+                            className={`w-full px-3 py-2 border ${
+                              errors[`plateBreadth_${index}`] ? "border-red-500" : "border-gray-300"
+                            } rounded-md ${
+                              lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
+                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                            readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
+                          />
+                          {lpDetails.colorDetails[index]?.plateDimensions?.breadth && (
+                            <div className="text-xs text-gray-500 mt-1">
+                              {lpDetails.colorDetails[index].plateDimensions.breadth} cm
+                            </div>
+                          )}
+                          {errors[`plateBreadth_${index}`] && (
+                            <p className="text-red-500 text-xs mt-1">
+                              {errors[`plateBreadth_${index}`]}
+                            </p>
+                          )}
+                        </div>
+                      </>
+                    )}
+
+                    {/* Pantone Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Pantone Type:
                       </label>
                       <input
-                        id={`breadth_${index}`}
-                        type="number"
-                        name="breadth"
-                        placeholder="(inches)"
-                        value={
-                          lpDetails.colorDetails[index]?.plateDimensions?.breadthInInches || ""
-                        }
-                        onChange={(e) =>
-                          handleColorDetailsChange(index, "plateDimensions", {
-                            breadth: e.target.value,
-                          })
-                        }
-                        className={`border rounded-md p-2 w-full ${
-                          lpDetails.colorDetails[index]?.plateSizeType === "Auto"
-                            ? "bg-gray-100"
-                            : ""
-                        }`}
-                        readOnly={
-                          lpDetails.colorDetails[index]?.plateSizeType === "Auto"
-                        }
+                        type="text"
+                        value={lpDetails.colorDetails[index]?.pantoneType || "Not sure"}
+                        onChange={(e) => handleColorDetailsChange(
+                          index,
+                          "pantoneType",
+                          e.target.value
+                        )}
+                        className={`w-full px-3 py-2 border ${
+                          errors[`pantoneType_${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        placeholder="Enter Pantone Type"
                       />
-                      {/* Display converted cm value for reference */}
-                      <div className="text-xs text-gray-500 mt-1">
-                        {lpDetails.colorDetails[index]?.plateDimensions?.breadth ? 
-                          `${lpDetails.colorDetails[index].plateDimensions.breadth} cm` : ""}
-                      </div>
-                      {errors[`plateBreadth_${index}`] && (
-                        <p className="text-red-500 text-sm">
-                          {errors[`plateBreadth_${index}`]}
+                      {errors[`pantoneType_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`pantoneType_${index}`]}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Plate Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Plate Type:
+                      </label>
+                      <select
+                        value={lpDetails.colorDetails[index]?.plateType || ""}
+                        onChange={(e) => handleColorDetailsChange(index, "plateType", e.target.value)}
+                        className={`w-full px-3 py-2 border ${
+                          errors[`plateType_${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                      >
+                        <option value="">Select Plate Type</option>
+                        {plateTypes.map((plateType, idx) => (
+                          <option key={idx} value={plateType.materialName}>
+                            {plateType.materialName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors[`plateType_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`plateType_${index}`]}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* MR Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        MR Type:
+                      </label>
+                      <select
+                        value={lpDetails.colorDetails[index]?.mrType || ""}
+                        onChange={(e) => handleColorDetailsChange(index, "mrType", e.target.value)}
+                        className={`w-full px-3 py-2 border ${
+                          errors[`mrType_${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                      >
+                        <option value="">Select MR Type</option>
+                        {mrTypes.map((typeOption, idx) => (
+                          <option key={idx} value={typeOption.type}>
+                            {typeOption.type}
+                          </option>
+                        ))}
+                      </select>
+                      {errors[`mrType_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`mrType_${index}`]}
                         </p>
                       )}
                     </div>
                   </div>
-                )}
-
-                {/* Pantone Type */}
-                <div className="flex-1">
-                  <div className="mb-1">Pantone Type:</div>
-                  <input
-                    type="text"
-                    value={lpDetails.colorDetails[index]?.pantoneType || "Not sure"}
-                    onChange={(e) =>
-                      handleColorDetailsChange(
-                        index,
-                        "pantoneType",
-                        e.target.value
-                      )
-                    }
-                    className="border rounded-md p-2 w-full"
-                    placeholder="Enter Pantone Type"
-                  />
-                  {errors[`pantoneType_${index}`] && (
-                    <p className="text-red-500 text-sm">
-                      {errors[`pantoneType_${index}`]}
-                    </p>
-                  )}
                 </div>
-
-                {/* Plate Type - Updated to use dynamic plate types from the materials hook */}
-                <div className="flex-1">
-                  <div className="mb-1">Plate Type:</div>
-                  <select
-                    value={lpDetails.colorDetails[index]?.plateType || ""}
-                    onChange={(e) =>
-                      handleColorDetailsChange(index, "plateType", e.target.value)
-                    }
-                    className="border rounded-md p-2 w-full"
-                  >
-                    {plateTypesLoading ? (
-                      <option value="" disabled>Loading Plate Types...</option>
-                    ) : (
-                      plateTypes.map((plateType, idx) => (
-                        <option key={idx} value={plateType.materialName}>
-                          {plateType.materialName}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  {errors[`plateType_${index}`] && (
-                    <p className="text-red-500 text-sm">
-                      {errors[`plateType_${index}`]}
-                    </p>
-                  )}
-                </div>
-
-                {/* MR Type - Updated to use dynamic MR types and store concatenated version */}
-                <div className="flex-1">
-                  <div className="mb-1">MR Type:</div>
-                  <select
-                    value={lpDetails.colorDetails[index]?.mrType || ""}
-                    onChange={(e) =>
-                      handleColorDetailsChange(index, "mrType", e.target.value)
-                    }
-                    className="border rounded-md p-2 w-full"
-                  >
-                    {mrTypesLoading ? (
-                      <option value="" disabled>Loading MR Types...</option>
-                    ) : (
-                      mrTypes.map((typeOption, idx) => (
-                        <option key={idx} value={typeOption.type}>
-                          {typeOption.type}
-                        </option>
-                      ))
-                    )}
-                  </select>
-                  {errors[`mrType_${index}`] && (
-                    <p className="text-red-500 text-sm">
-                      {errors[`mrType_${index}`]}
-                    </p>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </form>
   );
 };

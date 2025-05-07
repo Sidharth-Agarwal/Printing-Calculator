@@ -7,6 +7,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
 
 // Import components
+import FormSection from "./FormSection";
 import LPDetails from "./Sections/Production/LPDetails";
 import FSDetails from "./Sections/Production/FSDetails";
 import EMBDetails from "./Sections/Production/EMBDetails";
@@ -314,63 +315,6 @@ const mapStateToFirebaseStructure = (state, calculations) => {
   console.log("mapStateToFirebaseStructure: final projectName =", firestoreData.projectName);
   
   return firestoreData;
-};
-
-// FormSection component with toggle in header
-const FormSection = ({ title, children, id, activeSection, setActiveSection, isUsed = false, onToggleUsage, isDisabled = false, bgColor = "bg-gray-50" }) => {
-  const isActive = activeSection === id;
-  
-  const toggleSection = () => {
-    if (!isDisabled) {
-      setActiveSection(isActive ? null : id);
-    }
-  };
-  
-  // Special handling for the ReviewAndSubmit section (which has no toggle)
-  const isReviewSection = id === "reviewAndSubmit";
-  
-  return (
-    <div className={`mb-6 border rounded-lg overflow-hidden shadow-sm ${isDisabled ? 'opacity-60' : ''}`}>
-      <div 
-        className={`p-3 flex justify-between items-center ${isActive ? (bgColor || 'bg-blue-50') : (bgColor || 'bg-gray-50')} cursor-pointer`}
-        onClick={toggleSection}
-      >
-        <div className="flex items-center space-x-4">
-          {/* Toggle switch in section header - not shown for ReviewAndSubmit */}
-          {!isReviewSection && (
-            <div 
-              className={`flex items-center space-x-2 ${isDisabled ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-              onClick={(e) => {
-                e.stopPropagation(); // Prevent section expansion when clicking toggle
-                if (!isDisabled) {
-                  onToggleUsage();
-                }
-              }}
-            >
-              <div className={`w-5 h-5 flex items-center justify-center border rounded-full ${isDisabled ? 'bg-gray-200 border-gray-300' : 'border-gray-300 bg-gray-200'}`}>
-                {isUsed && <div className="w-3 h-3 rounded-full bg-blue-500"></div>}
-              </div>
-            </div>
-          )}
-          
-          {/* Section title */}
-          <h2 
-            className={`text-lg font-semibold ${isDisabled ? 'cursor-not-allowed text-gray-500' : 'cursor-pointer'}`}
-          >
-            {title}
-          </h2>
-        </div>
-        
-        {/* Expand/collapse button */}
-        <span className="text-gray-500">
-          {isActive ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
-        </span>
-      </div>
-      <div className={`transition-all duration-300 ${isActive ? 'block p-4' : 'hidden'}`}>
-        {children}
-      </div>
-    </div>
-  );
 };
 
 const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess = null, onClose = null }) => {
@@ -1517,13 +1461,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           />
 
           {/* Production Services Section */}
-          <div className="mb-8">
-            <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">PRODUCTION SERVICES</h2>
+          <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
+            <h2 className="mb-4 border-b border-gray-200 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
             
             {/* LP Section */}
             {isServiceVisible("LP") && (
               <FormSection 
-                title="LETTER PRESS (LP)" 
+                title="Letter Press (LP)" 
                 id="lp"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1540,10 +1484,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
 
-            {/* FS Section */}
+            {/* Other production service sections follow the same pattern */}
             {isServiceVisible("FS") && (
               <FormSection 
-                title="FOIL STAMPING (FS)" 
+                title="Foil Stamping (FS)" 
                 id="fs"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1559,11 +1503,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 />
               </FormSection>
             )}
-
-            {/* EMB Section */}
+            
             {isServiceVisible("EMB") && (
               <FormSection 
-                title="EMBOSSING (EMB)" 
+                title="Embossing (EMB)" 
                 id="emb"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1571,7 +1514,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 onToggleUsage={toggleEMBUsage}
               >
                 <EMBDetails 
-                  state={state}
+                  state={state} 
                   dispatch={dispatch} 
                   onNext={() => {}} 
                   onPrevious={() => {}} 
@@ -1579,11 +1522,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 />
               </FormSection>
             )}
-
-            {/* DIGI Section */}
+            
             {isServiceVisible("DIGI") && (
               <FormSection 
-                title="DIGITAL PRINTING" 
+                title="Digital Printing" 
                 id="digi"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1600,10 +1542,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
             
-            {/* NOTEBOOK Section - Only visible for Notebook job type */}
             {isServiceVisible("NOTEBOOK") && (
               <FormSection 
-                title="NOTEBOOK DETAILS" 
+                title="Notebook Details" 
                 id="notebook"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1620,10 +1561,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
             
-            {/* SCREEN PRINT Section */}
             {isServiceVisible("SCREEN") && (
               <FormSection 
-                title="SCREEN PRINTING" 
+                title="Screen Printing" 
                 id="screenPrint"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1642,13 +1582,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           </div>
 
           {/* Post-Production Services Section */}
-          <div className="mb-8">
-          <h2 className="text-lg font-semibold mb-4 text-blue-700 border-b pb-2">POST-PRODUCTION SERVICES</h2>
+          <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
+            <h2 className="mb-4 border-b border-gray-200 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
             
             {/* Die Cutting Section */}
             {isServiceVisible("DC") && (
               <FormSection 
-                title="DIE CUTTING" 
+                title="Die Cutting" 
                 id="dieCutting"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1668,7 +1608,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Post DC Section */}
             {isServiceVisible("POST DC") && (
               <FormSection 
-                title="POST DIE CUTTING" 
+                title="Post Die Cutting" 
                 id="postDC"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1688,7 +1628,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Fold & Paste Section */}
             {isServiceVisible("FOLD & PASTE") && (
               <FormSection 
-                title="FOLD & PASTE" 
+                title="Fold & Paste" 
                 id="foldAndPaste"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1748,7 +1688,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* QC Section */}
             {isServiceVisible("QC") && (
               <FormSection 
-                title="QUALITY CHECK" 
+                title="Quality Check" 
                 id="qc"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1768,7 +1708,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Packing Section */}
             {isServiceVisible("PACKING") && (
               <FormSection 
-                title="PACKING" 
+                title="Packing" 
                 id="packing"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1788,7 +1728,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Misc Section */}
             {isServiceVisible("MISC") && (
               <FormSection 
-                title="MISCELLANEOUS" 
+                title="Miscellaneous" 
                 id="misc"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
@@ -1808,7 +1748,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* Sandwich Section */}
             {isServiceVisible("DUPLEX") && (
               <FormSection 
-                title="DUPLEX/SANDWICH" 
+                title="Duplex/Sandwich" 
                 id="sandwich"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}

@@ -19,7 +19,7 @@ export const serviceRegistry = {
   // Production Services
   "LP": {
     id: "lp",
-    title: "LETTER PRESS (LP)",
+    title: "Letter Press (LP)",
     component: LPDetails,
     stateKey: "lpDetails",
     toggleField: "isLPUsed",
@@ -27,7 +27,7 @@ export const serviceRegistry = {
   },
   "FS": {
     id: "fs",
-    title: "FOIL STAMPING (FS)",
+    title: "Foil Stamping (FS)",
     component: FSDetails,
     stateKey: "fsDetails",
     toggleField: "isFSUsed",
@@ -35,7 +35,7 @@ export const serviceRegistry = {
   },
   "EMB": {
     id: "emb",
-    title: "EMBOSSING (EMB)",
+    title: "Embossing (EMB)",
     component: EMBDetails,
     stateKey: "embDetails",
     toggleField: "isEMBUsed",
@@ -43,7 +43,7 @@ export const serviceRegistry = {
   },
   "DIGI": {
     id: "digi",
-    title: "DIGITAL PRINTING",
+    title: "Digital Printing",
     component: DigiDetails,
     stateKey: "digiDetails",
     toggleField: "isDigiUsed",
@@ -51,7 +51,7 @@ export const serviceRegistry = {
   },
   "SCREEN": {
     id: "screenPrint",
-    title: "SCREEN PRINTING",
+    title: "Screen Printing",
     component: ScreenPrint,
     stateKey: "screenPrint",
     toggleField: "isScreenPrintUsed",
@@ -59,7 +59,7 @@ export const serviceRegistry = {
   },
   "NOTEBOOK": {  // Add the new Notebook service
     id: "notebook",
-    title: "NOTEBOOK DETAILS",
+    title: "Notebook Details",
     component: NotebookDetails,
     stateKey: "notebookDetails",
     toggleField: "isNotebookUsed",
@@ -69,7 +69,7 @@ export const serviceRegistry = {
   // Post-Production Services
   "DC": {
     id: "dieCutting",
-    title: "DIE CUTTING",
+    title: "Die Cutting",
     component: DieCutting,
     stateKey: "dieCutting",
     toggleField: "isDieCuttingUsed",
@@ -77,7 +77,7 @@ export const serviceRegistry = {
   },
   "POST DC": {
     id: "postDC",
-    title: "POST DIE CUTTING",
+    title: "Post Die Cutting",
     component: PostDC,
     stateKey: "postDC",
     toggleField: "isPostDCUsed",
@@ -85,7 +85,7 @@ export const serviceRegistry = {
   },
   "FOLD & PASTE": {
     id: "foldAndPaste",
-    title: "FOLD & PASTE",
+    title: "Fold & Paste",
     component: FoldAndPaste,
     stateKey: "foldAndPaste",
     toggleField: "isFoldAndPasteUsed",
@@ -109,7 +109,7 @@ export const serviceRegistry = {
   },
   "QC": {
     id: "qc",
-    title: "QUALITY CHECK",
+    title: "Quality Check",
     component: QC,
     stateKey: "qc",
     toggleField: "isQCUsed",
@@ -117,7 +117,7 @@ export const serviceRegistry = {
   },
   "PACKING": {
     id: "packing",
-    title: "PACKING",
+    title: "Packing",
     component: Packing,
     stateKey: "packing",
     toggleField: "isPackingUsed",
@@ -133,7 +133,7 @@ export const serviceRegistry = {
   },
   "MISC": {
     id: "misc",
-    title: "MISCELLANEOUS",
+    title: "Miscellaneous",
     component: Misc,
     stateKey: "misc",
     toggleField: "isMiscUsed",

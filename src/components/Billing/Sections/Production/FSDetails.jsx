@@ -15,22 +15,9 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   const selectionMade = useRef(false);
 
   // Use the custom hooks to fetch data
-  const { mrTypes, loading: mrTypesLoading, refreshMRTypes } = useMRTypes("FS MR");
+  const { mrTypes, loading: mrTypesLoading } = useMRTypes("FS MR");
   const { materials: foilTypes, loading: foilTypesLoading } = useMaterialTypes("Foil Type");
   const { materials: blockTypes, loading: blockTypesLoading } = useMaterialTypes("Block Type");
-
-  // Debugging: log what's loaded from hooks
-  useEffect(() => {
-    if (!foilTypesLoading && foilTypes.length > 0) {
-      console.log("Loaded foil types from hook:", foilTypes.map(ft => ft.materialName));
-    }
-    if (!blockTypesLoading && blockTypes.length > 0) {
-      console.log("Loaded block types from hook:", blockTypes.map(bt => bt.materialName));
-    }
-    if (!mrTypesLoading && mrTypes.length > 0) {
-      console.log("Loaded MR types from hook:", mrTypes.map(mt => mt.type));
-    }
-  }, [foilTypes, blockTypes, mrTypes, foilTypesLoading, blockTypesLoading, mrTypesLoading]);
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
@@ -66,7 +53,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
       if (foil.foilType) {
         const foilTypeExists = foilTypes.some(ft => ft.materialName === foil.foilType);
         if (!foilTypeExists) {
-          console.log(`Foil type ${foil.foilType} not found in available options. Updating to ${foilTypes[0].materialName}`);
           updatedFoilDetails[index].foilType = foilTypes[0].materialName;
           needsUpdate = true;
         }
@@ -76,7 +62,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
       if (foil.blockType) {
         const blockTypeExists = blockTypes.some(bt => bt.materialName === foil.blockType);
         if (!blockTypeExists) {
-          console.log(`Block type ${foil.blockType} not found in available options. Updating to ${blockTypes[0].materialName}`);
           updatedFoilDetails[index].blockType = blockTypes[0].materialName;
           needsUpdate = true;
         }
@@ -86,7 +71,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
       if (foil.mrType) {
         const mrTypeExists = mrTypes.some(mt => mt.type === foil.mrType);
         if (!mrTypeExists) {
-          console.log(`MR type ${foil.mrType} not found in available options. Updating to ${mrTypes[0].type}`);
           updatedFoilDetails[index].mrType = mrTypes[0].type;
           const selectedMrType = mrTypes.find(mt => mt.type === mrTypes[0].type);
           updatedFoilDetails[index].mrTypeConcatenated = selectedMrType?.concatenated || `FS MR ${mrTypes[0].type}`;
@@ -96,7 +80,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     });
 
     if (needsUpdate) {
-      console.log("Updating foil details with validated options:", updatedFoilDetails);
       dispatch({
         type: "UPDATE_FS_DETAILS",
         payload: { foilDetails: updatedFoilDetails },
@@ -127,12 +110,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         type: "SIMPLE",
         concatenated: "FS MR SIMPLE"
       };
-
-      console.log("Creating new foil details with defaults:", {
-        defaultFoilType,
-        defaultBlockType,
-        defaultMrType
-      });
 
       // Create new foil details array with the correct number of items
       const updatedFoilDetails = Array.from({ length: numberOfFoilOptions }, (_, index) => {
@@ -176,7 +153,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   };
 
   const handleFoilDetailsChange = (index, field, value) => {
-    console.log(`Changing ${field} for foil ${index} to:`, value);
     selectionMade.current = true; // Mark that user has made an explicit selection
     
     // Deep copy the foil details array
@@ -221,9 +197,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         updatedFoilDetails[index].blockDimension.breadth = value.breadth ? inchesToCm(value.breadth).toFixed(2) : "";
       }
     } else if (field === "foilType") {
-      // Special handling for foil type to ensure it is correctly set
       updatedFoilDetails[index].foilType = value;
-      console.log(`Set foil type at index ${index} to:`, value);
     } else if (field === "mrType") {
       updatedFoilDetails[index].mrType = value;
       
@@ -238,19 +212,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     } else {
       updatedFoilDetails[index][field] = value;
     }
-
-    // Log the updated details before dispatching
-    console.log(`Updated foil detail ${index}:`, updatedFoilDetails[index]);
     
     dispatch({
       type: "UPDATE_FS_DETAILS",
       payload: { foilDetails: updatedFoilDetails },
     });
-    
-    // Verify the update after next render cycle
-    setTimeout(() => {
-      console.log(`Current state after update for ${field}:`, fsDetails.foilDetails[index]);
-    }, 0);
   };
 
   const validateFields = () => {
@@ -291,10 +257,6 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    // Log the final state before validating
-    console.log("Final foil details before submit:", fsDetails.foilDetails);
-    
     if (!singlePageMode && validateFields()) {
       onNext();
     }
@@ -309,188 +271,206 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   const isLoading = foilTypesLoading || blockTypesLoading || mrTypesLoading;
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6">
-      <div>
-        <div className="mb-1 text-sm">FS Type:</div>
-        <select
-          name="fsType"
-          value={fsDetails.fsType || ""}
-          onChange={handleChange}
-          className="border rounded-md p-2 w-full text-sm"
-        >
-          <option value="">Select FS Type</option>
-          {["FS1", "FS2", "FS3", "FS4", "FS5"].map((type, idx) => (
-            <option key={idx} value={type}>
-              {type}
-            </option>
-          ))}
-        </select>
-        {errors.fsType && <p className="text-red-500 text-sm">{errors.fsType}</p>}
-      </div>
-
-      {fsDetails.fsType && (
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-5">
+        {/* FS Type Selection */}
         <div>
-          <h3 className="text-md font-semibold mt-4 mb-2">Foil Details</h3>
-          
-          {isLoading ? (
-            <div className="p-4 bg-gray-50 border rounded-md">
-              <p className="text-center text-gray-500">Loading material options...</p>
-            </div>
-          ) : (
-            fsDetails.foilDetails.map((foil, index) => (
-              <div key={index} className="mb-4 p-4 border rounded-md bg-gray-50">
-                <h4 className="text-sm font-semibold mb-2">Foil {index + 1}</h4>
+          <label htmlFor="fsType" className="block text-xs font-medium text-gray-600 mb-1">
+            FS Type:
+          </label>
+          <select
+            id="fsType"
+            name="fsType"
+            value={fsDetails.fsType || ""}
+            onChange={handleChange}
+            className={`w-full px-3 py-2 border ${errors.fsType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+          >
+            <option value="">Select FS Type</option>
+            {["FS1", "FS2", "FS3", "FS4", "FS5"].map((type) => (
+              <option key={type} value={type}>
+                {type}
+              </option>
+            ))}
+          </select>
+          {errors.fsType && <p className="text-red-500 text-xs mt-1">{errors.fsType}</p>}
+        </div>
 
-                <div className="flex flex-wrap gap-4 text-sm">
-                  {/* Block Size Type */}
-                  <div className="flex-1">
-                    <div className="mb-1">Block Size:</div>
-                    <select
-                      value={foil.blockSizeType || "Auto"}
-                      onChange={(e) =>
-                        handleFoilDetailsChange(index, "blockSizeType", e.target.value)
-                      }
-                      className="border rounded-md p-2 w-full"
-                    >
-                      <option value="Auto">Auto</option>
-                      <option value="Manual">Manual</option>
-                    </select>
-                    {errors[`blockSizeType-${index}`] && (
-                      <p className="text-red-500 text-sm">{errors[`blockSizeType-${index}`]}</p>
-                    )}
+        {/* Foil Details Section */}
+        {fsDetails.fsType && (
+          <div>
+            <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">Foil Details</h3>
+            
+            {isLoading ? (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+                <div className="flex justify-center">
+                  <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
+                </div>
+                <p className="text-center text-sm text-gray-500 mt-2">Loading materials...</p>
+              </div>
+            ) : (
+              fsDetails.foilDetails.map((foil, index) => (
+                <div key={index} className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                  <div className="flex justify-between items-center mb-3">
+                    <h4 className="text-sm font-medium text-gray-700">Foil {index + 1}</h4>
                   </div>
 
-                  {/* Block Dimensions */}
-                  {foil.blockSizeType && (
-                    <div className="flex flex-wrap gap-4 flex-1">
-                      <div className="flex-1">
-                        <label htmlFor={`length-${index}`} className="block mb-1">
-                          Length:
-                        </label>
-                        <input
-                          type="number"
-                          id={`length-${index}`}
-                          placeholder="(inches)"
-                          value={foil.blockDimension?.lengthInInches || ""}
-                          onChange={(e) =>
-                            handleFoilDetailsChange(index, "blockDimension", {
-                              length: e.target.value,
-                            })
-                          }
-                          className={`border rounded-md p-2 w-full ${
-                            foil.blockSizeType === "Auto" ? "bg-gray-100" : ""
-                          }`}
-                          readOnly={foil.blockSizeType === "Auto"}
-                        />
-                        {/* Display the converted cm value */}
-                        <div className="text-xs text-gray-500 mt-1">
-                          {foil.blockDimension?.length ? `${foil.blockDimension.length} cm` : ""}
-                        </div>
-                        {errors[`blockLength-${index}`] && (
-                          <p className="text-red-500 text-sm">{errors[`blockLength-${index}`]}</p>
-                        )}
-                      </div>
-
-                      <div className="flex-1">
-                        <label htmlFor={`breadth-${index}`} className="block mb-1">
-                          Breadth:
-                        </label>
-                        <input
-                          type="number"
-                          id={`breadth-${index}`}
-                          placeholder="(inches)"
-                          value={foil.blockDimension?.breadthInInches || ""}
-                          onChange={(e) =>
-                            handleFoilDetailsChange(index, "blockDimension", {
-                              breadth: e.target.value,
-                            })
-                          }
-                          className={`border rounded-md p-2 w-full ${
-                            foil.blockSizeType === "Auto" ? "bg-gray-100" : ""
-                          }`}
-                          readOnly={foil.blockSizeType === "Auto"}
-                        />
-                        {/* Display the converted cm value */}
-                        <div className="text-xs text-gray-500 mt-1">
-                          {foil.blockDimension?.breadth ? `${foil.blockDimension.breadth} cm` : ""}
-                        </div>
-                        {errors[`blockBreadth-${index}`] && (
-                          <p className="text-red-500 text-sm">{errors[`blockBreadth-${index}`]}</p>
-                        )}
-                      </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                    {/* Block Size Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Block Size:
+                      </label>
+                      <select
+                        value={foil.blockSizeType || "Auto"}
+                        onChange={(e) => handleFoilDetailsChange(index, "blockSizeType", e.target.value)}
+                        className={`w-full px-3 py-2 border ${
+                          errors[`blockSizeType-${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                      >
+                        <option value="Auto">Auto</option>
+                        <option value="Manual">Manual</option>
+                      </select>
+                      {errors[`blockSizeType-${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">{errors[`blockSizeType-${index}`]}</p>
+                      )}
                     </div>
-                  )}
 
-                  {/* Foil Type */}
-                  <div className="flex-1">
-                    <div className="mb-1">Foil Type:</div>
-                    <select
-                      value={foil.foilType || ""}
-                      onChange={(e) => {
-                        console.log(`Selected foil type: ${e.target.value}`);
-                        handleFoilDetailsChange(index, "foilType", e.target.value);
-                      }}
-                      className="border rounded-md p-2 w-full"
-                      data-testid={`foil-type-select-${index}`}
-                    >
-                      {foilTypes.map((foilType, idx) => (
-                        <option key={idx} value={foilType.materialName}>
-                          {foilType.materialName}
-                        </option>
-                      ))}
-                    </select>
-                    {errors[`foilType-${index}`] && (
-                      <p className="text-red-500 text-sm">{errors[`foilType-${index}`]}</p>
-                    )}
-                  </div>
+                    {/* Block Dimensions */}
+                    {foil.blockSizeType && (
+                      <>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Length (inches):
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="Enter length"
+                            value={foil.blockDimension?.lengthInInches || ""}
+                            onChange={(e) => handleFoilDetailsChange(index, "blockDimension", {
+                              length: e.target.value,
+                            })}
+                            className={`w-full px-3 py-2 border ${
+                              errors[`blockLength-${index}`] ? "border-red-500" : "border-gray-300"
+                            } rounded-md ${
+                              foil.blockSizeType === "Auto" ? "bg-gray-50" : ""
+                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                            readOnly={foil.blockSizeType === "Auto"}
+                          />
+                          {foil.blockDimension?.length && (
+                            <div className="text-xs text-gray-500 mt-1">{foil.blockDimension.length} cm</div>
+                          )}
+                          {errors[`blockLength-${index}`] && (
+                            <p className="text-red-500 text-xs mt-1">{errors[`blockLength-${index}`]}</p>
+                          )}
+                        </div>
 
-                  {/* Block Type */}
-                  <div className="flex-1">
-                    <div className="mb-1">Block Type:</div>
-                    <select
-                      value={foil.blockType || ""}
-                      onChange={(e) =>
-                        handleFoilDetailsChange(index, "blockType", e.target.value)
-                      }
-                      className="border rounded-md p-2 w-full"
-                    >
-                      {blockTypes.map((blockType, idx) => (
-                        <option key={idx} value={blockType.materialName}>
-                          {blockType.materialName}
-                        </option>
-                      ))}
-                    </select>
-                    {errors[`blockType-${index}`] && (
-                      <p className="text-red-500 text-sm">{errors[`blockType-${index}`]}</p>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            Breadth (inches):
+                          </label>
+                          <input
+                            type="number"
+                            placeholder="Enter breadth"
+                            value={foil.blockDimension?.breadthInInches || ""}
+                            onChange={(e) => handleFoilDetailsChange(index, "blockDimension", {
+                              breadth: e.target.value,
+                            })}
+                            className={`w-full px-3 py-2 border ${
+                              errors[`blockBreadth-${index}`] ? "border-red-500" : "border-gray-300"
+                            } rounded-md ${
+                              foil.blockSizeType === "Auto" ? "bg-gray-50" : ""
+                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                            readOnly={foil.blockSizeType === "Auto"}
+                          />
+                          {foil.blockDimension?.breadth && (
+                            <div className="text-xs text-gray-500 mt-1">{foil.blockDimension.breadth} cm</div>
+                          )}
+                          {errors[`blockBreadth-${index}`] && (
+                            <p className="text-red-500 text-xs mt-1">{errors[`blockBreadth-${index}`]}</p>
+                          )}
+                        </div>
+                      </>
                     )}
-                  </div>
 
-                  {/* MR Type */}
-                  <div className="flex-1">
-                    <div className="mb-1">MR Type:</div>
-                    <select
-                      value={foil.mrType || ""}
-                      onChange={(e) =>
-                        handleFoilDetailsChange(index, "mrType", e.target.value)
-                      }
-                      className="border rounded-md p-2 w-full"
-                    >
-                      {mrTypes.map((typeOption, idx) => (
-                        <option key={idx} value={typeOption.type}>
-                          {typeOption.type}
-                        </option>
-                      ))}
-                    </select>
-                    {errors[`mrType-${index}`] && (
-                      <p className="text-red-500 text-sm">{errors[`mrType-${index}`]}</p>
-                    )}
+                    {/* Foil Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Foil Type:
+                      </label>
+                      <select
+                        value={foil.foilType || ""}
+                        onChange={(e) => handleFoilDetailsChange(index, "foilType", e.target.value)}
+                        className={`w-full px-3 py-2 border ${
+                          errors[`foilType-${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        data-testid={`foil-type-select-${index}`}
+                      >
+                        <option value="">Select Foil Type</option>
+                        {foilTypes.map((foilType, idx) => (
+                          <option key={idx} value={foilType.materialName}>
+                            {foilType.materialName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors[`foilType-${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">{errors[`foilType-${index}`]}</p>
+                      )}
+                    </div>
+
+                    {/* Block Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Block Type:
+                      </label>
+                      <select
+                        value={foil.blockType || ""}
+                        onChange={(e) => handleFoilDetailsChange(index, "blockType", e.target.value)}
+                        className={`w-full px-3 py-2 border ${
+                          errors[`blockType-${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                      >
+                        <option value="">Select Block Type</option>
+                        {blockTypes.map((blockType, idx) => (
+                          <option key={idx} value={blockType.materialName}>
+                            {blockType.materialName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors[`blockType-${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">{errors[`blockType-${index}`]}</p>
+                      )}
+                    </div>
+
+                    {/* MR Type */}
+                    <div>
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        MR Type:
+                      </label>
+                      <select
+                        value={foil.mrType || ""}
+                        onChange={(e) => handleFoilDetailsChange(index, "mrType", e.target.value)}
+                        className={`w-full px-3 py-2 border ${
+                          errors[`mrType-${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                      >
+                        <option value="">Select MR Type</option>
+                        {mrTypes.map((typeOption, idx) => (
+                          <option key={idx} value={typeOption.type}>
+                            {typeOption.type}
+                          </option>
+                        ))}
+                      </select>
+                      {errors[`mrType-${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">{errors[`mrType-${index}`]}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
+              ))
+            )}
+          </div>
+        )}
+      </div>
     </form>
   );
 };

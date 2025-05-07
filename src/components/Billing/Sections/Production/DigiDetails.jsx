@@ -12,7 +12,6 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
   // Set default selection when Digi is first enabled
   useEffect(() => {
     if (isDigiUsed && !digiDie && Object.keys(DIGI_DIE_OPTIONS).length > 0) {
-      // Select the first option by default
       const firstOption = Object.keys(DIGI_DIE_OPTIONS)[0];
       dispatch({
         type: "UPDATE_DIGI_DETAILS",
@@ -62,7 +61,6 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
 
   useEffect(() => {
     if (!isDigiUsed) {
-      // Clear digiDie and digiDimensions fields when Digi is not used
       dispatch({
         type: "UPDATE_DIGI_DETAILS",
         payload: { digiDie: "", digiDimensions: {} },
@@ -77,45 +75,55 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
-      <div>
-        <div className="mb-1 text-sm">Select Digital Printing Die:</div>
-        <select
-          name="digiDie"
-          value={digiDie}
-          onChange={handleChange}
-          className={`border rounded-md p-2 w-full text-sm ${
-            errors.digiDie ? "border-red-500" : ""
-          }`}
-        >
-          {Object.keys(DIGI_DIE_OPTIONS).map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-        {errors.digiDie && (
-          <p className="text-red-500 text-sm mt-1">{errors.digiDie}</p>
-        )}
-      </div>
+    <form onSubmit={handleSubmit}>
+      <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Digital Die Selection */}
+          <div>
+            <label htmlFor="digiDie" className="block text-xs font-medium text-gray-600 mb-1">
+              Digital Printing Die:
+            </label>
+            <select
+              id="digiDie"
+              name="digiDie"
+              value={digiDie}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border ${errors.digiDie ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            >
+              <option value="">Select Die Size</option>
+              {Object.keys(DIGI_DIE_OPTIONS).map((option) => (
+                <option key={option} value={option}>
+                  {option}
+                </option>
+              ))}
+            </select>
+            {errors.digiDie && (
+              <p className="text-red-500 text-xs mt-1">{errors.digiDie}</p>
+            )}
+          </div>
+        </div>
 
-      {digiDie && (
-        <div className="mt-2">
-          <div className="mb-1 text-sm">Dimensions:</div>
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1">
-              <div className="bg-gray-100 p-2 rounded-md w-full">
-                <span className="text-sm">Length: {digiDimensions.length || "N/A"} inches</span>
+        {/* Dimensions Display */}
+        {digiDie && (
+          <div className="mt-4">
+            <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Dimensions</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Length:</div>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                  {digiDimensions.length || "N/A"} inches
+                </div>
               </div>
-            </div>
-            <div className="flex-1">
-              <div className="bg-gray-100 p-2 rounded-md w-full">
-                <span className="text-sm">Breadth: {digiDimensions.breadth || "N/A"} inches</span>
+              <div>
+                <div className="text-xs text-gray-600 mb-1">Breadth:</div>
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                  {digiDimensions.breadth || "N/A"} inches
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </form>
   );
 };
