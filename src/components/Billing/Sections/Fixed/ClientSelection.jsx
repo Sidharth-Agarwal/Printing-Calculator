@@ -190,15 +190,14 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
           {filteredClients.length === 0 ? (
             <div className="p-4 text-center">
               <p className="text-gray-500">No clients found</p>
-              <button
+              {/* <button
                 onClick={() => {
-                  /* Handle create new client */
                   if (onCreateNewClient) onCreateNewClient();
                 }}
                 className="mt-2 text-red-600 hover:underline text-sm"
               >
                 + Create new client
-              </button>
+              </button> */}
             </div>
           ) : (
             filteredClients.map(client => (
@@ -249,15 +248,14 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
             })}
           </select>
           <div className="mt-2 text-right">
-            <button
+            {/* <button
               onClick={() => {
-                /* Handle create new client */
                 if (onCreateNewClient) onCreateNewClient();
               }}
               className="text-red-600 hover:underline text-sm"
             >
               + Create new client
-            </button>
+            </button> */}
           </div>
         </div>
       )}

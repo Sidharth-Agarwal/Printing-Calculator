@@ -1392,9 +1392,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     <div className="bg-white rounded-lg">
       <div className="max-w-screen-xl mx-auto p-4">
         <div className="flex justify-between items-center mb-4">
-          <h1 className="text-2xl font-bold text-gray-700">
-            {isEditMode ? "EDIT ESTIMATE" : "CREATE NEW ESTIMATE"}
-          </h1>
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">
+              Billing Form
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Create, edit and generate new bills and estimates
+            </p>
+          </div>
           
           <div className="flex space-x-3">
             {/* Reset Form Button */}

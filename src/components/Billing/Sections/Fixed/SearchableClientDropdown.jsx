@@ -149,13 +149,13 @@ const SearchableClientDropdown = ({
           ) : (
             <div className="p-3 text-center">
               <p className="text-gray-500">No clients found</p>
-              <button
+              {/* <button
                 type="button"
                 onClick={handleCreateNew}
                 className="mt-2 text-red-600 hover:underline text-sm"
               >
                 + Create new client
-              </button>
+              </button> */}
             </div>
           )}
         </div>
