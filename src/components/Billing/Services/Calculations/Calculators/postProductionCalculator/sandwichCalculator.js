@@ -114,8 +114,6 @@ export const calculateSandwichCosts = async (state) => {
           isEMBUsed: sandwichDetails.isEMBUsed,
           plateSizeType: sandwichDetails.plateSizeType,
           plateDimensions: sandwichDetails.plateDimensions,
-          plateTypeMale: sandwichDetails.plateTypeMale,
-          plateTypeFemale: sandwichDetails.plateTypeFemale,
           embMR: sandwichDetails.embMR
         } : { isEMBUsed: false }
       };
