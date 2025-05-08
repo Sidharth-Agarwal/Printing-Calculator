@@ -7,7 +7,6 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
 
 // Import components
-import FormSection from "./FormSection";
 import LPDetails from "./Sections/Production/LPDetails";
 import FSDetails from "./Sections/Production/FSDetails";
 import EMBDetails from "./Sections/Production/EMBDetails";
@@ -25,6 +24,7 @@ import Sandwich from "./Sections/Post Production/Sandwich";
 import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
 import SuccessNotification from "../Shared/SuccessNotification";
+import FormSection from "../Shared/FormSection";
 import FixedSection from "./Sections/Fixed/FixedSection";
 
 // Import service and job type configurations
