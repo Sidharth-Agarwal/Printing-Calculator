@@ -1772,7 +1772,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           </div>
 
           {/* Cost Calculation & Review Section - Now Collapsible */}
-          <div className="mt-6 border-2 rounded-lg">
+          <div className="mt-6">
             <FormSection 
               title="COST CALCULATION" 
               id="reviewAndSubmit"
