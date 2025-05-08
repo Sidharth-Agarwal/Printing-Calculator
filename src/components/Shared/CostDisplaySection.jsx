@@ -77,7 +77,11 @@ const CostDisplaySection = ({
       bgColor: 'bg-blue-50',
       items: [
         { key: 'screenPrintPerPieceCost', label: 'Screen Print Per Piece' },
-        { key: 'screenPrintBaseCostPerCard', label: 'Screen Print Base Cost' }
+        { key: 'screenPrintBaseCostPerCard', label: 'Screen Print Base Cost' },
+        { key: 'screenPrintMRCostPerCard', label: 'Screen Print MR Cost' }  // Add the new MR cost field
+      ],
+      metaItems: [
+        { key: 'noOfColors', label: 'Number of Colors:' }
       ],
       totalKey: 'screenPrintCostPerCard',
       totalLabel: 'Screen Printing'

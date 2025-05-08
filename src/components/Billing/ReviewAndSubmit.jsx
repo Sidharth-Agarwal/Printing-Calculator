@@ -402,6 +402,16 @@ const ReviewAndSubmit = ({
               {localCalculations.screenPrintBaseCostPerCard && (
                 <CostItem label="Screen Print Base Cost" value={localCalculations.screenPrintBaseCostPerCard} isSubItem />
               )}
+              {/* New: Add MR Cost */}
+              {localCalculations.screenPrintMRCostPerCard && (
+                <CostItem label="Screen Print MR Cost" value={localCalculations.screenPrintMRCostPerCard} isSubItem />
+              )}
+              {/* New: Display Number of Colors */}
+              {localCalculations.noOfColors && (
+                <div className="pl-6 text-sm text-gray-600">
+                  Number of Colors: {localCalculations.noOfColors}
+                </div>
+              )}
             </div>
           )}
           

@@ -235,8 +235,16 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
             </thead>
             <tbody className="divide-y divide-gray-200">
               <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Screen Printing Enabled</td>
-                <td className="py-2 px-3 text-sm text-gray-500">Yes</td>
+                <td className="py-2 px-3 text-sm font-medium text-gray-700">Number of Colors</td>
+                <td className="py-2 px-3 text-sm text-gray-500">{data.noOfColors || 1}</td>
+              </tr>
+              <tr className="hover:bg-gray-50">
+                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
+                <td className="py-2 px-3 text-sm text-gray-500">{data.screenMR || "Not specified"}</td>
+              </tr>
+              <tr className="hover:bg-gray-50">
+                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Concatenated</td>
+                <td className="py-2 px-3 text-sm text-gray-500">{data.screenMRConcatenated || "Not specified"}</td>
               </tr>
             </tbody>
           </table>
