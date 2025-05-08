@@ -60,10 +60,10 @@ const CostDisplaySection = ({
       toggleField: 'isEMBUsed',
       bgColor: 'bg-blue-50',
       items: [
-        { key: 'embPlateCostPerCard', label: 'EMB Plate Cost' },
+        // { key: 'embPlateCostPerCard', label: 'EMB Plate Cost' },
         { key: 'embMRCostPerCard', label: 'EMB MR Cost' },
         { key: 'embPositiveFilmCostPerCard', label: 'EMB Positive Film' },
-        { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate' },
+        { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate (MKG)' },
         { key: 'embImpressionCostPerCard', label: 'EMB Impression' }
       ],
       totalKey: 'embCostPerCard',

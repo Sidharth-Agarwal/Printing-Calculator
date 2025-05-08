@@ -162,14 +162,14 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
                 <td className="py-2 px-3 text-sm font-medium text-gray-700">Plate Dimensions</td>
                 <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(data.plateDimensions)}</td>
               </tr>
-              <tr className="hover:bg-gray-50">
+              {/* <tr className="hover:bg-gray-50">
                 <td className="py-2 px-3 text-sm font-medium text-gray-700">Male Plate Type</td>
                 <td className="py-2 px-3 text-sm text-gray-500">{data.plateTypeMale || "Not specified"}</td>
               </tr>
               <tr className="hover:bg-gray-50">
                 <td className="py-2 px-3 text-sm font-medium text-gray-700">Female Plate Type</td>
                 <td className="py-2 px-3 text-sm text-gray-500">{data.plateTypeFemale || "Not specified"}</td>
-              </tr>
+              </tr> */}
               <tr className="hover:bg-gray-50">
                 <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
                 <td className="py-2 px-3 text-sm text-gray-500">{data.embMR || "Not specified"}</td>
