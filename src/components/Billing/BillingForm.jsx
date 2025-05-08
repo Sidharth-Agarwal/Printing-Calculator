@@ -91,7 +91,10 @@ const initialFormState = {
     paperName: ""
   },
   screenPrint: {
-    isScreenPrintUsed: false
+    isScreenPrintUsed: false,
+    noOfColors: 1,
+    screenMR: "",
+    screenMRConcatenated: ""
   },
   dieCutting: {
     isDieCuttingUsed: false,
@@ -1160,7 +1163,12 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     dispatch({
       type: "UPDATE_SCREEN_PRINT",
       payload: { 
-        isScreenPrintUsed: !isCurrentlyUsed
+        isScreenPrintUsed: !isCurrentlyUsed,
+        ...((!isCurrentlyUsed) && {
+          noOfColors: 1,
+          screenMR: "", // Will be set by useEffect in ScreenPrint component
+          screenMRConcatenated: "" // Will be set by useEffect in ScreenPrint component
+        })
       }
     });
     
@@ -1772,7 +1780,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           </div>
 
           {/* Cost Calculation & Review Section - Now Collapsible */}
-          <div className="mt-6 border-2 rounded-lg">
+          <div className="mt-6">
             <FormSection 
               title="COST CALCULATION" 
               id="reviewAndSubmit"

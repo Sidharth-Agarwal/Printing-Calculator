@@ -20,9 +20,16 @@ export const calculateScreenPrintCosts = async (state) => {
       return { 
         screenPrintCostPerCard: "0.00",
         screenPrintPerPieceCost: "0.00",
-        screenPrintBaseCostPerCard: "0.00"
+        screenPrintBaseCostPerCard: "0.00",
+        screenPrintMRCostPerCard: "0.00"
       };
     }
+
+    // Get the number of colors (default to 1 if not specified)
+    const noOfColors = screenPrintInfo?.noOfColors || 1;
+    
+    // Get the MR type (default to "SIMPLE" if not specified)
+    const mrType = screenPrintInfo?.screenMR || "SIMPLE";
 
     // 1. Fetch SCREEN PRINT PER PIECE cost from standard rates
     const screenPrintPerPieceDetails = await fetchStandardRate("SCREEN PRINT", "PER PIECE");
@@ -39,26 +46,52 @@ export const calculateScreenPrintCosts = async (state) => {
     // 3. Calculate SCREEN PRINT COST per unit
     const screenPrintBaseCostPerCard = screenPrintCost / totalCards;
     
-    // 4. Calculate total screen printing cost per card
-    const screenPrintCostPerCard = screenPrintPerPieceCost + screenPrintBaseCostPerCard;
+    // 4. NEW: Fetch MR cost from standard rates based on the MR type
+    const mrDetails = await fetchStandardRate("SCREEN MR", mrType);
+    let mrCost = 0;
+    
+    if (mrDetails) {
+      mrCost = parseFloat(mrDetails.finalRate || 0);
+    } else {
+      console.warn(`No MR details found for SCREEN MR type: ${mrType}`);
+      // Fallback values based on complexity (similar to other calculators)
+      if (mrType === "SIMPLE") mrCost = 100;
+      else if (mrType === "COMPLEX") mrCost = 200;
+      else if (mrType === "SUPER COMPLEX") mrCost = 300;
+    }
+    
+    // 5. Calculate MR cost per card (dividing by quantity)
+    const screenPrintMRCostPerCard = mrCost / totalCards;
+    
+    // 6. Sum all components first
+    const totalComponentsCostPerCard = screenPrintPerPieceCost + screenPrintBaseCostPerCard + screenPrintMRCostPerCard;
+    
+    // 7. Multiply the total by number of colors to get final cost per card
+    const finalScreenPrintCostPerCard = totalComponentsCostPerCard * noOfColors;
     
     // Log calculation for debugging
     console.log("Screen printing calculation:", {
       isScreenPrintUsed,
+      noOfColors,
+      mrType,
       screenPrintPerPieceCost,
-      screenPrintCost,
       screenPrintBaseCostPerCard,
-      screenPrintCostPerCard,
+      screenPrintMRCostPerCard,
+      totalComponentsCostPerCard,
+      finalScreenPrintCostPerCard,
       totalCards
     });
     
-    // Return all calculations
+    // Return all calculations with individual components multiplied by noOfColors
     return {
-      screenPrintCostPerCard: screenPrintCostPerCard.toFixed(2),
-      screenPrintPerPieceCost: screenPrintPerPieceCost.toFixed(2),
-      screenPrintBaseCostPerCard: screenPrintBaseCostPerCard.toFixed(2),
+      screenPrintCostPerCard: finalScreenPrintCostPerCard.toFixed(2),
+      screenPrintPerPieceCost: (screenPrintPerPieceCost * noOfColors).toFixed(2),
+      screenPrintBaseCostPerCard: (screenPrintBaseCostPerCard * noOfColors).toFixed(2),
+      screenPrintMRCostPerCard: (screenPrintMRCostPerCard * noOfColors).toFixed(2),
       // Additional info for debugging
-      totalScreenPrintCost: screenPrintCost.toFixed(2)
+      totalScreenPrintCost: (screenPrintCost * noOfColors).toFixed(2),
+      totalMRCost: (mrCost * noOfColors).toFixed(2),
+      noOfColors: noOfColors
     };
   } catch (error) {
     console.error("Error calculating screen printing costs:", error);
@@ -66,7 +99,8 @@ export const calculateScreenPrintCosts = async (state) => {
       error: "Error calculating screen printing costs",
       screenPrintCostPerCard: "0.00",
       screenPrintPerPieceCost: "0.00",
-      screenPrintBaseCostPerCard: "0.00"
+      screenPrintBaseCostPerCard: "0.00",
+      screenPrintMRCostPerCard: "0.00"
     };
   }
 };

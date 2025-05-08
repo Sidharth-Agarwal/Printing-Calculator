@@ -60,10 +60,10 @@ const CostDisplaySection = ({
       toggleField: 'isEMBUsed',
       bgColor: 'bg-blue-50',
       items: [
-        { key: 'embPlateCostPerCard', label: 'EMB Plate Cost' },
+        // { key: 'embPlateCostPerCard', label: 'EMB Plate Cost' },
         { key: 'embMRCostPerCard', label: 'EMB MR Cost' },
         { key: 'embPositiveFilmCostPerCard', label: 'EMB Positive Film' },
-        { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate' },
+        { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate (MKG)' },
         { key: 'embImpressionCostPerCard', label: 'EMB Impression' }
       ],
       totalKey: 'embCostPerCard',
@@ -77,7 +77,11 @@ const CostDisplaySection = ({
       bgColor: 'bg-blue-50',
       items: [
         { key: 'screenPrintPerPieceCost', label: 'Screen Print Per Piece' },
-        { key: 'screenPrintBaseCostPerCard', label: 'Screen Print Base Cost' }
+        { key: 'screenPrintBaseCostPerCard', label: 'Screen Print Base Cost' },
+        { key: 'screenPrintMRCostPerCard', label: 'Screen Print MR Cost' }  // Add the new MR cost field
+      ],
+      metaItems: [
+        { key: 'noOfColors', label: 'Number of Colors:' }
       ],
       totalKey: 'screenPrintCostPerCard',
       totalLabel: 'Screen Printing'

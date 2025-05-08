@@ -27,8 +27,6 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
       isEMBUsed: false, 
       plateSizeType: "", 
       plateDimensions: { length: "", breadth: "", lengthInInches: "", breadthInInches: "" },
-      plateTypeMale: "",
-      plateTypeFemale: "",
       embMR: "",
       embMRConcatenated: ""
     }
@@ -46,7 +44,6 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   const { materials: blockTypes, loading: blockTypesLoading } = useMaterialTypes("Block Type");
   
   const { mrTypes: embMRTypes, loading: embMRTypesLoading } = useMRTypes("EMB MR");
-  const { materials: embPlateTypes, loading: embPlateTypesLoading } = useMaterialTypes("Plate Type");
 
   // Fetch papers from Firestore
   useEffect(() => {
@@ -240,34 +237,6 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   }, [embDetailsSandwich.isEMBUsed, embMRTypes, embDetailsSandwich, dispatch]);
 
-  // Set default Plate Types for EMB when component mounts or when EMB is first enabled
-  useEffect(() => {
-    if (embDetailsSandwich.isEMBUsed && embPlateTypes.length > 0) {
-      const defaultPlateType = embPlateTypes[0].materialName;
-      const updatePayload = {};
-
-      if (!embDetailsSandwich.plateTypeMale) {
-        updatePayload.plateTypeMale = defaultPlateType;
-      }
-
-      if (!embDetailsSandwich.plateTypeFemale) {
-        updatePayload.plateTypeFemale = defaultPlateType;
-      }
-
-      if (Object.keys(updatePayload).length > 0) {
-        dispatch({
-          type: "UPDATE_SANDWICH",
-          payload: {
-            embDetailsSandwich: {
-              ...embDetailsSandwich,
-              ...updatePayload
-            }
-          }
-        });
-      }
-    }
-  }, [embDetailsSandwich.isEMBUsed, embPlateTypes, embDetailsSandwich, dispatch]);
-
   // Update dimensions when die size changes (for Auto mode)
   useEffect(() => {
     const updates = {};
@@ -430,7 +399,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
       });
     }
 
-    // Validate EMB if used
+    // Validate EMB if used - removing plate type validation
     if (embDetailsSandwich.isEMBUsed) {
       if (!embDetailsSandwich.plateSizeType) {
         newErrors.embPlateSizeType = "Plate size type is required.";
@@ -442,12 +411,6 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         if (!embDetailsSandwich.plateDimensions?.breadthInInches) {
           newErrors.embPlateBreadth = "Plate breadth is required.";
         }
-      }
-      if (!embDetailsSandwich.plateTypeMale) {
-        newErrors.embPlateTypeMale = "Male plate type is required.";
-      }
-      if (!embDetailsSandwich.plateTypeFemale) {
-        newErrors.embPlateTypeFemale = "Female plate type is required.";
       }
       if (!embDetailsSandwich.embMR) {
         newErrors.embMR = "EMB MR type is required.";
@@ -758,22 +721,6 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             }
           }
         });
-      } else if (value === "Manual") {
-        dispatch({
-          type: "UPDATE_SANDWICH",
-          payload: {
-            embDetailsSandwich: {
-              ...embDetailsSandwich,
-              [name]: value,
-              plateDimensions: { 
-                length: "", 
-                breadth: "",
-                lengthInInches: "",
-                breadthInInches: ""
-              }
-            }
-          }
-        });
       }
     } else if (name === "embMR" && embMRTypes.length > 0) {
       const selectedMRType = embMRTypes.find(type => type.type === value);
@@ -825,7 +772,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         }
       }
     });
-  };
+  }
 
   // Toggle LP Usage in Sandwich
   const toggleLPUsageInSandwich = () => {
@@ -924,8 +871,6 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
               lengthInInches: dieSize.length || "",
               breadthInInches: dieSize.breadth || ""
             },
-            plateTypeMale: embPlateTypes.length > 0 ? embPlateTypes[0].materialName : "Polymer Plate",
-            plateTypeFemale: embPlateTypes.length > 0 ? embPlateTypes[0].materialName : "Polymer Plate",
             embMR: embMRTypes.length > 0 ? embMRTypes[0].type : "SIMPLE",
             embMRConcatenated: embMRTypes.length > 0 ? 
               embMRTypes[0].concatenated || `EMB MR ${embMRTypes[0].type}` : 
@@ -1319,7 +1264,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         )}
       </div>
 
-      {/* EMB Section in Sandwich */}
+      {/* EMB Section in Sandwich - UPDATED */}
       <div className="border-t pt-4">
         <div className="flex items-center space-x-3 cursor-pointer mb-4">
           <label
@@ -1335,7 +1280,8 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
 
         {embDetailsSandwich.isEMBUsed && (
           <div className="pl-6 border-l-2 border-gray-200 mb-4">
-            <div className="grid grid-cols-1 md:grid-cols-6 gap-3 text-sm">
+            {/* All fields in a single line */}
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
               {/* Plate Size Type */}
               <div>
                 <label className="block text-xs mb-1">Plate Size:</label>
@@ -1352,117 +1298,55 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                 {errors.embPlateSizeType && <p className="text-red-500 text-xs">{errors.embPlateSizeType}</p>}
               </div>
 
-              {/* Plate Dimensions */}
-              {embDetailsSandwich.plateSizeType === "Manual" ? (
-                <>
-                  <div>
-                    <label className="block text-xs mb-1">Length:</label>
-                    <input
-                      type="number"
-                      placeholder="(inches)"
-                      value={embDetailsSandwich.plateDimensions?.lengthInInches || ""}
-                      onChange={(e) => handleEMBDimensionChange("length", e.target.value)}
-                      className={`border rounded-md p-2 w-full text-xs ${errors.embPlateLength ? "border-red-500" : ""}`}
-                    />
-                    {/* Show the cm conversion for reference */}
+              {/* Length Input - conditionally shown if plateSizeType is set */}
+              {embDetailsSandwich.plateSizeType && (
+                <div>
+                  <label className="block text-xs mb-1">Length (inches):</label>
+                  <input
+                    type="number"
+                    placeholder="Enter length"
+                    value={embDetailsSandwich.plateDimensions?.lengthInInches || ""}
+                    onChange={(e) => embDetailsSandwich.plateSizeType === "Manual" ? 
+                      handleEMBDimensionChange("length", e.target.value) : null}
+                    className={`border rounded-md p-2 w-full text-xs ${
+                      embDetailsSandwich.plateSizeType === "Auto" ? "bg-gray-50" : ""
+                    } ${errors.embPlateLength ? "border-red-500" : ""}`}
+                    readOnly={embDetailsSandwich.plateSizeType === "Auto"}
+                  />
+                  {embDetailsSandwich.plateDimensions?.length && (
                     <div className="text-xs text-gray-500 mt-1">
-                      {embDetailsSandwich.plateDimensions?.length ? `${embDetailsSandwich.plateDimensions.length} cm` : ""}
+                      {embDetailsSandwich.plateDimensions.length} cm
                     </div>
-                    {errors.embPlateLength && <p className="text-red-500 text-xs">{errors.embPlateLength}</p>}
-                  </div>
-                  <div>
-                    <label className="block text-xs mb-1">Breadth:</label>
-                    <input
-                      type="number"
-                      placeholder="(inches)"
-                      value={embDetailsSandwich.plateDimensions?.breadthInInches || ""}
-                      onChange={(e) => handleEMBDimensionChange("breadth", e.target.value)}
-                      className={`border rounded-md p-2 w-full text-xs ${errors.embPlateBreadth ? "border-red-500" : ""}`}
-                    />
-                    {/* Show the cm conversion for reference */}
-                    <div className="text-xs text-gray-500 mt-1">
-                      {embDetailsSandwich.plateDimensions?.breadth ? `${embDetailsSandwich.plateDimensions.breadth} cm` : ""}
-                    </div>
-                    {errors.embPlateBreadth && <p className="text-red-500 text-xs">{errors.embPlateBreadth}</p>}
-                  </div>
-                </>
-              ) : embDetailsSandwich.plateSizeType === "Auto" && (
-                // Auto mode - show read-only dimensions
-                <>
-                  <div>
-                    <label className="block text-xs mb-1">Length:</label>
-                    <input
-                      type="number"
-                      placeholder="(inches)"
-                      value={embDetailsSandwich.plateDimensions?.lengthInInches || ""}
-                      className="border rounded-md p-2 w-full text-xs bg-gray-100"
-                      readOnly
-                    />
-                    <div className="text-xs text-gray-500 mt-1">
-                      {embDetailsSandwich.plateDimensions?.length ? `${embDetailsSandwich.plateDimensions.length} cm` : ""}
-                    </div>
-                  </div>
-                  <div>
-                    <label className="block text-xs mb-1">Breadth:</label>
-                    <input
-                      type="number"
-                      placeholder="(inches)"
-                      value={embDetailsSandwich.plateDimensions?.breadthInInches || ""}
-                      className="border rounded-md p-2 w-full text-xs bg-gray-100"
-                      readOnly
-                    />
-                    <div className="text-xs text-gray-500 mt-1">
-                      {embDetailsSandwich.plateDimensions?.breadth ? `${embDetailsSandwich.plateDimensions.breadth} cm` : ""}
-                    </div>
-                  </div>
-                </>
+                  )}
+                  {errors.embPlateLength && <p className="text-red-500 text-xs">{errors.embPlateLength}</p>}
+                </div>
               )}
 
-              {/* Plate Type Male */}
-              <div>
-                <label className="block text-xs mb-1">Plate Type Male:</label>
-                <select
-                  name="plateTypeMale"
-                  value={embDetailsSandwich.plateTypeMale}
-                  onChange={handleEMBSandwichChange}
-                  className={`border rounded-md p-2 w-full text-xs ${errors.embPlateTypeMale ? "border-red-500" : ""}`}
-                >
-                  {embPlateTypesLoading ? (
-                    <option value="" disabled>Loading Plate Types...</option>
-                  ) : (
-                    embPlateTypes.map((plateType, idx) => (
-                      <option key={idx} value={plateType.materialName}>
-                        {plateType.materialName}
-                      </option>
-                    ))
+              {/* Breadth Input - conditionally shown if plateSizeType is set */}
+              {embDetailsSandwich.plateSizeType && (
+                <div>
+                  <label className="block text-xs mb-1">Breadth (inches):</label>
+                  <input
+                    type="number"
+                    placeholder="Enter breadth"
+                    value={embDetailsSandwich.plateDimensions?.breadthInInches || ""}
+                    onChange={(e) => embDetailsSandwich.plateSizeType === "Manual" ? 
+                      handleEMBDimensionChange("breadth", e.target.value) : null}
+                    className={`border rounded-md p-2 w-full text-xs ${
+                      embDetailsSandwich.plateSizeType === "Auto" ? "bg-gray-50" : ""
+                    } ${errors.embPlateBreadth ? "border-red-500" : ""}`}
+                    readOnly={embDetailsSandwich.plateSizeType === "Auto"}
+                  />
+                  {embDetailsSandwich.plateDimensions?.breadth && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      {embDetailsSandwich.plateDimensions.breadth} cm
+                    </div>
                   )}
-                </select>
-                {errors.embPlateTypeMale && <p className="text-red-500 text-xs">{errors.embPlateTypeMale}</p>}
-              </div>
+                  {errors.embPlateBreadth && <p className="text-red-500 text-xs">{errors.embPlateBreadth}</p>}
+                </div>
+              )}
 
-              {/* Plate Type Female */}
-              <div>
-                <label className="block text-xs mb-1">Plate Type Female:</label>
-                <select
-                  name="plateTypeFemale"
-                  value={embDetailsSandwich.plateTypeFemale}
-                  onChange={handleEMBSandwichChange}
-                  className={`border rounded-md p-2 w-full text-xs ${errors.embPlateTypeFemale ? "border-red-500" : ""}`}
-                >
-                  {embPlateTypesLoading ? (
-                    <option value="" disabled>Loading Plate Types...</option>
-                  ) : (
-                    embPlateTypes.map((plateType, idx) => (
-                      <option key={idx} value={plateType.materialName}>
-                        {plateType.materialName}
-                      </option>
-                    ))
-                  )}
-                </select>
-                {errors.embPlateTypeFemale && <p className="text-red-500 text-xs">{errors.embPlateTypeFemale}</p>}
-              </div>
-
-              {/* EMB MR */}
+              {/* EMB MR Type */}
               <div>
                 <label className="block text-xs mb-1">EMB MR:</label>
                 <select
@@ -1482,6 +1366,18 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                   )}
                 </select>
                 {errors.embMR && <p className="text-red-500 text-xs">{errors.embMR}</p>}
+              </div>
+            </div>
+
+            {/* Plate Cost Message */}
+            <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-md mt-3">
+              <div className="flex items-center">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <p className="text-yellow-700 text-xs">
+                  Embossing plate costs will be calculated separately.
+                </p>
               </div>
             </div>
           </div>

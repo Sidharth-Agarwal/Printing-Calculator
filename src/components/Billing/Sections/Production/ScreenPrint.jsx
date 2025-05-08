@@ -1,13 +1,98 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import useMRTypes from "../../../../hooks/useMRTypes";
 
 const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const screenPrint = state.screenPrint || {
-    isScreenPrintUsed: false
+    isScreenPrintUsed: false,
+    noOfColors: 1,
+    screenMR: "",
+    screenMRConcatenated: ""
+  };
+
+  const [errors, setErrors] = useState({});
+  
+  // Use the custom hook to fetch MR types
+  const { mrTypes, loading: mrTypesLoading } = useMRTypes("SCREEN MR");
+
+  // Set default MR Type when component mounts or when Screen Print is first enabled
+  useEffect(() => {
+    if (screenPrint.isScreenPrintUsed && mrTypes.length > 0) {
+      const defaultMRType = mrTypes[0];
+      const updates = {};
+      
+      // Set screenMR if it's empty
+      if (!screenPrint.screenMR) {
+        updates.screenMR = defaultMRType.type;
+      }
+      
+      // Set screenMRConcatenated if it's empty
+      if (!screenPrint.screenMRConcatenated) {
+        updates.screenMRConcatenated = defaultMRType.concatenated || `SCREEN MR ${defaultMRType.type}`;
+      }
+      
+      // Only dispatch if we have updates
+      if (Object.keys(updates).length > 0) {
+        dispatch({
+          type: "UPDATE_SCREEN_PRINT",
+          payload: updates
+        });
+      }
+    }
+  }, [screenPrint.isScreenPrintUsed, screenPrint.screenMR, screenPrint.screenMRConcatenated, mrTypes, dispatch]);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    
+    // Handle special case for screenMR to also set the concatenated version
+    if (name === "screenMR" && mrTypes.length > 0) {
+      const selectedMRType = mrTypes.find(type => type.type === value);
+      
+      if (selectedMRType && selectedMRType.concatenated) {
+        dispatch({
+          type: "UPDATE_SCREEN_PRINT",
+          payload: { 
+            screenMR: value,
+            screenMRConcatenated: selectedMRType.concatenated
+          },
+        });
+      } else {
+        // Fallback: create concatenated version if not found
+        dispatch({
+          type: "UPDATE_SCREEN_PRINT",
+          payload: { 
+            screenMR: value,
+            screenMRConcatenated: `SCREEN MR ${value}`
+          },
+        });
+      }
+    } else {
+      // Handle other fields normally
+      dispatch({
+        type: "UPDATE_SCREEN_PRINT",
+        payload: { [name]: value },
+      });
+    }
+  };
+
+  const validateFields = () => {
+    const newErrors = {};
+    
+    if (screenPrint.isScreenPrintUsed) {
+      if (!screenPrint.noOfColors || screenPrint.noOfColors < 1) {
+        newErrors.noOfColors = "Number of colors must be at least 1.";
+      }
+      if (!screenPrint.screenMR) {
+        newErrors.screenMR = "MR Type is required.";
+      }
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (!singlePageMode) {
+    if (!singlePageMode && validateFields()) {
       onNext();
     }
   };
@@ -19,14 +104,58 @@ const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
 
   return (
     <form onSubmit={handleSubmit}>
-      <div className="p-4 bg-green-50 border border-green-200 rounded-md">
-        <div className="flex items-center">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-          </svg>
-          <p className="text-green-700 font-medium text-sm">Screen Print is enabled for this project.</p>
+      <div className="space-y-5">
+        {/* Screen Print Configuration - Fields side by side */}
+        <div>
+          <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Screen Print Configuration</h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Number of Colors Input */}
+            <div>
+              <label htmlFor="noOfColors" className="block text-xs font-medium text-gray-600 mb-1">
+                Number of Colors:
+              </label>
+              <input
+                type="number"
+                id="noOfColors"
+                name="noOfColors"
+                value={screenPrint.noOfColors || 1}
+                min="1"
+                max="10"
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              />
+              {errors.noOfColors && (
+                <p className="text-red-500 text-xs mt-1">{errors.noOfColors}</p>
+              )}
+            </div>
+
+            {/* MR Type */}
+            <div>
+              <label htmlFor="screenMR" className="block text-xs font-medium text-gray-600 mb-1">
+                Screen MR Type:
+              </label>
+              <select
+                id="screenMR"
+                name="screenMR"
+                value={screenPrint.screenMR || ""}
+                onChange={handleChange}
+                className={`w-full px-3 py-2 border ${errors.screenMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              >
+                <option value="">Select Type</option>
+                {mrTypesLoading ? (
+                  <option value="" disabled>Loading...</option>
+                ) : (
+                  mrTypes.map((typeOption, idx) => (
+                    <option key={idx} value={typeOption.type}>
+                      {typeOption.type}
+                    </option>
+                  ))
+                )}
+              </select>
+              {errors.screenMR && <p className="text-red-500 text-xs mt-1">{errors.screenMR}</p>}
+            </div>
+          </div>
         </div>
-        <p className="text-green-600 text-xs mt-1 ml-7">No additional configuration is required.</p>
       </div>
     </form>
   );

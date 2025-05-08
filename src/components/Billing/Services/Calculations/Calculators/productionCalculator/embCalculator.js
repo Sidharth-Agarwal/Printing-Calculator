@@ -147,17 +147,14 @@ export const calculateEMBCosts = async (state) => {
     const embImpressionCostPerCard = impressionCostPerUnit; // Already per unit
     
     // 12. Calculate total embossing cost per card
-    const embCostPerCard = 
-      embPlateCostPerCard + 
-      embMRCostPerCard + 
-      embPositiveFilmCostPerCard +
-      embMkgPlateCostPerCard +
-      embImpressionCostPerCard;
+    // const embCostPerCard = embPlateCostPerCard + embMRCostPerCard + embPositiveFilmCostPerCard + embMkgPlateCostPerCard + embImpressionCostPerCard;
+
+    const embCostPerCard = embMRCostPerCard + embPositiveFilmCostPerCard + embMkgPlateCostPerCard + embImpressionCostPerCard;
     
     // 13. Return all calculations with detailed breakdowns
     return {
       embCostPerCard: embCostPerCard.toFixed(2),
-      embPlateCostPerCard: embPlateCostPerCard.toFixed(2),
+      // embPlateCostPerCard: embPlateCostPerCard.toFixed(2),
       embMRCostPerCard: embMRCostPerCard.toFixed(2),
       embPositiveFilmCostPerCard: embPositiveFilmCostPerCard.toFixed(2),
       embMkgPlateCostPerCard: embMkgPlateCostPerCard.toFixed(2),

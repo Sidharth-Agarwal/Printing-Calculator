@@ -5,7 +5,7 @@ export const ROUTE_ACCESS = {
   '/orders': ['admin', 'staff', 'production', 'b2b'],
   '/invoices': ['admin', 'staff'],
   '/clients': ['admin', 'staff'],
-  '/material-stock/estimates-db': ['admin', 'staff', 'b2b'],
+  '/estimates': ['admin', 'staff', 'b2b'],
   '/material-stock/paper-db': ['admin', 'staff'],
   '/material-stock/material-db': ['admin', 'staff'],
   '/material-stock/dies-db': ['admin', 'staff'],

@@ -115,7 +115,7 @@ const Header = () => {
       ]
     },
     { key: 'clients', label: 'Clients', path: '/clients', visible: isMenuItemVisible('clients') },
-    { key: 'estimates', label: 'Estimates', path: '/material-stock/estimates-db', visible: isMenuItemVisible('estimates') },
+    { key: 'estimates', label: 'Estimates', path: '/estimates', visible: isMenuItemVisible('estimates') },
     { key: 'orders', label: 'Orders', path: '/orders', visible: isMenuItemVisible('orders') },
     { key: 'invoices', label: 'Invoices', path: '/invoices', visible: isMenuItemVisible('invoices') },
     { key: 'loyalty', label: 'Loyalty Dashboard', path: '/loyalty-dashboard', visible: isMenuItemVisible('loyaltyProgram') },
@@ -143,7 +143,7 @@ const Header = () => {
                 onMouseLeave={() => setHoverIndex(-1)}>
                 <button 
                   className={`text-sm transition-all duration-200 border-b-2 ${
-                    location.pathname.includes(item.path) && !location.pathname.includes('/material-stock/estimates-db')
+                    location.pathname.includes(item.path) && !location.pathname.includes('/estimates')
                       ? "border-white font-medium" 
                       : "border-transparent hover:border-gray-400"
                   }`}
