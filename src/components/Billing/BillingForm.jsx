@@ -49,6 +49,8 @@ const initialFormState = {
     quantity: "",
     paperProvided: "Yes",
     paperName: "",
+    paperGsm: "",
+    paperCompany: "",
     dieSelection: "",
     dieCode: "",
     dieSize: { length: "", breadth: "" },
@@ -283,7 +285,9 @@ const mapStateToFirebaseStructure = (state, calculations) => {
       quantity: orderAndPaper.quantity,
       paperProvided: orderAndPaper.paperProvided,
       paperName: orderAndPaper.paperName,
-      hsnCode: orderAndPaper.hsnCode || "", // Include HSN code
+      paperGsm: orderAndPaper.paperGsm,
+      paperCompany: orderAndPaper.paperCompany,
+      hsnCode: orderAndPaper.hsnCode || "",
     }),
     
     // Die details with product size directly from orderAndPaper

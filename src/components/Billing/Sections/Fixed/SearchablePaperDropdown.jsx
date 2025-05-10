@@ -13,8 +13,18 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
     paper.paperName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const handleSelect = (paperName) => {
-    onChange({ target: { name: "paperName", value: paperName } });
+  // Updated to pass the entire paper object instead of just the name
+  const handleSelect = (paper) => {
+    onChange({ 
+      target: { 
+        name: "paperDetails", 
+        value: {
+          paperName: paper.paperName,
+          paperGsm: paper.gsm,
+          paperCompany: paper.company
+        } 
+      } 
+    });
     setIsOpen(false);
     setSearchTerm("");
   };
@@ -91,7 +101,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                   className={`p-2 hover:bg-gray-50 cursor-pointer transition-colors ${
                     selectedPaper === paper.paperName ? "bg-red-50" : ""
                   }`}
-                  onClick={() => handleSelect(paper.paperName)}
+                  onClick={() => handleSelect(paper)}
                 >
                   <div className="flex flex-col">
                     <span className={`font-medium ${selectedPaper === paper.paperName ? "text-red-700" : "text-gray-800"}`}>

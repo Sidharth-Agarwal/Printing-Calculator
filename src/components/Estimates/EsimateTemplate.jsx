@@ -80,6 +80,14 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
       const dieDetails = estimate?.dieDetails || {};
       const calc = estimate?.calculations || {};
       
+      // Get paper details with GSM
+      const paperName = jobDetails.paperName || "Standard Paper";
+      const paperGsm = jobDetails.paperGsm || "";
+      const paperCompany = jobDetails.paperCompany || "";
+      
+      // Format paper info including GSM if available
+      const paperInfo = paperName + (paperGsm ? ` ${paperGsm}gsm` : '') + (paperCompany ? ` (${paperCompany})` : '');
+      
       // Get HSN code from jobDetails if available
       const hsnCode = jobDetails.hsnCode || "N/A";
       
@@ -117,7 +125,7 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
         name: estimate.projectName || "Unnamed Project",
         description: features.join(", "),
         jobType: jobDetails.jobType || "Card",
-        paperName: jobDetails.paperName || "Standard Paper",
+        paperInfo: paperInfo,
         dieCode: dieDetails.dieCode || "",
         productDimensions: productDimensions,
         quantity: quantity,
@@ -244,7 +252,7 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
                     )}
                   </td>
                   <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
-                  <td className="py-1 px-2 border border-gray-300 text-center">{item.paperName}</td>
+                  <td className="py-1 px-2 border border-gray-300 text-center">{item.paperInfo}</td>
                   <td className="py-1 px-2 border border-gray-300 text-center whitespace-nowrap">{item.productDimensions}</td>
                   <td className="py-1 px-2 border border-gray-300 text-center">{item.quantity}</td>
                   <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>

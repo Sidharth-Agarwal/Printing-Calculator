@@ -42,7 +42,9 @@ const OrderAndPaper = ({
         dispatch({
           type: "UPDATE_ORDER_AND_PAPER",
           payload: {
-            paperName: paperData[0].paperName
+            paperName: paperData[0].paperName,
+            paperGsm: paperData[0].gsm,
+            paperCompany: paperData[0].company
           },
         });
       }
@@ -79,6 +81,19 @@ const OrderAndPaper = ({
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    
+    // Handle paper details specifically
+    if (name === "paperDetails") {
+      dispatch({
+        type: "UPDATE_ORDER_AND_PAPER",
+        payload: {
+          paperName: value.paperName,
+          paperGsm: value.paperGsm,
+          paperCompany: value.paperCompany
+        },
+      });
+      return;
+    }
     
     // If this is a job type change and we have a custom handler
     if (name === "jobType" && onJobTypeChange) {
@@ -313,7 +328,7 @@ const OrderAndPaper = ({
               </select>
             </div>
 
-            {/* Paper Name - Using Searchable Dropdown */}
+            {/* Paper Selection - Using Searchable Dropdown */}
             <div className="col-span-2">
               <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
                 Paper Name <span className="text-red-500">*</span>
@@ -324,6 +339,12 @@ const OrderAndPaper = ({
                 onChange={handleChange}
                 compact={compact}
               />
+              {/* Display selected paper details */}
+              {orderAndPaper.paperGsm && orderAndPaper.paperCompany && (
+                <div className="mt-1 text-xs text-gray-600">
+                  <p>Selected: {orderAndPaper.paperName} | {orderAndPaper.paperCompany} | {orderAndPaper.paperGsm}gsm</p>
+                </div>
+              )}
             </div>
           </div>
 
