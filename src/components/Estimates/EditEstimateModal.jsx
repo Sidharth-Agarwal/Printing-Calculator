@@ -9,6 +9,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
   const [isLoadingClient, setIsLoadingClient] = useState(true);
   const [initialFormState, setInitialFormState] = useState(null);
   const [isClientInactive, setIsClientInactive] = useState(false); // Track client active status
+  const [formChangeDebug, setFormChangeDebug] = useState({}); // Debug state for tracking form changes
 
   // Enhanced sanitizeEstimateStructure function
   const sanitizeEstimateStructure = (estimateData) => {
@@ -183,10 +184,13 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       };
     }
     
-    // Log available project name data for debugging
-    console.log("Converting estimate to form state. Project name from:", {
+    // Log available data for debugging
+    console.log("Converting estimate to form state. Critical fields:", {
       estimateProjectName: estimate.projectName,
-      estimateObject: estimate
+      jobType: estimate.jobDetails?.jobType,
+      quantity: estimate.jobDetails?.quantity,
+      paperName: estimate.jobDetails?.paperName,
+      dieCode: estimate.dieDetails?.dieCode
     });
     
     // Ensure arrays are properly set up
@@ -204,13 +208,15 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       },
       versionId: estimate.versionId || "1",
       orderAndPaper: {
-        projectName: estimate.projectName || "",  // Make sure we're getting the project name
+        projectName: estimate.projectName || "",
         date: estimate.date ? new Date(estimate.date) : null,
         deliveryDate: estimate.deliveryDate ? new Date(estimate.deliveryDate) : null,
         jobType: estimate.jobDetails?.jobType || "Card",
         quantity: estimate.jobDetails?.quantity || "",
         paperProvided: estimate.jobDetails?.paperProvided || "Yes",
         paperName: estimate.jobDetails?.paperName || "",
+        paperGsm: estimate.jobDetails?.paperGsm || "",
+        paperCompany: estimate.jobDetails?.paperCompany || "",
         dieSelection: estimate.dieDetails?.dieSelection || "",
         dieCode: estimate.dieDetails?.dieCode || "",
         dieSize: estimate.dieDetails?.dieSize || { length: "", breadth: "" },
@@ -255,7 +261,15 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         paperName: estimate.notebookDetails?.paperName || ""
       },
       screenPrint: {
-        isScreenPrintUsed: estimate.screenPrint?.isScreenPrintUsed || false
+        isScreenPrintUsed: estimate.screenPrint?.isScreenPrintUsed || false,
+        noOfColors: estimate.screenPrint?.noOfColors || 1,
+        screenMR: estimate.screenPrint?.screenMR || "",
+        screenMRConcatenated: estimate.screenPrint?.screenMRConcatenated || ""
+      },
+      preDieCutting: {
+        isPreDieCuttingUsed: estimate.preDieCutting?.isPreDieCuttingUsed || false,
+        predcMR: estimate.preDieCutting?.predcMR || "",
+        predcMRConcatenated: estimate.preDieCutting?.predcMRConcatenated || ""
       },
       dieCutting: {
         isDieCuttingUsed: estimate.dieCutting?.isDieCuttingUsed || false,
@@ -292,6 +306,9 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       },
       sandwich: {
         isSandwichComponentUsed: estimate.sandwich?.isSandwichComponentUsed || false,
+        paperInfo: estimate.sandwich?.paperInfo || {
+          paperName: ""
+        },
         lpDetailsSandwich: {
           isLPUsed: estimate.sandwich?.lpDetailsSandwich?.isLPUsed || false,
           noOfColors: estimate.sandwich?.lpDetailsSandwich?.noOfColors || 0,
@@ -337,6 +354,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     return sanitized;
   };
 
+  // This is the key fix - properly extract values from formData
   const handleSave = async (formData) => {
     // Show a warning if client is inactive
     if (isClientInactive) {
@@ -347,87 +365,157 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     
     setIsSaving(true);
     try {
-      // Extract the project name with fallbacks to ensure it's never undefined
-      // Check multiple possible locations where the project name might be stored
-      const updatedProjectName = 
-        // Try all possible locations
-        (formData.orderAndPaper && formData.orderAndPaper.projectName) || 
-        formData.projectName ||  // Direct property on formData
-        estimate.projectName ||  // Original estimate value
-        "Untitled Project";      // Last resort fallback
+      // Log the complete formData to help debugging
+      console.log("COMPLETE FORM DATA:", formData);
       
-      // Log for debugging
-      console.log("CRITICAL VALUES - PROJECT NAME EXTRACTION:", {
-        fromOrderAndPaper: formData.orderAndPaper?.projectName,
-        directProjectName: formData.projectName,
-        originalProjectName: estimate.projectName,
-        finalProjectName: updatedProjectName
+      // CRITICAL FIX: We need to check the structure of the formData
+      // In some cases, formData contains a nested structure, in others it contains flattened data
+      
+      // For the project name, check directly on formData first
+      const updatedProjectName = formData.projectName || estimate.projectName || "Untitled Project";
+      
+      // For job details, prioritize direct job details in formData
+      const updatedJobType = 
+        (formData.jobDetails?.jobType) || 
+        (formData.orderAndPaper?.jobType) || 
+        estimate.jobDetails?.jobType || 
+        "Card";
+      
+      const updatedQuantity = 
+        (formData.jobDetails?.quantity) || 
+        (formData.orderAndPaper?.quantity) || 
+        estimate.jobDetails?.quantity || 
+        "";
+      
+      const updatedPaperProvided = 
+        (formData.jobDetails?.paperProvided) || 
+        (formData.orderAndPaper?.paperProvided) || 
+        estimate.jobDetails?.paperProvided || 
+        "Yes";
+      
+      const updatedPaperName = 
+        (formData.jobDetails?.paperName) || 
+        (formData.orderAndPaper?.paperName) || 
+        estimate.jobDetails?.paperName || 
+        "";
+      
+      const updatedPaperGsm = 
+        (formData.jobDetails?.paperGsm) || 
+        (formData.orderAndPaper?.paperGsm) || 
+        estimate.jobDetails?.paperGsm || 
+        "";
+      
+      const updatedPaperCompany = 
+        (formData.jobDetails?.paperCompany) || 
+        (formData.orderAndPaper?.paperCompany) || 
+        estimate.jobDetails?.paperCompany || 
+        "";
+      
+      const updatedHsnCode = 
+        (formData.jobDetails?.hsnCode) || 
+        (formData.orderAndPaper?.hsnCode) || 
+        estimate.jobDetails?.hsnCode || 
+        "";
+      
+      // For die details, prioritize direct die details in formData
+      const updatedDieSelection = 
+        (formData.dieDetails?.dieSelection) || 
+        (formData.orderAndPaper?.dieSelection) || 
+        estimate.dieDetails?.dieSelection || 
+        "";
+      
+      const updatedDieCode = 
+        (formData.dieDetails?.dieCode) || 
+        (formData.orderAndPaper?.dieCode) || 
+        estimate.dieDetails?.dieCode || 
+        "";
+      
+      const updatedDieSize = 
+        (formData.dieDetails?.dieSize) || 
+        (formData.orderAndPaper?.dieSize) || 
+        estimate.dieDetails?.dieSize || 
+        { length: "", breadth: "" };
+      
+      const updatedProductSize = 
+        (formData.dieDetails?.productSize) || 
+        (formData.orderAndPaper?.productSize) || 
+        estimate.dieDetails?.productSize || 
+        { length: "", breadth: "" };
+      
+      const updatedImage = 
+        (formData.dieDetails?.image) || 
+        (formData.orderAndPaper?.image) || 
+        estimate.dieDetails?.image || 
+        "";
+      
+      // Log extracted values for debugging
+      console.log("Extracted critical values:", {
+        projectName: updatedProjectName,
+        jobType: updatedJobType,
+        quantity: updatedQuantity,
+        paperName: updatedPaperName,
+        dieCode: updatedDieCode
       });
       
       // Determine client name from available sources, ensuring it's never undefined
-      const clientName = formData.client?.clientInfo?.name || 
+      const clientName = formData.clientInfo?.name || 
+                         formData.client?.clientInfo?.name || 
                          estimate.clientInfo?.name || 
                          estimate.clientName || 
                          "Unknown Client";
       
-      // Create updated estimate, with special handling to preserve the project name
+      // Create updated estimate with explicit values for critical fields
       const updatedEstimate = {
         // Start with a completely fresh object
         id: estimate.id,
-        clientId: formData.client?.clientId || estimate.clientId,
-        clientInfo: formData.client?.clientInfo || estimate.clientInfo,
+        clientId: formData.clientId || formData.client?.clientId || estimate.clientId,
+        clientInfo: formData.clientInfo || formData.client?.clientInfo || estimate.clientInfo,
         clientName: clientName,
         
         // EXPLICITLY set project name with the value we extracted above
         projectName: updatedProjectName,
         
-        // Extract dates directly from form data or from nested orderAndPaper
-        date: (formData.orderAndPaper?.date || formData.date) ? 
-          ((formData.orderAndPaper?.date || formData.date) instanceof Date ? 
-            (formData.orderAndPaper?.date || formData.date).toISOString() : 
-            (formData.orderAndPaper?.date || formData.date)) : 
-          estimate.date,
+        // Extract dates directly from form data
+        date: formData.date || estimate.date,
+        deliveryDate: formData.deliveryDate || estimate.deliveryDate,
         
-        deliveryDate: (formData.orderAndPaper?.deliveryDate || formData.deliveryDate) ? 
-          ((formData.orderAndPaper?.deliveryDate || formData.deliveryDate) instanceof Date ? 
-            (formData.orderAndPaper?.deliveryDate || formData.deliveryDate).toISOString() : 
-            (formData.orderAndPaper?.deliveryDate || formData.deliveryDate)) : 
-          estimate.deliveryDate,
-        
-        // Format job details from form data - check both direct and nested structures
+        // Format job details from form data - EXPLICITLY use our extracted values
         jobDetails: {
-          jobType: (formData.orderAndPaper?.jobType || formData.jobType) || estimate.jobDetails?.jobType || "Card",
-          quantity: (formData.orderAndPaper?.quantity || formData.quantity) || estimate.jobDetails?.quantity || "",
-          paperProvided: (formData.orderAndPaper?.paperProvided || formData.paperProvided) || estimate.jobDetails?.paperProvided || "Yes",
-          paperName: (formData.orderAndPaper?.paperName || formData.paperName) || estimate.jobDetails?.paperName || "",
-          hsnCode: (formData.orderAndPaper?.hsnCode || formData.hsnCode) || estimate.jobDetails?.hsnCode || "",
+          jobType: updatedJobType,
+          quantity: updatedQuantity,
+          paperProvided: updatedPaperProvided,
+          paperName: updatedPaperName,
+          paperGsm: updatedPaperGsm,
+          paperCompany: updatedPaperCompany,
+          hsnCode: updatedHsnCode,
         },
         
-        // Die details - check both direct and nested structures
+        // Die details - EXPLICITLY use our extracted values
         dieDetails: {
-          dieSelection: (formData.orderAndPaper?.dieSelection || formData.dieSelection) || estimate.dieDetails?.dieSelection || "",
-          dieCode: (formData.orderAndPaper?.dieCode || formData.dieCode) || estimate.dieDetails?.dieCode || "",
-          dieSize: (formData.orderAndPaper?.dieSize || formData.dieSize) || estimate.dieDetails?.dieSize || { length: "", breadth: "" },
-          productSize: (formData.orderAndPaper?.productSize || formData.productSize) || estimate.dieDetails?.productSize || { length: "", breadth: "" },
-          image: (formData.orderAndPaper?.image || formData.image) || estimate.dieDetails?.image || "",
+          dieSelection: updatedDieSelection,
+          dieCode: updatedDieCode,
+          dieSize: updatedDieSize,
+          productSize: updatedProductSize,
+          image: updatedImage,
         },
         
-        // All other processing details from form data
-        lpDetails: formData.lpDetails?.isLPUsed ? formData.lpDetails : estimate.lpDetails,
-        fsDetails: formData.fsDetails?.isFSUsed ? formData.fsDetails : estimate.fsDetails,
-        embDetails: formData.embDetails?.isEMBUsed ? formData.embDetails : estimate.embDetails,
-        digiDetails: formData.digiDetails?.isDigiUsed ? formData.digiDetails : estimate.digiDetails,
-        notebookDetails: formData.notebookDetails?.isNotebookUsed ? formData.notebookDetails : estimate.notebookDetails,
-        screenPrint: formData.screenPrint?.isScreenPrintUsed ? formData.screenPrint : estimate.screenPrint,
-        dieCutting: formData.dieCutting?.isDieCuttingUsed ? formData.dieCutting : estimate.dieCutting,
-        sandwich: formData.sandwich?.isSandwichComponentUsed ? formData.sandwich : estimate.sandwich,
-        magnet: formData.magnet?.isMagnetUsed ? formData.magnet : estimate.magnet,
-        postDC: formData.postDC?.isPostDCUsed ? formData.postDC : estimate.postDC,
-        foldAndPaste: formData.foldAndPaste?.isFoldAndPasteUsed ? formData.foldAndPaste : estimate.foldAndPaste,
-        dstPaste: formData.dstPaste?.isDstPasteUsed ? formData.dstPaste : estimate.dstPaste,
-        qc: formData.qc?.isQCUsed ? formData.qc : estimate.qc,
-        packing: formData.packing?.isPackingUsed ? formData.packing : estimate.packing,
-        misc: formData.misc?.isMiscUsed ? formData.misc : estimate.misc,
+        // All other processing details from form data - preserve any updates
+        lpDetails: formData.lpDetails || estimate.lpDetails,
+        fsDetails: formData.fsDetails || estimate.fsDetails,
+        embDetails: formData.embDetails || estimate.embDetails,
+        digiDetails: formData.digiDetails || estimate.digiDetails,
+        notebookDetails: formData.notebookDetails || estimate.notebookDetails,
+        screenPrint: formData.screenPrint || estimate.screenPrint,
+        preDieCutting: formData.preDieCutting || estimate.preDieCutting,
+        dieCutting: formData.dieCutting || estimate.dieCutting,
+        sandwich: formData.sandwich || estimate.sandwich,
+        magnet: formData.magnet || estimate.magnet,
+        postDC: formData.postDC || estimate.postDC,
+        foldAndPaste: formData.foldAndPaste || estimate.foldAndPaste,
+        dstPaste: formData.dstPaste || estimate.dstPaste,
+        qc: formData.qc || estimate.qc,
+        packing: formData.packing || estimate.packing,
+        misc: formData.misc || estimate.misc,
         
         // Calculations
         calculations: formData.calculations || estimate.calculations,
@@ -442,15 +530,26 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         createdAt: estimate.createdAt || new Date().toISOString(),
       };
       
-      // Double-check project name is properly set before saving
-      console.log("PROJECT NAME - FINAL VERIFICATION:", updatedEstimate.projectName);
-      console.log("FULL UPDATED ESTIMATE:", updatedEstimate);
+      // Double-check critical fields are properly set before saving
+      console.log("FINAL VERIFICATION - Critical Values:", {
+        projectName: updatedEstimate.projectName,
+        jobType: updatedEstimate.jobDetails.jobType,
+        quantity: updatedEstimate.jobDetails.quantity,
+        paperName: updatedEstimate.jobDetails.paperName,
+        dieCode: updatedEstimate.dieDetails.dieCode
+      });
       
       // Sanitize data before saving to Firestore to prevent undefined values
       const sanitizedEstimate = sanitizeForFirestore(updatedEstimate);
       
       // Last check on critical fields
-      console.log("FINAL SANITIZED ESTIMATE PROJECT NAME:", sanitizedEstimate.projectName);
+      console.log("FINAL SANITIZED ESTIMATE - Critical Fields:", {
+        projectName: sanitizedEstimate.projectName,
+        jobType: sanitizedEstimate.jobDetails.jobType,
+        quantity: sanitizedEstimate.jobDetails.quantity,
+        paperName: sanitizedEstimate.jobDetails.paperName,
+        dieCode: sanitizedEstimate.dieDetails.dieCode
+      });
       
       await onSave(sanitizedEstimate);
     } catch (error) {
@@ -459,7 +558,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     } finally {
       setIsSaving(false);
     }
-  };
+  };  
 
   // Show loading state while fetching client info
   if (isLoadingClient) {

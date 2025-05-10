@@ -48,6 +48,14 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       // Get job type, paper
       const jobType = order.jobDetails?.jobType || 'Card';
       
+      // Get paper details with GSM
+      const paperName = order.jobDetails?.paperName || '';
+      const paperGsm = order.jobDetails?.paperGsm || '';
+      const paperCompany = order.jobDetails?.paperCompany || '';
+      
+      // Format paper info including GSM if available
+      const paperInfo = paperName + (paperGsm ? ` ${paperGsm}gsm` : '') + (paperCompany ? ` (${paperCompany})` : '');
+      
       // Get HSN code from jobDetails if available
       const hsnCode = order.jobDetails?.hsnCode || '';
       
@@ -72,6 +80,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         id: order.id,
         name,
         jobType,
+        paperInfo,
         quantity,
         price: costPerCard,
         originalTotal: originalTotal,
@@ -182,6 +191,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
               <th className="py-1 px-2 border border-gray-300 text-center">S.No</th>
               <th className="py-1 px-2 border border-gray-300 text-left">Item</th>
               <th className="py-1 px-2 border border-gray-300 text-center">Job Type</th>
+              <th className="py-1 px-2 border border-gray-300 text-center">Paper</th>
               <th className="py-1 px-2 border border-gray-300 text-center">Qty</th>
               <th className="py-1 px-2 border border-gray-300 text-right">Unit Cost</th>
               <th className="py-1 px-2 border border-gray-300 text-right">Total</th>
@@ -201,6 +211,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
                   <div className="font-medium">{item.name}</div>
                 </td>
                 <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
+                <td className="py-1 px-2 border border-gray-300 text-center">{item.paperInfo}</td>
                 <td className="py-1 px-2 border border-gray-300 text-center">{item.quantity}</td>
                 <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
                 <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.originalTotal.toFixed(2)}</td>

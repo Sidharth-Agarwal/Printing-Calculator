@@ -49,6 +49,8 @@ const initialFormState = {
     quantity: "",
     paperProvided: "Yes",
     paperName: "",
+    paperGsm: "",
+    paperCompany: "",
     dieSelection: "",
     dieCode: "",
     dieSize: { length: "", breadth: "" },
@@ -175,6 +177,8 @@ const reducer = (state, action) => {
     case "UPDATE_VERSION":
       return { ...state, versionId: action.payload };
     case "UPDATE_ORDER_AND_PAPER":
+      // Log the update for debugging
+      console.log("UPDATE_ORDER_AND_PAPER:", action.payload);
       return { ...state, orderAndPaper: { ...state.orderAndPaper, ...action.payload } };
     case "UPDATE_LP_DETAILS":
       return { ...state, lpDetails: { ...state.lpDetails, ...action.payload } };
@@ -213,6 +217,8 @@ const reducer = (state, action) => {
     case "RESET_FORM":
       return initialFormState;
     case "INITIALIZE_FORM":
+      // Log the initialization for debugging
+      console.log("INITIALIZING FORM with data:", action.payload);
       return { ...action.payload };
     default:
       return state;
@@ -260,8 +266,14 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     return sanitized;
   };
 
-  // Log project name to help debug
-  console.log("mapStateToFirebaseStructure: processing projectName =", orderAndPaper?.projectName);
+  // Log critical fields for debugging
+  console.log("mapStateToFirebaseStructure - critical fields:", {
+    projectName: orderAndPaper?.projectName,
+    jobType: orderAndPaper?.jobType,
+    quantity: orderAndPaper?.quantity,
+    paperName: orderAndPaper?.paperName,
+    dieCode: orderAndPaper?.dieCode
+  });
 
   // Create the sanitized Firebase data structure
   const firestoreData = {
@@ -283,7 +295,9 @@ const mapStateToFirebaseStructure = (state, calculations) => {
       quantity: orderAndPaper.quantity,
       paperProvided: orderAndPaper.paperProvided,
       paperName: orderAndPaper.paperName,
-      hsnCode: orderAndPaper.hsnCode || "", // Include HSN code
+      paperGsm: orderAndPaper.paperGsm,
+      paperCompany: orderAndPaper.paperCompany,
+      hsnCode: orderAndPaper.hsnCode || "",
     }),
     
     // Die details with product size directly from orderAndPaper
@@ -323,8 +337,14 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     updatedAt: new Date().toISOString(),
   };
 
-  // Final verification log
-  console.log("mapStateToFirebaseStructure: final projectName =", firestoreData.projectName);
+  // Final verification log for critical fields
+  console.log("mapStateToFirebaseStructure - final critical fields:", {
+    projectName: firestoreData.projectName,
+    jobType: firestoreData.jobDetails.jobType,
+    quantity: firestoreData.jobDetails.quantity,
+    paperName: firestoreData.jobDetails.paperName,
+    dieCode: firestoreData.dieDetails.dieCode
+  });
   
   return firestoreData;
 };
@@ -345,6 +365,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [markupPercentage, setMarkupPercentage] = useState(50);
   const [papers, setPapers] = useState([]);
   const [hsnRates, setHsnRates] = useState([]); // Store HSN rates from standard_rates
+  const [formChangeDebug, setFormChangeDebug] = useState({}); // Track form changes for debugging
   
   // Success notification state
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
@@ -424,6 +445,24 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       updateHsnCodeForJobType(jobType);
     }
   }, [state.orderAndPaper.jobType, hsnRates]);
+
+  // Log form state changes for debugging critical fields
+  useEffect(() => {
+    // Log critical fields when they change
+    console.log("BillingForm - Current critical field values:", {
+      projectName: state.orderAndPaper.projectName,
+      jobType: state.orderAndPaper.jobType,
+      quantity: state.orderAndPaper.quantity,
+      paperName: state.orderAndPaper.paperName,
+      dieCode: state.orderAndPaper.dieCode
+    });
+  }, [
+    state.orderAndPaper.projectName,
+    state.orderAndPaper.jobType,
+    state.orderAndPaper.quantity,
+    state.orderAndPaper.paperName,
+    state.orderAndPaper.dieCode
+  ]);
 
   // Direct initialization of default services
   useEffect(() => {
@@ -699,6 +738,15 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       // Initialize form state with the provided data
       dispatch({ type: "INITIALIZE_FORM", payload: initialState });
       
+      // Log critical fields for debugging
+      console.log("BillingForm - Initializing with data:", {
+        projectName: initialState.orderAndPaper?.projectName,
+        jobType: initialState.orderAndPaper?.jobType,
+        quantity: initialState.orderAndPaper?.quantity,
+        paperName: initialState.orderAndPaper?.paperName,
+        dieCode: initialState.orderAndPaper?.dieCode
+      });
+      
       // If client info exists in initialState, set the client for display
       if (initialState.client?.clientId) {
         console.log("Setting client from initialState:", initialState.client);
@@ -896,6 +944,12 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const { value } = e.target;
     
     console.log(`Job type changed to: ${value}`);
+    
+    // Track the change for debugging
+    setFormChangeDebug(prev => ({
+      ...prev,
+      jobType: value
+    }));
     
     // First update the job type in state
     dispatch({
@@ -1848,6 +1902,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
+  // Updated handleSubmit function with better debugging and explicit field handling
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -1859,6 +1914,15 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       }
       return;
     }
+    
+    // Log critical form state before submission for debugging
+    console.log("Form state before submission:", {
+      jobType: state.orderAndPaper.jobType,
+      quantity: state.orderAndPaper.quantity,
+      paperName: state.orderAndPaper.paperName,
+      dieCode: state.orderAndPaper.dieCode,
+      projectName: state.orderAndPaper.projectName
+    });
     
     setIsSubmitting(true);
     try {
@@ -1873,12 +1937,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       // Create the formatted data for Firebase using the enhanced calculations
       const formattedData = mapStateToFirebaseStructure(state, calculationsWithMarkup);
       
-      // Log the data before saving to verify markup values and HSN code
-      console.log("Saving to Firebase:", {
-        markupType: formattedData.calculations.markupType,
-        markupPercentage: formattedData.calculations.markupPercentage,
-        markupAmount: formattedData.calculations.markupAmount,
-        hsnCode: formattedData.jobDetails.hsnCode
+      // Log the data before saving to verify critical fields
+      console.log("Saving to Firebase - critical fields:", {
+        jobType: formattedData.jobDetails.jobType,
+        quantity: formattedData.jobDetails.quantity,
+        paperName: formattedData.jobDetails.paperName,
+        dieCode: formattedData.dieDetails.dieCode,
+        projectName: formattedData.projectName
       });
       
       if (isEditMode && onSubmitSuccess) {
@@ -2441,7 +2506,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               <h2 className="text-xl font-bold mb-4">Confirm Reset</h2>
               <p className="mb-6">Are you sure you want to reset the form? All entered data will be lost.</p>
               <div className="flex justify-end space-x-4">
-                <button 
+              <button 
                   type="button"
                   onClick={() => setShowResetConfirmation(false)}
                   className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 transition-colors"
@@ -2480,7 +2545,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
           {/* Production Services Section */}
           <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
-            <h2 className="mb-4 border-b border-gray-200 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
+            <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
             
             {/* LP Section */}
             {isServiceVisible("LP") && (
@@ -2605,7 +2670,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
           {/* Post-Production Services Section */}
           <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
-            <h2 className="mb-4 border-b border-gray-200 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
+            <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
             
             {/* Pre Die Cutting Section */}
             {isServiceVisible("PRE DC") && (

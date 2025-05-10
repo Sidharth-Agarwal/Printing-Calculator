@@ -20,6 +20,7 @@ const OrderAndPaper = ({
   const [papers, setPapers] = useState([]);
   const firstInputRef = useRef(null);
   const quantityInputRef = useRef(null);
+  const [formChanges, setFormChanges] = useState({});
 
   // Focus on the first input field when the component loads
   useEffect(() => {
@@ -27,6 +28,16 @@ const OrderAndPaper = ({
       firstInputRef.current.focus();
     }
   }, [singlePageMode]);
+
+  // Log form state for debugging
+  useEffect(() => {
+    console.log("OrderAndPaper - Current orderAndPaper state:", {
+      jobType: orderAndPaper.jobType,
+      quantity: orderAndPaper.quantity,
+      paperName: orderAndPaper.paperName,
+      dieCode: orderAndPaper.dieCode
+    });
+  }, [orderAndPaper]);
 
   // Fetch papers from Firestore and set the first paper if none is selected
   useEffect(() => {
@@ -42,7 +53,9 @@ const OrderAndPaper = ({
         dispatch({
           type: "UPDATE_ORDER_AND_PAPER",
           payload: {
-            paperName: paperData[0].paperName
+            paperName: paperData[0].paperName,
+            paperGsm: paperData[0].gsm,
+            paperCompany: paperData[0].company
           },
         });
       }
@@ -80,13 +93,48 @@ const OrderAndPaper = ({
   const handleChange = (e) => {
     const { name, value } = e.target;
     
+    // Track form changes for debugging
+    setFormChanges(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
+    // Handle paper details specifically
+    if (name === "paperDetails") {
+      // Log paper selection for debugging
+      console.log("Paper selection changed:", value);
+      
+      dispatch({
+        type: "UPDATE_ORDER_AND_PAPER",
+        payload: {
+          paperName: value.paperName,
+          paperGsm: value.paperGsm,
+          paperCompany: value.paperCompany
+        },
+      });
+      return;
+    }
+    
     // If this is a job type change and we have a custom handler
-    if (name === "jobType" && onJobTypeChange) {
-      onJobTypeChange(e);
+    if (name === "jobType") {
+      // Log job type change for debugging
+      console.log("Job type changed to:", value);
+      
+      if (onJobTypeChange) {
+        onJobTypeChange(e);
+      } else {
+        // Directly update the job type in state if no custom handler
+        dispatch({
+          type: "UPDATE_ORDER_AND_PAPER",
+          payload: { jobType: value },
+        });
+      }
     } else {
-      // Debug log to track projectName changes
+      // Debug log to track changes
       if (name === "projectName") {
         console.log("Updating projectName to:", value);
+      } else if (name === "quantity") {
+        console.log("Updating quantity to:", value);
       }
       
       // Normal field update
@@ -118,8 +166,18 @@ const OrderAndPaper = ({
         dieSize: dieData.dieSize || { length: "", breadth: "" },
         productSize: dieData.productSize || { length: "", breadth: "" },
         image: dieData.image || "",
-        frags: dieData.frags || ""
+        frags: dieData.frags || "",
+        type: dieData.type || "" // Add this line to include the type
       }
+    });
+    
+    // Log the updated state after die selection
+    console.log("Die selection updated state:", {
+      dieSelection: dieData.dieSelection || "",
+      dieCode: dieData.dieCode || "",
+      dieSize: dieData.dieSize || { length: "", breadth: "" },
+      productSize: dieData.productSize || { length: "", breadth: "" },
+      type: dieData.type || "" // Add this line to log the type
     });
   };
 
@@ -313,7 +371,7 @@ const OrderAndPaper = ({
               </select>
             </div>
 
-            {/* Paper Name - Using Searchable Dropdown */}
+            {/* Paper Selection - Using Searchable Dropdown */}
             <div className="col-span-2">
               <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
                 Paper Name <span className="text-red-500">*</span>
@@ -324,6 +382,12 @@ const OrderAndPaper = ({
                 onChange={handleChange}
                 compact={compact}
               />
+              {/* Display selected paper details */}
+              {orderAndPaper.paperGsm && orderAndPaper.paperCompany && (
+                <div className="mt-1 text-xs text-gray-600">
+                  <p>Selected: {orderAndPaper.paperName} | {orderAndPaper.paperCompany} | {orderAndPaper.paperGsm}gsm</p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -338,7 +402,8 @@ const OrderAndPaper = ({
                 dieSize: orderAndPaper.dieSize || { length: "", breadth: "" },
                 productSize: orderAndPaper.productSize || { length: "", breadth: "" },
                 image: orderAndPaper.image || "",
-                frags: orderAndPaper.frags || ""
+                frags: orderAndPaper.frags || "",
+                type: orderAndPaper.type || "" // Add this line to include the type
               }}
               onDieSelect={handleDieSelect}
               compact={compact}
