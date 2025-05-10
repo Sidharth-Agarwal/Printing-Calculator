@@ -13,6 +13,7 @@
   "license": "ISC",
   "dependencies": {
     "@firebasegen/default-connector": "file:dataconnect-generated/js/default-connector",
+    "file-saver": "^2.0.5",
     "firebase": "^11.0.2",
     "html2canvas": "^1.4.1",
     "jspdf": "^2.5.2",
@@ -25,7 +26,8 @@
     "react-router": "^6.15.0",
     "react-router-dom": "^6.15.0",
     "react-toastify": "^10.0.6",
-    "recharts": "^2.15.1"
+    "recharts": "^2.15.1",
+    "xlsx": "^0.18.5"
   },
   "devDependencies": {
     "@parcel/core": "^2.13.3",
