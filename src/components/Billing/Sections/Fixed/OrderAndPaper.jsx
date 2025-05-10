@@ -13,12 +13,13 @@ const OrderAndPaper = ({
   validationErrors = {}, 
   singlePageMode = false, 
   onJobTypeChange = null,
-  compact = false // New prop to control display style
+  compact = false
 }) => {
   const { orderAndPaper } = state;
 
   const [papers, setPapers] = useState([]);
   const firstInputRef = useRef(null);
+  const quantityInputRef = useRef(null);
 
   // Focus on the first input field when the component loads
   useEffect(() => {
@@ -98,6 +99,13 @@ const OrderAndPaper = ({
     }
   };
 
+  // Prevent scroll wheel from changing quantity value
+  const handleQuantityWheel = (e) => {
+    // Prevent the default scroll behavior when the quantity input is focused
+    e.preventDefault();
+    e.stopPropagation();
+  };
+
   const handleDieSelect = (dieData) => {
     console.log("OrderAndPaper receiving die data:", dieData);
     
@@ -132,7 +140,8 @@ const OrderAndPaper = ({
   };
 
   // Custom styles for the datepicker to make it smaller
-  const customDatePickerStyles = `
+  const customStyles = `
+    /* DatePicker Styles */
     .react-datepicker {
       font-size: 0.8rem;
       width: 200px;
@@ -156,11 +165,21 @@ const OrderAndPaper = ({
     .react-datepicker__current-month {
       font-size: 0.9rem;
     }
+    
+    /* Remove spinner (up/down arrows) from number inputs */
+    .no-spinner::-webkit-inner-spin-button, 
+    .no-spinner::-webkit-outer-spin-button { 
+      -webkit-appearance: none; 
+      margin: 0; 
+    }
+    .no-spinner {
+      -moz-appearance: textfield;
+    }
   `;
 
   return (
     <div>
-      <style>{customDatePickerStyles}</style>
+      <style>{customStyles}</style>
       <div>
         {!singlePageMode && !compact && (
           <h1 className="text-lg font-bold text-gray-700 mb-4">PROJECT & PAPER DETAILS</h1>
@@ -216,7 +235,7 @@ const OrderAndPaper = ({
               </select>
             </div>
 
-            {/* Quantity */}
+            {/* Quantity - Modified to prevent scroll changes and hide arrows */}
             <div>
               <label htmlFor="quantity" className="block text-xs font-medium text-gray-600 mb-1">
                 Quantity <span className="text-red-500">*</span>
@@ -228,7 +247,9 @@ const OrderAndPaper = ({
                 placeholder="Quantity"
                 value={orderAndPaper.quantity || ""}
                 onChange={handleChange}
-                className={`border rounded-md p-2 w-full text-sm ${
+                ref={quantityInputRef}
+                onWheel={handleQuantityWheel}
+                className={`border rounded-md p-2 w-full text-sm no-spinner ${
                   validationErrors.quantity ? "border-red-500" : ""
                 }`}
                 required
