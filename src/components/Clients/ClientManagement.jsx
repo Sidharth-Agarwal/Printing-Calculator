@@ -498,7 +498,7 @@ const ClientManagement = () => {
       </div>
       
       {/* Table component */}
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+      <div className="bg-white overflow-hidden">
         {isLoading ? (
           <div className="p-8 flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
