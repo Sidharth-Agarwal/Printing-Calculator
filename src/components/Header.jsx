@@ -106,12 +106,12 @@ const Header = () => {
     { key: 'newBill', label: 'New Bill', path: '/new-bill', visible: isMenuItemVisible('newBill') },
     { key: 'materials', label: 'Material & Stock', path: '/material-stock', visible: isMenuItemVisible('materials'), isDropdown: true,
       dropdownItems: [
-        { label: 'Paper Management', path: '/material-stock/paper-db' },
-        { label: 'Material Management', path: '/material-stock/material-db' },
-        { label: 'Die Management', path: '/material-stock/dies-db' },
-        { label: 'Labour Management', path: '/material-stock/standard-rates-db' },
-        { label: 'Overheads Management', path: '/material-stock/overheads' },
-        { label: 'Loyalty Program Management', path: '/material-stock/loyalty-tiers', visible: isMenuItemVisible('loyaltyProgram') }
+        { label: 'Papers DB', path: '/material-stock/paper-db' },
+        { label: 'Materials DB', path: '/material-stock/material-db' },
+        { label: 'Dies DB', path: '/material-stock/dies-db' },
+        { label: 'Labours DB', path: '/material-stock/standard-rates-db' },
+        { label: 'Standard Parameters', path: '/material-stock/overheads' },
+        { label: 'Loyalty Program', path: '/material-stock/loyalty-tiers', visible: isMenuItemVisible('loyaltyProgram') }
       ]
     },
     { key: 'clients', label: 'Clients', path: '/clients', visible: isMenuItemVisible('clients') },
