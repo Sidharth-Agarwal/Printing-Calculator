@@ -166,7 +166,8 @@ const OrderAndPaper = ({
         dieSize: dieData.dieSize || { length: "", breadth: "" },
         productSize: dieData.productSize || { length: "", breadth: "" },
         image: dieData.image || "",
-        frags: dieData.frags || ""
+        frags: dieData.frags || "",
+        type: dieData.type || "" // Add this line to include the type
       }
     });
     
@@ -175,7 +176,8 @@ const OrderAndPaper = ({
       dieSelection: dieData.dieSelection || "",
       dieCode: dieData.dieCode || "",
       dieSize: dieData.dieSize || { length: "", breadth: "" },
-      productSize: dieData.productSize || { length: "", breadth: "" }
+      productSize: dieData.productSize || { length: "", breadth: "" },
+      type: dieData.type || "" // Add this line to log the type
     });
   };
 
@@ -400,7 +402,8 @@ const OrderAndPaper = ({
                 dieSize: orderAndPaper.dieSize || { length: "", breadth: "" },
                 productSize: orderAndPaper.productSize || { length: "", breadth: "" },
                 image: orderAndPaper.image || "",
-                frags: orderAndPaper.frags || ""
+                frags: orderAndPaper.frags || "",
+                type: orderAndPaper.type || "" // Add this line to include the type
               }}
               onDieSelect={handleDieSelect}
               compact={compact}

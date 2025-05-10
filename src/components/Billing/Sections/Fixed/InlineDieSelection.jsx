@@ -287,7 +287,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
         breadth: die.productSizeB || "" 
       },
       image: die.imageUrl || "",
-      frags: die.frags || "" // Include frags in the selection
+      frags: die.frags || "",
+      type: die.type || ""
     };
     
     // Update our local state first
