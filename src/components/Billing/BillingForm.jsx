@@ -13,6 +13,7 @@ import EMBDetails from "./Sections/Production/EMBDetails";
 import DigiDetails from "./Sections/Production/DigiDetails";
 import ScreenPrint from "./Sections/Production/ScreenPrint";
 import NotebookDetails from "./Sections/Production/NotebookDetails";
+import PreDieCutting from "./Sections/Post Production/PreDieCutting";
 import DieCutting from "./Sections/Post Production/DieCutting";
 import PostDC from "./Sections/Post Production/PostDC";
 import FoldAndPaste from "./Sections/Post Production/FoldAndPaste";
@@ -95,6 +96,11 @@ const initialFormState = {
     noOfColors: 1,
     screenMR: "",
     screenMRConcatenated: ""
+  },
+  preDieCutting: {  // Add the new preDieCutting section
+    isPreDieCuttingUsed: false,
+    predcMR: "",
+    predcMRConcatenated: ""
   },
   dieCutting: {
     isDieCuttingUsed: false,
@@ -182,6 +188,8 @@ const reducer = (state, action) => {
       return { ...state, notebookDetails: { ...state.notebookDetails, ...action.payload } };
     case "UPDATE_SCREEN_PRINT":
       return { ...state, screenPrint: { ...state.screenPrint, ...action.payload } };
+    case "UPDATE_PRE_DIE_CUTTING": // Add the new case for preDieCutting
+      return { ...state, preDieCutting: { ...state.preDieCutting, ...action.payload } };
     case "UPDATE_DIE_CUTTING":
       return { ...state, dieCutting: { ...state.dieCutting, ...action.payload } };
     case "UPDATE_POST_DC":
@@ -212,7 +220,6 @@ const reducer = (state, action) => {
 };
 
 // Map state to Firebase structure with sanitization for undefined values
-// Map state to Firebase structure with sanitization for undefined values
 const mapStateToFirebaseStructure = (state, calculations) => {
   const { 
     client, 
@@ -223,6 +230,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     embDetails, 
     digiDetails, 
     screenPrint, 
+    preDieCutting, // Add preDieCutting
     dieCutting, 
     sandwich,
     magnet,
@@ -294,6 +302,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     digiDetails: digiDetails.isDigiUsed ? sanitizeForFirestore(digiDetails) : null,
     notebookDetails: notebookDetails?.isNotebookUsed ? sanitizeForFirestore(notebookDetails) : null,
     screenPrint: screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(screenPrint) : null,
+    preDieCutting: preDieCutting?.isPreDieCuttingUsed ? sanitizeForFirestore(preDieCutting) : null, // Add preDieCutting
     dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
     sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
     magnet: magnet?.isMagnetUsed ? sanitizeForFirestore(magnet) : null,
@@ -349,6 +358,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [isB2BClient, setIsB2BClient] = useState(false);
   const [linkedClientData, setLinkedClientData] = useState(null);
 
+  // State to track direct initialization
+  const [directInitializationDone, setDirectInitializationDone] = useState(false);
+
   const formRef = useRef(null);
   
   // Fetch HSN codes from standard_rates collection
@@ -385,41 +397,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     fetchHsnCodes();
   }, []);
   
-  // Function to update HSN code when job type changes
-  const updateHsnCodeForJobType = (jobType, ratesArray = null) => {
-    // Use passed rates array or state's hsnRates
-    const ratesToUse = ratesArray || hsnRates;
-    
-    if (!ratesToUse || ratesToUse.length === 0) {
-      console.log("No HSN rates available");
-      return;
-    }
-    
-    // Find matching HSN code
-    const matchingHsn = ratesToUse.find(rate => 
-      rate.type.toUpperCase() === jobType.toUpperCase()
-    );
-    
-    if (matchingHsn) {
-      const hsnCode = matchingHsn.finalRate || "";
-      console.log(`Found HSN code ${hsnCode} for job type ${jobType}`);
-      
-      // Update HSN code in state
-      dispatch({
-        type: "UPDATE_HSN_CODE",
-        payload: hsnCode
-      });
-    } else {
-      console.log(`No HSN code found for job type ${jobType}`);
-      
-      // Reset HSN code if no matching code found
-      dispatch({
-        type: "UPDATE_HSN_CODE",
-        payload: ""
-      });
-    }
-  };
-  
   // Fetch papers from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
@@ -433,36 +410,335 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     return () => unsubscribe();
   }, []);
   
-  // Add CSS for success notification animations
+  // Update visible services when job type changes
   useEffect(() => {
-    const style = document.createElement('style');
-    style.innerHTML = `
-      @keyframes fade-in {
-        0% { opacity: 0; transform: translateY(-20px); }
-        100% { opacity: 1; transform: translateY(0); }
-      }
-      
-      @keyframes success-check {
-        0% { transform: scale(0.5); opacity: 0; }
-        50% { transform: scale(1.2); opacity: 1; }
-        100% { transform: scale(1); opacity: 1; }
-      }
-      
-      .animate-fade-in {
-        animation: fade-in 0.5s ease forwards;
-      }
-      
-      .animate-success-check {
-        animation: success-check 0.6s ease-in-out forwards;
-      }
-    `;
-    document.head.appendChild(style);
+    const jobType = state.orderAndPaper.jobType || "Card";
+    const config = jobTypeConfigurations[jobType] || jobTypeConfigurations["Card"];
     
-    return () => {
-      document.head.removeChild(style);
-    };
-  }, []);
-  
+    // Set visible services based on job type
+    setVisibleProductionServices(config.productionServices || []);
+    setVisiblePostProductionServices(config.postProductionServices || []);
+    
+    // Update HSN code when job type changes
+    if (hsnRates.length > 0) {
+      updateHsnCodeForJobType(jobType);
+    }
+  }, [state.orderAndPaper.jobType, hsnRates]);
+
+  // Direct initialization of default services
+  useEffect(() => {
+    // Only run this once at the beginning and only for new forms
+    if (!directInitializationDone && !isEditMode) {
+      console.log("Performing direct initialization of default services");
+      
+      // Get the current job type
+      const jobType = state.orderAndPaper.jobType || "Card";
+      
+      // Get the services that should be active by default
+      const defaultActiveProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.production || [];
+      const defaultActivePostProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.postProduction || [];
+      
+      console.log("Default active services:", {
+        production: defaultActiveProductionServices,
+        postProduction: defaultActivePostProductionServices
+      });
+      
+      // DIRECT SERVICE ACTIVATION - Production Services
+      if (defaultActiveProductionServices.includes("LP")) {
+        console.log("Activating LP service");
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { 
+            isLPUsed: true,
+            noOfColors: 1,
+            colorDetails: [
+              {
+                plateSizeType: "Auto",
+                plateDimensions: { 
+                  length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                  breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                },
+                pantoneType: "",
+                plateType: "Polymer Plate",
+                mrType: "SIMPLE",
+                mrTypeConcatenated: "LP MR SIMPLE"
+              }
+            ]
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("DIGI")) {
+        console.log("Activating DIGI service");
+        dispatch({
+          type: "UPDATE_DIGI_DETAILS",
+          payload: { 
+            isDigiUsed: true,
+            digiDie: "12x18",
+            digiDimensions: { length: "12", breadth: "18" }
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("FS")) {
+        console.log("Activating FS service");
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: { 
+            isFSUsed: true,
+            fsType: "FS1",
+            foilDetails: [
+              {
+                blockSizeType: "Auto",
+                blockDimension: { 
+                  length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                  breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                },
+                foilType: "Gold MTS 220",
+                blockType: "Magnesium Block 3MM",
+                mrType: "SIMPLE",
+                mrTypeConcatenated: "FS MR SIMPLE"
+              }
+            ]
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("EMB")) {
+        console.log("Activating EMB service");
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: { 
+            isEMBUsed: true,
+            plateSizeType: "Auto",
+            plateDimensions: { 
+              length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+              breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+            },
+            plateTypeMale: "Polymer Plate",
+            plateTypeFemale: "Polymer Plate",
+            embMR: "SIMPLE",
+            embMRConcatenated: "EMB MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("SCREEN")) {
+        console.log("Activating SCREEN service");
+        dispatch({
+          type: "UPDATE_SCREEN_PRINT",
+          payload: { 
+            isScreenPrintUsed: true,
+            noOfColors: 1,
+            screenMR: "SIMPLE",
+            screenMRConcatenated: "SCREEN MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("NOTEBOOK")) {
+        console.log("Activating NOTEBOOK service");
+        dispatch({
+          type: "UPDATE_NOTEBOOK_DETAILS",
+          payload: { 
+            isNotebookUsed: true,
+            orientation: "",
+            length: "",
+            breadth: "",
+            calculatedLength: "",
+            calculatedBreadth: "",
+            numberOfPages: "",
+            bindingType: "",
+            bindingTypeConcatenated: "",
+            paperName: papers.length > 0 ? papers[0].paperName : ""
+          }
+        });
+      }
+      
+      // DIRECT SERVICE ACTIVATION - Post-Production Services
+      if (defaultActivePostProductionServices.includes("PRE DC")) {
+        console.log("Activating PRE DC service");
+        dispatch({
+          type: "UPDATE_PRE_DIE_CUTTING",
+          payload: { 
+            isPreDieCuttingUsed: true,
+            predcMR: "SIMPLE",
+            predcMRConcatenated: "PREDC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DC")) {
+        console.log("Activating DC service");
+        dispatch({
+          type: "UPDATE_DIE_CUTTING",
+          payload: { 
+            isDieCuttingUsed: true,
+            dcMR: "SIMPLE",
+            dcMRConcatenated: "DC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("POST DC")) {
+        console.log("Activating POST DC service");
+        dispatch({
+          type: "UPDATE_POST_DC",
+          payload: { 
+            isPostDCUsed: true,
+            pdcMR: "SIMPLE",
+            pdcMRConcatenated: "PDC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
+        console.log("Activating FOLD & PASTE service");
+        dispatch({
+          type: "UPDATE_FOLD_AND_PASTE",
+          payload: { 
+            isFoldAndPasteUsed: true,
+            dstMaterial: "",
+            dstType: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DST PASTE")) {
+        console.log("Activating DST PASTE service");
+        dispatch({
+          type: "UPDATE_DST_PASTE",
+          payload: { 
+            isDstPasteUsed: true,
+            dstType: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("MAGNET")) {
+        console.log("Activating MAGNET service");
+        dispatch({
+          type: "UPDATE_MAGNET",
+          payload: { 
+            isMagnetUsed: true,
+            magnetMaterial: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("QC")) {
+        console.log("Activating QC service");
+        dispatch({
+          type: "UPDATE_QC",
+          payload: { 
+            isQCUsed: true
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("PACKING")) {
+        console.log("Activating PACKING service");
+        dispatch({
+          type: "UPDATE_PACKING",
+          payload: { 
+            isPackingUsed: true
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DUPLEX")) {
+        console.log("Activating DUPLEX service");
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: { 
+            isSandwichComponentUsed: true,
+            paperInfo: {
+              paperName: papers.length > 0 ? papers[0].paperName : ""
+            }
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("MISC")) {
+        console.log("Activating MISC service");
+        dispatch({
+          type: "UPDATE_MISC",
+          payload: { 
+            isMiscUsed: true,
+            miscCharge: ""
+          }
+        });
+      }
+      
+      // Expand one of the active services (preferably a production service)
+      let sectionToExpand = null;
+      
+      if (defaultActiveProductionServices.length > 0) {
+        const firstActiveService = defaultActiveProductionServices[0];
+        sectionToExpand = serviceRegistry[firstActiveService]?.id;
+      } else if (defaultActivePostProductionServices.length > 0) {
+        const firstActiveService = defaultActivePostProductionServices[0];
+        sectionToExpand = serviceRegistry[firstActiveService]?.id;
+      }
+      
+      if (sectionToExpand) {
+        console.log(`Expanding section: ${sectionToExpand}`);
+        setActiveSection(sectionToExpand);
+      }
+      
+      // Mark initialization as done
+      setDirectInitializationDone(true);
+    }
+  }, [directInitializationDone, isEditMode, state.orderAndPaper.jobType, papers]);
+
+  // Initialize form with data if in edit mode
+  useEffect(() => {
+    if (initialState && isEditMode) {
+      // Initialize form state with the provided data
+      dispatch({ type: "INITIALIZE_FORM", payload: initialState });
+      
+      // If client info exists in initialState, set the client for display
+      if (initialState.client?.clientId) {
+        console.log("Setting client from initialState:", initialState.client);
+        
+        // Create a client object from client info
+        const clientData = {
+          id: initialState.client.clientId,
+          clientId: initialState.client.clientId,
+          name: initialState.client.clientInfo?.name || "Unknown Client",
+          clientCode: initialState.client.clientInfo?.clientCode || "",
+          clientType: initialState.client.clientInfo?.clientType || "Direct",
+          contactPerson: initialState.client.clientInfo?.contactPerson || "",
+          email: initialState.client.clientInfo?.email || "",
+          phone: initialState.client.clientInfo?.phone || "",
+          ...initialState.client.clientInfo // Include any other client properties
+        };
+        
+        // Set the selected client for display
+        setSelectedClient(clientData);
+      }
+      
+      // Set selected version if it exists in initialState
+      if (initialState.versionId) {
+        setSelectedVersion(initialState.versionId);
+      }
+      
+      // Set markup if it exists in initialState calculations
+      if (initialState.calculations?.markupType) {
+        setSelectedMarkupType(initialState.calculations.markupType);
+      }
+      
+      if (initialState.calculations?.markupPercentage) {
+        setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
+      }
+      
+      // Mark initialization as done for edit mode
+      setDirectInitializationDone(true);
+    }
+  }, [initialState, isEditMode]);
+
   // Add useEffect to fetch B2B client data when component mounts
   useEffect(() => {
     const fetchB2BClientData = async () => {
@@ -570,80 +846,41 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     fetchDefaultMarkup();
   }, [isB2BClient]);
-  
-  // Initialize form with data if in edit mode
-  useEffect(() => {
-    if (initialState && isEditMode) {
-      // Initialize form state with the provided data
-      dispatch({ type: "INITIALIZE_FORM", payload: initialState });
-      
-      // If client info exists in initialState, set the client for display
-      if (initialState.client?.clientId) {
-        console.log("Setting client from initialState:", initialState.client);
-        
-        // Create a client object from client info
-        const clientData = {
-          id: initialState.client.clientId,
-          clientId: initialState.client.clientId,
-          name: initialState.client.clientInfo?.name || "Unknown Client",
-          clientCode: initialState.client.clientInfo?.clientCode || "",
-          clientType: initialState.client.clientInfo?.clientType || "Direct",
-          contactPerson: initialState.client.clientInfo?.contactPerson || "",
-          email: initialState.client.clientInfo?.email || "",
-          phone: initialState.client.clientInfo?.phone || "",
-          ...initialState.client.clientInfo // Include any other client properties
-        };
-        
-        // Set the selected client for display
-        setSelectedClient(clientData);
-      }
-      
-      // Set selected version if it exists in initialState
-      if (initialState.versionId) {
-        setSelectedVersion(initialState.versionId);
-      }
-      
-      // Set markup if it exists in initialState calculations
-      if (initialState.calculations?.markupType) {
-        setSelectedMarkupType(initialState.calculations.markupType);
-      }
-      
-      if (initialState.calculations?.markupPercentage) {
-        setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
-      }
-    }
-  }, [initialState, isEditMode]);  
 
-  // Update visible services when job type changes
-  useEffect(() => {
-    const jobType = state.orderAndPaper.jobType || "Card";
-    const config = jobTypeConfigurations[jobType] || jobTypeConfigurations["Card"];
+  // Function to update HSN code when job type changes
+  const updateHsnCodeForJobType = (jobType, ratesArray = null) => {
+    // Use passed rates array or state's hsnRates
+    const ratesToUse = ratesArray || hsnRates;
     
-    // Set visible services based on job type
-    setVisibleProductionServices(config.productionServices || []);
-    setVisiblePostProductionServices(config.postProductionServices || []);
-    
-    // Reset non-applicable services to avoid showing disabled ones
-    Object.entries(serviceRegistry).forEach(([serviceCode, serviceInfo]) => {
-      const isVisible = 
-        config.productionServices.includes(serviceCode) || 
-        config.postProductionServices.includes(serviceCode);
-      
-      if (!isVisible && serviceInfo.stateKey && serviceInfo.toggleField) {
-        // Reset this service if it's not visible for the current job type
-        dispatch({
-          type: `UPDATE_${serviceInfo.stateKey.toUpperCase()}`,
-          payload: { [serviceInfo.toggleField]: false }
-        });
-      }
-    });
-    
-    // Update HSN code when job type changes
-    if (hsnRates.length > 0) {
-      updateHsnCodeForJobType(jobType);
+    if (!ratesToUse || ratesToUse.length === 0) {
+      console.log("No HSN rates available");
+      return;
     }
     
-  }, [state.orderAndPaper.jobType, hsnRates]);
+    // Find matching HSN code
+    const matchingHsn = ratesToUse.find(rate => 
+      rate.type.toUpperCase() === jobType.toUpperCase()
+    );
+    
+    if (matchingHsn) {
+      const hsnCode = matchingHsn.finalRate || "";
+      console.log(`Found HSN code ${hsnCode} for job type ${jobType}`);
+      
+      // Update HSN code in state
+      dispatch({
+        type: "UPDATE_HSN_CODE",
+        payload: hsnCode
+      });
+    } else {
+      console.log(`No HSN code found for job type ${jobType}`);
+      
+      // Reset HSN code if no matching code found
+      dispatch({
+        type: "UPDATE_HSN_CODE",
+        payload: ""
+      });
+    }
+  };
 
   // Calculate costs when form data changes
   useEffect(() => {
@@ -653,6 +890,292 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     return () => clearTimeout(debounceTimer);
   }, [state]);
+
+  // Enhanced job type change handler - direct activation approach
+  const handleJobTypeChange = (e) => {
+    const { value } = e.target;
+    
+    console.log(`Job type changed to: ${value}`);
+    
+    // First update the job type in state
+    dispatch({
+      type: "UPDATE_ORDER_AND_PAPER",
+      payload: { jobType: value }
+    });
+    
+    // Only if not in edit mode, directly activate services
+    if (!isEditMode) {
+      // First reset all services
+      Object.entries(serviceRegistry).forEach(([serviceCode, serviceInfo]) => {
+        dispatch({
+          type: `UPDATE_${serviceInfo.stateKey.toUpperCase()}`,
+          payload: { [serviceInfo.toggleField]: false }
+        });
+      });
+      
+      // Get default active services for the new job type
+      const defaultActiveProductionServices = 
+        jobTypeConfigurations[value]?.defaultActiveServices?.production || [];
+      const defaultActivePostProductionServices = 
+        jobTypeConfigurations[value]?.defaultActiveServices?.postProduction || [];
+      
+      console.log("Default active services for new job type:", {
+        production: defaultActiveProductionServices,
+        postProduction: defaultActivePostProductionServices
+      });
+      
+      // Set a timeout to ensure state updates have processed
+      setTimeout(() => {
+        // DIRECT SERVICE ACTIVATION - Production Services
+        if (defaultActiveProductionServices.includes("LP")) {
+          console.log("Activating LP service");
+          dispatch({
+            type: "UPDATE_LP_DETAILS",
+            payload: { 
+              isLPUsed: true,
+              noOfColors: 1,
+              colorDetails: [
+                {
+                  plateSizeType: "Auto",
+                  plateDimensions: { 
+                    length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                    breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                  },
+                  pantoneType: "",
+                  plateType: "Polymer Plate",
+                  mrType: "SIMPLE",
+                  mrTypeConcatenated: "LP MR SIMPLE"
+                }
+              ]
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("DIGI")) {
+          console.log("Activating DIGI service");
+          dispatch({
+            type: "UPDATE_DIGI_DETAILS",
+            payload: { 
+              isDigiUsed: true,
+              digiDie: "12x18",
+              digiDimensions: { length: "12", breadth: "18" }
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("FS")) {
+          console.log("Activating FS service");
+          dispatch({
+            type: "UPDATE_FS_DETAILS",
+            payload: { 
+              isFSUsed: true,
+              fsType: "FS1",
+              foilDetails: [
+                {
+                  blockSizeType: "Auto",
+                  blockDimension: { 
+                    length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                    breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                  },
+                  foilType: "Gold MTS 220",
+                  blockType: "Magnesium Block 3MM",
+                  mrType: "SIMPLE",
+                  mrTypeConcatenated: "FS MR SIMPLE"
+                }
+              ]
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("EMB")) {
+          console.log("Activating EMB service");
+          dispatch({
+            type: "UPDATE_EMB_DETAILS",
+            payload: { 
+              isEMBUsed: true,
+              plateSizeType: "Auto",
+              plateDimensions: { 
+                length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+              },
+              plateTypeMale: "Polymer Plate",
+              plateTypeFemale: "Polymer Plate",
+              embMR: "SIMPLE",
+              embMRConcatenated: "EMB MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("SCREEN")) {
+          console.log("Activating SCREEN service");
+          dispatch({
+            type: "UPDATE_SCREEN_PRINT",
+            payload: { 
+              isScreenPrintUsed: true,
+              noOfColors: 1,
+              screenMR: "SIMPLE",
+              screenMRConcatenated: "SCREEN MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("NOTEBOOK")) {
+          console.log("Activating NOTEBOOK service");
+          dispatch({
+            type: "UPDATE_NOTEBOOK_DETAILS",
+            payload: { 
+              isNotebookUsed: true,
+              orientation: "",
+              length: "",
+              breadth: "",
+              calculatedLength: "",
+              calculatedBreadth: "",
+              numberOfPages: "",
+              bindingType: "",
+              bindingTypeConcatenated: "",
+              paperName: papers.length > 0 ? papers[0].paperName : ""
+            }
+          });
+        }
+        
+        // DIRECT SERVICE ACTIVATION - Post-Production Services
+        if (defaultActivePostProductionServices.includes("PRE DC")) {
+          console.log("Activating PRE DC service");
+          dispatch({
+            type: "UPDATE_PRE_DIE_CUTTING",
+            payload: { 
+              isPreDieCuttingUsed: true,
+              predcMR: "SIMPLE",
+              predcMRConcatenated: "PREDC MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("DC")) {
+          console.log("Activating DC service");
+          dispatch({
+            type: "UPDATE_DIE_CUTTING",
+            payload: { 
+              isDieCuttingUsed: true,
+              dcMR: "SIMPLE",
+              dcMRConcatenated: "DC MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("POST DC")) {
+          console.log("Activating POST DC service");
+          dispatch({
+            type: "UPDATE_POST_DC",
+            payload: { 
+              isPostDCUsed: true,
+              pdcMR: "SIMPLE",
+              pdcMRConcatenated: "PDC MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
+          console.log("Activating FOLD & PASTE service");
+          dispatch({
+            type: "UPDATE_FOLD_AND_PASTE",
+            payload: { 
+              isFoldAndPasteUsed: true,
+              dstMaterial: "",
+              dstType: ""
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("DST PASTE")) {
+          console.log("Activating DST PASTE service");
+          dispatch({
+            type: "UPDATE_DST_PASTE",
+            payload: { 
+              isDstPasteUsed: true,
+              dstType: ""
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("MAGNET")) {
+          console.log("Activating MAGNET service");
+          dispatch({
+            type: "UPDATE_MAGNET",
+            payload: { 
+              isMagnetUsed: true,
+              magnetMaterial: ""
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("QC")) {
+          console.log("Activating QC service");
+          dispatch({
+            type: "UPDATE_QC",
+            payload: { 
+              isQCUsed: true
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("PACKING")) {
+          console.log("Activating PACKING service");
+          dispatch({
+            type: "UPDATE_PACKING",
+            payload: { 
+              isPackingUsed: true
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("DUPLEX")) {
+          console.log("Activating DUPLEX service");
+          dispatch({
+            type: "UPDATE_SANDWICH",
+            payload: { 
+              isSandwichComponentUsed: true,
+              paperInfo: {
+                paperName: papers.length > 0 ? papers[0].paperName : ""
+              }
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("MISC")) {
+          console.log("Activating MISC service");
+          dispatch({
+            type: "UPDATE_MISC",
+            payload: { 
+              isMiscUsed: true,
+              miscCharge: ""
+            }
+          });
+        }
+        
+        // Open first activated section if available
+        let sectionToExpand = null;
+        
+        if (defaultActiveProductionServices.length > 0) {
+          const firstActiveService = defaultActiveProductionServices[0];
+          sectionToExpand = serviceRegistry[firstActiveService]?.id;
+        } else if (defaultActivePostProductionServices.length > 0) {
+          const firstActiveService = defaultActivePostProductionServices[0];
+          sectionToExpand = serviceRegistry[firstActiveService]?.id;
+        }
+        
+        if (sectionToExpand) {
+          console.log(`Expanding section: ${sectionToExpand}`);
+          setActiveSection(sectionToExpand);
+        }
+      }, 0);
+    }
+    
+    // Update HSN code when job type changes
+    if (hsnRates.length > 0) {
+      updateHsnCodeForJobType(value);
+    }
+  };
 
   // Function to handle markup changes from ReviewAndSubmit component
   const handleMarkupChange = async (markupType, markupPercentage) => {
@@ -825,6 +1348,240 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     dispatch({ type: "INITIALIZE_FORM", payload: partialReset });
     setCalculations(null);
     setActiveSection("reviewAndSubmit");
+    
+    // Reset direct initialization flag to reapply default services
+    setDirectInitializationDone(false);
+    
+    // Set default active services for current job type
+    const jobType = state.orderAndPaper.jobType || "Card";
+    
+    // Wait for state to be updated
+    setTimeout(() => {
+      // Get default active services for the job type
+      const defaultActiveProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.production || [];
+      const defaultActivePostProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.postProduction || [];
+      
+      console.log("Re-activating default services after partial reset:", {
+        production: defaultActiveProductionServices,
+        postProduction: defaultActivePostProductionServices
+      });
+      
+      // DIRECT SERVICE ACTIVATION - Production Services
+      if (defaultActiveProductionServices.includes("LP")) {
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { 
+            isLPUsed: true,
+            noOfColors: 1,
+            colorDetails: [
+              {
+                plateSizeType: "Auto",
+                plateDimensions: { 
+                  length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                  breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                },
+                pantoneType: "",
+                plateType: "Polymer Plate",
+                mrType: "SIMPLE",
+                mrTypeConcatenated: "LP MR SIMPLE"
+              }
+            ]
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("DIGI")) {
+        dispatch({
+          type: "UPDATE_DIGI_DETAILS",
+          payload: { 
+            isDigiUsed: true,
+            digiDie: "12x18",
+            digiDimensions: { length: "12", breadth: "18" }
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("FS")) {
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: { 
+            isFSUsed: true,
+            fsType: "FS1",
+            foilDetails: [
+              {
+                blockSizeType: "Auto",
+                blockDimension: { 
+                  length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                  breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                },
+                foilType: "Gold MTS 220",
+                blockType: "Magnesium Block 3MM",
+                mrType: "SIMPLE",
+                mrTypeConcatenated: "FS MR SIMPLE"
+              }
+            ]
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("EMB")) {
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: { 
+            isEMBUsed: true,
+            plateSizeType: "Auto",
+            plateDimensions: { 
+              length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+              breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+            },
+            plateTypeMale: "Polymer Plate",
+            plateTypeFemale: "Polymer Plate",
+            embMR: "SIMPLE",
+            embMRConcatenated: "EMB MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("SCREEN")) {
+        dispatch({
+          type: "UPDATE_SCREEN_PRINT",
+          payload: { 
+            isScreenPrintUsed: true,
+            noOfColors: 1,
+            screenMR: "SIMPLE",
+            screenMRConcatenated: "SCREEN MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("NOTEBOOK")) {
+        dispatch({
+          type: "UPDATE_NOTEBOOK_DETAILS",
+          payload: { 
+            isNotebookUsed: true,
+            orientation: "",
+            length: "",
+            breadth: "",
+            calculatedLength: "",
+            calculatedBreadth: "",
+            numberOfPages: "",
+            bindingType: "",
+            bindingTypeConcatenated: "",
+            paperName: papers.length > 0 ? papers[0].paperName : ""
+          }
+        });
+      }
+      
+      // DIRECT SERVICE ACTIVATION - Post-Production Services
+      if (defaultActivePostProductionServices.includes("PRE DC")) {
+        dispatch({
+          type: "UPDATE_PRE_DIE_CUTTING",
+          payload: { 
+            isPreDieCuttingUsed: true,
+            predcMR: "SIMPLE",
+            predcMRConcatenated: "PREDC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DC")) {
+        dispatch({
+          type: "UPDATE_DIE_CUTTING",
+          payload: { 
+            isDieCuttingUsed: true,
+            dcMR: "SIMPLE",
+            dcMRConcatenated: "DC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("POST DC")) {
+        dispatch({
+          type: "UPDATE_POST_DC",
+          payload: { 
+            isPostDCUsed: true,
+            pdcMR: "SIMPLE",
+            pdcMRConcatenated: "PDC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
+        dispatch({
+          type: "UPDATE_FOLD_AND_PASTE",
+          payload: { 
+            isFoldAndPasteUsed: true,
+            dstMaterial: "",
+            dstType: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DST PASTE")) {
+        dispatch({
+          type: "UPDATE_DST_PASTE",
+          payload: { 
+            isDstPasteUsed: true,
+            dstType: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("MAGNET")) {
+        dispatch({
+          type: "UPDATE_MAGNET",
+          payload: { 
+            isMagnetUsed: true,
+            magnetMaterial: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("QC")) {
+        dispatch({
+          type: "UPDATE_QC",
+          payload: { 
+            isQCUsed: true
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("PACKING")) {
+        dispatch({
+          type: "UPDATE_PACKING",
+          payload: { 
+            isPackingUsed: true
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DUPLEX")) {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: { 
+            isSandwichComponentUsed: true,
+            paperInfo: {
+              paperName: papers.length > 0 ? papers[0].paperName : ""
+            }
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("MISC")) {
+        dispatch({
+          type: "UPDATE_MISC",
+          payload: { 
+            isMiscUsed: true,
+            miscCharge: ""
+          }
+        });
+      }
+      
+      // Mark initialization as done
+      setDirectInitializationDone(true);
+    }, 0);
   };
 
   // Function for full reset (used by the reset button)
@@ -844,6 +1601,246 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     // Reset markup to defaults
     setSelectedMarkupType(defaultMarkup.type);
     setMarkupPercentage(defaultMarkup.percentage);
+    
+    // Reset direct initialization flag
+    setDirectInitializationDone(false);
+    
+    // Set default active services for the default job type after reset
+    const jobType = "Card"; // Default job type
+    
+    // Using a timeout to ensure state is reset before setting default services
+    setTimeout(() => {
+      // Get default active services for the job type
+      const defaultActiveProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.production || [];
+      const defaultActivePostProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.postProduction || [];
+      
+      console.log("Re-activating default services after full reset:", {
+        production: defaultActiveProductionServices,
+        postProduction: defaultActivePostProductionServices
+      });
+      
+      // DIRECT SERVICE ACTIVATION - Production Services
+      if (defaultActiveProductionServices.includes("LP")) {
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { 
+            isLPUsed: true,
+            noOfColors: 1,
+            colorDetails: [
+              {
+                plateSizeType: "Auto",
+                plateDimensions: { length: "", breadth: "" },
+                pantoneType: "",
+                plateType: "Polymer Plate",
+                mrType: "SIMPLE",
+                mrTypeConcatenated: "LP MR SIMPLE"
+              }
+            ]
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("DIGI")) {
+        dispatch({
+          type: "UPDATE_DIGI_DETAILS",
+          payload: { 
+            isDigiUsed: true,
+            digiDie: "12x18",
+            digiDimensions: { length: "12", breadth: "18" }
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("FS")) {
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: { 
+            isFSUsed: true,
+            fsType: "FS1",
+            foilDetails: [
+              {
+                blockSizeType: "Auto",
+                blockDimension: { length: "", breadth: "" },
+                foilType: "Gold MTS 220",
+                blockType: "Magnesium Block 3MM",
+                mrType: "SIMPLE",
+                mrTypeConcatenated: "FS MR SIMPLE"
+              }
+            ]
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("EMB")) {
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: { 
+            isEMBUsed: true,
+            plateSizeType: "Auto",
+            plateDimensions: { length: "", breadth: "" },
+            plateTypeMale: "Polymer Plate",
+            plateTypeFemale: "Polymer Plate",
+            embMR: "SIMPLE",
+            embMRConcatenated: "EMB MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("SCREEN")) {
+        dispatch({
+          type: "UPDATE_SCREEN_PRINT",
+          payload: { 
+            isScreenPrintUsed: true,
+            noOfColors: 1,
+            screenMR: "SIMPLE",
+            screenMRConcatenated: "SCREEN MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("NOTEBOOK")) {
+        dispatch({
+          type: "UPDATE_NOTEBOOK_DETAILS",
+          payload: { 
+            isNotebookUsed: true,
+            orientation: "",
+            length: "",
+            breadth: "",
+            calculatedLength: "",
+            calculatedBreadth: "",
+            numberOfPages: "",
+            bindingType: "",
+            bindingTypeConcatenated: "",
+            paperName: papers.length > 0 ? papers[0].paperName : ""
+          }
+        });
+      }
+      
+      // DIRECT SERVICE ACTIVATION - Post-Production Services
+      if (defaultActivePostProductionServices.includes("PRE DC")) {
+        dispatch({
+          type: "UPDATE_PRE_DIE_CUTTING",
+          payload: { 
+            isPreDieCuttingUsed: true,
+            predcMR: "SIMPLE",
+            predcMRConcatenated: "PREDC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DC")) {
+        dispatch({
+          type: "UPDATE_DIE_CUTTING",
+          payload: { 
+            isDieCuttingUsed: true,
+            dcMR: "SIMPLE",
+            dcMRConcatenated: "DC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("POST DC")) {
+        dispatch({
+          type: "UPDATE_POST_DC",
+          payload: { 
+            isPostDCUsed: true,
+            pdcMR: "SIMPLE",
+            pdcMRConcatenated: "PDC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
+        dispatch({
+          type: "UPDATE_FOLD_AND_PASTE",
+          payload: { 
+            isFoldAndPasteUsed: true,
+            dstMaterial: "",
+            dstType: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DST PASTE")) {
+        dispatch({
+          type: "UPDATE_DST_PASTE",
+          payload: { 
+            isDstPasteUsed: true,
+            dstType: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("MAGNET")) {
+        dispatch({
+          type: "UPDATE_MAGNET",
+          payload: { 
+            isMagnetUsed: true,
+            magnetMaterial: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("QC")) {
+        dispatch({
+          type: "UPDATE_QC",
+          payload: { 
+            isQCUsed: true
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("PACKING")) {
+        dispatch({
+          type: "UPDATE_PACKING",
+          payload: { 
+            isPackingUsed: true
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DUPLEX")) {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: { 
+            isSandwichComponentUsed: true,
+            paperInfo: {
+              paperName: papers.length > 0 ? papers[0].paperName : ""
+            }
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("MISC")) {
+        dispatch({
+          type: "UPDATE_MISC",
+          payload: { 
+            isMiscUsed: true,
+            miscCharge: ""
+          }
+        });
+      }
+      
+      // Mark as initialized
+      setDirectInitializationDone(true);
+      
+      // Expand a default section
+      if (defaultActiveProductionServices.length > 0) {
+        const serviceCode = defaultActiveProductionServices[0];
+        const sectionId = serviceRegistry[serviceCode]?.id;
+        if (sectionId) {
+          setActiveSection(sectionId);
+        }
+      } else if (defaultActivePostProductionServices.length > 0) {
+        const serviceCode = defaultActivePostProductionServices[0];
+        const sectionId = serviceRegistry[serviceCode]?.id;
+        if (sectionId) {
+          setActiveSection(sectionId);
+        }
+      }
+    }, 0);
     
     // Scroll to top of form
     if (formRef.current) {
@@ -948,19 +1945,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       type: "UPDATE_VERSION",
       payload: versionId
     });
-  };
-  
-  // Handle job type change in OrderAndPaper component
-  const handleJobTypeChange = (e) => {
-    const { value } = e.target;
-    
-    // Update the job type in the state
-    dispatch({
-      type: "UPDATE_ORDER_AND_PAPER",
-      payload: { jobType: value }
-    });
-    
-    // The useEffect will handle updating the visible services and HSN code
   };
   
   // Generate client code function - needed for when creating new clients
@@ -1166,8 +2150,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         isScreenPrintUsed: !isCurrentlyUsed,
         ...((!isCurrentlyUsed) && {
           noOfColors: 1,
-          screenMR: "", // Will be set by useEffect in ScreenPrint component
-          screenMRConcatenated: "" // Will be set by useEffect in ScreenPrint component
+          screenMR: "SIMPLE", // Default value
+          screenMRConcatenated: "SCREEN MR SIMPLE" // Default concatenated value
         })
       }
     });
@@ -1175,6 +2159,27 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     // Auto expand when toggled on
     if (!isCurrentlyUsed) {
       setActiveSection("screenPrint");
+    }
+  };
+  
+  // Add Toggle function for PreDieCutting
+  const togglePreDieCuttingUsage = () => {
+    const isCurrentlyUsed = state.preDieCutting?.isPreDieCuttingUsed || false;
+    
+    dispatch({
+      type: "UPDATE_PRE_DIE_CUTTING",
+      payload: { 
+        isPreDieCuttingUsed: !isCurrentlyUsed,
+        ...((!isCurrentlyUsed) && {
+          predcMR: "SIMPLE", // Default value
+          predcMRConcatenated: "PREDC MR SIMPLE" // Default concatenated value
+        })
+      }
+    });
+    
+    // Auto expand when toggled on
+    if (!isCurrentlyUsed) {
+      setActiveSection("preDieCutting");
     }
   };
   
@@ -1497,7 +2502,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
 
-            {/* Other production service sections follow the same pattern */}
+            {/* FS Section */}
             {isServiceVisible("FS") && (
               <FormSection 
                 title="Foil Stamping (FS)" 
@@ -1517,6 +2522,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
             
+            {/* EMB Section */}
             {isServiceVisible("EMB") && (
               <FormSection 
                 title="Embossing (EMB)" 
@@ -1536,6 +2542,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
             
+            {/* DIGI Section */}
             {isServiceVisible("DIGI") && (
               <FormSection 
                 title="Digital Printing" 
@@ -1555,6 +2562,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
             
+            {/* NOTEBOOK Section */}
             {isServiceVisible("NOTEBOOK") && (
               <FormSection 
                 title="Notebook Details" 
@@ -1574,6 +2582,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
             
+            {/* SCREEN Section */}
             {isServiceVisible("SCREEN") && (
               <FormSection 
                 title="Screen Printing" 
@@ -1597,6 +2606,26 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           {/* Post-Production Services Section */}
           <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
             <h2 className="mb-4 border-b border-gray-200 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
+            
+            {/* Pre Die Cutting Section */}
+            {isServiceVisible("PRE DC") && (
+              <FormSection 
+                title="Pre Die Cutting" 
+                id="preDieCutting"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.preDieCutting?.isPreDieCuttingUsed || false}
+                onToggleUsage={togglePreDieCuttingUsage}
+              >
+                <PreDieCutting 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
             
             {/* Die Cutting Section */}
             {isServiceVisible("DC") && (

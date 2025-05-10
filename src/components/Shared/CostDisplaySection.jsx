@@ -108,6 +108,19 @@ const CostDisplaySection = ({
 
   const postProductionSections = [
     { 
+      key: 'PRE_DC', 
+      label: 'Pre Die Cutting', 
+      serviceKey: 'preDieCutting', 
+      toggleField: 'isPreDieCuttingUsed',
+      bgColor: 'bg-purple-50',
+      items: [
+        { key: 'preDieCuttingMRCostPerCard', label: 'Pre Die Cutting MR Cost' },
+        { key: 'preDieCuttingImpressionCostPerCard', label: 'Pre Die Cutting Impression' }
+      ],
+      totalKey: 'preDieCuttingCostPerCard',
+      totalLabel: 'Pre Die Cutting'
+    },
+    { 
       key: 'DC', 
       label: 'Die Cutting', 
       serviceKey: 'dieCutting', 

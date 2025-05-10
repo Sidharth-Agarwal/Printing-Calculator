@@ -450,6 +450,7 @@ const ReviewAndSubmit = ({
     if (!localCalculations) return null;
     
     // Check if any post-production services are enabled
+    const hasPreDieCutting = state.preDieCutting?.isPreDieCuttingUsed;
     const hasDieCutting = state.dieCutting?.isDieCuttingUsed;
     const hasPostDC = state.postDC?.isPostDCUsed;
     const hasFoldAndPaste = state.foldAndPaste?.isFoldAndPasteUsed;
@@ -460,8 +461,8 @@ const ReviewAndSubmit = ({
     const hasMisc = state.misc?.isMiscUsed;
     const hasSandwich = state.sandwich?.isSandwichComponentUsed;
     
-    if (!hasDieCutting && !hasPostDC && !hasFoldAndPaste && !hasDstPaste && 
-        !hasMagnet && !hasQC && !hasPacking && !hasMisc && !hasSandwich) {
+    if (!hasPreDieCutting && !hasDieCutting && !hasPostDC && !hasFoldAndPaste && !hasDstPaste && 
+      !hasMagnet && !hasQC && !hasPacking && !hasMisc && !hasSandwich) {
       return null;
     }
     
@@ -473,6 +474,32 @@ const ReviewAndSubmit = ({
         bgColor="bg-purple-50"
       >
         <div className="space-y-3">
+          {/* Pre Die Cutting Section */}
+          {hasPreDieCutting && localCalculations.preDieCuttingCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Pre Die Cutting" value={localCalculations.preDieCuttingCostPerCard} isTotal />
+              {localCalculations.preDieCuttingMRCostPerCard && (
+                <CostItem label="Pre Die Cutting MR Cost" value={localCalculations.preDieCuttingMRCostPerCard} isSubItem />
+              )}
+              {localCalculations.preDieCuttingImpressionCostPerCard && (
+                <CostItem label="Pre Die Cutting Impression" value={localCalculations.preDieCuttingImpressionCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
+          
+          {/* Die Cutting Section */}
+          {hasDieCutting && localCalculations.dieCuttingCostPerCard && (
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Die Cutting" value={localCalculations.dieCuttingCostPerCard} isTotal />
+              {localCalculations.dieCuttingMRCostPerCard && (
+                <CostItem label="Die Cutting MR Cost" value={localCalculations.dieCuttingMRCostPerCard} isSubItem />
+              )}
+              {localCalculations.dieCuttingImpressionCostPerCard && (
+                <CostItem label="Die Cutting Impression" value={localCalculations.dieCuttingImpressionCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
+
           {/* Die Cutting Section */}
           {hasDieCutting && localCalculations.dieCuttingCostPerCard && (
             <div className="space-y-1 border-b pb-2 mb-2">

@@ -61,7 +61,7 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     setSearchTerm(""); // Clear search after selection
   };
 
-  // Get filtered clients based on search term
+  // Get filtered clients based on search term - UPDATED to include contact person
   const getFilteredClients = () => {
     if (!searchTerm.trim()) {
       return clients;
@@ -70,7 +70,9 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     const searchTermLower = searchTerm.toLowerCase();
     return clients.filter(client => 
       client.name.toLowerCase().includes(searchTermLower) || 
-      (client.clientCode && client.clientCode.toLowerCase().includes(searchTermLower))
+      (client.clientCode && client.clientCode.toLowerCase().includes(searchTermLower)) ||
+      (client.contactPerson && client.contactPerson.toLowerCase().includes(searchTermLower)) ||
+      (client.email && client.email.toLowerCase().includes(searchTermLower))
     );
   };
 
@@ -168,12 +170,12 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
 
   return (
     <div>
-      {/* Search input */}
+      {/* Search input with improved placeholder text */}
       <div className="mb-4">
         <div className="relative">
           <input
             type="text"
-            placeholder="Search clients by name or code..."
+            placeholder="Search by client name, code, contact person or email..."
             value={searchTerm}
             onChange={handleSearchChange}
             className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
@@ -213,6 +215,9 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
                       {getClientTypeBadge(client)}
                     </div>
                     <div className="text-sm text-gray-500">{client.clientCode}</div>
+                    {client.contactPerson && (
+                      <div className="text-xs text-gray-500">Contact: {client.contactPerson}</div>
+                    )}
                   </div>
                   <div className="text-red-600">
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
@@ -240,9 +245,10 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
             <option value="">Select a client</option>
             {clients.map(client => {
               const clientType = (client.clientType || "DIRECT").toUpperCase();
+              const contactDisplay = client.contactPerson ? ` - Contact: ${client.contactPerson}` : '';
               return (
                 <option key={client.id} value={client.id}>
-                  {client.name} ({client.clientCode}) - {clientType}
+                  {client.name} ({client.clientCode}) - {clientType}{contactDisplay}
                 </option>
               );
             })}

@@ -5,10 +5,11 @@ import {
   calculateEMBCosts,
   calculateScreenPrintCosts,
   calculateDigiDetailsCosts,
+  calculatePreDieCuttingCosts,
   calculateDieCuttingCosts,
   calculatePostDCCosts,
-  calculateFoldAndPasteCosts, // New calculator
-  calculateDstPasteCosts,     // New calculator
+  calculateFoldAndPasteCosts,
+  calculateDstPasteCosts,
   calculateQCCosts,
   calculatePackingCosts,
   calculateMiscCosts,
@@ -17,8 +18,8 @@ import {
   calculateMarkup,
   calculateGST,
   calculateSandwichCosts,
-  calculateMagnetCosts,       // New calculator
-  calculateNotebookCosts      // New notebook calculator
+  calculateMagnetCosts,
+  calculateNotebookCosts
 } from './Calculators';
 
 // Import loyalty service functions
@@ -112,6 +113,15 @@ export const performCalculations = async (state) => {
     }
 
     // Post-production services calculations
+    if (state.preDieCutting?.isPreDieCuttingUsed) {
+      const preDieCuttingResults = await calculatePreDieCuttingCosts(state);
+      if (preDieCuttingResults.error) {
+        console.warn("Pre die cutting calculation error:", preDieCuttingResults.error);
+      } else {
+        Object.assign(results, preDieCuttingResults);
+      }
+    }
+    
     if (state.dieCutting?.isDieCuttingUsed) {
       const dieCuttingResults = await calculateDieCuttingCosts(state);
       if (dieCuttingResults.error) {
@@ -255,6 +265,7 @@ export const performCompleteCalculations = async (
     ];
     
     const postProductionFields = [
+      'preDieCuttingCostPerCard',  // New pre die cutting field
       'dieCuttingCostPerCard',
       'postDCCostPerCard',
       'foldAndPasteCostPerCard',
@@ -548,6 +559,7 @@ export const recalculateTotals = async (
     ];
     
     const postProductionFields = [
+      'preDieCuttingCostPerCard',  // New pre die cutting field
       'dieCuttingCostPerCard',
       'postDCCostPerCard',
       'foldAndPasteCostPerCard',

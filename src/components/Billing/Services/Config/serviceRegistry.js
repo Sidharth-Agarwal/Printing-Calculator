@@ -4,6 +4,7 @@ import EMBDetails from '../../Sections/Production/EMBDetails';
 import DigiDetails from '../../Sections/Production/DigiDetails';
 import ScreenPrint from '../../Sections/Production/ScreenPrint';
 import NotebookDetails from '../../Sections/Production/NotebookDetails';
+import PreDieCutting from '../../Sections/Post Production/PreDieCutting';
 import DieCutting from '../../Sections/Post Production/DieCutting';
 import PostDC from '../../Sections/Post Production/PostDC';
 import FoldAndPaste from '../../Sections/Post Production/FoldAndPaste';
@@ -57,7 +58,7 @@ export const serviceRegistry = {
     toggleField: "isScreenPrintUsed",
     group: "production"
   },
-  "NOTEBOOK": {  // Add the new Notebook service
+  "NOTEBOOK": {
     id: "notebook",
     title: "Notebook Details",
     component: NotebookDetails,
@@ -67,6 +68,14 @@ export const serviceRegistry = {
   },
 
   // Post-Production Services
+  "PRE DC": { // Add the new Pre Die Cutting service
+    id: "preDieCutting",
+    title: "Pre Die Cutting",
+    component: PreDieCutting,
+    stateKey: "preDieCutting",
+    toggleField: "isPreDieCuttingUsed",
+    group: "postProduction"
+  },
   "DC": {
     id: "dieCutting",
     title: "Die Cutting",

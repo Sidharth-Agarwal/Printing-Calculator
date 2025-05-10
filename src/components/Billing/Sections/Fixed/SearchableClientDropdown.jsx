@@ -69,6 +69,27 @@ const SearchableClientDropdown = ({
     setIsDropdownOpen(false);
   };
 
+  // Helper function to highlight the matching text in search results
+  const highlightMatch = (text, searchTerm) => {
+    if (!text || !searchTerm) return text;
+    
+    const lowerText = text.toLowerCase();
+    const lowerSearchTerm = searchTerm.toLowerCase();
+    
+    if (!lowerText.includes(lowerSearchTerm)) return text;
+    
+    const startIndex = lowerText.indexOf(lowerSearchTerm);
+    const endIndex = startIndex + lowerSearchTerm.length;
+    
+    return (
+      <>
+        {text.substring(0, startIndex)}
+        <span className="bg-yellow-200">{text.substring(startIndex, endIndex)}</span>
+        {text.substring(endIndex)}
+      </>
+    );
+  };
+
   return (
     <div className="relative" ref={dropdownRef}>
       <div className="flex">
@@ -78,7 +99,7 @@ const SearchableClientDropdown = ({
             value={searchTerm}
             onChange={handleSearchChange}
             onFocus={() => setIsDropdownOpen(true)}
-            placeholder="Search clients by name, code, or email..."
+            placeholder="Search clients by name, code, contact person or email..."
             className="border border-gray-300 rounded-md p-2 pl-10 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
             disabled={isLoading}
           />
@@ -117,10 +138,12 @@ const SearchableClientDropdown = ({
                   className="px-3 py-2 hover:bg-gray-50 cursor-pointer border-b border-gray-200 transition-colors"
                 >
                   <div className="flex items-center justify-between">
-                    <div>
-                      <div className="font-medium text-gray-800">{client.name}</div>
+                    <div className="flex-1">
+                      <div className="font-medium text-gray-800">
+                        {highlightMatch(client.name, searchTerm)}
+                      </div>
                       <div className="text-xs text-gray-500 flex justify-between">
-                        <span>Code: {client.clientCode}</span>
+                        <span>Code: {highlightMatch(client.clientCode, searchTerm)}</span>
                         {client.clientType && (
                           <span className={`px-1.5 py-0.5 ml-2 rounded-full text-xs ${
                             client.clientType.toUpperCase() === 'B2B' 
@@ -132,7 +155,7 @@ const SearchableClientDropdown = ({
                         )}
                       </div>
                     </div>
-                    <div className="text-red-600">
+                    <div className="text-red-600 ml-2">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
                         <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                       </svg>
@@ -140,7 +163,12 @@ const SearchableClientDropdown = ({
                   </div>
                   {client.contactPerson && (
                     <div className="text-xs text-gray-500 mt-1">
-                      <span>Contact: {client.contactPerson}</span>
+                      <span>Contact: {highlightMatch(client.contactPerson, searchTerm)}</span>
+                    </div>
+                  )}
+                  {client.email && searchTerm.toLowerCase().includes('@') && (
+                    <div className="text-xs text-gray-500 mt-1">
+                      <span>Email: {highlightMatch(client.email, searchTerm)}</span>
                     </div>
                   )}
                 </li>
@@ -149,13 +177,15 @@ const SearchableClientDropdown = ({
           ) : (
             <div className="p-3 text-center">
               <p className="text-gray-500">No clients found</p>
-              {/* <button
-                type="button"
-                onClick={handleCreateNew}
-                className="mt-2 text-red-600 hover:underline text-sm"
-              >
-                + Create new client
-              </button> */}
+              {onCreateNewClient && (
+                <button
+                  type="button"
+                  onClick={handleCreateNew}
+                  className="mt-2 text-red-600 hover:underline text-sm"
+                >
+                  + Create new client
+                </button>
+              )}
             </div>
           )}
         </div>
