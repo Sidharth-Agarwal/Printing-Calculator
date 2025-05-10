@@ -10,6 +10,7 @@ export { calculateDigiDetailsCosts } from './productionCalculator/digiCalculator
 export { calculateNotebookCosts } from './productionCalculator/notebookCalculator';
 
 // Post-production service calculators
+export { calculatePreDieCuttingCosts } from './postProductionCalculator/preDCCalculator';
 export { calculateDieCuttingCosts } from './postProductionCalculator/dieCuttingCalculator';
 export { calculatePostDCCosts } from './postProductionCalculator/postDCCalculator';
 export { calculateFoldAndPasteCosts } from './postProductionCalculator/foldPastCalculator';

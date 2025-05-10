@@ -253,6 +253,40 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
     );
   };
   
+  // Render Pre Die Cutting details
+  const renderPreDieCuttingTable = () => {
+    if (!data || !data.isPreDieCuttingUsed) return null;
+    
+    return (
+      <div className="space-y-4">
+        <div className="bg-amber-50 p-2 rounded-md">
+          <h3 className="font-semibold">Pre Die Cutting Details</h3>
+        </div>
+        
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border border-gray-200 rounded-md">
+            <thead className="bg-gray-50">
+              <tr>
+                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
+                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              <tr className="hover:bg-gray-50">
+                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
+                <td className="py-2 px-3 text-sm text-gray-500">{data.predcMR || "Not specified"}</td>
+              </tr>
+              <tr className="hover:bg-gray-50">
+                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Concatenated</td>
+                <td className="py-2 px-3 text-sm text-gray-500">{data.predcMRConcatenated || "Not specified"}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  };
+  
   // Handle rendering Die Cutting details
   const renderDieCuttingTable = () => {
     if (!data || !data.isDieCuttingUsed) return null;
@@ -752,6 +786,8 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
         return renderDigiDetailsTable();
       case 'screenPrint':
         return renderScreenPrintTable();
+      case 'preDieCutting':
+        return renderPreDieCuttingTable();
       case 'dieCutting':
         return renderDieCuttingTable();
       case 'postDC':
@@ -793,6 +829,8 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
         return data.isDigiUsed === true;
       case 'screenPrint':
         return data.isScreenPrintUsed === true;
+      case 'preDieCutting':
+        return data.isPreDieCuttingUsed === true;
       case 'dieCutting':
         return data.isDieCuttingUsed === true;
       case 'postDC':

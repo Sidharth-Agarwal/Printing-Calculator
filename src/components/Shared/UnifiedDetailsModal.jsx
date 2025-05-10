@@ -314,6 +314,7 @@ const UnifiedDetailsModal = ({
   const getUsedPostProductionProcesses = () => {
     const processes = [];
     
+    if (displayData.preDieCutting?.isPreDieCuttingUsed) processes.push('preDieCutting');
     if (displayData.dieCutting?.isDieCuttingUsed) processes.push('dieCutting');
     if (displayData.postDC?.isPostDCUsed) processes.push('postDC');
     if (displayData.foldAndPaste?.isFoldAndPasteUsed) processes.push('foldAndPaste');
