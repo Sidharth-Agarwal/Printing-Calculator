@@ -382,12 +382,6 @@ const OrderAndPaper = ({
                 onChange={handleChange}
                 compact={compact}
               />
-              {/* Display selected paper details */}
-              {orderAndPaper.paperGsm && orderAndPaper.paperCompany && (
-                <div className="mt-1 text-xs text-gray-600">
-                  <p>Selected: {orderAndPaper.paperName} | {orderAndPaper.paperCompany} | {orderAndPaper.paperGsm}gsm</p>
-                </div>
-              )}
             </div>
           </div>
 
