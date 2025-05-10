@@ -17,6 +17,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
   const [editingDie, setEditingDie] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState(null);
+  const [selectedDieState, setSelectedDieState] = useState({});
   
   // New Die Form State
   const [formData, setFormData] = useState({
@@ -39,6 +40,19 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
   
   const [dieImage, setDieImage] = useState(null);
   const jobTypeOptions = ["Card", "Biz Card", "Envelope", "Seal", "Magnet", "Packaging", "Notebook", "Liner"];
+
+  // Log selectedDie for debugging
+  useEffect(() => {
+    console.log("InlineDieSelection - Selected Die:", selectedDie);
+    
+    // Track selected die state
+    setSelectedDieState(selectedDie);
+    
+    // Automatically show/hide selection UI based on whether a die is selected
+    if (selectedDie && selectedDie.dieCode) {
+      setShowSelectionUI(false);
+    }
+  }, [selectedDie]);
 
   // Calculate CM from inches
   const calculateCM = (inches) => {
@@ -257,6 +271,9 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
   };
 
   const handleSelectDie = (die) => {
+    // Log selection for debugging
+    console.log("Die selection:", die);
+    
     // Create the die selection object directly from the die data
     const dieSelection = {
       dieSelection: die.dieName || "",
@@ -273,11 +290,17 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       frags: die.frags || "" // Include frags in the selection
     };
     
+    // Update our local state first
+    setSelectedDieState(dieSelection);
+    
     // Pass the selection to the parent component
     onDieSelect(dieSelection);
     
     // Hide selection UI after die is selected
     setShowSelectionUI(false);
+    
+    // Log the die selection being sent to parent
+    console.log("Die selection sent to parent:", dieSelection);
   };
 
   // Show selection UI again when "Change Die" is clicked
@@ -767,7 +790,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                         handleAddDie(e);
                       }
                     }}
-                  >
+                    >
                     {isSubmitting ? (
                       <span className="flex items-center">
                         <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -814,6 +837,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
               value={searchTerm}
               onChange={handleTextSearch}
               className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+              data-testid="die-search-input"
             />
           </div>
   
@@ -831,6 +855,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 value={searchDimensions.length}
                 onChange={handleSearchChange}
                 className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                data-testid="die-length-input"
               />
             </div>
             <div>
@@ -843,6 +868,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 value={searchDimensions.breadth}
                 onChange={handleSearchChange}
                 className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                data-testid="die-breadth-input"
               />
             </div>
           </div>
@@ -855,6 +881,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                   key={die.id}
                   className="p-2 border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
                   onClick={() => handleSelectDie(die)}
+                  data-testid={`die-option-${die.dieCode}`}
                 >
                   <div className="flex justify-between items-center">
                     <div>
@@ -877,15 +904,6 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                           className="w-16 h-16 object-contain border rounded"
                         />
                       )}
-                      {/* <button 
-                        className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded hover:bg-gray-200"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleEditDie(die);
-                        }}
-                      >
-                        Edit
-                      </button> */}
                     </div>
                   </div>
                 </div>
@@ -906,7 +924,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
           <div className="flex items-center space-x-2 overflow-hidden flex-grow">
             <div className="text-sm font-medium flex items-center space-x-2">
               <span className="text-gray-700">Die Code:</span>
-              <span className="text-red-600">{selectedDie.dieCode || "SS-4"}</span>
+              <span className="text-red-600" data-testid="selected-die-code">{selectedDie.dieCode || "SS-4"}</span>
             </div>
             
             <div className="border-l border-gray-300 pl-2 text-xs flex-grow overflow-hidden">
@@ -929,27 +947,49 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
           </div>
           
           <div className="flex items-center space-x-2 ml-2">
-            {/* <button
-              onClick={() => setShowAddDieForm(true)}
-              className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white text-xs rounded transition-colors"
-            >
-              + New
-            </button> */}
             <button
               onClick={handleChangeDie}
               className="px-2 py-1 bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs rounded transition-colors"
+              data-testid="change-die-button"
             >
               Change
             </button>
-            {/* <button
-              onClick={() => handleEditDie(selectedDie)}
-              className="px-2 py-1 bg-blue-50 hover:bg-blue-100 text-blue-700 text-xs rounded transition-colors"
-            >
-              Edit
-            </button> */}
           </div>
         </div>
       )}
+
+      {/* Hidden input to store selected die info for form submission */}
+      <input 
+        type="hidden" 
+        name="dieCode" 
+        value={selectedDieState.dieCode || ""} 
+        data-testid="hidden-die-code-input"
+      />
+      <input 
+        type="hidden" 
+        name="dieSizeLength" 
+        value={selectedDieState.dieSize?.length || ""} 
+      />
+      <input 
+        type="hidden" 
+        name="dieSizeBreadth" 
+        value={selectedDieState.dieSize?.breadth || ""} 
+      />
+      <input 
+        type="hidden" 
+        name="productSizeLength" 
+        value={selectedDieState.productSize?.length || ""} 
+      />
+      <input 
+        type="hidden" 
+        name="productSizeBreadth" 
+        value={selectedDieState.productSize?.breadth || ""} 
+      />
+      <input 
+        type="hidden" 
+        name="frags" 
+        value={selectedDieState.frags || ""} 
+      />
     </div>
   );
 };

@@ -16,7 +16,7 @@ export const calculatePackingCosts = async (state, baseCost = null) => {
     }
 
     // Fetch Packing percentage from overheads
-    const packingOverhead = await fetchOverheadValue("PACKAGING");
+    const packingOverhead = await fetchOverheadValue("PACKING");
     
     // Use the percentage from DB or default if not found
     const packingPercentage = packingOverhead && packingOverhead.percentage

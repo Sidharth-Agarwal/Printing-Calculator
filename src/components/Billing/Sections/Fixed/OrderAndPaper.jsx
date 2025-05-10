@@ -20,6 +20,7 @@ const OrderAndPaper = ({
   const [papers, setPapers] = useState([]);
   const firstInputRef = useRef(null);
   const quantityInputRef = useRef(null);
+  const [formChanges, setFormChanges] = useState({});
 
   // Focus on the first input field when the component loads
   useEffect(() => {
@@ -27,6 +28,16 @@ const OrderAndPaper = ({
       firstInputRef.current.focus();
     }
   }, [singlePageMode]);
+
+  // Log form state for debugging
+  useEffect(() => {
+    console.log("OrderAndPaper - Current orderAndPaper state:", {
+      jobType: orderAndPaper.jobType,
+      quantity: orderAndPaper.quantity,
+      paperName: orderAndPaper.paperName,
+      dieCode: orderAndPaper.dieCode
+    });
+  }, [orderAndPaper]);
 
   // Fetch papers from Firestore and set the first paper if none is selected
   useEffect(() => {
@@ -82,8 +93,17 @@ const OrderAndPaper = ({
   const handleChange = (e) => {
     const { name, value } = e.target;
     
+    // Track form changes for debugging
+    setFormChanges(prev => ({
+      ...prev,
+      [name]: value
+    }));
+    
     // Handle paper details specifically
     if (name === "paperDetails") {
+      // Log paper selection for debugging
+      console.log("Paper selection changed:", value);
+      
       dispatch({
         type: "UPDATE_ORDER_AND_PAPER",
         payload: {
@@ -96,12 +116,25 @@ const OrderAndPaper = ({
     }
     
     // If this is a job type change and we have a custom handler
-    if (name === "jobType" && onJobTypeChange) {
-      onJobTypeChange(e);
+    if (name === "jobType") {
+      // Log job type change for debugging
+      console.log("Job type changed to:", value);
+      
+      if (onJobTypeChange) {
+        onJobTypeChange(e);
+      } else {
+        // Directly update the job type in state if no custom handler
+        dispatch({
+          type: "UPDATE_ORDER_AND_PAPER",
+          payload: { jobType: value },
+        });
+      }
     } else {
-      // Debug log to track projectName changes
+      // Debug log to track changes
       if (name === "projectName") {
         console.log("Updating projectName to:", value);
+      } else if (name === "quantity") {
+        console.log("Updating quantity to:", value);
       }
       
       // Normal field update
@@ -135,6 +168,14 @@ const OrderAndPaper = ({
         image: dieData.image || "",
         frags: dieData.frags || ""
       }
+    });
+    
+    // Log the updated state after die selection
+    console.log("Die selection updated state:", {
+      dieSelection: dieData.dieSelection || "",
+      dieCode: dieData.dieCode || "",
+      dieSize: dieData.dieSize || { length: "", breadth: "" },
+      productSize: dieData.productSize || { length: "", breadth: "" }
     });
   };
 

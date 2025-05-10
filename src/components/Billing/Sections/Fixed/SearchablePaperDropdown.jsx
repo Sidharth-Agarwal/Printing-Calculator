@@ -5,9 +5,28 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef(null);
   const inputRef = useRef(null);
+  const [selectedDetails, setSelectedDetails] = useState({});
 
   // Get the selected paper object
   const selectedPaperObj = papers.find(paper => paper.paperName === selectedPaper);
+
+  // Keep track of currently selected paper details for debugging
+  useEffect(() => {
+    if (selectedPaperObj) {
+      setSelectedDetails({
+        paperName: selectedPaperObj.paperName,
+        paperGsm: selectedPaperObj.gsm,
+        paperCompany: selectedPaperObj.company
+      });
+      
+      // Log current selection for debugging
+      console.log("Current paper selection:", {
+        paperName: selectedPaperObj.paperName,
+        gsm: selectedPaperObj.gsm,
+        company: selectedPaperObj.company
+      });
+    }
+  }, [selectedPaper, selectedPaperObj]);
 
   const filteredPapers = papers.filter((paper) =>
     paper.paperName.toLowerCase().includes(searchTerm.toLowerCase())
@@ -15,7 +34,15 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
 
   // Updated to pass the entire paper object instead of just the name
   const handleSelect = (paper) => {
-    onChange({ 
+    // Log the selection for debugging
+    console.log("Paper selected:", {
+      paperName: paper.paperName,
+      gsm: paper.gsm,
+      company: paper.company
+    });
+    
+    // Create a proper synthetic event to pass to onChange
+    const syntheticEvent = { 
       target: { 
         name: "paperDetails", 
         value: {
@@ -24,7 +51,12 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
           paperCompany: paper.company
         } 
       } 
-    });
+    };
+    
+    // Call the parent component's onChange handler with our synthetic event
+    onChange(syntheticEvent);
+    
+    // Close the dropdown and reset search
     setIsOpen(false);
     setSearchTerm("");
   };
@@ -56,6 +88,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
       <div
         onClick={() => setIsOpen(!isOpen)}
         className="border border-gray-300 rounded-md p-2 w-full text-sm flex justify-between items-center cursor-pointer bg-white hover:border-gray-400 transition-colors"
+        data-testid="paper-dropdown-selector"
       >
         <div className="flex flex-col overflow-hidden">
           <span className="truncate font-medium">{selectedPaper || "Select Paper"}</span>
@@ -85,6 +118,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search papers..."
                 className="border border-gray-300 rounded-md pl-8 pr-2 py-1.5 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                data-testid="paper-search-input"
               />
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-2.5 top-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -102,6 +136,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                     selectedPaper === paper.paperName ? "bg-red-50" : ""
                   }`}
                   onClick={() => handleSelect(paper)}
+                  data-testid={`paper-option-${paper.paperName}`}
                 >
                   <div className="flex flex-col">
                     <span className={`font-medium ${selectedPaper === paper.paperName ? "text-red-700" : "text-gray-800"}`}>
@@ -118,6 +153,17 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
             )}
           </div>
         </div>
+      )}
+
+      {/* Hidden debug info - can be removed in production */}
+      {process.env.NODE_ENV === 'development' && (
+        <input 
+          type="hidden" 
+          name="paperName" 
+          value={selectedDetails.paperName || ""} 
+          data-gsm={selectedDetails.paperGsm || ""}
+          data-company={selectedDetails.paperCompany || ""}
+        />
       )}
     </div>
   );
