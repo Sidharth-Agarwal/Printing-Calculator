@@ -2755,7 +2755,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             {/* DST Paste Section */}
             {isServiceVisible("DST PASTE") && (
               <FormSection 
-                title="DST PASTE" 
+                title="DST Paste" 
                 id="dstPaste"
                 activeSection={activeSection}
                 setActiveSection={setActiveSection}
