@@ -2732,26 +2732,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </FormSection>
             )}
 
-            {/* Fold & Paste Section */}
-            {isServiceVisible("FOLD & PASTE") && (
-              <FormSection 
-                title="Fold & Paste" 
-                id="foldAndPaste"
-                activeSection={activeSection}
-                setActiveSection={setActiveSection}
-                isUsed={state.foldAndPaste?.isFoldAndPasteUsed || false}
-                onToggleUsage={toggleFoldAndPasteUsage}
-              >
-                <FoldAndPaste 
-                  state={state} 
-                  dispatch={dispatch} 
-                  onNext={() => {}} 
-                  onPrevious={() => {}} 
-                  singlePageMode={true}
-                />
-              </FormSection>
-            )}
-
             {/* DST Paste Section */}
             {isServiceVisible("DST PASTE") && (
               <FormSection 
@@ -2763,6 +2743,26 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 onToggleUsage={toggleDstPasteUsage}
               >
                 <DstPaste 
+                  state={state} 
+                  dispatch={dispatch} 
+                  onNext={() => {}} 
+                  onPrevious={() => {}} 
+                  singlePageMode={true}
+                />
+              </FormSection>
+            )}
+
+            {/* Fold & Paste Section */}
+            {isServiceVisible("FOLD & PASTE") && (
+              <FormSection 
+                title="Fold & Paste" 
+                id="foldAndPaste"
+                activeSection={activeSection}
+                setActiveSection={setActiveSection}
+                isUsed={state.foldAndPaste?.isFoldAndPasteUsed || false}
+                onToggleUsage={toggleFoldAndPasteUsage}
+              >
+                <FoldAndPaste 
                   state={state} 
                   dispatch={dispatch} 
                   onNext={() => {}} 
