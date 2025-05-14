@@ -1,25 +1,8 @@
-// src/components/BillingForm/Services/Calculations/calculators/finalCalculator/gstCalculator.js
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
 
 /**
- * GST Rate mapping based on job types
- * These are default rates that will be used if database values aren't found
- */
-const DEFAULT_GST_RATES = {
-  "Card": 18,         // Standard GST for cards
-  "Biz Card": 18,     // Business cards
-  "Envelope": 18,     // Envelopes
-  "Seal": 18,         // Seals
-  "Magnet": 18,       // Magnets
-  "Packaging": 18,    // Packaging
-  "Notebook": 18,     // Notebooks
-  "Custom": 18,       // Custom jobs
-  "Other": 18         // Default rate for other job types
-};
-
-/**
- * Fetches GST rate from standard_rates collection based on job type
+ * Fetches GST rate from gst_and_hsn collection based on job type
  * @param {string} jobType - Type of job (Card, Folder, Box, etc.)
  * @returns {Promise<number>} - GST percentage for the job type
  */
@@ -28,10 +11,10 @@ const fetchGSTRate = async (jobType) => {
     // Normalize the job type
     const normalizedType = jobType?.trim().toUpperCase() || 'CARD';
     
-    // Query the standard_rates collection for GST rate
-    const standardRatesCollection = collection(db, "standard_rates");
+    // Query the gst_and_hsn collection for GST rate
+    const gstHsnCollection = collection(db, "gst_and_hsn");
     const q = query(
-      standardRatesCollection, 
+      gstHsnCollection, 
       where("group", "==", "GST"),
       where("type", "==", normalizedType)
     );
@@ -42,20 +25,15 @@ const fetchGSTRate = async (jobType) => {
       // Get the first matching record
       const gstRate = querySnapshot.docs[0].data();
       
-      // Use percentage field for GST
-      if (gstRate.percentage) {
-        return parseFloat(gstRate.percentage);
-      }
-      
-      // Fallback to finalRate if percentage is not available
-      if (gstRate.finalRate) {
-        return parseFloat(gstRate.finalRate);
+      // Use value field for GST from the new database structure
+      if (gstRate.value) {
+        return parseFloat(gstRate.value);
       }
     }
     
     // If no matching record found, try to find a default GST rate
     const defaultQuery = query(
-      standardRatesCollection, 
+      gstHsnCollection, 
       where("group", "==", "GST"),
       where("type", "==", "CARD") // Using CARD as the default
     );
@@ -63,9 +41,9 @@ const fetchGSTRate = async (jobType) => {
     const defaultSnapshot = await getDocs(defaultQuery);
     if (!defaultSnapshot.empty) {
       const defaultRate = defaultSnapshot.docs[0].data();
-      if (defaultRate.percentage) {
-        console.log(`No GST rate found for ${jobType}, using default GST CARD: ${defaultRate.percentage}%`);
-        return parseFloat(defaultRate.percentage);
+      if (defaultRate.value) {
+        console.log(`No GST rate found for ${jobType}, using default GST CARD: ${defaultRate.value}%`);
+        return parseFloat(defaultRate.value);
       }
     }
     

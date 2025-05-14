@@ -386,18 +386,18 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   useEffect(() => {
     const fetchHsnCodes = async () => {
       try {
-        console.log("Fetching HSN codes from standard_rates collection...");
-        const standardRatesCollection = collection(db, "standard_rates");
+        console.log("Fetching HSN codes from gst_and_hsn collection...");
+        const gstHsnCollection = collection(db, "gst_and_hsn");
         
-        const unsubscribe = onSnapshot(standardRatesCollection, (snapshot) => {
-          const ratesData = snapshot.docs.map((doc) => ({
+        const unsubscribe = onSnapshot(gstHsnCollection, (snapshot) => {
+          const hsnData = snapshot.docs.map((doc) => ({
             id: doc.id,
             ...doc.data(),
           }));
           
-          // Filter only for HSN rates where group is "HSN"
-          const hsnCodesData = ratesData.filter(rate => rate.group === "HSN");
-          console.log(`Fetched ${hsnCodesData.length} HSN codes from standard_rates`);
+          // Filter only for HSN records - group should be "HSN"
+          const hsnCodesData = hsnData.filter(item => item.group === "HSN");
+          console.log(`Fetched ${hsnCodesData.length} HSN codes from gst_and_hsn`);
           
           setHsnRates(hsnCodesData);
           
@@ -414,7 +414,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     };
     
     fetchHsnCodes();
-  }, []);
+  }, []);  
   
   // Fetch papers from Firestore
   useEffect(() => {
@@ -903,13 +903,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       return;
     }
     
-    // Find matching HSN code
+    // Find matching HSN code - match on 'type' field which contains the job type
     const matchingHsn = ratesToUse.find(rate => 
       rate.type.toUpperCase() === jobType.toUpperCase()
     );
     
     if (matchingHsn) {
-      const hsnCode = matchingHsn.finalRate || "";
+      // Use 'value' instead of 'finalRate' for the new database structure
+      const hsnCode = matchingHsn.value || "";
       console.log(`Found HSN code ${hsnCode} for job type ${jobType}`);
       
       // Update HSN code in state
@@ -926,7 +927,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         payload: ""
       });
     }
-  };
+  };  
 
   // Calculate costs when form data changes
   useEffect(() => {
