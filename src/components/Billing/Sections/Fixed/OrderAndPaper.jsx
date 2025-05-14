@@ -39,7 +39,7 @@ const OrderAndPaper = ({
     });
   }, [orderAndPaper]);
 
-  // Fetch papers from Firestore and set the first paper if none is selected
+  // Fetch papers from Firestore and set WILD-450 paper if available, or the first paper if not
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
       const paperData = snapshot.docs.map((doc) => ({
@@ -48,14 +48,23 @@ const OrderAndPaper = ({
       }));
       setPapers(paperData);
       
-      // If papers are loaded and no paper name is selected yet, set the first paper
+      // If papers are loaded and no paper name is selected yet
       if (paperData.length > 0 && !orderAndPaper.paperName) {
+        // Look for the paper named "WILD-450"
+        const wildPaper = paperData.find(paper => paper.paperName === "WILD-450");
+        
+        // If WILD-450 exists, select it; otherwise default to the first paper
+        const selectedPaper = wildPaper || paperData[0];
+        
+        // Log the auto-selection for debugging purposes
+        console.log("Auto-selecting paper:", selectedPaper.paperName);
+        
         dispatch({
           type: "UPDATE_ORDER_AND_PAPER",
           payload: {
-            paperName: paperData[0].paperName,
-            paperGsm: paperData[0].gsm,
-            paperCompany: paperData[0].company
+            paperName: selectedPaper.paperName,
+            paperGsm: selectedPaper.gsm,
+            paperCompany: selectedPaper.company
           },
         });
       }
