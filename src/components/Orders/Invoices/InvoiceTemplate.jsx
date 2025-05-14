@@ -116,39 +116,39 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
   }, {});
 
   return (
-    <div className="bg-white p-4 print:p-0" style={{ maxWidth: '750px', margin: '0 auto', fontSize: '85%' }}>
+    <div className="bg-white p-2 print:p-0" style={{ maxWidth: '680px', margin: '0 auto', fontSize: '80%' }}>
       {/* Header with Title and Logo */}
       <div className="flex justify-between mb-1">
         <div>
-          <h1 className="text-xl font-bold text-gray-900">INVOICE</h1>
-          <div className="text-sm text-gray-500 mb-2">{invoiceData.invoiceNumber}</div>
+          <h1 className="text-lg font-bold text-gray-900">INVOICE</h1>
+          <div className="text-sm text-gray-500 mb-1">{invoiceData.invoiceNumber}</div>
           
           {/* Client Info - Positioned directly under invoice number */}
           <div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-1">Bill To:</h2>
-            <div className="font-medium">{clientInfo.name || "Unknown Client"}</div>
+            <h2 className="text-xs font-semibold text-gray-700 mb-1">Bill To:</h2>
+            <div className="font-medium text-sm">{clientInfo.name || "Unknown Client"}</div>
             {/* Display address line 1 if available */}
             {clientInfo?.address?.line1 && (
-              <div className="text-gray-600 text-sm">{clientInfo.address.line1}</div>
+              <div className="text-gray-600 text-xs">{clientInfo.address.line1}</div>
             )}
             {/* Display address line 2 if available */}
             {clientInfo?.address?.line2 && (
-              <div className="text-gray-600 text-sm">{clientInfo.address.line2}</div>
+              <div className="text-gray-600 text-xs">{clientInfo.address.line2}</div>
             )}
             {/* Display city and state together with comma separator */}
             {(clientInfo?.address?.city || clientInfo?.address?.state) && (
-              <div className="text-gray-600 text-sm">
+              <div className="text-gray-600 text-xs">
                 {clientInfo.address.city || ""}
                 {clientInfo.address.city && clientInfo.address.state && ", "}
                 {clientInfo.address.state || ""}
               </div>
             )}
-            <div className="text-gray-600 text-sm">Client Code: {clientInfo?.clientCode || "N/A"}</div>
+            <div className="text-gray-600 text-xs">Client Code: {clientInfo?.clientCode || "N/A"}</div>
           </div>
           
           {/* Date Information */}
-          <div className="mt-2 mb-2">
-            <div className="text-sm">
+          <div className="mt-1 mb-1">
+            <div className="text-xs">
               <div className="text-gray-600">Invoice Date: {formatDate(invoiceData.date)}</div>
               <div className="text-gray-600">Due Date: {formatDate(invoiceData.dueDate)}</div>
             </div>
@@ -158,22 +158,22 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           <img 
             src={logo} 
             alt="Famous Letterpress" 
-            className="w-16 h-16 object-contain mb-2 ml-auto"
+            className="w-14 h-14 object-contain mb-1 ml-auto"
             onError={(e) => {
               console.error("Logo failed to load");
               e.target.style.display = 'none';
             }}
           />
-          <div className="font-bold text-lg text-gray-900">FAMOUS</div>
-          <div className="text-gray-600 text-sm">91 Tetris Building, Subjail Tinali</div>
-          <div className="text-gray-600 text-sm">Dimapur-797112, Nagaland, India</div>
-          <div className="text-gray-600 text-sm">GSTIN: 13ALFPA2458Q2ZO</div>
-          <div className="text-gray-600 text-sm">Phone: +919233152718</div>
-          <div className="text-gray-600 text-sm">Email: info@famousletterpress.com</div>
+          <div className="font-bold text-base text-gray-900">FAMOUS</div>
+          <div className="text-gray-600 text-xs">91 Tetris Building, Subjail Tinali</div>
+          <div className="text-gray-600 text-xs">Dimapur-797112, Nagaland, India</div>
+          <div className="text-gray-600 text-xs">GSTIN: 13ALFPA2458Q2ZO</div>
+          <div className="text-gray-600 text-xs">Phone: +919233152718</div>
+          <div className="text-gray-600 text-xs">Email: info@famousletterpress.com</div>
           
           {/* Bank Details moved to right side, below company info */}
-          <div className="my-2">
-            <div className="text-sm">
+          <div className="my-1">
+            <div className="text-xs">
               <div className="font-medium">Bank Details</div>
               <div className="text-gray-600">A/C No: 912020005432066</div>
               <div className="text-gray-600">IFSC Code: UTIB0000378</div>
@@ -184,51 +184,51 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       </div>
       
       {/* Line Items - Simplified Table */}
-      <div className="mb-4 overflow-x-auto" style={{ width: '100%' }}>
+      <div className="mb-3 overflow-x-auto" style={{ width: '100%' }}>
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-gray-100 text-gray-700">
-              <th className="py-1 px-2 border border-gray-300 text-center">S.No</th>
-              <th className="py-1 px-2 border border-gray-300 text-left">Item</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">Job Type</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">Paper</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">Qty</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">Unit Cost</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">Total</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">Loyalty</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">Discount</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">Net Amount</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">GST %</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">GST Amt</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">Final Total</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">S.No</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-left">Item</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">Job Type</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">Paper</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">Qty</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">Unit Cost</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">Total</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">Loyalty</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">Discount</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">Net Amount</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">GST %</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">GST Amt</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">Final Total</th>
             </tr>
           </thead>
           <tbody>
             {lineItems.map((item, index) => (
               <tr key={item.id || index} className="text-gray-700">
-                <td className="py-1 px-2 border border-gray-300 text-center">{index + 1}</td>
-                <td className="py-1 px-2 border border-gray-300">
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{index + 1}</td>
+                <td className="py-0.5 px-1 border border-gray-300">
                   <div className="font-medium">{item.name}</div>
                 </td>
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.paperInfo}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.quantity}</td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.originalTotal.toFixed(2)}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center">
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.jobType}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.paperInfo}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.quantity}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.originalTotal.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center">
                   {item.loyaltyDiscount > 0 && (
                     <div className="flex items-center justify-center">
                       <span>{item.loyaltyDiscount}%</span>
                     </div>
                   )}
                 </td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono text-red-600">
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono text-red-600">
                   {item.loyaltyDiscountAmount > 0 ? `-${item.loyaltyDiscountAmount.toFixed(2)}` : '-'}
                 </td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.discountedTotal.toFixed(2)}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.gstRate}%</td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.discountedTotal.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.gstRate}%</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -236,9 +236,9 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       </div>
       
       {/* Summary */}
-      <div className="flex justify-end mb-3">
-        <div className="w-64">
-          <div className="flex justify-between py-1 text-sm border-t border-gray-200">
+      <div className="flex justify-end mb-2">
+        <div className="w-60">
+          <div className="flex justify-between py-0.5 text-xs border-t border-gray-200">
             <div className="text-gray-700">Subtotal:</div>
             <div className="text-gray-900 font-medium font-mono">
               {formatCurrency(lineItems.reduce((sum, item) => sum + item.originalTotal, 0))}
@@ -247,7 +247,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           
           {/* Total Loyalty Discount */}
           {lineItems.some(item => item.loyaltyDiscountAmount > 0) && (
-            <div className="flex justify-between py-1 text-sm text-red-600">
+            <div className="flex justify-between py-0.5 text-xs text-red-600">
               <div>Loyalty Discount:</div>
               <div className="font-mono">
                 -{formatCurrency(lineItems.reduce((sum, item) => sum + item.loyaltyDiscountAmount, 0))}
@@ -255,14 +255,14 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
             </div>
           )}
           
-          <div className="flex justify-between py-1 text-sm">
+          <div className="flex justify-between py-0.5 text-xs">
             <div className="text-gray-700">GST Amount:</div>
             <div className="text-gray-900 font-mono">
               {formatCurrency(lineItems.reduce((sum, item) => sum + item.gstAmount, 0))}
             </div>
           </div>
           
-          <div className="flex justify-between py-1 font-bold border-t border-gray-300">
+          <div className="flex justify-between py-0.5 font-bold border-t border-gray-300">
             <div>Total:</div>
             <div className="font-mono">
               {formatCurrency(lineItems.reduce((sum, item) => sum + item.finalTotal, 0))}
@@ -271,21 +271,21 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         </div>
       </div>
       
-      {/* HSN Summary */}
-      <div className="mb-3">
-        <div className="font-medium text-sm mb-1">HSN Summary:</div>
+      {/* HSN Summary - More compact */}
+      <div className="mb-2">
+        <div className="font-medium text-xs mb-0.5">HSN Summary:</div>
         <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-gray-50">
-              <th className="py-1 px-4 border border-gray-300 text-left">HSN Code</th>
-              <th className="py-1 px-4 border border-gray-300 text-left">Job Types</th>
+              <th className="py-0.5 px-2 border border-gray-300 text-left">HSN Code</th>
+              <th className="py-0.5 px-2 border border-gray-300 text-left">Job Types</th>
             </tr>
           </thead>
           <tbody>
             {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
               <tr key={idx}>
-                <td className="py-1 px-4 border border-gray-300 font-mono">{hsnCode}</td>
-                <td className="py-1 px-4 border border-gray-300">{data.jobTypes.join(', ')}</td>
+                <td className="py-0.5 px-2 border border-gray-300 font-mono">{hsnCode}</td>
+                <td className="py-0.5 px-2 border border-gray-300">{data.jobTypes.join(', ')}</td>
               </tr>
             ))}
           </tbody>
@@ -293,20 +293,20 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       </div>
       
       {/* Footer - Declaration */}
-      <div className="mt-4 pt-2 border-t border-gray-200">
+      <div className="mt-2 pt-1 border-t border-gray-200">
         <div className="grid grid-cols-2">
           <div>
-            <div className="font-medium mb-1 text-xs">Declaration</div>
+            <div className="font-medium mb-0.5 text-xs">Declaration</div>
             <div className="text-xs text-gray-600">
               We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.
             </div>
           </div>
           <div className="text-right">
-            <div className="font-medium mb-6">for FAMOUS</div>
+            <div className="font-medium mb-4">for FAMOUS</div>
             <div className="text-xs">Authorised Signatory</div>
           </div>
         </div>
-        <div className="mt-3 text-center text-xs text-gray-500">
+        <div className="mt-1 text-center text-xs text-gray-500">
           <p>This is a computer generated invoice and does not require a signature.</p>
         </div>
       </div>

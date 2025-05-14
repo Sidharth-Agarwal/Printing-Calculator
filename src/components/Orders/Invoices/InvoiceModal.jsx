@@ -121,7 +121,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     return hsnSummary;
   };
   
-  // Generate PDF
+  // Generate PDF - Improved version
   const generatePDF = async () => {
     if (!contentRef.current) return;
     
@@ -131,76 +131,97 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
       const images = contentRef.current.querySelectorAll('img');
       const imagePromises = Array.from(images).map(img => {
         if (img.complete) return Promise.resolve();
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           img.onload = resolve;
-          img.onerror = reject;
+          img.onerror = resolve; // Use resolve even for errors to proceed
+          // Set a timeout to resolve after 2 seconds in case image loading hangs
+          setTimeout(resolve, 2000);
         });
       });
       
       await Promise.all(imagePromises);
       
-      // Clone the element for PDF generation to avoid affecting the display
-      const originalElement = contentRef.current;
-      const clonedElement = originalElement.cloneNode(true);
+      // Create a new container with improved settings for PDF generation
+      const container = document.createElement('div');
+      container.style.position = 'absolute';
+      container.style.top = '-9999px';
+      container.style.left = '-9999px';
+      container.style.width = '680px'; // Reduced width to match the template
+      container.style.padding = '0';
+      container.style.margin = '0';
+      container.style.backgroundColor = 'white';
+      container.style.overflow = 'visible'; // Prevent scrollbars in rendering
       
-      // Temporarily add the cloned element to the body with fixed dimensions
-      clonedElement.style.position = 'absolute';
-      clonedElement.style.top = '-9999px';
-      clonedElement.style.left = '-9999px';
-      clonedElement.style.width = '800px'; // Fixed width for PDF generation
-      document.body.appendChild(clonedElement);
+      // Clone the invoice content
+      const clone = contentRef.current.cloneNode(true);
       
-      // Generate PDF
-      const canvas = await html2canvas(clonedElement, {
+      // Remove any potential overflow issues in the clone
+      const allElements = clone.querySelectorAll('*');
+      allElements.forEach(el => {
+        if (el.style) {
+          el.style.overflow = 'visible';
+        }
+      });
+      
+      container.appendChild(clone);
+      document.body.appendChild(container);
+      
+      // Generate PDF with better settings
+      const canvas = await html2canvas(container, {
         scale: 2, // Higher scale for better quality
         useCORS: true,
         logging: false,
         allowTaint: true,
-        imageTimeout: 0
+        imageTimeout: 0,
+        scrollY: 0, // Fix scroll position issues
+        windowWidth: 680, // Match container width
+        onclone: (clonedDoc) => {
+          // Additional adjustments to the cloned document if needed
+          const clonedContent = clonedDoc.querySelector('[data-html2canvas-clone]');
+          if (clonedContent) {
+            clonedContent.style.overflow = 'visible';
+          }
+        }
       });
       
-      // Remove the cloned element
-      document.body.removeChild(clonedElement);
+      // Remove the temp container
+      document.body.removeChild(container);
       
-      // Calculate aspect ratio to determine orientation
-      const aspectRatio = canvas.width / canvas.height;
-      const orientation = aspectRatio > 1 ? 'landscape' : 'portrait';
-      
-      // Create PDF with the appropriate orientation
+      // Create PDF with explicit A4 dimensions
       const pdf = new jsPDF({
-        orientation: orientation,
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
       
       // Get PDF dimensions
-      const pdfWidth = orientation === 'landscape' ? 297 : 210; // A4 width in mm
-      const pdfHeight = orientation === 'landscape' ? 210 : 297; // A4 height in mm
+      const pdfWidth = 210; // A4 width in mm
+      const pdfHeight = 297; // A4 height in mm
       
-      // Calculate image dimensions to fit in PDF
-      const imgWidth = pdfWidth;
+      // Calculate image dimensions to fit in PDF while maintaining aspect ratio
+      const imgWidth = pdfWidth - 20; // Add some margin
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // If the image height exceeds the PDF height, adjust scale to fit
-      if (imgHeight > pdfHeight) {
-        const scale = pdfHeight / imgHeight;
-        const adjustedWidth = pdfWidth * scale;
-        const adjustedHeight = pdfHeight;
+      // Add image to PDF with proper scaling
+      if (imgHeight > pdfHeight - 20) { // Add some margin
+        // If the rendered content is too tall, scale it to fit
+        const scale = (pdfHeight - 20) / imgHeight;
+        const adjustedWidth = imgWidth * scale;
         
         pdf.addImage(
           canvas.toDataURL('image/jpeg', 1.0),
           'JPEG',
           (pdfWidth - adjustedWidth) / 2, // Center horizontally
-          0,
+          10, // Top margin
           adjustedWidth,
-          adjustedHeight
+          pdfHeight - 20 // Bottom margin
         );
       } else {
-        // Image fits, add it to PDF
+        // If it fits, center it vertically
         pdf.addImage(
           canvas.toDataURL('image/jpeg', 1.0),
           'JPEG',
-          0,
+          (pdfWidth - imgWidth) / 2, // Center horizontally
           (pdfHeight - imgHeight) / 2, // Center vertically
           imgWidth,
           imgHeight
@@ -229,19 +250,19 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
         {/* Modal Header */}
-        <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-800">
+        <div className="px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+          <h2 className="text-lg font-bold text-gray-800">
             Generate Invoice
           </h2>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             <button
               onClick={generatePDF}
               disabled={isGeneratingPDF}
-              className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:bg-blue-400"
+              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:bg-blue-400"
             >
               {isGeneratingPDF ? (
                 <>
-                  <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                  <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
@@ -256,19 +277,19 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
               className="text-gray-500 hover:text-gray-700"
               disabled={isGeneratingPDF}
             >
-              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M6 18L18 6M6 6l12 12" />
               </svg>
             </button>
           </div>
         </div>
         
-        {/* Modal Body */}
+        {/* Modal Body - Updated layout for better space utilization */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Invoice Controls - Reduced width */}
-          <div className="p-4 md:w-1/4 overflow-y-auto border-r border-gray-200">
-            <div className="space-y-3">
-              <h3 className="text-md font-medium">Invoice Details</h3>
+          {/* Invoice Controls - Smaller width */}
+          <div className="p-3 md:w-1/5 overflow-y-auto border-r border-gray-200">
+            <div className="space-y-2">
+              <h3 className="text-sm font-medium">Invoice Details</h3>
               
               <div>
                 <label className="block text-xs font-medium text-gray-700">Invoice Number</label>
@@ -277,7 +298,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   name="invoiceNumber"
                   value={invoiceData.invoiceNumber}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs"
                 />
               </div>
               
@@ -288,7 +309,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   name="date"
                   value={invoiceData.date}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs"
                 />
               </div>
               
@@ -299,7 +320,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   name="dueDate"
                   value={invoiceData.dueDate}
                   onChange={handleInputChange}
-                  className="mt-1 block w-full px-3 py-1.5 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                  className="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs"
                 />
               </div>
               
@@ -310,15 +331,15 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   value={invoiceData.notes}
                   onChange={handleInputChange}
                   rows="2"
-                  className="mt-1 block w-full px-3 py-1.5 text-sm border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
+                  className="mt-1 block w-full px-2 py-1 text-xs border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500"
                   placeholder="Payment terms, delivery notes, etc."
                 ></textarea>
               </div>
               
               {/* HSN Summary */}
-              <div className="mt-4 bg-gray-50 p-3 rounded-lg text-xs">
-                <h4 className="font-medium text-gray-700 mb-2">HSN Codes</h4>
-                <div className="space-y-1">
+              <div className="mt-2 bg-gray-50 p-2 rounded-lg text-xs">
+                <h4 className="font-medium text-gray-700 mb-1">HSN Codes</h4>
+                <div className="space-y-0.5">
                   {Object.entries(hsnSummary).map(([hsnCode, data], index) => (
                     <div key={index} className="flex justify-between">
                       <span className="font-mono">{hsnCode}:</span>
@@ -328,9 +349,9 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                 </div>
               </div>
               
-              <div className="mt-4 bg-gray-50 p-3 rounded-lg text-xs">
-                <h4 className="font-medium text-gray-700 mb-2">Invoice Summary</h4>
-                <div className="space-y-1">
+              <div className="mt-2 bg-gray-50 p-2 rounded-lg text-xs">
+                <h4 className="font-medium text-gray-700 mb-1">Invoice Summary</h4>
+                <div className="space-y-0.5">
                   <div className="flex justify-between">
                     <span>Subtotal:</span>
                     <span className="font-mono">{formatCurrency(totals.subtotal)}</span>
@@ -357,19 +378,51 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                     </div>
                   )}
                   
-                  <div className="flex justify-between font-bold border-t border-gray-300 pt-1 mt-1">
+                  <div className="flex justify-between font-bold border-t border-gray-300 pt-0.5 mt-0.5">
                     <span>Total:</span>
                     <span className="font-mono">{formatCurrency(totals.total)}</span>
                   </div>
                 </div>
+              </div>
+              
+              {/* Discount control */}
+              <div className="mt-2">
+                <label className="block text-xs font-medium text-gray-700">
+                  Additional Discount (%)
+                </label>
+                <input
+                  type="number"
+                  name="discount"
+                  value={invoiceData.discount}
+                  onChange={handleInputChange}
+                  min="0"
+                  max="100"
+                  step="0.5"
+                  className="mt-1 block w-full px-2 py-1 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-xs"
+                />
+              </div>
+              
+              {/* Tax toggle */}
+              <div className="mt-2 flex items-center">
+                <input
+                  type="checkbox"
+                  id="showTax"
+                  name="showTax"
+                  checked={invoiceData.showTax}
+                  onChange={handleInputChange}
+                  className="h-3 w-3 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="showTax" className="ml-2 text-xs text-gray-700">
+                  Show GST
+                </label>
               </div>
             </div>
           </div>
           
           {/* Invoice Preview - Expanded */}
           <div className="flex-1 overflow-y-auto bg-gray-50">
-            <div className="p-4">
-              <div ref={contentRef} className="bg-white shadow-lg rounded-lg overflow-hidden">
+            <div className="p-3">
+              <div ref={contentRef} className="bg-white shadow-lg rounded overflow-hidden">
                 <InvoiceTemplate
                   invoiceData={invoiceData}
                   orders={orders}
