@@ -279,7 +279,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         {/* Color Details Sections */}
         {lpDetails.noOfColors > 0 && (
           <div>
-            <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">Color Details</h3>
+            <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">COLOR DETAILS</h3>
             
             {/* Loading state */}
             {mrTypesLoading || plateTypesLoading ? (
@@ -299,10 +299,11 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="text-sm font-medium text-gray-700">Color {index + 1}</h4>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {/* Plate Size Type */}
-                    <div>
+                  
+                  {/* Single line layout for color fields */}
+                  <div className="grid grid-cols-6 gap-2">
+                    {/* First row with all fields in a single line */}
+                    <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Plate Size:
                       </label>
@@ -313,7 +314,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           "plateSizeType",
                           e.target.value
                         )}
-                        className={`w-full px-3 py-2 border ${
+                        className={`w-full px-2 py-2 border ${
                           errors[`plateSizeType_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
                       >
@@ -327,75 +328,69 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       )}
                     </div>
 
-                    {/* Plate Dimensions */}
-                    {lpDetails.colorDetails[index]?.plateSizeType && (
-                      <>
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Length (inches):
-                          </label>
-                          <input
-                            type="number"
-                            placeholder="Enter length"
-                            value={lpDetails.colorDetails[index]?.plateDimensions?.lengthInInches || ""}
-                            onChange={(e) => handleColorDetailsChange(index, "plateDimensions", {
-                              length: e.target.value,
-                            })}
-                            className={`w-full px-3 py-2 border ${
-                              errors[`plateLength_${index}`] ? "border-red-500" : "border-gray-300"
-                            } rounded-md ${
-                              lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
-                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
-                            readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
-                          />
-                          {lpDetails.colorDetails[index]?.plateDimensions?.length && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {lpDetails.colorDetails[index].plateDimensions.length} cm
-                            </div>
-                          )}
-                          {errors[`plateLength_${index}`] && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors[`plateLength_${index}`]}
-                            </p>
-                          )}
-                        </div>
-
-                        <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Breadth (inches):
-                          </label>
-                          <input
-                            type="number"
-                            placeholder="Enter breadth"
-                            value={lpDetails.colorDetails[index]?.plateDimensions?.breadthInInches || ""}
-                            onChange={(e) => handleColorDetailsChange(index, "plateDimensions", {
-                              breadth: e.target.value,
-                            })}
-                            className={`w-full px-3 py-2 border ${
-                              errors[`plateBreadth_${index}`] ? "border-red-500" : "border-gray-300"
-                            } rounded-md ${
-                              lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
-                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
-                            readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
-                          />
-                          {lpDetails.colorDetails[index]?.plateDimensions?.breadth && (
-                            <div className="text-xs text-gray-500 mt-1">
-                              {lpDetails.colorDetails[index].plateDimensions.breadth} cm
-                            </div>
-                          )}
-                          {errors[`plateBreadth_${index}`] && (
-                            <p className="text-red-500 text-xs mt-1">
-                              {errors[`plateBreadth_${index}`]}
-                            </p>
-                          )}
-                        </div>
-                      </>
-                    )}
-
-                    {/* Pantone Type */}
-                    <div>
+                    <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Pantone Type:
+                        Length (in):
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Length"
+                        value={lpDetails.colorDetails[index]?.plateDimensions?.lengthInInches || ""}
+                        onChange={(e) => handleColorDetailsChange(index, "plateDimensions", {
+                          length: e.target.value,
+                        })}
+                        className={`w-full px-2 py-2 border ${
+                          errors[`plateLength_${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md ${
+                          lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
+                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
+                      />
+                      {lpDetails.colorDetails[index]?.plateDimensions?.length && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {lpDetails.colorDetails[index].plateDimensions.length} cm
+                        </div>
+                      )}
+                      {errors[`plateLength_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`plateLength_${index}`]}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="col-span-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Breadth (in):
+                      </label>
+                      <input
+                        type="number"
+                        placeholder="Breadth"
+                        value={lpDetails.colorDetails[index]?.plateDimensions?.breadthInInches || ""}
+                        onChange={(e) => handleColorDetailsChange(index, "plateDimensions", {
+                          breadth: e.target.value,
+                        })}
+                        className={`w-full px-2 py-2 border ${
+                          errors[`plateBreadth_${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md ${
+                          lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
+                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
+                      />
+                      {lpDetails.colorDetails[index]?.plateDimensions?.breadth && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {lpDetails.colorDetails[index].plateDimensions.breadth} cm
+                        </div>
+                      )}
+                      {errors[`plateBreadth_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`plateBreadth_${index}`]}
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="col-span-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        Pantone:
                       </label>
                       <input
                         type="text"
@@ -405,10 +400,10 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           "pantoneType",
                           e.target.value
                         )}
-                        className={`w-full px-3 py-2 border ${
+                        className={`w-full px-2 py-2 border ${
                           errors[`pantoneType_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
-                        placeholder="Enter Pantone Type"
+                        placeholder="Pantone"
                       />
                       {errors[`pantoneType_${index}`] && (
                         <p className="text-red-500 text-xs mt-1">
@@ -417,19 +412,18 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       )}
                     </div>
 
-                    {/* Plate Type */}
-                    <div>
+                    <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Plate Type:
                       </label>
                       <select
                         value={lpDetails.colorDetails[index]?.plateType || ""}
                         onChange={(e) => handleColorDetailsChange(index, "plateType", e.target.value)}
-                        className={`w-full px-3 py-2 border ${
+                        className={`w-full px-2 py-2 border ${
                           errors[`plateType_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
                       >
-                        <option value="">Select Plate Type</option>
+                        <option value="">Select Type</option>
                         {plateTypes.map((plateType, idx) => (
                           <option key={idx} value={plateType.materialName}>
                             {plateType.materialName}
@@ -443,19 +437,18 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       )}
                     </div>
 
-                    {/* MR Type */}
-                    <div>
+                    <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         MR Type:
                       </label>
                       <select
                         value={lpDetails.colorDetails[index]?.mrType || ""}
                         onChange={(e) => handleColorDetailsChange(index, "mrType", e.target.value)}
-                        className={`w-full px-3 py-2 border ${
+                        className={`w-full px-2 py-2 border ${
                           errors[`mrType_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
                       >
-                        <option value="">Select MR Type</option>
+                        <option value="">Select Type</option>
                         {mrTypes.map((typeOption, idx) => (
                           <option key={idx} value={typeOption.type}>
                             {typeOption.type}
