@@ -99,7 +99,7 @@ const initialFormState = {
     screenMR: "",
     screenMRConcatenated: ""
   },
-  preDieCutting: {  // Add the new preDieCutting section
+  preDieCutting: {
     isPreDieCuttingUsed: false,
     predcMR: "",
     predcMRConcatenated: ""
@@ -177,7 +177,6 @@ const reducer = (state, action) => {
     case "UPDATE_VERSION":
       return { ...state, versionId: action.payload };
     case "UPDATE_ORDER_AND_PAPER":
-      // Log the update for debugging
       console.log("UPDATE_ORDER_AND_PAPER:", action.payload);
       return { ...state, orderAndPaper: { ...state.orderAndPaper, ...action.payload } };
     case "UPDATE_LP_DETAILS":
@@ -192,7 +191,7 @@ const reducer = (state, action) => {
       return { ...state, notebookDetails: { ...state.notebookDetails, ...action.payload } };
     case "UPDATE_SCREEN_PRINT":
       return { ...state, screenPrint: { ...state.screenPrint, ...action.payload } };
-    case "UPDATE_PRE_DIE_CUTTING": // Add the new case for preDieCutting
+    case "UPDATE_PRE_DIE_CUTTING":
       return { ...state, preDieCutting: { ...state.preDieCutting, ...action.payload } };
     case "UPDATE_DIE_CUTTING":
       return { ...state, dieCutting: { ...state.dieCutting, ...action.payload } };
@@ -217,7 +216,6 @@ const reducer = (state, action) => {
     case "RESET_FORM":
       return initialFormState;
     case "INITIALIZE_FORM":
-      // Log the initialization for debugging
       console.log("INITIALIZING FORM with data:", action.payload);
       return { ...action.payload };
     default:
@@ -236,11 +234,11 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     embDetails, 
     digiDetails, 
     screenPrint, 
-    preDieCutting, // Add preDieCutting
+    preDieCutting,
     dieCutting, 
     sandwich,
     magnet,
-    notebookDetails // Add notebookDetails to destructuring
+    notebookDetails
   } = state;
 
   // Helper function to sanitize objects for Firebase
@@ -316,7 +314,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     digiDetails: digiDetails.isDigiUsed ? sanitizeForFirestore(digiDetails) : null,
     notebookDetails: notebookDetails?.isNotebookUsed ? sanitizeForFirestore(notebookDetails) : null,
     screenPrint: screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(screenPrint) : null,
-    preDieCutting: preDieCutting?.isPreDieCuttingUsed ? sanitizeForFirestore(preDieCutting) : null, // Add preDieCutting
+    preDieCutting: preDieCutting?.isPreDieCuttingUsed ? sanitizeForFirestore(preDieCutting) : null,
     dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
     sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
     magnet: magnet?.isMagnetUsed ? sanitizeForFirestore(magnet) : null,
@@ -2454,9 +2452,18 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   };
 
   const confirmResetForm = () => {
-    fullResetForm();
+    // Close the confirmation modal
     setShowResetConfirmation(false);
-  };
+    
+    // Show a brief loading message (optional)
+    setIsSubmitting(true);
+    
+    // Short timeout to allow the UI to update before refreshing
+    setTimeout(() => {
+      // Refresh the page
+      window.location.reload();
+    }, 100);
+  };  
 
   // Check if a service is visible for the current job type
   const isServiceVisible = (serviceCode) => {

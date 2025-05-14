@@ -197,7 +197,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
             </p>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client Name</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Client / Company Name</label>
             <input
               type="text"
               name="name"
