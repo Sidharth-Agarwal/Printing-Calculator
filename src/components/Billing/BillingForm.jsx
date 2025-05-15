@@ -75,6 +75,8 @@ const initialFormState = {
     plateTypeMale: "",
     plateTypeFemale: "",
     embMR: "",
+    embMRConcatenated: "",
+    dstMaterial: ""
   },
   digiDetails: {
     isDigiUsed: false,
@@ -500,7 +502,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 pantoneType: "",
                 plateType: "Polymer Plate",
                 mrType: "SIMPLE",
-                mrTypeConcatenated: "LP MR SIMPLE"
+                mrTypeConcatenated: "LP MR SIMPLE",
+                dstMaterial: ""
               }
             ]
           }
@@ -557,7 +560,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             plateTypeMale: "Polymer Plate",
             plateTypeFemale: "Polymer Plate",
             embMR: "SIMPLE",
-            embMRConcatenated: "EMB MR SIMPLE"
+            embMRConcatenated: "EMB MR SIMPLE",
+            dstMaterial: ""
           }
         });
       }
@@ -2074,8 +2078,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               },
               pantoneType: "",
               plateType: "Polymer Plate",
-              mrType: "SIMPLE", // Display value
-              mrTypeConcatenated: "LP MR SIMPLE" // Value for calculations
+              mrType: "SIMPLE",
+              mrTypeConcatenated: "LP MR SIMPLE",
+              dstMaterial: ""
             }
           ]
         })
@@ -2086,7 +2091,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     if (!isCurrentlyUsed) {
       setActiveSection("lp");
     }
-  };
+  };  
   
   const toggleFSUsage = () => {
     const isCurrentlyUsed = state.fsDetails.isFSUsed;
@@ -2135,8 +2140,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           },
           plateTypeMale: "Polymer Plate",
           plateTypeFemale: "Polymer Plate",
-          embMR: "SIMPLE", // Display value
-          embMRConcatenated: "EMB MR SIMPLE" // Value for calculations
+          embMR: "SIMPLE",
+          embMRConcatenated: "EMB MR SIMPLE",
+          dstMaterial: ""
         })
       }
     });
@@ -2145,7 +2151,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     if (!isCurrentlyUsed) {
       setActiveSection("emb");
     }
-  };  
+  };    
   
   const toggleDigiUsage = () => {
     const isCurrentlyUsed = state.digiDetails.isDigiUsed;

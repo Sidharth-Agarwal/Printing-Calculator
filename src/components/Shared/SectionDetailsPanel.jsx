@@ -63,6 +63,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
                   <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plate Size</th>
                   <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensions</th>
                   <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MR Type</th>
+                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DST Material</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-200">
@@ -74,6 +75,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
                     <td className="py-2 px-3 text-sm text-gray-500">{color.plateSizeType || "Auto"}</td>
                     <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(color.plateDimensions)}</td>
                     <td className="py-2 px-3 text-sm text-gray-500">{color.mrType || "Not specified"}</td>
+                    <td className="py-2 px-3 text-sm text-gray-500">{color.dstMaterial || "Not specified"}</td>
                   </tr>
                 ))}
               </tbody>
@@ -173,6 +175,10 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
               <tr className="hover:bg-gray-50">
                 <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
                 <td className="py-2 px-3 text-sm text-gray-500">{data.embMR || "Not specified"}</td>
+              </tr>
+              <tr className="hover:bg-gray-50">
+                <td className="py-2 px-3 text-sm font-medium text-gray-700">DST Material</td>
+                <td className="py-2 px-3 text-sm text-gray-500">{data.dstMaterial || "Not specified"}</td>
               </tr>
             </tbody>
           </table>

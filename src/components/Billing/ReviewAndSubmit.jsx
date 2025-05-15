@@ -328,25 +328,30 @@ const ReviewAndSubmit = ({
           
           {/* LP Section */}
           {hasLP && localCalculations.lpCostPerCard && (
-            <div className="space-y-1 border-b pb-2 mb-2">
-              <CostItem label="Letter Press (LP)" value={localCalculations.lpCostPerCard} isTotal />
-              {localCalculations.lpPlateCostPerCard && (
-                <CostItem label="LP Plate Cost" value={localCalculations.lpPlateCostPerCard} isSubItem />
-              )}
-              {localCalculations.lpPositiveFilmCostPerCard && (
-                <CostItem label="LP Positive Film" value={localCalculations.lpPositiveFilmCostPerCard} isSubItem />
-              )}
-              {localCalculations.lpMRCostPerCard && (
-                <CostItem label="LP MR Cost" value={localCalculations.lpMRCostPerCard} isSubItem />
-              )}
-              {localCalculations.lpMkgCostPerCard && (
-                <CostItem label="LP Making Cost" value={localCalculations.lpMkgCostPerCard} isSubItem />
-              )}
-              {localCalculations.lpInkCostPerCard && (
-                <CostItem label="LP Ink Cost" value={localCalculations.lpInkCostPerCard} isSubItem />
-              )}
-            </div>
-          )}
+          <div className="space-y-1 border-b pb-2 mb-2">
+            <CostItem label="Letter Press (LP)" value={localCalculations.lpCostPerCard} isTotal />
+            {localCalculations.lpPlateCostPerCard && (
+              <CostItem label="LP Plate Cost" value={localCalculations.lpPlateCostPerCard} isSubItem />
+            )}
+            {localCalculations.lpPositiveFilmCostPerCard && (
+              <CostItem label="LP Positive Film" value={localCalculations.lpPositiveFilmCostPerCard} isSubItem />
+            )}
+            {localCalculations.lpMRCostPerCard && (
+              <CostItem label="LP MR Cost" value={localCalculations.lpMRCostPerCard} isSubItem />
+            )}
+            {localCalculations.lpMkgCostPerCard && (
+              <CostItem label="LP Making Cost" value={localCalculations.lpMkgCostPerCard} isSubItem />
+            )}
+            {localCalculations.lpInkCostPerCard && (
+              <CostItem label="LP Ink Cost" value={localCalculations.lpInkCostPerCard} isSubItem />
+            )}
+            {/* Add DST Material Cost */}
+            {localCalculations.lpDstMaterialCostPerCard && 
+             parseFloat(localCalculations.lpDstMaterialCostPerCard) > 0 && (
+              <CostItem label="LP DST Material Cost" value={localCalculations.lpDstMaterialCostPerCard} isSubItem />
+            )}
+          </div>
+        )}
           
           {/* FS Section */}
           {hasFS && localCalculations.fsCostPerCard && (
@@ -388,6 +393,10 @@ const ReviewAndSubmit = ({
               )}
               {localCalculations.embImpressionCostPerCard && (
                 <CostItem label="EMB Impression" value={localCalculations.embImpressionCostPerCard} isSubItem />
+              )}
+              {localCalculations.embDstMaterialCostPerCard && 
+              parseFloat(localCalculations.embDstMaterialCostPerCard) > 0 && (
+                <CostItem label="EMB DST Material Cost" value={localCalculations.embDstMaterialCostPerCard} isSubItem />
               )}
             </div>
           )}

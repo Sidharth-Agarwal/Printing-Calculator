@@ -1,6 +1,46 @@
 import React, { useState, useEffect } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../../../firebaseConfig";
 import useMRTypes from "../../../../hooks/useMRTypes";
 import useMaterialTypes from "../../../../hooks/useMaterialTypes";
+
+// Custom hook to fetch DST Materials from Firestore
+const useDSTMaterials = () => {
+  const [dstMaterials, setDSTMaterials] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchDSTMaterials = async () => {
+      try {
+        // Query to fetch DST materials from materials collection
+        const materialsCollection = collection(db, "materials");
+        const dstMaterialsQuery = query(
+          materialsCollection, 
+          where("materialType", "==", "DST Type")
+        );
+        
+        const querySnapshot = await getDocs(dstMaterialsQuery);
+        
+        const materials = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setDSTMaterials(materials);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching DST materials:", err);
+        setError(err);
+        setLoading(false);
+      }
+    };
+
+    fetchDSTMaterials();
+  }, []);
+
+  return { dstMaterials, loading, error };
+};
 
 const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const lpDetails = state.lpDetails || {
@@ -15,6 +55,9 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   // Use the custom hooks to fetch LP MR types and plate types
   const { mrTypes, loading: mrTypesLoading } = useMRTypes("LP MR");
   const { materials: plateTypes, loading: plateTypesLoading } = useMaterialTypes("Plate Type");
+  
+  // Use custom hook to fetch DST materials
+  const { dstMaterials, loading: dstMaterialsLoading, error: dstMaterialsError } = useDSTMaterials();
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
@@ -50,19 +93,25 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     }
   }, [lpDetails.isLPUsed, dieSize, dispatch, lpDetails.colorDetails]);
 
-  // Set default MR Types when MR types are loaded and colors have null/empty MR types
+  // Set default MR Types and DST Material when they are loaded
   useEffect(() => {
-    if (lpDetails.isLPUsed && mrTypes.length > 0 && lpDetails.colorDetails.length > 0) {
+    if (lpDetails.isLPUsed && mrTypes.length > 0 && dstMaterials.length > 0 && lpDetails.colorDetails.length > 0) {
       const defaultMRType = mrTypes[0];
+      const defaultDstMaterial = dstMaterials[0]?.materialName || "";
       
-      // Check if any color has an empty/missing MR type
-      const needsMRTypeUpdate = lpDetails.colorDetails.some(color => !color.mrType || !color.mrTypeConcatenated);
+      // Check if any color has empty/missing values that need updates
+      const needsUpdate = lpDetails.colorDetails.some(color => 
+        !color.mrType || 
+        !color.mrTypeConcatenated || 
+        !color.dstMaterial
+      );
       
-      if (needsMRTypeUpdate) {
+      if (needsUpdate) {
         const updatedDetails = lpDetails.colorDetails.map(color => ({
           ...color,
           mrType: color.mrType || defaultMRType.type,
-          mrTypeConcatenated: color.mrTypeConcatenated || defaultMRType.concatenated || `LP MR ${defaultMRType.type}`
+          mrTypeConcatenated: color.mrTypeConcatenated || defaultMRType.concatenated || `LP MR ${defaultMRType.type}`,
+          dstMaterial: color.dstMaterial || defaultDstMaterial
         }));
         
         dispatch({
@@ -71,9 +120,9 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         });
       }
     }
-  }, [mrTypes, lpDetails.isLPUsed, lpDetails.colorDetails, dispatch]);
+  }, [mrTypes, dstMaterials, lpDetails.isLPUsed, lpDetails.colorDetails, dispatch]);
 
-  // Set default plate types when plate types are loaded and colors have null/empty plate types
+  // Set default plate types when plate types are loaded
   useEffect(() => {
     if (lpDetails.isLPUsed && plateTypes.length > 0 && lpDetails.colorDetails.length > 0) {
       const defaultPlateType = plateTypes[0].materialName;
@@ -150,19 +199,20 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         // Convert to cm for the standard database field
         updatedDetails[index].plateDimensions.breadth = value.breadth ? inchesToCm(value.breadth).toFixed(2) : "";
       }
-    } else {
-      updatedDetails[index][field] = value;
-
+    } else if (field === "mrType" && mrTypes.length > 0) {
       // Special handling for mrType to also set the concatenated version
-      if (field === "mrType" && mrTypes.length > 0) {
-        const selectedMRType = mrTypes.find(type => type.type === value);
-        if (selectedMRType && selectedMRType.concatenated) {
-          updatedDetails[index].mrTypeConcatenated = selectedMRType.concatenated;
-        } else {
-          // Fallback: create concatenated version if not found
-          updatedDetails[index].mrTypeConcatenated = `LP MR ${value}`;
-        }
+      updatedDetails[index].mrType = value;
+      
+      const selectedMRType = mrTypes.find(type => type.type === value);
+      if (selectedMRType && selectedMRType.concatenated) {
+        updatedDetails[index].mrTypeConcatenated = selectedMRType.concatenated;
+      } else {
+        // Fallback: create concatenated version if not found
+        updatedDetails[index].mrTypeConcatenated = `LP MR ${value}`;
       }
+    } else {
+      // Handle all other fields normally
+      updatedDetails[index][field] = value;
     }
 
     dispatch({
@@ -179,6 +229,9 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     
     // Get the default plate type from the fetched list, or fallback to "Polymer Plate"
     const defaultPlateType = plateTypes.length > 0 ? plateTypes[0].materialName : "Polymer Plate";
+    
+    // Get the default DST material
+    const defaultDstMaterial = dstMaterials.length > 0 ? dstMaterials[0]?.materialName : "";
 
     const details = Array.from({ length: noOfColors }, (_, index) => {
       const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
@@ -195,7 +248,8 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         pantoneType: lpDetails.colorDetails[index]?.pantoneType || "Not sure", // Pre-filled with "Not sure"
         plateType: lpDetails.colorDetails[index]?.plateType || defaultPlateType, // Use first plate type from API
         mrType: lpDetails.colorDetails[index]?.mrType || defaultMRType.type, // Use first MR type from API
-        mrTypeConcatenated: lpDetails.colorDetails[index]?.mrTypeConcatenated || defaultMRType.concatenated // Store concatenated version
+        mrTypeConcatenated: lpDetails.colorDetails[index]?.mrTypeConcatenated || defaultMRType.concatenated, // Store concatenated version
+        dstMaterial: lpDetails.colorDetails[index]?.dstMaterial || defaultDstMaterial // Add DST material to each color
       }
     });
     
@@ -233,6 +287,9 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         }
         if (!color.mrType) {
           newErrors[`mrType_${index}`] = "MR type is required.";
+        }
+        if (!color.dstMaterial) {
+          newErrors[`dstMaterial_${index}`] = "DST Material is required.";
         }
       });
     }
@@ -282,7 +339,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">COLOR DETAILS</h3>
             
             {/* Loading state */}
-            {mrTypesLoading || plateTypesLoading ? (
+            {mrTypesLoading || plateTypesLoading || dstMaterialsLoading ? (
               <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
                 <div className="flex justify-center">
                   <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
@@ -301,7 +358,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   </div>
                   
                   {/* Single line layout for color fields */}
-                  <div className="grid grid-cols-6 gap-2">
+                  <div className="grid grid-cols-7 gap-2">
                     {/* First row with all fields in a single line */}
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -459,6 +516,34 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         <p className="text-red-500 text-xs mt-1">
                           {errors[`mrType_${index}`]}
                         </p>
+                      )}
+                    </div>
+
+                    <div className="col-span-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">
+                        DST Material:
+                      </label>
+                      <select
+                        value={lpDetails.colorDetails[index]?.dstMaterial || ""}
+                        onChange={(e) => handleColorDetailsChange(index, "dstMaterial", e.target.value)}
+                        className={`w-full px-2 py-2 border ${
+                          errors[`dstMaterial_${index}`] ? "border-red-500" : "border-gray-300"
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                      >
+                        <option value="">Select Material</option>
+                        {dstMaterials.map((material) => (
+                          <option key={material.id} value={material.materialName}>
+                            {material.materialName}
+                          </option>
+                        ))}
+                      </select>
+                      {errors[`dstMaterial_${index}`] && (
+                        <p className="text-red-500 text-xs mt-1">
+                          {errors[`dstMaterial_${index}`]}
+                        </p>
+                      )}
+                      {dstMaterialsError && (
+                        <p className="text-red-500 text-xs mt-1">Failed to load DST materials</p>
                       )}
                     </div>
                   </div>

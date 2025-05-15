@@ -1,5 +1,45 @@
 import React, { useEffect, useState } from "react";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../../../firebaseConfig";
 import useMRTypes from "../../../../hooks/useMRTypes";
+
+// Custom hook to fetch DST Materials from Firestore
+const useDSTMaterials = () => {
+  const [dstMaterials, setDSTMaterials] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchDSTMaterials = async () => {
+      try {
+        // Query to fetch DST materials from materials collection
+        const materialsCollection = collection(db, "materials");
+        const dstMaterialsQuery = query(
+          materialsCollection, 
+          where("materialType", "==", "DST Type")
+        );
+        
+        const querySnapshot = await getDocs(dstMaterialsQuery);
+        
+        const materials = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setDSTMaterials(materials);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching DST materials:", err);
+        setError(err);
+        setLoading(false);
+      }
+    };
+
+    fetchDSTMaterials();
+  }, []);
+
+  return { dstMaterials, loading, error };
+};
 
 const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
@@ -8,21 +48,28 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     isEMBUsed = false,
     plateSizeType = "",
     plateDimensions = { length: "", breadth: "", lengthInInches: "", breadthInInches: "" },
+    plateTypeMale = "",
+    plateTypeFemale = "",
     embMR = "",
-    embMRConcatenated = ""
+    embMRConcatenated = "",
+    dstMaterial = ""
   } = state.embDetails || {};
 
   const [errors, setErrors] = useState({});
 
   // Use the custom hooks to fetch data
   const { mrTypes, loading: mrTypesLoading } = useMRTypes("EMB MR");
+  
+  // Use custom hook to fetch DST materials
+  const { dstMaterials, loading: dstMaterialsLoading, error: dstMaterialsError } = useDSTMaterials();
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
-  // Set default MR Type when component mounts or when EMB is first enabled
+  // Set default MR Type and DST Material when component mounts or when EMB is first enabled
   useEffect(() => {
-    if (isEMBUsed && mrTypes.length > 0) {
+    if (isEMBUsed && mrTypes.length > 0 && dstMaterials.length > 0) {
       const defaultMRType = mrTypes[0];
+      const defaultDstMaterial = dstMaterials[0]?.materialName || "";
       const updates = {};
       
       // Set embMR if it's empty
@@ -35,6 +82,11 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
         updates.embMRConcatenated = defaultMRType.concatenated || `EMB MR ${defaultMRType.type}`;
       }
       
+      // Set dstMaterial if it's empty
+      if (!dstMaterial) {
+        updates.dstMaterial = defaultDstMaterial;
+      }
+      
       // Only dispatch if we have updates
       if (Object.keys(updates).length > 0) {
         dispatch({
@@ -43,7 +95,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
         });
       }
     }
-  }, [isEMBUsed, embMR, embMRConcatenated, mrTypes, dispatch]);
+  }, [isEMBUsed, embMR, embMRConcatenated, dstMaterial, mrTypes, dstMaterials, dispatch]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -144,6 +196,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
         if (!plateDimensions.breadthInInches) validationErrors.breadth = "Breadth is required.";
       }
       if (!embMR) validationErrors.embMR = "EMB MR Type is required.";
+      if (!dstMaterial) validationErrors.dstMaterial = "DST Material is required.";
     }
     setErrors(validationErrors);
     return Object.keys(validationErrors).length === 0;
@@ -193,7 +246,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     <form onSubmit={handleSubmit}>
       <div className="space-y-5">
         {/* All Fields in a Single Line */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
           <div>
             <label htmlFor="plateSizeType" className="block text-xs font-medium text-gray-600 mb-1">
               Plate Size:
@@ -203,7 +256,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               name="plateSizeType"
               value={plateSizeType}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.plateSizeType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.plateSizeType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
             >
               <option value="">Select Option</option>
               <option value="Auto">Auto</option>
@@ -218,15 +271,15 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             <>
               <div>
                 <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
-                  Length (inches):
+                  Length (in):
                 </label>
                 <input
                   type="number"
                   id="length"
-                  placeholder="Enter length"
+                  placeholder="Length"
                   value={plateDimensions.lengthInInches || ""}
                   onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("length", e.target.value) : null}
-                  className={`w-full px-3 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                  className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
                   readOnly={plateSizeType === "Auto"}
                 />
                 {plateDimensions.length && (
@@ -236,15 +289,15 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               </div>
               <div>
                 <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
-                  Breadth (inches):
+                  Breadth (in):
                 </label>
                 <input
                   type="number"
                   id="breadth"
-                  placeholder="Enter breadth"
+                  placeholder="Breadth"
                   value={plateDimensions.breadthInInches || ""}
                   onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("breadth", e.target.value) : null}
-                  className={`w-full px-3 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                  className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
                   readOnly={plateSizeType === "Auto"}
                 />
                 {plateDimensions.breadth && (
@@ -264,7 +317,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               name="embMR"
               value={embMR}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.embMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.embMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
             >
               <option value="">Select Type</option>
               {mrTypesLoading ? (
@@ -278,6 +331,37 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               )}
             </select>
             {errors.embMR && <p className="text-red-500 text-xs mt-1">{errors.embMR}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="dstMaterial" className="block text-xs font-medium text-gray-600 mb-1">
+              DST Material:
+            </label>
+            <select
+              id="dstMaterial"
+              name="dstMaterial"
+              value={dstMaterial}
+              onChange={handleChange}
+              className={`w-full px-2 py-2 border ${
+                errors.dstMaterial ? "border-red-500" : "border-gray-300"
+              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              disabled={dstMaterialsLoading}
+            >
+              <option value="">
+                {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
+              </option>
+              {dstMaterials.map((material) => (
+                <option key={material.id} value={material.materialName}>
+                  {material.materialName}
+                </option>
+              ))}
+            </select>
+            {errors.dstMaterial && (
+              <p className="text-red-500 text-xs mt-1">{errors.dstMaterial}</p>
+            )}
+            {dstMaterialsError && (
+              <p className="text-red-500 text-xs mt-1">Failed to load DST materials</p>
+            )}
           </div>
         </div>
 

@@ -19,7 +19,8 @@ export const calculateEMBCosts = async (state) => {
         embMRCostPerCard: "0.00",
         embPositiveFilmCostPerCard: "0.00",
         embMkgPlateCostPerCard: "0.00",
-        embImpressionCostPerCard: "0.00"
+        embImpressionCostPerCard: "0.00",
+        embDstMaterialCostPerCard: "0.00" // Add DST material cost field
       };
     }
 
@@ -32,7 +33,8 @@ export const calculateEMBCosts = async (state) => {
         embMRCostPerCard: "0.00",
         embPositiveFilmCostPerCard: "0.00",
         embMkgPlateCostPerCard: "0.00",
-        embImpressionCostPerCard: "0.00"
+        embImpressionCostPerCard: "0.00",
+        embDstMaterialCostPerCard: "0.00" // Add DST material cost field
       };
     }
 
@@ -60,10 +62,6 @@ export const calculateEMBCosts = async (state) => {
       // Otherwise use the provided plate dimensions
       const providedLength = parseFloat(embDetails.plateDimensions.length);
       const providedBreadth = parseFloat(embDetails.plateDimensions.breadth);
-      console.log(providedLength)
-      console.log(providedLength + margin)
-      console.log(providedBreadth)
-      console.log(providedBreadth + margin)
       plateArea = (providedLength + margin) * (providedBreadth + margin);
     }
 
@@ -90,7 +88,19 @@ export const calculateEMBCosts = async (state) => {
     // 6. Calculate total plate cost
     const totalPlateCost = malePlateCost + femalePlateCost;
 
-    // 7. Fetch positive film material details
+    // 7. Fetch DST material details and calculate cost
+    let dstMaterialCost = 0;
+    if (embDetails.dstMaterial) {
+      const dstMaterialDetails = await fetchMaterialDetails(embDetails.dstMaterial);
+      if (dstMaterialDetails) {
+        // Calculate DST material cost based on plate area
+        dstMaterialCost = plateArea * parseFloat(dstMaterialDetails.finalCostPerUnit || 0);
+      } else {
+        console.warn(`Material details not found for DST material: ${embDetails.dstMaterial}`);
+      }
+    }
+    
+    // 8. Fetch positive film material details
     const positiveFilmDetails = await fetchMaterialDetails("Positive Film");
     let positiveFilmCost = 0;
     
@@ -100,7 +110,7 @@ export const calculateEMBCosts = async (state) => {
       console.warn("Material details not found for Positive Film");
     }
 
-    // 8. Fetch MR (Machine Running) cost from standard rates
+    // 9. Fetch MR (Machine Running) cost from standard rates
     const embMR = embDetails.embMR || "SIMPLE"; // Default to SIMPLE if not specified
     const concatenatedMR = `EMB MR ${embMR}`;
     
@@ -117,7 +127,7 @@ export const calculateEMBCosts = async (state) => {
       else if (embMR === "SUPER COMPLEX") mrCost = 200;
     }
 
-    // 9. Fetch MKG (Making) plate cost from standard rates
+    // 10. Fetch MKG (Making) plate cost from standard rates
     const mkgDetails = await fetchStandardRate("MKG", "EMB PLATE");
     let mkgCost = 0;
     
@@ -128,7 +138,7 @@ export const calculateEMBCosts = async (state) => {
       mkgCost = 500; // Fallback value
     }
 
-    // 10. Fetch impression cost from standard rates
+    // 11. Fetch impression cost from standard rates
     const impressionDetails = await fetchStandardRate("IMPRESSION", "EMB");
     let impressionCostPerUnit = 0;
     
@@ -139,31 +149,36 @@ export const calculateEMBCosts = async (state) => {
       impressionCostPerUnit = 1; // Fallback value
     }
 
-    // 11. Calculate per card costs
+    // 12. Calculate per card costs
     const embPlateCostPerCard = totalPlateCost / totalCards;
     const embMRCostPerCard = mrCost / totalCards;
     const embPositiveFilmCostPerCard = positiveFilmCost / totalCards;
     const embMkgPlateCostPerCard = mkgCost / totalCards;
     const embImpressionCostPerCard = impressionCostPerUnit; // Already per unit
+    const embDstMaterialCostPerCard = dstMaterialCost / totalCards; // Calculate DST material cost per card
     
-    // 12. Calculate total embossing cost per card
-    // const embCostPerCard = embPlateCostPerCard + embMRCostPerCard + embPositiveFilmCostPerCard + embMkgPlateCostPerCard + embImpressionCostPerCard;
-
-    const embCostPerCard = embMRCostPerCard + embPositiveFilmCostPerCard + embMkgPlateCostPerCard + embImpressionCostPerCard;
+    // 13. Calculate total embossing cost per card including DST material cost
+    const embCostPerCard = 
+      embMRCostPerCard + 
+      embPositiveFilmCostPerCard + 
+      embMkgPlateCostPerCard + 
+      embImpressionCostPerCard + 
+      embDstMaterialCostPerCard; // Include DST material cost
     
-    // 13. Return all calculations with detailed breakdowns
+    // 14. Return all calculations with detailed breakdowns
     return {
       embCostPerCard: embCostPerCard.toFixed(2),
-      // embPlateCostPerCard: embPlateCostPerCard.toFixed(2),
       embMRCostPerCard: embMRCostPerCard.toFixed(2),
       embPositiveFilmCostPerCard: embPositiveFilmCostPerCard.toFixed(2),
       embMkgPlateCostPerCard: embMkgPlateCostPerCard.toFixed(2),
       embImpressionCostPerCard: embImpressionCostPerCard.toFixed(2),
+      embDstMaterialCostPerCard: embDstMaterialCostPerCard.toFixed(2), // Include DST material cost
       // Additional data for debugging
       plateArea: plateArea.toFixed(2),
       malePlateCost: malePlateCost.toFixed(2),
       femalePlateCost: femalePlateCost.toFixed(2),
       totalPlateCost: totalPlateCost.toFixed(2),
+      dstMaterialCost: dstMaterialCost.toFixed(2), // Include total DST material cost
       positiveFilmCost: positiveFilmCost.toFixed(2),
       mrCost: mrCost.toFixed(2),
       mkgCost: mkgCost.toFixed(2)
@@ -177,7 +192,8 @@ export const calculateEMBCosts = async (state) => {
       embMRCostPerCard: "0.00",
       embPositiveFilmCostPerCard: "0.00",
       embMkgPlateCostPerCard: "0.00",
-      embImpressionCostPerCard: "0.00"
+      embImpressionCostPerCard: "0.00",
+      embDstMaterialCostPerCard: "0.00" // Include DST material cost field
     };
   }
 };
