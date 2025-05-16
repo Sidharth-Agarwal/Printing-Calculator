@@ -23,6 +23,8 @@ const EstimateCard = ({
   const isMovedToOrders = estimate.movedToOrders;
   const isCanceled = estimate.isCanceled;
   const isInEscrow = estimate.inEscrow;
+  const isApproved = estimate.isApproved;
+  const isRejected = estimate.isRejected;
   
   // Determine if this estimate can be selected (not moved, canceled, or in escrow)
   const isSelectable = !isMovedToOrders && !isCanceled && !isInEscrow;
@@ -109,16 +111,62 @@ const EstimateCard = ({
     return isLoyaltyEligible ? "Move to Escrow" : "Move to Orders";
   };
 
+  // Get status badge text - FIXED PRIORITY ORDER
+  const getStatusBadgeText = () => {
+    // First priority: Check escrow status
+    if (isInEscrow) {
+      if (isApproved) return "Approved";
+      if (isRejected) return "Rejected";
+      return "In Escrow";
+    }
+    
+    // Second priority: Check other states
+    if (isMovedToOrders) return "Moved";
+    if (isCanceled) return "Cancelled";
+    return "Pending";
+  };
+
+  // Get status badge color - FIXED PRIORITY ORDER
+  const getStatusBadgeColor = () => {
+    // First priority: Check escrow status
+    if (isInEscrow) {
+      if (isApproved) return "bg-green-100 text-green-700";
+      if (isRejected) return "bg-red-100 text-red-700";
+      return "bg-purple-100 text-purple-700";
+    }
+    
+    // Second priority: Check other states
+    if (isMovedToOrders) return "bg-green-100 text-green-700";
+    if (isCanceled) return "bg-red-100 text-red-700";
+    return "bg-amber-100 text-amber-700"; // Pending state color
+  };
+
+  // Get card border color
+  const getCardBorderClass = () => {
+    // Handle multi-select mode first
+    if (isMultiSelectActive && isSelectable) {
+      return isSelected ? 'border-blue-500 bg-blue-50 shadow' : 'border-gray-200';
+    }
+    
+    // First priority: Check escrow status
+    if (isInEscrow) {
+      if (isApproved) return 'border-green-400 border-l-4'; // Green for approved
+      if (isRejected) return 'border-red-400 border-l-4'; // Red for rejected
+      return 'border-purple-400 border-l-4'; // Purple for in escrow
+    }
+    
+    // Second priority: Check other states
+    if (isMovedToOrders) return 'border-green-400 border-l-4'; // Green for moved
+    if (isCanceled) return 'border-red-400 border-l-4'; // Red for canceled
+    
+    // Pending state - amber/yellow border
+    return 'border-amber-400 border-l-4'; // Amber for pending
+  };
+
   return (
     <div
       onClick={handleCardClick}
-      className={`border rounded-lg p-2.5 bg-white hover:shadow-sm cursor-pointer transition-all ${
-        isMultiSelectActive && isSelectable
-          ? isSelected 
-            ? 'border-blue-500 bg-blue-50 shadow' 
-            : 'border-gray-200'
-          : 'border-gray-200'
-      }`}
+      className={`border rounded-lg p-2.5 bg-white hover:shadow-sm cursor-pointer transition-all ${getCardBorderClass()}`}
     >
       {/* Header row */}
       <div className="flex justify-between items-center mb-1.5">
@@ -150,22 +198,8 @@ const EstimateCard = ({
           </span>
           
           {/* Status Badge */}
-          <span className={`px-2 py-0.5 text-xs rounded-full ${
-            isMovedToOrders
-              ? "bg-green-100 text-green-700"
-              : isCanceled
-              ? "bg-red-100 text-red-700"
-              : isInEscrow
-              ? "bg-purple-100 text-purple-700"
-              : "bg-amber-100 text-amber-700"
-          }`}>
-            {isMovedToOrders 
-              ? "Moved" 
-              : isCanceled 
-              ? "Cancelled" 
-              : isInEscrow
-              ? "In Escrow"
-              : "Pending"}
+          <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusBadgeColor()}`}>
+            {getStatusBadgeText()}
           </span>
         </div>
         
@@ -294,7 +328,7 @@ const EstimateCard = ({
             </button>
           )}
 
-          {isMovedToOrders && (
+          {isMovedToOrders && !isInEscrow && (
             <button
               disabled
               className="flex-1 p-1 rounded bg-green-50 text-green-600 cursor-not-allowed"
@@ -321,12 +355,28 @@ const EstimateCard = ({
           {isInEscrow && (
             <button
               disabled
-              className="flex-1 p-1 rounded bg-purple-50 text-purple-600 cursor-not-allowed"
-              title="In Escrow"
+              className={`flex-1 p-1 rounded ${
+                isApproved
+                  ? "bg-green-50 text-green-600"
+                  : isRejected
+                    ? "bg-red-50 text-red-600"
+                    : "bg-purple-50 text-purple-600"
+              } cursor-not-allowed`}
+              title={isApproved ? "Approved" : isRejected ? "Rejected" : "In Escrow"}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-              </svg>
+              {isApproved ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                </svg>
+              ) : isRejected ? (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" viewBox="0 0 20 20" fill="currentColor">
+                  <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+                </svg>
+              )}
             </button>
           )}
         </div>
@@ -341,7 +391,10 @@ const EstimateCard = ({
             </span>
           ) : (
             <span className="text-xs text-gray-400">
-              {isMovedToOrders ? 'Already moved' : isInEscrow ? 'In escrow' : 'Cancelled'}
+              {isInEscrow ? 
+                (isApproved ? 'Approved' : isRejected ? 'Rejected' : 'In escrow') 
+                : isMovedToOrders ? 'Already moved' 
+                : 'Cancelled'}
             </span>
           )}
         </div>

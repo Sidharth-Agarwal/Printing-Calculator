@@ -732,9 +732,19 @@ const EstimatesPage = () => {
       duplicatedEstimate.inEscrow = false;
       duplicatedEstimate.movedToEscrow = false;
       
+      // Reset approval/rejection fields - important to prevent auto-approval
+      duplicatedEstimate.isApproved = false;
+      duplicatedEstimate.isRejected = false;
+      duplicatedEstimate.approvalNotes = null;
+      duplicatedEstimate.rejectionNotes = null;
+      duplicatedEstimate.approvedAt = null;
+      duplicatedEstimate.rejectedAt = null;
+      duplicatedEstimate.approvedBy = null;
+      duplicatedEstimate.rejectedBy = null;
+      
       // Append "- Copy" to project name for easy identification
       duplicatedEstimate.projectName = `${estimate.projectName || "Unnamed Project"} - Copy`;
-
+  
       // Add the duplicated estimate to Firestore
       const docRef = await addDoc(collection(db, "estimates"), duplicatedEstimate);
       
