@@ -56,18 +56,18 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel }) => {
       const ratePerGram = freightPerKg / 1000;
       const area = length * breadth;
       const oneSqcmInGram = gsm / 10000;
-      const gsmPerSheet = (area * oneSqcmInGram);
+      const gsmPerSheet = (area * oneSqcmInGram)/1000;
       const freightPerSheet = ratePerGram * gsmPerSheet;
       const finalRate = pricePerSheet + freightPerSheet;
 
       return {
         ...updatedForm,
         ratePerGram: ratePerGram.toFixed(4),
-        area: area.toFixed(2),
+        area: area.toFixed(4),
         oneSqcmInGram: oneSqcmInGram.toFixed(6),
-        gsmPerSheet: gsmPerSheet.toFixed(2),
-        freightPerSheet: freightPerSheet.toFixed(2),
-        finalRate: finalRate.toFixed(2),
+        gsmPerSheet: gsmPerSheet.toFixed(4),
+        freightPerSheet: freightPerSheet.toFixed(4),
+        finalRate: finalRate.toFixed(4),
       };
     });
   };
