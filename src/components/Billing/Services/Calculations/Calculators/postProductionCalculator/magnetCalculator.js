@@ -1,4 +1,5 @@
 import { fetchMaterialDetails } from "../../../../../../utils/fetchDataUtils";
+import { fetchMarginByJobType } from "../../../../../../utils/dbFetchUtils";
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
 
@@ -35,6 +36,7 @@ export const calculateMagnetCosts = async (state) => {
     const { magnet, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
+    const jobType = orderAndPaper.jobType || "CARD";
 
     // Check if magnet is used
     if (!magnet || !magnet.isMagnetUsed) {
@@ -64,10 +66,10 @@ export const calculateMagnetCosts = async (state) => {
     const fragsPerDie = dieDetails.frags ? parseInt(dieDetails.frags) || 1 : 1;
     console.log("Frags per die:", fragsPerDie);
 
-    // 2. Fetch margin value from overheads
-    const { fetchOverheadValue } = require('../../../../../../utils/dbFetchUtils');
-    const marginValue = await fetchOverheadValue('MARGIN');
-    const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
+    // 2. Fetch margin value from standard rates based on job type
+    const marginRate = await fetchMarginByJobType(jobType);
+    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
+    console.log("MARGIN : ",margin)
     
     // 3. Calculate plate area for magnet material
     let plateArea = 0;
@@ -112,7 +114,8 @@ export const calculateMagnetCosts = async (state) => {
       fragsPerDie: fragsPerDie,
       plateArea: plateArea.toFixed(2),
       magnetMaterial: magnet.magnetMaterial,
-      materialCostPerUnit: materialCostPerUnit.toFixed(2)
+      materialCostPerUnit: materialCostPerUnit.toFixed(2),
+      marginValue: margin.toFixed(2) // Added for debugging
     };
   } catch (error) {
     console.error("Error calculating magnet costs:", error);

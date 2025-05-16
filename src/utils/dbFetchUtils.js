@@ -180,3 +180,71 @@ export const fetchGstHsnByGroup = async (group) => {
     return [];
   }
 };
+
+/**
+ * Fetches a margin value from standard_rates based on job type
+ * @param {string} jobType - The job type (e.g. "CARD", "NOTEBOOK")
+ * @returns {Promise<Object|null>} - The margin object or null if not found
+ */
+export const fetchMarginByJobType = async (jobType) => {
+  try {
+    // Convert jobType to uppercase for case-insensitive comparison
+    const jobTypeUpper = jobType.toUpperCase();
+    
+    const ratesCollection = collection(db, "standard_rates");
+    // Try first with the exact concatenated value
+    const concatenatedValue = `MARGIN ${jobTypeUpper}`;
+    
+    // Try to fetch by concatenated value first (most reliable)
+    let q = query(ratesCollection, where("concatenate", "==", concatenatedValue));
+    let querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    // If not found, try with separate group and type
+    q = query(
+      ratesCollection, 
+      where("group", "==", "MARGIN"), 
+      where("type", "==", jobTypeUpper)
+    );
+    querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    // If still not found and jobType contains spaces (like "Biz Card"), 
+    // try converting to a single word by removing spaces
+    if (jobType.includes(' ')) {
+      const jobTypeNoSpace = jobTypeUpper.replace(/\s+/g, '');
+      
+      // Try concatenated value without spaces
+      q = query(ratesCollection, where("concatenate", "==", `MARGIN ${jobTypeNoSpace}`));
+      querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+      }
+      
+      // Try type without spaces
+      q = query(
+        ratesCollection, 
+        where("group", "==", "MARGIN"), 
+        where("type", "==", jobTypeNoSpace)
+      );
+      querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+      }
+    }
+    
+    console.warn(`Margin not found for job type: ${jobType}`);
+    return null;
+  } catch (error) {
+    console.error("Error fetching margin by job type:", error);
+    return null;
+  }
+};

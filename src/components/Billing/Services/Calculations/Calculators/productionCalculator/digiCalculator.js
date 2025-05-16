@@ -1,5 +1,5 @@
 import { fetchPaperDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchOverheadValue } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
 
 /**
  * Helper function to calculate maximum babies per sheet
@@ -32,6 +32,7 @@ export const calculateDigiDetailsCosts = async (state) => {
   try {
     const { digiDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const jobType = orderAndPaper.jobType || "CARD";
 
     // Check if digital printing is used
     if (!digiDetails.isDigiUsed) {
@@ -84,9 +85,10 @@ export const calculateDigiDetailsCosts = async (state) => {
     
     // PART 2: Calculations with respect to the die selected
     
-    // 1. Fetch margin value from overheads
-    const marginValue = await fetchOverheadValue('MARGIN');
-    const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
+    // 1. Fetch margin value from standard rates based on job type
+    const marginRate = await fetchMarginByJobType(jobType);
+    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
+    console.log("MARGIN : ",margin)
     
     // 2. Convert die size from inches to cm and add margin
     const dieWithMargin = {
@@ -141,7 +143,8 @@ export const calculateDigiDetailsCosts = async (state) => {
       totalSheets,
       paperRate: parseFloat(paperDetails.finalRate).toFixed(2),
       digitalPrintRate: digitalPrintRateValue.toFixed(2),
-      gilCutRate: gilCutCostPerSheet.toFixed(2)
+      gilCutRate: gilCutCostPerSheet.toFixed(2),
+      marginValue: margin.toFixed(2) // Added for debugging
     };
   } catch (error) {
     console.error("Error calculating digital printing costs:", error);

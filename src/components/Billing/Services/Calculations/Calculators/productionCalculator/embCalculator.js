@@ -1,5 +1,5 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
 
 /**
  * Calculates embossing costs based on form state
@@ -10,6 +10,7 @@ export const calculateEMBCosts = async (state) => {
   try {
     const { embDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const jobType = orderAndPaper.jobType || "CARD";
 
     // Check if embossing is used
     if (!embDetails.isEMBUsed) {
@@ -38,10 +39,10 @@ export const calculateEMBCosts = async (state) => {
       };
     }
 
-    // 1. Fetch margin value from overheads
-    const { fetchOverheadValue } = require('../../../../../../utils/dbFetchUtils');
-    const marginValue = await fetchOverheadValue('MARGIN');
-    const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
+    // 1. Fetch margin value from standard rates based on job type
+    const marginRate = await fetchMarginByJobType(jobType);
+    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
+    console.log("MARGIN : ",margin)
     
     // Calculate plate area 
     let plateArea = 0;
@@ -181,7 +182,8 @@ export const calculateEMBCosts = async (state) => {
       dstMaterialCost: dstMaterialCost.toFixed(2), // Include total DST material cost
       positiveFilmCost: positiveFilmCost.toFixed(2),
       mrCost: mrCost.toFixed(2),
-      mkgCost: mkgCost.toFixed(2)
+      mkgCost: mkgCost.toFixed(2),
+      marginValue: margin.toFixed(2) // Added for debugging
     };
   } catch (error) {
     console.error("Error calculating embossing costs:", error);
