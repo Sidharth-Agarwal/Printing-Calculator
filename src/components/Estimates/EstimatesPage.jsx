@@ -55,17 +55,12 @@ const EstimatesPage = () => {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [estimateToEdit, setEstimateToEdit] = useState(null);
   
-  // Loyalty status update notification state
-  const [loyaltyNotification, setLoyaltyNotification] = useState(null);
-  const [redirectTimer, setRedirectTimer] = useState(5);
-  const [redirectTimerId, setRedirectTimerId] = useState(null);
-
   // UPDATED: Multi-select state for estimates
   // Structure: { estimateId: { selected: true, versionId: "1" } }
   const [selectedEstimates, setSelectedEstimates] = useState({});
   const [isMultiSelectActive, setIsMultiSelectActive] = useState(false);
   const [isMovingMultiple, setIsMovingMultiple] = useState(false);
-  // New state to show all versions of a client simultaneously
+  // State to show all versions of a client simultaneously
   const [showAllVersions, setShowAllVersions] = useState(false);
 
   // Fetch B2B client data if applicable
@@ -95,38 +90,6 @@ const EstimatesPage = () => {
     
     fetchB2BClientData();
   }, [userRole, currentUser]);
-
-  // Handle timer for auto-dismiss without redirecting
-  useEffect(() => {
-    // If loyalty notification is shown, start the timer
-    if (loyaltyNotification) {
-      setRedirectTimer(5);
-      
-      // Clear any existing timer
-      if (redirectTimerId) {
-        clearInterval(redirectTimerId);
-      }
-      
-      // Start a new timer that updates every second
-      const timerId = setInterval(() => {
-        setRedirectTimer(prev => {
-          if (prev <= 1) {
-            // Time's up, clear the interval and dismiss the notification without redirecting
-            clearInterval(timerId);
-            setLoyaltyNotification(null);
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
-      
-      // Save the timer ID for cleanup
-      setRedirectTimerId(timerId);
-      
-      // Cleanup function to clear timer if component unmounts
-      return () => clearInterval(timerId);
-    }
-  }, [loyaltyNotification]);
 
   // UPDATED: No longer reset multi-select when client changes
   useEffect(() => {
@@ -212,11 +175,13 @@ const EstimatesPage = () => {
     // Apply status filter
     if (filterStatus) {
       if (filterStatus === "Pending") {
-        filtered = filtered.filter(estimate => !estimate.movedToOrders && !estimate.isCanceled);
+        filtered = filtered.filter(estimate => !estimate.movedToOrders && !estimate.isCanceled && !estimate.inEscrow);
       } else if (filterStatus === "Moved") {
         filtered = filtered.filter(estimate => estimate.movedToOrders);
       } else if (filterStatus === "Cancelled") {
         filtered = filtered.filter(estimate => estimate.isCanceled);
+      } else if (filterStatus === "InEscrow") {
+        filtered = filtered.filter(estimate => estimate.inEscrow);
       }
     }
     
@@ -273,7 +238,7 @@ const EstimatesPage = () => {
     Object.keys(selectedEstimates).forEach(estimateId => {
       if (selectedEstimates[estimateId]?.selected) {
         const estimate = allEstimates.find(est => est.id === estimateId);
-        if (estimate && !estimate.movedToOrders && !estimate.isCanceled) {
+        if (estimate && !estimate.movedToOrders && !estimate.isCanceled && !estimate.inEscrow) {
           count++;
         }
       }
@@ -313,7 +278,7 @@ const EstimatesPage = () => {
     const newSelections = { ...selectedEstimates };
     versionData.estimates.forEach(estimate => {
       // Only include estimates that can be moved
-      if (!estimate.movedToOrders && !estimate.isCanceled) {
+      if (!estimate.movedToOrders && !estimate.isCanceled && !estimate.inEscrow) {
         newSelections[estimate.id] = { 
           selected: true, 
           versionId: estimate.versionId || "1" 
@@ -372,8 +337,8 @@ const EstimatesPage = () => {
   // Handle edit estimate
   const handleEditEstimate = (estimate) => {
     // Only allow editing estimates that haven't been moved to orders or canceled
-    if (estimate.movedToOrders || estimate.isCanceled) {
-      alert("Estimates that have been moved to orders or canceled cannot be edited.");
+    if (estimate.movedToOrders || estimate.isCanceled || estimate.inEscrow) {
+      alert("Estimates that have been moved to orders, escrow, or canceled cannot be edited.");
       return;
     }
     
@@ -422,122 +387,66 @@ const EstimatesPage = () => {
     }
   };  
 
-  // Handle moving estimate to orders - Updated to stay on estimates page
+  // UPDATED: Handle moving estimate to orders or escrow based on client type
   const handleMoveToOrders = async (estimate) => {
     try {
-      // Normalize the data to ensure proper structure
-      console.log("Moving estimate to orders, normalizing data first...");
-      const normalizedEstimate = normalizeDataForOrders(estimate);
+      // First, check if this is a B2B client
+      const isB2B = estimate.clientInfo?.clientType === "B2B" || 
+                    (estimate.clientInfo?.clientType || "").toUpperCase() === "B2B";
       
-      // Add the key that marks this as an order
-      normalizedEstimate.stage = "Not started yet";
-      normalizedEstimate.status = "In Progress";
-      
-      // Get the client ID
-      const clientId = normalizedEstimate.clientId;
-      
-      // Process loyalty for B2B clients
-      let loyaltyUpdate = null;
-      let tierChanged = false;
-      let oldTier = null;
-      
-      if (clientId) {
-        try {
-          // Check if this client is eligible for the loyalty program (B2B)
-          const isLoyaltyEligible = await isClientEligibleForLoyalty(clientId);
-          normalizedEstimate.isLoyaltyEligible = isLoyaltyEligible;
-          
-          if (isLoyaltyEligible) {
-            console.log("Processing B2B client loyalty...");
-            
-            // Get current tier info before updating
-            oldTier = await getClientCurrentTier(clientId);
-            
-            // Update client's order count and get updated tier info
-            loyaltyUpdate = await updateClientOrderCountAndTier(clientId);
-            tierChanged = loyaltyUpdate.tierChanged;
-            
-            if (loyaltyUpdate.success && loyaltyUpdate.tier) {
-              console.log("Applied loyalty tier:", loyaltyUpdate.tier.name);
-              
-              // Apply loyalty discount to calculations
-              const updatedCalculations = applyLoyaltyDiscount(
-                normalizedEstimate.calculations,
-                loyaltyUpdate.tier
-              );
-              
-              // Update the estimate with new calculations
-              normalizedEstimate.calculations = updatedCalculations;
-              
-              // Add loyalty information to the order
-              normalizedEstimate.loyaltyInfo = {
-                tierId: loyaltyUpdate.tier.dbId,
-                tierName: loyaltyUpdate.tier.name,
-                discount: loyaltyUpdate.tier.discount,
-                discountAmount: updatedCalculations.loyaltyDiscountAmount,
-                tierChanged: loyaltyUpdate.tierChanged,
-                clientOrderCount: loyaltyUpdate.orderCount
-              };
-              
-              // If tier changed, create a notification
-              if (loyaltyUpdate.tierChanged) {
-                // Generate tier change notification
-                const clientDoc = await getDoc(doc(db, "clients", clientId));
-                const clientName = clientDoc.exists() ? clientDoc.data().name : "Unknown Client";
-                
-                await createLoyaltyTierChangeNotification(
-                  clientId, 
-                  clientName, 
-                  oldTier, 
-                  loyaltyUpdate.tier
-                );
-              }
-            }
-          }
-        } catch (loyaltyError) {
-          // Log error but continue with order creation
-          console.error("Error processing loyalty discount:", loyaltyError);
-        }
-      }
-
-      // Add to orders collection
-      await addDoc(collection(db, "orders"), normalizedEstimate);
-
-      // Update the estimate
-      const estimateRef = doc(db, "estimates", estimate.id);
-      await updateDoc(estimateRef, { movedToOrders: true });
-
-      // Update local state
-      setAllEstimates(prev => 
-        prev.map(est => est.id === estimate.id ? { ...est, movedToOrders: true } : est)
-      );
-      
-      console.log("Successfully moved estimate to orders");
-      
-      // Show popup if tier changed, but don't redirect
-      if (tierChanged && loyaltyUpdate && loyaltyUpdate.tier) {
-        // Get client info for the popup
-        const clientDoc = await getDoc(doc(db, "clients", clientId));
-        const clientName = clientDoc.exists() ? clientDoc.data().name : "Unknown Client";
-        
-        // Set loyalty notification data for popup
-        setLoyaltyNotification({
-          clientName: clientName,
-          oldTier: oldTier?.name || "No Tier",
-          newTier: loyaltyUpdate.tier.name,
-          newDiscount: loyaltyUpdate.tier.discount
+      if (isB2B) {
+        // Move to escrow instead of orders
+        const estimateRef = doc(db, "estimates", estimate.id);
+        await updateDoc(estimateRef, { 
+          inEscrow: true,
+          movedToEscrow: true,
+          movedToEscrowAt: new Date().toISOString()
         });
+        
+        // Update local state
+        setAllEstimates(prev => 
+          prev.map(est => est.id === estimate.id ? { 
+            ...est, 
+            inEscrow: true,
+            movedToEscrow: true
+          } : est)
+        );
+        
+        alert("Estimate successfully moved to escrow for B2B approval!");
       } else {
+        // For direct clients, move directly to orders as before
+        // Normalize the data to ensure proper structure
+        console.log("Moving estimate to orders, normalizing data first...");
+        const normalizedEstimate = normalizeDataForOrders(estimate);
+        
+        // Add the key that marks this as an order
+        normalizedEstimate.stage = "Not started yet";
+        normalizedEstimate.status = "In Progress";
+        
+        // Add to orders collection
+        await addDoc(collection(db, "orders"), normalizedEstimate);
+
+        // Update the estimate
+        const estimateRef = doc(db, "estimates", estimate.id);
+        await updateDoc(estimateRef, { movedToOrders: true });
+
+        // Update local state
+        setAllEstimates(prev => 
+          prev.map(est => est.id === estimate.id ? { ...est, movedToOrders: true } : est)
+        );
+        
+        console.log("Successfully moved estimate to orders");
+        
         // Show success message
         alert("Estimate successfully moved to orders!");
       }
     } catch (error) {
-      console.error("Error moving estimate to orders:", error);
-      alert("Failed to move estimate to orders. See console for details.");
+      console.error("Error moving estimate:", error);
+      alert("Failed to process estimate. See console for details.");
     }
   };
 
-  // UPDATED: Handle moving multiple estimates to orders
+  // UPDATED: Handle moving multiple estimates to orders or escrow
   const handleMoveMultipleToOrders = async () => {
     try {
       setIsMovingMultiple(true);
@@ -547,156 +456,84 @@ const EstimatesPage = () => {
       Object.keys(selectedEstimates).forEach(estimateId => {
         if (selectedEstimates[estimateId]?.selected) {
           const estimate = allEstimates.find(est => est.id === estimateId);
-          if (estimate && !estimate.movedToOrders && !estimate.isCanceled) {
+          if (estimate && !estimate.movedToOrders && !estimate.isCanceled && !estimate.inEscrow) {
             estimatesToMove.push(estimate);
           }
         }
       });
       
       if (estimatesToMove.length === 0) {
-        alert("No valid estimates selected to move. Please select estimates that are not already moved or canceled.");
+        alert("No valid estimates selected to move. Please select estimates that are not already moved, canceled, or in escrow.");
         setIsMovingMultiple(false);
         return;
       }
       
-      // Create a counter for successful moves
-      let successCount = 0;
+      // Create counters for tracking operations
+      let directMoveCount = 0;
+      let escrowMoveCount = 0;
       
-      // Track final loyalty state by client
-      const finalLoyaltyState = {};
-      
-      // UPDATED: Process each estimate one by one, tracking final loyalty state
+      // Process each estimate one by one, handling B2B and direct clients differently
       for (const estimate of estimatesToMove) {
         try {
-          // Normalize the data to ensure proper structure
-          const normalizedEstimate = normalizeDataForOrders(estimate);
+          // Check if this is a B2B client
+          const isB2B = estimate.clientInfo?.clientType === "B2B" || 
+                        (estimate.clientInfo?.clientType || "").toUpperCase() === "B2B";
           
-          // Add the key that marks this as an order
-          normalizedEstimate.stage = "Not started yet";
-          normalizedEstimate.status = "In Progress";
-          
-          // Get the client ID
-          const clientId = normalizedEstimate.clientId;
-          
-          // Process loyalty for B2B clients
-          if (clientId) {
-            try {
-              // Check if this client is eligible for the loyalty program (B2B)
-              const isLoyaltyEligible = await isClientEligibleForLoyalty(clientId);
-              normalizedEstimate.isLoyaltyEligible = isLoyaltyEligible;
-              
-              if (isLoyaltyEligible) {
-                // Track initial tier info if we haven't seen this client yet
-                if (!finalLoyaltyState[clientId]) {
-                  const oldTier = await getClientCurrentTier(clientId);
-                  finalLoyaltyState[clientId] = {
-                    oldTier,
-                    updatesProcessed: 0,
-                    latestTier: null,
-                    clientName: estimate.clientInfo?.name || estimate.clientName || "Unknown Client"
-                  };
-                }
-                
-                // Update client's order count and get updated tier info
-                const loyaltyUpdate = await updateClientOrderCountAndTier(clientId);
-                
-                // Store the latest tier info after this update
-                if (loyaltyUpdate.success) {
-                  finalLoyaltyState[clientId].latestTier = loyaltyUpdate.tier;
-                  finalLoyaltyState[clientId].updatesProcessed++;
-                  
-                  // Apply loyalty discount to calculations
-                  if (loyaltyUpdate.tier) {
-                    const updatedCalculations = applyLoyaltyDiscount(
-                      normalizedEstimate.calculations,
-                      loyaltyUpdate.tier
-                    );
-                    
-                    // Update the estimate with new calculations
-                    normalizedEstimate.calculations = updatedCalculations;
-                    
-                    // Add loyalty information to the order
-                    normalizedEstimate.loyaltyInfo = {
-                      tierId: loyaltyUpdate.tier.dbId,
-                      tierName: loyaltyUpdate.tier.name,
-                      discount: loyaltyUpdate.tier.discount,
-                      discountAmount: updatedCalculations.loyaltyDiscountAmount,
-                      tierChanged: loyaltyUpdate.tierChanged,
-                      clientOrderCount: loyaltyUpdate.orderCount
-                    };
-                  }
-                }
-              }
-            } catch (loyaltyError) {
-              // Log error but continue with order creation
-              console.error("Error processing loyalty discount:", loyaltyError);
-            }
+          if (isB2B) {
+            // Move to escrow
+            const estimateRef = doc(db, "estimates", estimate.id);
+            await updateDoc(estimateRef, { 
+              inEscrow: true,
+              movedToEscrow: true,
+              movedToEscrowAt: new Date().toISOString()
+            });
+            
+            escrowMoveCount++;
+          } else {
+            // Move directly to orders
+            const normalizedEstimate = normalizeDataForOrders(estimate);
+            normalizedEstimate.stage = "Not started yet";
+            normalizedEstimate.status = "In Progress";
+            
+            await addDoc(collection(db, "orders"), normalizedEstimate);
+            
+            const estimateRef = doc(db, "estimates", estimate.id);
+            await updateDoc(estimateRef, { movedToOrders: true });
+            
+            directMoveCount++;
           }
-
-          // Add to orders collection
-          await addDoc(collection(db, "orders"), normalizedEstimate);
-
-          // Update the estimate
-          const estimateRef = doc(db, "estimates", estimate.id);
-          await updateDoc(estimateRef, { movedToOrders: true });
-          
-          // Count successful operations
-          successCount++;
         } catch (error) {
-          console.error(`Error moving estimate ${estimate.id} to orders:`, error);
+          console.error(`Error processing estimate ${estimate.id}:`, error);
         }
       }
       
       // Update all estimates in local state
       setAllEstimates(prev => 
         prev.map(est => {
-          if (selectedEstimates[est.id]?.selected && !est.movedToOrders && !est.isCanceled) {
-            return { ...est, movedToOrders: true };
+          if (selectedEstimates[est.id]?.selected && !est.movedToOrders && !est.isCanceled && !est.inEscrow) {
+            const isB2B = est.clientInfo?.clientType === "B2B" || 
+                          (est.clientInfo?.clientType || "").toUpperCase() === "B2B";
+            
+            if (isB2B) {
+              return { ...est, inEscrow: true, movedToEscrow: true };
+            } else {
+              return { ...est, movedToOrders: true };
+            }
           }
           return est;
         })
       );
       
       // Show success message
-      console.log(`Successfully moved ${successCount} out of ${estimatesToMove.length} estimates to orders.`);
-      
-      // Generate notifications for tier changes
-      const clientsWithTierChanges = Object.entries(finalLoyaltyState).filter(
-        ([_, data]) => data.oldTier?.dbId !== data.latestTier?.dbId
-      );
-      
-      // Show tier change notification for the first client with a changed tier
-      if (clientsWithTierChanges.length > 0) {
-        const [clientId, data] = clientsWithTierChanges[0];
-        
-        // Generate tier change notification (for UI display)
-        setLoyaltyNotification({
-          clientName: data.clientName,
-          oldTier: data.oldTier?.name || "No Tier",
-          newTier: data.latestTier.name,
-          newDiscount: data.latestTier.discount
-        });
-        
-        // Also create system notifications for all clients with tier changes
-        for (const [cId, cData] of clientsWithTierChanges) {
-          if (cData.oldTier?.dbId !== cData.latestTier?.dbId) {
-            await createLoyaltyTierChangeNotification(
-              cId,
-              cData.clientName,
-              cData.oldTier,
-              cData.latestTier
-            );
-          }
-        }
-      }
+      alert(`Successfully processed ${estimatesToMove.length} estimates:\n${directMoveCount} direct estimates moved to orders\n${escrowMoveCount} B2B estimates moved to escrow`);
       
       // Clear selections
       setSelectedEstimates({});
       setIsMultiSelectActive(false);
       
     } catch (error) {
-      console.error("Error during bulk move to orders:", error);
-      alert("There was an error moving the selected estimates to orders. Please check the console for details.");
+      console.error("Error during bulk processing:", error);
+      alert("There was an error processing the selected estimates. Please check the console for details.");
     } finally {
       setIsMovingMultiple(false);
     }
@@ -705,6 +542,12 @@ const EstimatesPage = () => {
   // Handle cancel estimate
   const handleCancelEstimate = async (estimate) => {
     try {
+      // Check if estimate is in escrow
+      if (estimate.inEscrow) {
+        alert("This estimate is currently in escrow and cannot be canceled. It must be rejected in the escrow system first.");
+        return;
+      }
+      
       const estimateRef = doc(db, "estimates", estimate.id);
       await updateDoc(estimateRef, { isCanceled: true });
       
@@ -718,48 +561,24 @@ const EstimatesPage = () => {
     }
   };
 
-  // Handle deleting an individual estimate and its related notifications
+  // Handle deleting an estimate
   const handleDeleteEstimate = async (estimate) => {
     try {
-      // First delete the estimate document
+      // Check if estimate is in escrow
+      if (estimate.inEscrow) {
+        alert("This estimate is currently in escrow and cannot be deleted. It must be rejected in the escrow system first.");
+        return;
+      }
+      
       const estimateRef = doc(db, "estimates", estimate.id);
       await deleteDoc(estimateRef);
       
-      // Then check if we need to clean up notifications
-      // For B2B clients with loyalty changes, we need to be careful
-      // Only delete loyalty tier change notifications if this was the only estimate
-      if (estimate.clientId) {
-        // Check if there are other estimates for this client
-        const remainingEstimates = allEstimates.filter(est => 
-          est.clientId === estimate.clientId && est.id !== estimate.id
-        );
-        
-        if (remainingEstimates.length === 0) {
-          // This was the last estimate for this client, safe to delete notifications
-          await deleteRelatedNotifications(estimate.id, estimate.clientId);
-        }
-      }
-      
-      // Update local state to remove the deleted estimate
+      // Update local state
       setAllEstimates(prev => prev.filter(est => est.id !== estimate.id));
-      
-      console.log("Successfully deleted estimate");
     } catch (error) {
       console.error("Error deleting estimate:", error);
-      alert("Failed to delete estimate. Please try again.");
+      alert("Failed to delete estimate.");
     }
-  };
-
-  // Dismiss loyalty notification without navigating away
-  const handleDismissLoyaltyNotification = () => {
-    // Clear the timer
-    if (redirectTimerId) {
-      clearInterval(redirectTimerId);
-      setRedirectTimerId(null);
-    }
-    
-    // Close notification without navigating away
-    setLoyaltyNotification(null);
   };
 
   // Handle preview job ticket for a specific client version
@@ -877,451 +696,470 @@ const EstimatesPage = () => {
           imgWidth,
           imgHeight
         );
-    }
+      }
     
-    // Save the PDF with customer-specific name
-    pdf.save(`Customer_Estimate_${previewData.clientInfo.name}_V${previewData.version}.pdf`);
-    
-    // Clean up
-    if (tempDiv && tempDiv.parentNode) {
-      root.unmount();
-      tempDiv.parentNode.removeChild(tempDiv);
-    }
-  } catch (error) {
-    console.error('Error generating customer estimate:', error);
-    setPdfError(error.message || 'Failed to generate estimate');
-  } finally {
-    setIsGeneratingPDF(false);
-  }
-};
-
-const handleDuplicateEstimate = async (estimate) => {
-  try {
-    // Create a new object from the original estimate
-    const duplicatedEstimate = {
-      ...estimate
-    };
-    
-    // Remove the id completely instead of setting it to undefined
-    delete duplicatedEstimate.id;
-    
-    // Update timestamps and reset flags
-    duplicatedEstimate.createdAt = new Date().toISOString();
-    duplicatedEstimate.updatedAt = new Date().toISOString();
-    duplicatedEstimate.movedToOrders = false;
-    duplicatedEstimate.isCanceled = false;
-    
-    // Append "- Copy" to project name for easy identification
-    duplicatedEstimate.projectName = `${estimate.projectName || "Unnamed Project"} - Copy`;
-
-    // Add the duplicated estimate to Firestore
-    const docRef = await addDoc(collection(db, "estimates"), duplicatedEstimate);
-    
-    // Get the new document with its ID
-    const newEstimate = {
-      ...duplicatedEstimate,
-      id: docRef.id
-    };
-    
-    // Update local state to include the new estimate
-    setAllEstimates(prev => [...prev, newEstimate]);
-    
-    // Show success message
-    alert("Estimate duplicated successfully!");
-    
-    return newEstimate;
-  } catch (error) {
-    console.error("Error duplicating estimate:", error);
-    throw error; // Rethrow to be caught in the EstimateCard component
-  }
-};
-
-// Calculate active and inactive client counts
-const clientCounts = React.useMemo(() => {
-  let activeCount = 0;
-  let inactiveCount = 0;
-  
-  Object.values(clientGroups).forEach(client => {
-    if (client.isActive !== false) {
-      activeCount++;
-    } else {
-      inactiveCount++;
-    }
-  });
-  
-  return { activeCount, inactiveCount };
-}, [clientGroups]);
-
-return (
-  <div className="p-4 max-w-screen-xl mx-auto">
-    {/* Page Header */}
-    <div className="mb-6">
-      <h1 className="text-2xl font-bold text-gray-900">
-        {isB2BClient ? "Your Estimates" : "Estimates Management"}
-      </h1>
-      <p className="text-gray-600 mt-1">
-        {isB2BClient 
-          ? "View and manage your estimate requests" 
-          : "Track, update, and convert estimates into orders"}
-      </p>
-    </div>
-
-    {/* Filters Section */}
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div className="relative w-full md:w-64">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
-                d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Search estimates..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-          />
-        </div>
-        
-        <div className="flex flex-wrap gap-3 w-full md:w-auto">
-          <select
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
-          >
-            <option value="">All Status</option>
-            <option value="Pending">Pending</option>
-            <option value="Moved">Moved to Orders</option>
-            <option value="Cancelled">Cancelled</option>
-          </select>
-          
-          {/* Only show the inactive clients toggle for admin/staff */}
-          {(userRole === "admin" || userRole === "staff") && (
-            <div className="flex items-center">
-              <input
-                type="checkbox"
-                id="showInactiveClients"
-                checked={showInactiveClients}
-                onChange={(e) => setShowInactiveClients(e.target.checked)}
-                className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
-              />
-              <label htmlFor="showInactiveClients" className="ml-2 text-sm text-gray-700">
-                Show Inactive Clients
-              </label>
-            </div>
-          )}
-        </div>
-      </div>
+      // Save the PDF with customer-specific name
+      pdf.save(`Customer_Estimate_${previewData.clientInfo.name}_V${previewData.version}.pdf`);
       
-      {/* Client Status Summary - Only for admin/staff */}
-      {(userRole === "admin" || userRole === "staff") && (
-        <div className="flex gap-2 mt-4">
-          <div className="bg-green-50 border border-green-100 rounded-md px-3 py-1.5 text-xs font-medium text-green-800">
-            {clientCounts.activeCount} Active Client{clientCounts.activeCount !== 1 ? 's' : ''}
+      // Clean up
+      if (tempDiv && tempDiv.parentNode) {
+        root.unmount();
+        tempDiv.parentNode.removeChild(tempDiv);
+      }
+    } catch (error) {
+      console.error('Error generating customer estimate:', error);
+      setPdfError(error.message || 'Failed to generate estimate');
+    } finally {
+      setIsGeneratingPDF(false);
+    }
+  };
+
+  const handleDuplicateEstimate = async (estimate) => {
+    try {
+      // Create a new object from the original estimate
+      const duplicatedEstimate = {
+        ...estimate
+      };
+      
+      // Remove the id completely instead of setting it to undefined
+      delete duplicatedEstimate.id;
+      
+      // Update timestamps and reset flags
+      duplicatedEstimate.createdAt = new Date().toISOString();
+      duplicatedEstimate.updatedAt = new Date().toISOString();
+      duplicatedEstimate.movedToOrders = false;
+      duplicatedEstimate.isCanceled = false;
+      duplicatedEstimate.inEscrow = false;
+      duplicatedEstimate.movedToEscrow = false;
+      
+      // Append "- Copy" to project name for easy identification
+      duplicatedEstimate.projectName = `${estimate.projectName || "Unnamed Project"} - Copy`;
+
+      // Add the duplicated estimate to Firestore
+      const docRef = await addDoc(collection(db, "estimates"), duplicatedEstimate);
+      
+      // Get the new document with its ID
+      const newEstimate = {
+        ...duplicatedEstimate,
+        id: docRef.id
+      };
+      
+      // Update local state to include the new estimate
+      setAllEstimates(prev => [...prev, newEstimate]);
+      
+      // Show success message
+      alert("Estimate duplicated successfully!");
+      
+      return newEstimate;
+    } catch (error) {
+      console.error("Error duplicating estimate:", error);
+      throw error; // Rethrow to be caught in the EstimateCard component
+    }
+  };
+
+  // Calculate active and inactive client counts
+  const clientCounts = React.useMemo(() => {
+    let activeCount = 0;
+    let inactiveCount = 0;
+    
+    Object.values(clientGroups).forEach(client => {
+      if (client.isActive !== false) {
+        activeCount++;
+      } else {
+        inactiveCount++;
+      }
+    });
+    
+    return { activeCount, inactiveCount };
+  }, [clientGroups]);
+
+  // Calculate counts for different estimate states
+  const estimateCounts = React.useMemo(() => {
+    let pendingCount = 0;
+    let movedCount = 0;
+    let canceledCount = 0;
+    let inEscrowCount = 0;
+    
+    allEstimates.forEach(estimate => {
+      if (estimate.movedToOrders) {
+        movedCount++;
+      } else if (estimate.isCanceled) {
+        canceledCount++;
+      } else if (estimate.inEscrow) {
+        inEscrowCount++;
+      } else {
+        pendingCount++;
+      }
+    });
+    
+    return { pendingCount, movedCount, canceledCount, inEscrowCount };
+  }, [allEstimates]);
+
+  return (
+    <div className="p-4 max-w-screen-xl mx-auto">
+      {/* Page Header */}
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold text-gray-900">
+          {isB2BClient ? "Your Estimates" : "Estimates Management"}
+        </h1>
+        <p className="text-gray-600 mt-1">
+          {isB2BClient 
+            ? "View and manage your estimate requests" 
+            : "Track, update, and convert estimates into orders"}
+        </p>
+      </div>
+
+      {/* Stats Cards */}
+      {!isB2BClient && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-xs font-medium text-gray-500 mb-1">Pending Estimates</h3>
+            <p className="text-xl font-bold text-amber-600">{estimateCounts.pendingCount}</p>
+            <p className="text-xs text-gray-500 mt-1">Ready to process</p>
           </div>
-          {showInactiveClients && clientCounts.inactiveCount > 0 && (
-            <div className="bg-red-50 border border-red-100 rounded-md px-3 py-1.5 text-xs font-medium text-red-800">
-              {clientCounts.inactiveCount} Inactive Client{clientCounts.inactiveCount !== 1 ? 's' : ''}
-            </div>
-          )}
+          
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-xs font-medium text-gray-500 mb-1">In Escrow</h3>
+            <p className="text-xl font-bold text-purple-600">{estimateCounts.inEscrowCount}</p>
+            <p className="text-xs text-gray-500 mt-1">Waiting for B2B approval</p>
+          </div>
+
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-xs font-medium text-gray-500 mb-1">Moved to Orders</h3>
+            <p className="text-xl font-bold text-green-600">{estimateCounts.movedCount}</p>
+            <p className="text-xs text-gray-500 mt-1">In production workflow</p>
+          </div>
+
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-xs font-medium text-gray-500 mb-1">Canceled</h3>
+            <p className="text-xl font-bold text-red-600">{estimateCounts.canceledCount}</p>
+            <p className="text-xs text-gray-500 mt-1">No longer active</p>
+          </div>
+          
+          <div className="bg-white p-3 rounded-lg shadow-sm border border-gray-200">
+            <h3 className="text-xs font-medium text-gray-500 mb-1">Total Clients</h3>
+            <p className="text-xl font-bold text-gray-800">{clientCounts.activeCount + clientCounts.inactiveCount}</p>
+            <p className="text-xs text-gray-500 mt-1">{clientCounts.activeCount} active clients</p>
+          </div>
         </div>
       )}
-    </div>
 
-    {/* Loyalty Tier Upgrade Popup with Timer */}
-    {loyaltyNotification && (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border-l-4 border-red-500">
-          <div className="flex items-start mb-4">
-            <div className="flex-shrink-0 mr-3">
-              <svg className="h-8 w-8 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+      {/* Filters Section */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+          <div className="relative w-full md:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" 
+                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
-            <div>
-              <h3 className="text-lg font-bold text-gray-900">Loyalty Tier Upgraded!</h3>
-              <p className="mt-2 text-gray-700">
-                <span className="font-medium">{loyaltyNotification.clientName}</span> has been upgraded from 
-                <span className="font-medium"> {loyaltyNotification.oldTier}</span> to
-                <span className="font-medium"> {loyaltyNotification.newTier}</span>.
-              </p>
-              <p className="text-red-600 font-medium">
-                New discount: {loyaltyNotification.newDiscount}%
-              </p>
-            </div>
+            <input
+              type="text"
+              placeholder="Search estimates..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
           </div>
-          <div className="flex justify-between items-center mt-4">
-            <div className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
-              <p className="text-sm text-gray-500">Notification will close in {redirectTimer} seconds...</p>
-            </div>
-            <button
-              onClick={handleDismissLoyaltyNotification}
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+          
+          <div className="flex flex-wrap gap-3 w-full md:w-auto">
+            <select
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
             >
-              Dismiss
-            </button>
+              <option value="">All Status</option>
+              <option value="Pending">Pending</option>
+              <option value="InEscrow">In Escrow</option>
+              <option value="Moved">Moved to Orders</option>
+              <option value="Cancelled">Cancelled</option>
+            </select>
+            
+            {/* Only show the inactive clients toggle for admin/staff */}
+            {(userRole === "admin" || userRole === "staff") && (
+              <div className="flex items-center">
+                <input
+                  type="checkbox"
+                  id="showInactiveClients"
+                  checked={showInactiveClients}
+                  onChange={(e) => setShowInactiveClients(e.target.checked)}
+                  className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
+                />
+                <label htmlFor="showInactiveClients" className="ml-2 text-sm text-gray-700">
+                  Show Inactive Clients
+                </label>
+              </div>
+            )}
           </div>
         </div>
-      </div>
-    )}
-
-    {/* Main Content Area */}
-    {isLoading ? (
-      <div className="flex flex-col items-center justify-center h-64">
-        <div className="animate-spin h-10 w-10 border-4 border-red-500 rounded-full border-t-transparent mb-4"></div>
-        <p className="text-gray-500">Loading estimates...</p>
-      </div>
-    ) : Object.keys(clientGroups).length === 0 ? (
-      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-        <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <h2 className="text-lg font-medium text-gray-700 mt-4 mb-2">No Estimates Found</h2>
-        <p className="text-sm text-gray-500 max-w-md mx-auto">
-          {isB2BClient 
-            ? "You don't have any estimates yet. Contact us to request a new estimate." 
-            : showInactiveClients
-              ? "No estimates match your current search criteria."
-              : "No estimates for active clients match your search criteria."}
-        </p>
-        {(searchQuery || filterStatus || (!isB2BClient && !showInactiveClients)) && (
-          <div className="flex flex-wrap justify-center gap-3 mt-4">
-            {(searchQuery || filterStatus) && (
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setFilterStatus("");
-                }}
-                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md flex items-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                Clear Filters
-              </button>
-            )}
-            {!isB2BClient && !showInactiveClients && (
-              <button
-                onClick={() => setShowInactiveClients(true)}
-                className="px-3 py-1.5 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-md flex items-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                  <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                </svg>
-                Show Inactive Clients
-              </button>
+        
+        {/* Client Status Summary - Only for admin/staff */}
+        {(userRole === "admin" || userRole === "staff") && (
+          <div className="flex gap-2 mt-4">
+            <div className="bg-green-50 border border-green-100 rounded-md px-3 py-1.5 text-xs font-medium text-green-800">
+              {clientCounts.activeCount} Active Client{clientCounts.activeCount !== 1 ? 's' : ''}
+            </div>
+            {showInactiveClients && clientCounts.inactiveCount > 0 && (
+              <div className="bg-red-50 border border-red-100 rounded-md px-3 py-1.5 text-xs font-medium text-red-800">
+                {clientCounts.inactiveCount} Inactive Client{clientCounts.inactiveCount !== 1 ? 's' : ''}
+              </div>
             )}
           </div>
         )}
       </div>
-    ) : (
-      <div className="space-y-4">
-        {/* Client Groups */}
-        {Object.values(clientGroups).map((client) => (
-          <div key={client.id} className={`bg-white rounded-lg shadow-sm border ${!client.isActive ? 'border-red-300 border-l-4' : 'border-gray-200'} overflow-hidden`}>
-            {/* Client Header */}
-            <div 
-              className={`px-4 py-3 ${expandedClientId === client.id ? 'bg-gray-50' : ''} cursor-pointer transition-colors hover:bg-gray-50 flex justify-between items-center`}
-              onClick={() => toggleClient(client.id)}
-            >
-              <div className="flex items-center">
-                <h2 className="text-base font-medium text-gray-800">{client.name}</h2>
-                {!client.isActive && (
-                  <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
-                    Inactive
-                  </span>
-                )}
-                <div className="flex items-center ml-3 text-xs text-gray-500">
-                  <span className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                      <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+
+      {/* Main Content Area */}
+      {isLoading ? (
+        <div className="flex flex-col items-center justify-center h-64">
+          <div className="animate-spin h-10 w-10 border-4 border-red-500 rounded-full border-t-transparent mb-4"></div>
+          <p className="text-gray-500">Loading estimates...</p>
+        </div>
+      ) : Object.keys(clientGroups).length === 0 ? (
+        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+          <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          <h2 className="text-lg font-medium text-gray-700 mt-4 mb-2">No Estimates Found</h2>
+          <p className="text-sm text-gray-500 max-w-md mx-auto">
+            {isB2BClient 
+              ? "You don't have any estimates yet. Contact us to request a new estimate." 
+              : showInactiveClients
+                ? "No estimates match your current search criteria."
+                : "No estimates for active clients match your search criteria."}
+          </p>
+          {(searchQuery || filterStatus || (!isB2BClient && !showInactiveClients)) && (
+            <div className="flex flex-wrap justify-center gap-3 mt-4">
+              {(searchQuery || filterStatus) && (
+                <button
+                  onClick={() => {
+                    setSearchQuery("");
+                    setFilterStatus("");
+                  }}
+                  className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                  </svg>
+                  Clear Filters
+                </button>
+              )}
+              {!isB2BClient && !showInactiveClients && (
+                <button
+                  onClick={() => setShowInactiveClients(true)}
+                  className="px-3 py-1.5 text-sm bg-red-50 hover:bg-red-100 text-red-600 rounded-md flex items-center"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                    <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                    <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                  </svg>
+                  Show Inactive Clients
+                </button>
+              )}
+            </div>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {/* Client Groups */}
+          {Object.values(clientGroups).map((client) => (
+            <div key={client.id} className={`bg-white rounded-lg shadow-sm border ${!client.isActive ? 'border-red-300 border-l-4' : 'border-gray-200'} overflow-hidden`}>
+              {/* Client Header */}
+              <div 
+                className={`px-4 py-3 ${expandedClientId === client.id ? 'bg-gray-50' : ''} cursor-pointer transition-colors hover:bg-gray-50 flex justify-between items-center`}
+                onClick={() => toggleClient(client.id)}
+              >
+                <div className="flex items-center">
+                  <h2 className="text-base font-medium text-gray-800">{client.name}</h2>
+                  {!client.isActive && (
+                    <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
+                      Inactive
+                    </span>
+                  )}
+                  <div className="flex items-center ml-3 text-xs text-gray-500">
+                    <span className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                      </svg>
+                      {client.totalEstimates} Estimate{client.totalEstimates !== 1 ? 's' : ''}
+                    </span>
+                    <span className="mx-2">•</span>
+                    <span className="flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path d="M13 7H7v6h6V7z" />
+                        <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
+                      </svg>
+                      {client.versions.size} Version{client.versions.size !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center">
+                  {expandedClientId === client.id ? (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
                     </svg>
-                    {client.totalEstimates} Estimate{client.totalEstimates !== 1 ? 's' : ''}
-                  </span>
-                  <span className="mx-2">•</span>
-                  <span className="flex items-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M13 7H7v6h6V7z" />
-                      <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
+                  ) : (
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
                     </svg>
-                    {client.versions.size} Version{client.versions.size !== 1 ? 's' : ''}
-                  </span>
+                  )}
                 </div>
               </div>
-              <div className="flex items-center">
-                {expandedClientId === client.id ? (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                  </svg>
-                ) : (
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-                    <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-              </div>
-            </div>
-            
-            {/* Expanded Content */}
-            {expandedClientId === client.id && (
-              <div className="border-t border-gray-200 bg-white">
-                {/* NEW: Toggle to show all versions at once */}
-                {client.versions.size > 1 && (
-                  <div className="flex justify-end px-4 pt-2">
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        toggleShowAllVersions();
-                      }}
-                      className={`px-3 py-1 text-xs rounded-full flex items-center ${
-                        showAllVersions 
-                          ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        {showAllVersions ? (
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                        ) : (
-                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                        )}
-                      </svg>
-                      {showAllVersions ? 'Hide Versions' : 'Show All Versions'}
-                    </button>
-                  </div>
-                )}
-                
-                {/* Version Selection Tabs - Only show if not in "Show All Versions" mode */}
-                {!showAllVersions && (
-                  <div className="flex border-b border-gray-200 overflow-x-auto">
-                    {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
+              
+              {/* Expanded Content */}
+              {expandedClientId === client.id && (
+                <div className="border-t border-gray-200 bg-white">
+                  {/* NEW: Toggle to show all versions at once */}
+                  {client.versions.size > 1 && (
+                    <div className="flex justify-end px-4 pt-2">
                       <button
-                        key={versionId}
-                        onClick={() => selectVersion(client.id, versionId)}
-                        className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
-                          selectedVersions[client.id] === versionId
-                            ? 'border-b-2 border-red-500 text-red-600'
-                            : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleShowAllVersions();
+                        }}
+                        className={`px-3 py-1 text-xs rounded-full flex items-center ${
+                          showAllVersions 
+                            ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                         }`}
                       >
-                        Version {versionId} 
-                        <span className="ml-1 text-xs text-gray-500">({versionData.count})</span>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                          {showAllVersions ? (
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                          ) : (
+                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                          )}
+                        </svg>
+                        {showAllVersions ? 'Hide Versions' : 'Show All Versions'}
                       </button>
-                    ))}
-                  </div>
-                )}
-
-                {/* If not showing all versions, show the selected version */}
-                {!showAllVersions && selectedVersions[client.id] && (
-                  <div className="p-4">
-                    <div className="flex justify-between items-center mb-4">
-                      <div className="flex items-center gap-2">
-                        <h3 className="font-medium text-gray-800">
-                          Version {selectedVersions[client.id]} Estimates
-                        </h3>
-                        
-                        {/* Multi-select toggle */}
+                    </div>
+                  )}
+                  
+                  {/* Version Selection Tabs - Only show if not in "Show All Versions" mode */}
+                  {!showAllVersions && (
+                    <div className="flex border-b border-gray-200 overflow-x-auto">
+                      {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            toggleMultiSelect();
-                          }}
-                          className={`px-2 py-1 rounded text-xs flex items-center ${
-                            isMultiSelectActive 
-                              ? 'bg-red-500 text-white' 
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                          key={versionId}
+                          onClick={() => selectVersion(client.id, versionId)}
+                          className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
+                            selectedVersions[client.id] === versionId
+                              ? 'border-b-2 border-red-500 text-red-600'
+                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
                           }`}
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                            {isMultiSelectActive ? (
-                              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                            ) : (
-                              <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                            )}
-                          </svg>
-                          {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
+                          Version {versionId} 
+                          <span className="ml-1 text-xs text-gray-500">({versionData.count})</span>
                         </button>
-                        
-                        {/* Select All button (visible in multi-select mode) */}
-                        {isMultiSelectActive && (
+                      ))}
+                    </div>
+                  )}
+
+                  {/* If not showing all versions, show the selected version */}
+                  {!showAllVersions && selectedVersions[client.id] && (
+                    <div className="p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium text-gray-800">
+                            Version {selectedVersions[client.id]} Estimates
+                          </h3>
+                          
+                          {/* Multi-select toggle */}
                           <button
                             onClick={(e) => {
                               e.stopPropagation();
-                              selectAllCurrentVersionEstimates(client.id, selectedVersions[client.id]);
+                              toggleMultiSelect();
                             }}
-                            className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
+                            className={`px-2 py-1 rounded text-xs flex items-center ${
+                              isMultiSelectActive 
+                                ? 'bg-red-500 text-white' 
+                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                            }`}
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                              <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                              <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
+                              {isMultiSelectActive ? (
+                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                              ) : (
+                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                              )}
                             </svg>
-                            Select All
+                            {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
                           </button>
-                        )}
+                          
+                          {/* Select All button (visible in multi-select mode) */}
+                          {isMultiSelectActive && (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                selectAllCurrentVersionEstimates(client.id, selectedVersions[client.id]);
+                              }}
+                              className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
+                              </svg>
+                              Select All
+                            </button>
+                          )}
+                        </div>
+                        
+                        <div className="flex gap-2">
+                          {/* Bulk Move Action Button */}
+                          {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
+                            <button
+                              onClick={handleMoveMultipleToOrders}
+                              disabled={isMovingMultiple}
+                              className={`px-3 py-1.5 rounded text-sm ${
+                                isMovingMultiple
+                                ? 'bg-blue-300 text-white cursor-wait' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                              } flex items-center gap-1.5`}
+                            >
+                              {isMovingMultiple ? (
+                                <>
+                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
+                                    <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
+                                  </svg>
+                                  Process {getSelectedEstimatesCount()}
+                                </>
+                              )}
+                            </button>
+                          )}
+                          
+                          <button
+                            onClick={() => handlePreviewJobTicket(client.id, selectedVersions[client.id])}
+                            className="px-3 py-1.5 rounded text-sm bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1.5"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
+                              <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
+                            </svg>
+                            Preview Customer Estimate
+                          </button>
+                        </div>
                       </div>
                       
-                      <div className="flex gap-2">
-                        {/* Bulk Move Action Button */}
-                        {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
-                          <button
-                            onClick={handleMoveMultipleToOrders}
-                            disabled={isMovingMultiple}
-                            className={`px-3 py-1.5 rounded text-sm ${
-                              isMovingMultiple
-                              ? 'bg-blue-300 text-white cursor-wait' 
-                              : 'bg-blue-500 text-white hover:bg-blue-600'
-                            } flex items-center gap-1.5`}
-                          >
-                            {isMovingMultiple ? (
-                              <>
-                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Processing...
-                              </>
-                            ) : (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                  <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
-                                  <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
-                                </svg>
-                                Move {getSelectedEstimatesCount()} to Orders
-                              </>
-                            )}
-                          </button>
-                        )}
-                        
-                        <button
-                          onClick={() => handlePreviewJobTicket(client.id, selectedVersions[client.id])}
-                          className="px-3 py-1.5 rounded text-sm bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1.5"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
-                            <path fillRule="evenodd" d="M.458 10C1.732 5.943 5.522 3 10 3s8.268 2.943 9.542 7c-1.274 4.057-5.064 7-9.542 7S1.732 14.057.458 10zM14 10a4 4 0 11-8 0 4 4 0 018 0z" clipRule="evenodd" />
-                          </svg>
-                          Preview Customer Estimate
-                        </button>
-                      </div>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
-                      <EstimateCard
-                        key={estimate.id}
-                        estimate={estimate}
-                        estimateNumber={index + 1}
-                        onViewDetails={() => handleViewEstimate(estimate)}
-                        onMoveToOrders={() => handleMoveToOrders(estimate)}
-                        onCancelEstimate={() => handleCancelEstimate(estimate)}
-                        onDeleteEstimate={() => handleDeleteEstimate(estimate)}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                      {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
+                        <EstimateCard
+                          key={estimate.id}
+                          estimate={estimate}
+                          estimateNumber={index + 1}
+                          onViewDetails={() => handleViewEstimate(estimate)}
+                          onMoveToOrders={() => handleMoveToOrders(estimate)}
+                          onCancelEstimate={() => handleCancelEstimate(estimate)}
+                          onDeleteEstimate={() => handleDeleteEstimate(estimate)}
                           onEditEstimate={() => handleEditEstimate(estimate)}
                           onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
                           isAdmin={userRole === "admin"}
@@ -1396,7 +1234,7 @@ return (
                                   <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
                                   <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
                                 </svg>
-                                Move {getSelectedEstimatesCount()} to Orders
+                                Process {getSelectedEstimatesCount()}
                               </>
                             )}
                           </button>
@@ -1429,7 +1267,7 @@ return (
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                                     <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
-                                  </svg>
+                                    </svg>
                                   Select All
                                 </button>
                               )}

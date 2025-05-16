@@ -6,6 +6,7 @@ export const ROUTE_ACCESS = {
   '/invoices': ['admin', 'staff'],
   '/clients': ['admin', 'staff'],
   '/estimates': ['admin', 'staff', 'b2b'],
+  '/escrow': ['admin', 'staff'], // NEW: Added escrow route access
   '/material-stock/paper-db': ['admin', 'staff'],
   '/material-stock/material-db': ['admin', 'staff'],
   '/material-stock/dies-db': ['admin', 'staff'],
@@ -21,6 +22,7 @@ export const MENU_ACCESS = {
   materials: ['admin', 'staff'],
   clients: ['admin', 'staff'],
   estimates: ['admin', 'staff', 'b2b'],
+  escrow: ['admin', 'staff'], // NEW: Added escrow menu access
   orders: ['admin', 'staff', 'production', 'b2b'],
   invoices: ['admin', 'staff'],
   transactions: ['admin'],
