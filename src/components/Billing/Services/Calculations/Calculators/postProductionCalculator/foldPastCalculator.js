@@ -1,4 +1,4 @@
-import { fetchStandardRate } from "../../../../../../utils/dbFetchUtils";
+import { fetchStandardRate, fetchMarginByJobType } from "../../../../../../utils/dbFetchUtils";
 import { fetchMaterialDetails } from "../../../../../../utils/fetchDataUtils";
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
@@ -36,6 +36,7 @@ export const calculateFoldAndPasteCosts = async (state) => {
     const { foldAndPaste, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
+    const jobType = orderAndPaper.jobType || "CARD";
 
     // Check if fold and paste is used
     if (!foldAndPaste || !foldAndPaste.isFoldAndPasteUsed) {
@@ -71,10 +72,10 @@ export const calculateFoldAndPasteCosts = async (state) => {
     const fragsPerDie = dieDetails.frags ? parseInt(dieDetails.frags) || 1 : 1;
     console.log("Frags per die:", fragsPerDie);
 
-    // 2. Fetch margin value from overheads
-    const { fetchOverheadValue } = require('../../../../../../utils/dbFetchUtils');
-    const marginValue = await fetchOverheadValue('MARGIN');
-    const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
+    // 2. Fetch margin value from standard rates based on job type
+    const marginRate = await fetchMarginByJobType(jobType);
+    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2;
+    console.log("MARGIN : ",margin)
 
     // 3. Calculate plate area for DST material
     let plateArea = 0;
@@ -144,7 +145,8 @@ export const calculateFoldAndPasteCosts = async (state) => {
       plateArea: plateArea.toFixed(2),
       dstMaterial: foldAndPaste.dstMaterial,
       dstType: foldAndPaste.dstType,
-      materialCostPerUnit: materialCostPerUnit.toFixed(2)
+      materialCostPerUnit: materialCostPerUnit.toFixed(2),
+      marginValue: margin.toFixed(2) // Added for debugging
     };
   } catch (error) {
     console.error("Error calculating fold and paste costs:", error);

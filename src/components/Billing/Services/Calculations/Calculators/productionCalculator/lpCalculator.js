@@ -1,5 +1,5 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchOverheadValue } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
 
 /**
  * Calculates letter press (LP) costs based on form state
@@ -10,6 +10,7 @@ export const calculateLPCosts = async (state) => {
   try {
     const { lpDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const jobType = orderAndPaper.jobType || "CARD";
 
     // Check if LP is used
     if (!lpDetails.isLPUsed || !lpDetails.colorDetails?.length) {
@@ -40,9 +41,10 @@ export const calculateLPCosts = async (state) => {
       };
     }
 
-    // 1. Fetch margin value from overheads
-    const marginValue = await fetchOverheadValue('MARGIN');
-    const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
+    // 1. Fetch margin value from standard rates based on job type
+    const marginRate = await fetchMarginByJobType(jobType);
+    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
+    console.log("MARGIN : ",margin)
     
     // Initialize cost variables
     let totalPlateCost = 0;
@@ -190,7 +192,8 @@ export const calculateLPCosts = async (state) => {
       totalMkgCost: totalMkgCost.toFixed(2),
       totalDstMaterialCost: totalDstMaterialCost.toFixed(2), // Include DST material cost
       totalColorsCost: totalColorsCost.toFixed(2),
-      colorsCount: lpDetails.colorDetails.length
+      colorsCount: lpDetails.colorDetails.length,
+      marginValue: margin.toFixed(2) // Added for debugging
     };
   } catch (error) {
     console.error("Error calculating LP costs:", error);

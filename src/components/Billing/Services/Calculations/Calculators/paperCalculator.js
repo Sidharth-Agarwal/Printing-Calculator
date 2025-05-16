@@ -1,5 +1,5 @@
 import { fetchPaperDetails } from '../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchOverheadValue } from '../../../../../utils/dbFetchUtils';
+import { fetchStandardRate, fetchMarginByJobType } from '../../../../../utils/dbFetchUtils';
 import { db } from '../../../../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -91,9 +91,10 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     const gilCutRate = await fetchStandardRate('GIL CUT', 'PER SHEET');
     const gilCutCostPerSheet = gilCutRate ? parseFloat(gilCutRate.finalRate) : 0.25; // Default if not found
 
-    // 3. Fetch margin value from overheads
-    const marginValue = await fetchOverheadValue('MARGIN');
-    const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
+    // 3. Fetch margin value from standard rates based on job type
+    const marginRate = await fetchMarginByJobType(jobType || "CARD");
+    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
+    console.log("MARGIN : ",margin)
 
     // 4. Get dimensions based on job type
     let dieSize = {};
@@ -161,7 +162,8 @@ export const calculatePaperAndCuttingCosts = async (state) => {
       totalFragsPerSheet, // Pass this for notebook calculator
       paperRate: parseFloat(paperDetails.finalRate).toFixed(2),
       gilCutRate: gilCutCostPerSheet.toFixed(2),
-      fragsPerDie
+      fragsPerDie,
+      marginValue: margin.toFixed(2) // Added for debugging
     };
   } catch (error) {
     console.error("Error calculating paper and cutting costs:", error);

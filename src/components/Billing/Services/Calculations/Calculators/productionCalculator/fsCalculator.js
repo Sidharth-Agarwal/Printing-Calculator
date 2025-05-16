@@ -1,5 +1,5 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchOverheadValue } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
 
@@ -36,6 +36,7 @@ export const calculateFSCosts = async (state) => {
     const { fsDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
+    const jobType = orderAndPaper.jobType || "CARD";
 
     // Check if FS is used
     if (!fsDetails.isFSUsed || !fsDetails.foilDetails?.length) {
@@ -75,9 +76,10 @@ export const calculateFSCosts = async (state) => {
       }
     }
 
-    // 1. Fetch margin value from overheads
-    const marginValue = await fetchOverheadValue('MARGIN');
-    const margin = marginValue ? parseFloat(marginValue.value) : 2; // Default margin if not found
+    // 1. Fetch margin value from standard rates based on job type
+    const marginRate = await fetchMarginByJobType(jobType);
+    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
+    console.log("MARGIN : ",margin)
     
     // 1a. Fetch freight cost for blocks from standard rates
     const freightDetails = await fetchStandardRate("FREIGHT", "BLOCK");
@@ -197,7 +199,8 @@ export const calculateFSCosts = async (state) => {
       totalMRCost: totalMRCost.toFixed(2),
       totalFreightCost: totalFreightCost.toFixed(2),
       fragsPerDie: fragsPerDie,
-      foilsCount: fsDetails.foilDetails.length
+      foilsCount: fsDetails.foilDetails.length,
+      marginValue: margin.toFixed(2) // Added for debugging
     };
   } catch (error) {
     console.error("Error calculating FS costs:", error);
