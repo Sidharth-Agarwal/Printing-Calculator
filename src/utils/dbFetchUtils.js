@@ -98,3 +98,85 @@ export const fetchMarkupValue = async (type = "STANDARD") => {
     return null;
   }
 };
+
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../firebaseConfig";
+
+/**
+ * Fetches a GST/HSN value from the database
+ * @param {string} group - The group (e.g. "GST", "HSN")
+ * @param {string} type - The type (e.g. "PRINTED MATERIAL", "BOOK")
+ * @returns {Promise<Object|null>} - The GST/HSN object or null if not found
+ */
+export const fetchGstHsn = async (group, type) => {
+  try {
+    const gstHsnCollection = collection(db, "gst_and_hsn");
+    const concatenatedValue = `${group} ${type}`.trim();
+    
+    // Try to fetch by concatenated value first (most reliable)
+    let q = query(gstHsnCollection, where("concatenate", "==", concatenatedValue));
+    let querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    // If not found, try with separate group and type
+    q = query(
+      gstHsnCollection, 
+      where("group", "==", group), 
+      where("type", "==", type)
+    );
+    querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    console.warn(`GST/HSN record not found for group: ${group}, type: ${type}`);
+    return null;
+  } catch (error) {
+    console.error("Error fetching GST/HSN record:", error);
+    return null;
+  }
+};
+
+/**
+ * Fetches all GST values from the database
+ * @returns {Promise<Array>} - Array of GST objects
+ */
+export const fetchAllGstHsn = async () => {
+  try {
+    const gstHsnCollection = collection(db, "gst_and_hsn");
+    const querySnapshot = await getDocs(gstHsnCollection);
+    
+    return querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error("Error fetching all GST/HSN records:", error);
+    return [];
+  }
+};
+
+/**
+ * Fetches GST/HSN records by group
+ * @param {string} group - The group to filter by (e.g. "GST", "HSN")
+ * @returns {Promise<Array>} - Array of matching GST/HSN objects
+ */
+export const fetchGstHsnByGroup = async (group) => {
+  try {
+    const gstHsnCollection = collection(db, "gst_and_hsn");
+    const q = query(gstHsnCollection, where("group", "==", group));
+    const querySnapshot = await getDocs(q);
+    
+    return querySnapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data()
+    }));
+  } catch (error) {
+    console.error(`Error fetching GST/HSN records for group ${group}:`, error);
+    return [];
+  }
+};

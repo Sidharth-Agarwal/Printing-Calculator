@@ -20,6 +20,7 @@ export const calculateLPCosts = async (state) => {
         lpInkCostPerCard: "0.00",
         lpMRCostPerCard: "0.00",
         lpMkgCostPerCard: "0.00",
+        lpDstMaterialCostPerCard: "0.00", // Add DST material cost field
         lpTotalColorsCostPerCard: "0.00"
       };
     }
@@ -34,6 +35,7 @@ export const calculateLPCosts = async (state) => {
         lpInkCostPerCard: "0.00",
         lpMRCostPerCard: "0.00",
         lpMkgCostPerCard: "0.00",
+        lpDstMaterialCostPerCard: "0.00", // Add DST material cost field
         lpTotalColorsCostPerCard: "0.00"
       };
     }
@@ -48,6 +50,7 @@ export const calculateLPCosts = async (state) => {
     let totalInkCost = 0;
     let totalMRCost = 0;
     let totalMkgCost = 0;
+    let totalDstMaterialCost = 0; // Add DST material cost tracking
     let totalColorsCost = 0;
 
     // Process each color
@@ -73,10 +76,6 @@ export const calculateLPCosts = async (state) => {
         // Otherwise use the provided plate dimensions
         const providedLength = parseFloat(colorDetail.plateDimensions.length)
         const providedBreadth = parseFloat(colorDetail.plateDimensions.breadth)
-        console.log(providedLength)
-        console.log(providedLength + margin)
-        console.log(providedBreadth)
-        console.log(providedBreadth + margin)
         plateArea = (providedLength + margin) * (providedBreadth + margin);
       }
       
@@ -92,6 +91,18 @@ export const calculateLPCosts = async (state) => {
       // 3. Calculate plate cost
       const plateCost = plateArea * parseFloat(plateMaterialDetails.finalCostPerUnit || 0);
       totalPlateCost += plateCost;
+      
+      // 4. Fetch DST material details and calculate cost
+      if (colorDetail.dstMaterial) {
+        const dstMaterialDetails = await fetchMaterialDetails(colorDetail.dstMaterial);
+        if (dstMaterialDetails) {
+          // Calculate DST material cost based on plate area
+          const dstMaterialCost = plateArea * parseFloat(dstMaterialDetails.finalCostPerUnit || 0);
+          totalDstMaterialCost += dstMaterialCost;
+        } else {
+          console.warn(`Material details not found for DST material: ${colorDetail.dstMaterial}`);
+        }
+      }
       
       // 5. Fetch positive film material details
       const positiveFilmDetails = await fetchMaterialDetails("Positive Film");
@@ -149,6 +160,7 @@ export const calculateLPCosts = async (state) => {
     const lpInkCostPerCard = totalInkCost / totalCards;
     const lpMRCostPerCard = totalMRCost / totalCards;
     const lpMkgCostPerCard = totalMkgCost / totalCards;
+    const lpDstMaterialCostPerCard = totalDstMaterialCost / totalCards;
     const lpTotalColorsCostPerCard = totalColorsCost / totalCards;
     
     // Calculate total LP cost per card
@@ -157,7 +169,8 @@ export const calculateLPCosts = async (state) => {
       lpPositiveFilmCostPerCard + 
       lpInkCostPerCard + 
       lpMRCostPerCard + 
-      lpMkgCostPerCard;
+      lpMkgCostPerCard + 
+      lpDstMaterialCostPerCard; // Include DST material cost
     
     // Return all calculations with detailed breakdowns
     return {
@@ -167,6 +180,7 @@ export const calculateLPCosts = async (state) => {
       lpInkCostPerCard: lpInkCostPerCard.toFixed(2),
       lpMRCostPerCard: lpMRCostPerCard.toFixed(2),
       lpMkgCostPerCard: lpMkgCostPerCard.toFixed(2),
+      lpDstMaterialCostPerCard: lpDstMaterialCostPerCard.toFixed(2), // Include DST material cost
       lpTotalColorsCostPerCard: lpTotalColorsCostPerCard.toFixed(2),
       // Additional info for debugging
       totalPlateCost: totalPlateCost.toFixed(2),
@@ -174,6 +188,7 @@ export const calculateLPCosts = async (state) => {
       totalInkCost: totalInkCost.toFixed(2),
       totalMRCost: totalMRCost.toFixed(2),
       totalMkgCost: totalMkgCost.toFixed(2),
+      totalDstMaterialCost: totalDstMaterialCost.toFixed(2), // Include DST material cost
       totalColorsCost: totalColorsCost.toFixed(2),
       colorsCount: lpDetails.colorDetails.length
     };
@@ -187,6 +202,7 @@ export const calculateLPCosts = async (state) => {
       lpInkCostPerCard: "0.00",
       lpMRCostPerCard: "0.00",
       lpMkgCostPerCard: "0.00",
+      lpDstMaterialCostPerCard: "0.00", // Include DST material cost
       lpTotalColorsCostPerCard: "0.00"
     };
   }

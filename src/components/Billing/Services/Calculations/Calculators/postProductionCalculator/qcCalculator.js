@@ -1,4 +1,4 @@
-import { fetchOverheadValue } from "../../../../../../utils/dbFetchUtils";
+import { fetchStandardRate } from "../../../../../../utils/dbFetchUtils";
 
 /**
  * Calculates quality control costs based on form state
@@ -14,12 +14,12 @@ export const calculateQCCosts = async (state) => {
       return { qcCostPerCard: "0.00" };
     }
 
-    // Fetch QC value from overheads
-    const qcOverhead = await fetchOverheadValue("QUALITY CHECK");
+    // Fetch QC value from standard_rates instead of overheads
+    const qcRate = await fetchStandardRate("LABOUR", "QUALITY CHECK");
     
-    // Use the value from DB or default if not found
-    const qcCostPerCard = qcOverhead && qcOverhead.value
-      ? parseFloat(qcOverhead.value)
+    // Use the finalRate from DB or default if not found
+    const qcCostPerCard = qcRate && qcRate.finalRate
+      ? parseFloat(qcRate.finalRate)
       : 1.0; // Default to 1.0 if not found
     
     console.log("QC calculation:", {

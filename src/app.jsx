@@ -5,9 +5,10 @@ import PaperManagement from "./components/Management/Papers/PaperManagement"
 import MaterialManagement from "./components/Management/Materials/MaterialManagement"
 import DieManagement from "./components/Management/Dies/DieManagement"
 import StandardRateManagement from "./components/Management/StandardRates/StandardRateManagement"
+import GstHsnManagement from "./components/Management/GstHsn/GstHsnManagement" // NEW: Import GstHsnManagement
 import OverheadManagement from "./components/Management/Overheads/OverheadManagement"
 import LoyaltyTierManagement from "./components/Management/LoyaltyTierManagement/LoyaltyTierManagement"
-import LoyaltyDashboard from "./components/Loyalty/LoyaltyDashboard"; // NEW: Import LoyaltyDashboard
+import LoyaltyDashboard from "./components/Loyalty/LoyaltyDashboard";
 import ClientManagement from "./components/Clients/ClientManagement";
 import Header from "./components/Header";
 import Login from "./components/Login/login";
@@ -159,6 +160,16 @@ function App() {
               } 
             />
             
+            {/* NEW: Route for GST & HSN management */}
+            <Route 
+              path="/material-stock/gst-hsn-db" 
+              element={
+                <ProtectedRoute>
+                  <GstHsnManagement />
+                </ProtectedRoute>
+              } 
+            />
+            
             <Route 
               path="/material-stock/overheads" 
               element={
@@ -178,7 +189,7 @@ function App() {
               } 
             />
             
-            {/* NEW: Route for loyalty dashboard */}
+            {/* Route for loyalty dashboard */}
             <Route 
               path="/loyalty-dashboard" 
               element={

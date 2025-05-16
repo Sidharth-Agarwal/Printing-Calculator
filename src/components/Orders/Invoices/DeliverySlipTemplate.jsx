@@ -27,6 +27,15 @@ const DeliverySlipTemplate = ({ deliveryData, orders, clientInfo }) => {
           <p className="text-xs">Email: info@famousletterpress.com</p>
         </div>
         <div className="text-right">
+          <img 
+            src={logo} 
+            alt="Famous Letterpress" 
+            className="w-16 h-16 object-contain mb-2 ml-auto"
+            onError={(e) => {
+              console.error("Logo failed to load");
+              e.target.style.display = 'none';
+            }}
+          />
           <p className="text-xs">Date: {formatDate(deliveryData.date)}</p>
         </div>
       </div>

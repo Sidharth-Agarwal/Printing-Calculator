@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "./Login/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
@@ -110,13 +110,14 @@ const Header = () => {
         { label: 'Materials DB', path: '/material-stock/material-db' },
         { label: 'Dies DB', path: '/material-stock/dies-db' },
         { label: 'Labours DB', path: '/material-stock/standard-rates-db' },
+        { label: 'GST & HSN DB', path: '/material-stock/gst-hsn-db' },
         { label: 'Standard Parameters', path: '/material-stock/overheads' },
         { label: 'Loyalty Program', path: '/material-stock/loyalty-tiers', visible: isMenuItemVisible('loyaltyProgram') }
       ]
     },
     { key: 'clients', label: 'Clients', path: '/clients', visible: isMenuItemVisible('clients') },
     { key: 'estimates', label: 'Estimates', path: '/estimates', visible: isMenuItemVisible('estimates') },
-    { key: 'orders', label: 'Orders', path: '/orders', visible: isMenuItemVisible('orders') },
+    { key: 'orders', label: 'Job Dashboard', path: '/orders', visible: isMenuItemVisible('orders') },
     { key: 'invoices', label: 'Invoices', path: '/invoices', visible: isMenuItemVisible('invoices') },
     { key: 'loyalty', label: 'Loyalty Dashboard', path: '/loyalty-dashboard', visible: isMenuItemVisible('loyaltyProgram') },
     { key: 'transactions', label: 'Transactions', path: '/transactions', visible: isMenuItemVisible('transactions') },
@@ -127,12 +128,16 @@ const Header = () => {
     <header className="fixed top-0 left-0 right-0 z-50 bg-black text-white shadow-md">
       <div className="w-full px-6 py-2 flex items-center justify-between">
         {/* Logo */}
-        <img 
-          src={logo} 
-          alt="Famous Logo" 
-          className="h-10 w-10 transition-transform hover:rotate-12 duration-300 cursor-pointer" 
-          onClick={() => userRole === "b2b" ? navigateTo("/b2b-dashboard") : navigateTo("/")}
-        />
+        <Link 
+          to={userRole === "b2b" ? "/b2b-dashboard" : "/"} 
+          className="block"
+        >
+          <img 
+            src={logo} 
+            alt="Famous Logo" 
+            className="h-10 w-10 transition-transform hover:rotate-12 duration-300 cursor-pointer" 
+          />
+        </Link>
         
         {/* Centered Navigation */}
         <nav className="flex items-center justify-center flex-1 space-x-8">
@@ -141,33 +146,33 @@ const Header = () => {
               <div key={item.key} className="group relative inline-block" 
                 onMouseEnter={() => setHoverIndex(index)}
                 onMouseLeave={() => setHoverIndex(-1)}>
-                <button 
-                  className={`text-sm transition-all duration-200 border-b-2 ${
+                <span 
+                  className={`text-sm transition-all duration-200 border-b-2 cursor-pointer ${
                     location.pathname.includes(item.path) && !location.pathname.includes('/estimates')
                       ? "border-white font-medium" 
                       : "border-transparent hover:border-gray-400"
                   }`}
                 >
                   {item.label}
-                </button>
+                </span>
                 <div className="absolute hidden group-hover:block bg-white text-black rounded shadow-lg z-10 left-1/2 transform -translate-x-1/2 min-w-max overflow-hidden transition-all duration-300 opacity-0 group-hover:opacity-100" style={{ top: '100%', marginTop: '0' }}>
                   {item.dropdownItems.filter(subItem => subItem.visible !== false).map(subItem => (
-                    <button
+                    <Link
                       key={subItem.path}
-                      onClick={() => navigateTo(subItem.path)}
+                      to={subItem.path}
                       className={`block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100 ${
                         isActive(subItem.path) ? "bg-gray-100 font-medium" : ""
                       }`}
                     >
                       {subItem.label}
-                    </button>
+                    </Link>
                   ))}
                 </div>
               </div>
             ) : (
-              <button
+              <Link
                 key={item.key}
-                onClick={() => navigateTo(item.path)}
+                to={item.path}
                 onMouseEnter={() => setHoverIndex(index)}
                 onMouseLeave={() => setHoverIndex(-1)}
                 className={`text-sm transition-all duration-200 border-b-2 ${
@@ -177,7 +182,7 @@ const Header = () => {
                 } ${hoverIndex === index ? "transform -translate-y-0.5" : ""}`}
               >
                 {item.label}
-              </button>
+              </Link>
             )
           ))}
         </nav>
@@ -207,21 +212,23 @@ const Header = () => {
 
               {/* User Management - Only for Admin */}
               {isMenuItemVisible('userManagement') && (
-                <button
-                  onClick={() => navigateTo('/user-management')}
+                <Link
+                  to="/user-management"
                   className="block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100"
+                  onClick={() => setShowProfileMenu(false)}
                 >
                   User Management
-                </button>
+                </Link>
               )}
              
               {/* Change Password - Always Visible */}
-              <button
-                onClick={() => navigateTo('/change-password')}
+              <Link
+                to="/change-password"
                 className="block w-full text-left px-4 py-2 text-sm transition-colors hover:bg-gray-100"
+                onClick={() => setShowProfileMenu(false)}
               >
                 Change Password
-              </button>
+              </Link>
              
               {/* Logout - Always Visible */}
               <button

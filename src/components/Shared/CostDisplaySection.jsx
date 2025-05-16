@@ -32,7 +32,8 @@ const CostDisplaySection = ({
         { key: 'lpPositiveFilmCostPerCard', label: 'LP Positive Film' },
         { key: 'lpMRCostPerCard', label: 'LP MR Cost' },
         { key: 'lpMkgCostPerCard', label: 'LP Making Cost' },
-        { key: 'lpInkCostPerCard', label: 'LP Ink Cost' }
+        { key: 'lpInkCostPerCard', label: 'LP Ink Cost' },
+        { key: 'lpDstMaterialCostPerCard', label: 'LP DST Material Cost' }
       ],
       totalKey: 'lpCostPerCard',
       totalLabel: 'Letter Press (LP)'
@@ -64,7 +65,8 @@ const CostDisplaySection = ({
         { key: 'embMRCostPerCard', label: 'EMB MR Cost' },
         { key: 'embPositiveFilmCostPerCard', label: 'EMB Positive Film' },
         { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate (MKG)' },
-        { key: 'embImpressionCostPerCard', label: 'EMB Impression' }
+        { key: 'embImpressionCostPerCard', label: 'EMB Impression' },
+        { key: 'embDstMaterialCostPerCard', label: 'EMB DST Material Cost' }
       ],
       totalKey: 'embCostPerCard',
       totalLabel: 'Embossing (EMB)'
