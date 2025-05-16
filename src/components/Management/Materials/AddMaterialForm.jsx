@@ -50,10 +50,10 @@ const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, isSubmitting, o
       const courier = parseFloat(updatedData.courier || 0);
       const markUp = parseFloat(updatedData.markUp || 0);
       
-      const area = (sizeL * sizeB * quantity).toFixed(2);
-      const landedCost = (rate + courier).toFixed(2);
-      const costPerUnit = area > 0 ? (parseFloat(landedCost) / parseFloat(area)).toFixed(2) : "0.00";
-      const finalCostPerUnit = (parseFloat(costPerUnit) * parseFloat(markUp || 0)).toFixed(2);
+      const area = (sizeL * sizeB * quantity).toFixed(4);
+      const landedCost = (rate + courier).toFixed(4);
+      const costPerUnit = area > 0 ? (parseFloat(landedCost) / parseFloat(area)).toFixed(4) : "0.00";
+      const finalCostPerUnit = (parseFloat(costPerUnit) * parseFloat(markUp || 0)).toFixed(4);
       
       return {
         ...updatedData,
