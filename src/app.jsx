@@ -25,6 +25,7 @@ import ProtectedRoute from "./components/Login/ProtectedRoute";
 import { AuthProvider } from "./components/Login/AuthContext";
 import B2BClientDashboard from "./components/Clients/B2BClientDashboard";
 import "./styles/tailwind.css";
+import EscrowDashboard from "./components/Escrow/EscrowDashboard";
 
 function App() {
   return (
@@ -106,6 +107,15 @@ function App() {
               } 
             />
 
+            <Route 
+              path="/escrow" 
+              element={
+                <ProtectedRoute>
+                  <EscrowDashboard />
+                </ProtectedRoute>
+              } 
+            />
+            
             <Route 
               path="/b2b-dashboard" 
               element={
