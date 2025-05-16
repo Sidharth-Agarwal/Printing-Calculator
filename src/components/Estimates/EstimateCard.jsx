@@ -10,7 +10,7 @@ const EstimateCard = ({
   onEditEstimate,
   onDuplicateEstimate,
   isAdmin,
-  // NEW: multi-select props
+  // Multi-select props
   isMultiSelectActive = false,
   isSelected = false,
   onSelectToggle = () => {}
@@ -22,9 +22,10 @@ const EstimateCard = ({
 
   const isMovedToOrders = estimate.movedToOrders;
   const isCanceled = estimate.isCanceled;
+  const isInEscrow = estimate.inEscrow;
   
-  // Determine if this estimate can be selected (not moved or canceled)
-  const isSelectable = !isMovedToOrders && !isCanceled;
+  // Determine if this estimate can be selected (not moved, canceled, or in escrow)
+  const isSelectable = !isMovedToOrders && !isCanceled && !isInEscrow;
   
   // Check if this client is eligible for loyalty benefits (B2B client)
   const isLoyaltyEligible = estimate.clientInfo?.clientType === "B2B";
@@ -43,7 +44,7 @@ const EstimateCard = ({
   // Action handlers
   const handleMoveToOrders = async (e) => {
     e.stopPropagation();
-    if (isMovedToOrders || isCanceled) return;
+    if (isMovedToOrders || isCanceled || isInEscrow) return;
     try {
       setIsMoving(true);
       await onMoveToOrders(estimate);
@@ -56,7 +57,7 @@ const EstimateCard = ({
 
   const handleCancelEstimate = async (e) => {
     e.stopPropagation();
-    if (isMovedToOrders || isCanceled) return;
+    if (isMovedToOrders || isCanceled || isInEscrow) return;
     if (!window.confirm("Cancel this estimate?")) return;
     try {
       setIsCancelling(true);
@@ -70,7 +71,7 @@ const EstimateCard = ({
 
   const handleDeleteEstimate = async (e) => {
     e.stopPropagation();
-    if (isMovedToOrders) return;
+    if (isMovedToOrders || isInEscrow) return;
     if (!window.confirm("Delete this estimate? This cannot be undone.")) return;
     try {
       setIsDeleting(true);
@@ -84,8 +85,8 @@ const EstimateCard = ({
 
   const handleEditEstimate = (e) => {
     e.stopPropagation();
-    if (isMovedToOrders || isCanceled) {
-      alert("Estimates that have been moved to orders or canceled cannot be edited.");
+    if (isMovedToOrders || isCanceled || isInEscrow) {
+      alert("Estimates that have been moved to orders, escrow, or canceled cannot be edited.");
       return;
     }
     onEditEstimate(estimate);
@@ -103,6 +104,11 @@ const EstimateCard = ({
     }
   };
 
+  // Generate the proper move to orders text based on client type
+  const getMoveToOrdersText = () => {
+    return isLoyaltyEligible ? "Move to Escrow" : "Move to Orders";
+  };
+
   return (
     <div
       onClick={handleCardClick}
@@ -117,7 +123,7 @@ const EstimateCard = ({
       {/* Header row */}
       <div className="flex justify-between items-center mb-1.5">
         <div className="flex items-center gap-2">
-          {/* NEW: Checkbox for multi-select mode */}
+          {/* Checkbox for multi-select mode */}
           {isMultiSelectActive && (
             <div onClick={(e) => e.stopPropagation()} className="flex-shrink-0">
               <input
@@ -149,12 +155,16 @@ const EstimateCard = ({
               ? "bg-green-100 text-green-700"
               : isCanceled
               ? "bg-red-100 text-red-700"
+              : isInEscrow
+              ? "bg-purple-100 text-purple-700"
               : "bg-amber-100 text-amber-700"
           }`}>
             {isMovedToOrders 
               ? "Moved" 
               : isCanceled 
               ? "Cancelled" 
+              : isInEscrow
+              ? "In Escrow"
               : "Pending"}
           </span>
         </div>
@@ -164,8 +174,8 @@ const EstimateCard = ({
           {isAdmin && (
             <button
               onClick={handleDeleteEstimate}
-              disabled={isDeleting || isMovedToOrders}
-              className={`text-red-500 ${isDeleting || isMovedToOrders ? 'opacity-30 cursor-not-allowed' : 'hover:text-red-700'}`}
+              disabled={isDeleting || isMovedToOrders || isInEscrow}
+              className={`text-red-500 ${isDeleting || isMovedToOrders || isInEscrow ? 'opacity-30 cursor-not-allowed' : 'hover:text-red-700'}`}
               title="Delete"
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
@@ -223,7 +233,7 @@ const EstimateCard = ({
             </svg>
           </button>
 
-          {!isMovedToOrders && !isCanceled && (
+          {!isMovedToOrders && !isCanceled && !isInEscrow && (
             <button
               onClick={handleEditEstimate}
               className="flex-1 p-1 rounded bg-indigo-50 hover:bg-indigo-100 text-indigo-600"
@@ -235,18 +245,16 @@ const EstimateCard = ({
             </button>
           )}
 
-          {!isCanceled && (
+          {!isCanceled && !isMovedToOrders && !isInEscrow && (
             <button
               onClick={handleMoveToOrders}
-              disabled={isMovedToOrders || isMoving}
+              disabled={isMoving}
               className={`flex-1 p-1 rounded ${
-                isMovedToOrders
-                  ? "bg-green-50 text-green-600 cursor-not-allowed"
-                  : isMoving
-                  ? "bg-blue-50 text-blue-500 cursor-wait"
-                  : "bg-blue-500 hover:bg-blue-600 text-white"
+                isMoving
+                ? "bg-blue-50 text-blue-500 cursor-wait"
+                : "bg-blue-500 hover:bg-blue-600 text-white"
               }`}
-              title="Move to Orders"
+              title={getMoveToOrdersText()}
             >
               {isMoving ? (
                 <svg className="animate-spin h-4 w-4 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -262,7 +270,7 @@ const EstimateCard = ({
             </button>
           )}
 
-          {!isMovedToOrders && !isCanceled && (
+          {!isMovedToOrders && !isCanceled && !isInEscrow && (
             <button
               onClick={handleCancelEstimate}
               disabled={isCancelling}
@@ -286,6 +294,18 @@ const EstimateCard = ({
             </button>
           )}
 
+          {isMovedToOrders && (
+            <button
+              disabled
+              className="flex-1 p-1 rounded bg-green-50 text-green-600 cursor-not-allowed"
+              title="Moved to Orders"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
+
           {isCanceled && (
             <button
               disabled
@@ -294,6 +314,18 @@ const EstimateCard = ({
             >
               <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" viewBox="0 0 20 20" fill="currentColor">
                 <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
+
+          {isInEscrow && (
+            <button
+              disabled
+              className="flex-1 p-1 rounded bg-purple-50 text-purple-600 cursor-not-allowed"
+              title="In Escrow"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mx-auto" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
               </svg>
             </button>
           )}
@@ -309,7 +341,7 @@ const EstimateCard = ({
             </span>
           ) : (
             <span className="text-xs text-gray-400">
-              {isMovedToOrders ? 'Already moved' : 'Cancelled'}
+              {isMovedToOrders ? 'Already moved' : isInEscrow ? 'In escrow' : 'Cancelled'}
             </span>
           )}
         </div>

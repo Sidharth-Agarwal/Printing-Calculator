@@ -4,7 +4,7 @@ import { useAuth } from "./Login/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { MENU_ACCESS } from "../components/Login/routesConfig"; 
-import logo from "../assets/logo.png"; // Import the logo
+import logo from "../assets/logo.png";
 
 const Header = () => {
   const { currentUser, userRole, logout } = useAuth();
@@ -117,6 +117,7 @@ const Header = () => {
     },
     { key: 'clients', label: 'Clients', path: '/clients', visible: isMenuItemVisible('clients') },
     { key: 'estimates', label: 'Estimates', path: '/estimates', visible: isMenuItemVisible('estimates') },
+    { key: 'escrow', label: 'B2B Escrow', path: '/escrow', visible: userRole === "admin" || userRole === "staff" },
     { key: 'orders', label: 'Job Dashboard', path: '/orders', visible: isMenuItemVisible('orders') },
     { key: 'invoices', label: 'Invoices', path: '/invoices', visible: isMenuItemVisible('invoices') },
     { key: 'loyalty', label: 'Loyalty Dashboard', path: '/loyalty-dashboard', visible: isMenuItemVisible('loyaltyProgram') },
