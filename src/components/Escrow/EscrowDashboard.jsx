@@ -118,13 +118,13 @@ const EscrowDashboard = () => {
     fetchActiveClients();
   }, []);
 
-  // Fetch all B2B estimates in escrow on mount
+  // Fetch all B2B estimates in escrow on mount - UPDATED to filter out already processed estimates
   useEffect(() => {
     const fetchEscrowEstimates = async () => {
       try {
         setIsLoading(true);
         
-        // Query for estimates in escrow - those marked as inEscrow=true
+        // Query for estimates in escrow
         const escrowQuery = query(
           collection(db, "estimates"),
           where("inEscrow", "==", true)

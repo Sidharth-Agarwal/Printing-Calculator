@@ -72,7 +72,11 @@ const EscrowCard = ({
           ? isSelected 
             ? 'border-blue-500 bg-blue-50 shadow' 
             : 'border-gray-200'
-          : 'border-gray-200'
+          : isApproved
+            ? 'border-green-400 border-l-4' // Green for approved
+            : isRejected
+            ? 'border-red-400 border-l-4' // Red for rejected
+            : 'border-amber-400 border-l-4' // Amber for pending
       }`}
     >
       {/* Header row */}
