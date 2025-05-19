@@ -121,7 +121,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     return hsnSummary;
   };
   
-  // Generate PDF - Improved version
+  // Generate PDF - Improved version with enforced portrait orientation
   const generatePDF = async () => {
     if (!contentRef.current) return;
     
@@ -142,11 +142,13 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
       await Promise.all(imagePromises);
       
       // Create a new container with improved settings for PDF generation
+      // Setting width to match A4 proportions for portrait mode
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.top = '-9999px';
       container.style.left = '-9999px';
-      container.style.width = '680px'; // Reduced width to match the template
+      // Set width to match A4 portrait dimensions ratio (width/height = 210/297)
+      container.style.width = '620px'; // Slightly narrower to ensure portrait fit
       container.style.padding = '0';
       container.style.margin = '0';
       container.style.backgroundColor = 'white';
@@ -174,7 +176,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
         allowTaint: true,
         imageTimeout: 0,
         scrollY: 0, // Fix scroll position issues
-        windowWidth: 680, // Match container width
+        windowWidth: 620, // Match container width for portrait
         onclone: (clonedDoc) => {
           // Additional adjustments to the cloned document if needed
           const clonedContent = clonedDoc.querySelector('[data-html2canvas-clone]');
@@ -187,39 +189,55 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
       // Remove the temp container
       document.body.removeChild(container);
       
-      // Create PDF with explicit A4 dimensions
+      // ENFORCE PORTRAIT: Always create PDF in portrait mode regardless of content proportions
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'portrait', // Always portrait
         unit: 'mm',
-        format: 'a4'
+        format: 'a4',
+        compress: true // Enable compression for smaller file size
       });
       
-      // Get PDF dimensions
+      // Get PDF dimensions (A4 portrait)
       const pdfWidth = 210; // A4 width in mm
       const pdfHeight = 297; // A4 height in mm
       
       // Calculate image dimensions to fit in PDF while maintaining aspect ratio
+      // Adjust width to fit portrait mode
       const imgWidth = pdfWidth - 20; // Add some margin
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // Add image to PDF with proper scaling
-      if (imgHeight > pdfHeight - 20) { // Add some margin
-        // If the rendered content is too tall, scale it to fit
-        const scale = (pdfHeight - 20) / imgHeight;
-        const adjustedWidth = imgWidth * scale;
+      // If the content would be too wide for portrait, scale it down
+      if (canvas.width / canvas.height > pdfWidth / pdfHeight) {
+        const adjustedWidth = pdfWidth - 20; // Leave 10mm margin on each side
+        const adjustedHeight = (canvas.height * adjustedWidth) / canvas.width;
         
         pdf.addImage(
-          canvas.toDataURL('image/jpeg', 1.0),
+          canvas.toDataURL('image/jpeg', 0.95), // Slightly reduce quality for smaller file
+          'JPEG',
+          10, // Left margin of 10mm
+          10, // Top margin of 10mm
+          adjustedWidth,
+          adjustedHeight
+        );
+      } 
+      // If the content would be too tall, scale it down to fit
+      else if (imgHeight > pdfHeight - 20) {
+        const adjustedHeight = pdfHeight - 20; // Leave 10mm margin top and bottom
+        const adjustedWidth = (canvas.width * adjustedHeight) / canvas.height;
+        
+        pdf.addImage(
+          canvas.toDataURL('image/jpeg', 0.95),
           'JPEG',
           (pdfWidth - adjustedWidth) / 2, // Center horizontally
           10, // Top margin
           adjustedWidth,
-          pdfHeight - 20 // Bottom margin
+          adjustedHeight
         );
-      } else {
-        // If it fits, center it vertically
+      } 
+      // Otherwise center it
+      else {
         pdf.addImage(
-          canvas.toDataURL('image/jpeg', 1.0),
+          canvas.toDataURL('image/jpeg', 0.95),
           'JPEG',
           (pdfWidth - imgWidth) / 2, // Center horizontally
           (pdfHeight - imgHeight) / 2, // Center vertically
@@ -269,7 +287,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   Generating...
                 </>
               ) : (
-                <>Download Invoice</>
+                <>Download Invoice (Portrait)</>
               )}
             </button>
             <button 
@@ -419,10 +437,19 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
             </div>
           </div>
           
-          {/* Invoice Preview - Expanded */}
+          {/* Invoice Preview - Resized for A4 Portrait proportions */}
           <div className="flex-1 overflow-y-auto bg-gray-50">
             <div className="p-3">
-              <div ref={contentRef} className="bg-white shadow-lg rounded overflow-hidden">
+              <div 
+                ref={contentRef} 
+                className="bg-white shadow-lg rounded overflow-hidden mx-auto"
+                style={{ 
+                  maxWidth: '600px', 
+                  width: '100%',
+                  aspectRatio: '210/297', /* A4 portrait ratio */
+                  boxSizing: 'border-box'
+                }}
+              >
                 <InvoiceTemplate
                   invoiceData={invoiceData}
                   orders={orders}
