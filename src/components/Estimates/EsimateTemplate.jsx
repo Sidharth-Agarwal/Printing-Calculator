@@ -91,18 +91,24 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
       // Get HSN code from jobDetails if available
       const hsnCode = jobDetails.hsnCode || "N/A";
       
-      // Get processing features
+      // Get processing features - UNCOMMENTED AND UPDATED THIS SECTION
       const features = [];
-      // if (estimate?.lpDetails?.isLPUsed) features.push("Letterpress");
-      // if (estimate?.fsDetails?.isFSUsed) features.push("Foil Stamping");
-      // if (estimate?.embDetails?.isEMBUsed) features.push("Embossing");
-      // if (estimate?.digiDetails?.isDigiUsed) features.push("Digital Print");
-      // if (estimate?.notebookDetails?.isNotebookUsed) features.push("Notebook");
-      // if (estimate?.screenPrint?.isScreenPrintUsed) features.push("Screen Print");
-      // if (estimate?.dieCutting?.isDieCuttingUsed) features.push("Die Cutting")
-      // if (estimate?.dieCutting?.isDieCuttingUsed) features.push("Die Cutting")
-      // if (estimate?.postDC?.isPastingUsed) features.push("Pasting");
-      // if (estimate?.sandwich?.isSandwichComponentUsed) features.push("Sandwich");
+      if (estimate?.lpDetails?.isLPUsed) features.push("Letterpress");
+      if (estimate?.fsDetails?.isFSUsed) features.push("Foil Stamping");
+      if (estimate?.embDetails?.isEMBUsed) features.push("Embossing");
+      if (estimate?.digiDetails?.isDigiUsed) features.push("Digital Print");
+      if (estimate?.notebookDetails?.isNotebookUsed) features.push("Notebook");
+      if (estimate?.screenPrint?.isScreenPrintUsed) features.push("Screen Print");
+      if (estimate?.preDieCutting?.isPreDieCuttingUsed) features.push("Pre Die Cutting");
+      if (estimate?.dieCutting?.isDieCuttingUsed) features.push("Die Cutting");
+      if (estimate?.postDC?.isPostDCUsed) features.push("Post Die Cutting");
+      if (estimate?.foldAndPaste?.isFoldAndPasteUsed) features.push("Fold & Paste");
+      if (estimate?.dstPaste?.isDstPasteUsed) features.push("DST Paste");
+      if (estimate?.magnet?.isMagnetUsed) features.push("Magnet");
+      if (estimate?.qc?.isQCUsed) features.push("Quality Check");
+      if (estimate?.packing?.isPackingUsed) features.push("Packing");
+      if (estimate?.sandwich?.isSandwichComponentUsed) features.push("Sandwich/Duplex");
+      if (estimate?.misc?.isMiscUsed) features.push("Misc");
       
       // Get quantities and costs
       const quantity = parseInt(jobDetails.quantity) || 0;
@@ -265,6 +271,27 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
             </tbody>
           </table>
         </div>
+        
+        {/* Added: Process Details Section */}
+        {/* <div className="mb-4">
+          <div className="font-medium text-sm mb-1">Process Details:</div>
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="py-1 px-2 border border-gray-300 text-left">Item</th>
+                <th className="py-1 px-2 border border-gray-300 text-left">Processes Used</th>
+              </tr>
+            </thead>
+            <tbody>
+              {lineItems.map((item, index) => (
+                <tr key={item.id}>
+                  <td className="py-1 px-2 border border-gray-300 font-medium">{item.name}</td>
+                  <td className="py-1 px-2 border border-gray-300">{item.description || "No special processes"}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div> */}
         
         {/* Summary */}
         <div className="flex justify-end mb-3">
