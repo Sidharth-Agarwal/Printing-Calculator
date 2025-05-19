@@ -159,9 +159,6 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     if (client.loyaltyTierId && client.loyaltyTierName) {
       return (
         <div className="flex items-center">
-          {client.loyaltyTierColor && (
-            <span className="h-3 w-3 rounded-full mr-2" style={{ backgroundColor: client.loyaltyTierColor }}></span>
-          )}
           <span 
             className="px-2 py-0.5 rounded text-xs font-medium text-white"
             style={{ backgroundColor: client.loyaltyTierColor || "#9f7aea" }}
