@@ -1,15 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createRoot } from 'react-dom/client';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import JobTicket from './JobTicket';
 
 const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) => {
   const [isGeneratingPDF, setIsGeneratingPDF] = useState(false);
-  const [currentTicketIndex, setCurrentTicketIndex] = useState(0);
-  const contentRef = useRef(null);
-  const secondTicketRef = useRef(null);
+  const [currentPairIndex, setCurrentPairIndex] = useState(0);
+  const leftTicketRef = useRef(null);
+  const rightTicketRef = useRef(null);
   
-  // Add new state for notes
+  // Add state for notes
   const [ticketNotes, setTicketNotes] = useState({});
   
   // Initialize notes for each order
@@ -46,82 +47,71 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }
   };
   
-  // Get the current order being displayed
-  const currentOrder = Array.isArray(orders) && orders.length > currentTicketIndex ? 
-    orders[currentTicketIndex] : null;
+  // Get the left order being displayed (first in the pair)
+  const leftOrder = Array.isArray(orders) && orders.length > currentPairIndex * 2 ? 
+    orders[currentPairIndex * 2] : null;
   
-  // Get the next order if available (for two-up display)
-  const nextOrder = Array.isArray(orders) && orders.length > currentTicketIndex + 1 ? 
-    orders[currentTicketIndex + 1] : null;
+  // Get the right order if available (second in the pair)
+  const rightOrder = Array.isArray(orders) && orders.length > currentPairIndex * 2 + 1 ? 
+    orders[currentPairIndex * 2 + 1] : null;
   
-  // Navigate between job tickets (by pairs)
-  const goToNextTicket = () => {
+  // Navigate between job ticket pairs
+  const goToNextPair = () => {
     if (!Array.isArray(orders)) return;
     
-    if (currentTicketIndex < orders.length - 2) {
-      setCurrentTicketIndex(currentTicketIndex + 2);
-    } else if (currentTicketIndex < orders.length - 1) {
-      setCurrentTicketIndex(currentTicketIndex + 1);
+    const maxPairIndex = Math.ceil(orders.length / 2) - 1;
+    if (currentPairIndex < maxPairIndex) {
+      setCurrentPairIndex(currentPairIndex + 1);
     }
   };
   
-  const goToPreviousTicket = () => {
-    if (currentTicketIndex >= 2) {
-      setCurrentTicketIndex(currentTicketIndex - 2);
-    } else if (currentTicketIndex > 0) {
-      setCurrentTicketIndex(currentTicketIndex - 1);
+  const goToPreviousPair = () => {
+    if (currentPairIndex > 0) {
+      setCurrentPairIndex(currentPairIndex - 1);
     }
   };
   
   // Generate PDF for current job ticket pair
-  const generateSinglePDF = async () => {
-    if (!contentRef.current || !currentOrder) return;
+  const generateCurrentPDF = async () => {
+    if (!leftTicketRef.current || !leftOrder) return;
     
     setIsGeneratingPDF(true);
     try {
-      // Wait for any images to load in both tickets
-      const allContainers = [contentRef.current];
-      if (secondTicketRef.current && nextOrder) allContainers.push(secondTicketRef.current);
-      
-      const allImages = allContainers.flatMap(container => 
-        Array.from(container.querySelectorAll('img'))
-      );
-      
-      const imagePromises = allImages.map(img => {
-        if (img.complete) return Promise.resolve();
-        return new Promise((resolve, reject) => {
-          img.onload = resolve;
-          img.onerror = resolve; // Use resolve for errors too, to continue even if an image fails
-        });
-      });
-      
-      await Promise.all(imagePromises);
-      
-      // Create container for both tickets
+      // Create container for both tickets side by side
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.top = '-9999px';
       container.style.left = '-9999px';
-      container.style.width = '800px';
-      container.style.padding = '20px';
+      container.style.width = '900px'; // Wider container for landscape
+      container.style.display = 'flex'; // Flexbox for side-by-side
+      container.style.flexDirection = 'row'; // Horizontal layout
+      container.style.justifyContent = 'space-between'; // Space between tickets
       container.style.backgroundColor = 'white';
+      container.style.padding = '20px';
       
-      // Clone the first ticket
-      const firstClone = contentRef.current.cloneNode(true);
-      container.appendChild(firstClone);
+      // Clone the left ticket
+      const leftClone = leftTicketRef.current.cloneNode(true);
+      container.appendChild(leftClone);
       
-      // Add separator
-      const separator = document.createElement('div');
-      separator.style.height = '30px';
-      container.appendChild(separator);
-      
-      // Clone the second ticket if it exists
-      if (secondTicketRef.current && nextOrder) {
-        const secondClone = secondTicketRef.current.cloneNode(true);
-        container.appendChild(secondClone);
+      // Add right ticket if it exists
+      if (rightTicketRef.current && rightOrder) {
+        const rightClone = rightTicketRef.current.cloneNode(true);
+        container.appendChild(rightClone);
       }
       
       document.body.appendChild(container);
+      
+      // Wait for images to load
+      const allImages = Array.from(container.querySelectorAll('img'));
+      const imagePromises = allImages.map(img => {
+        if (img.complete) return Promise.resolve();
+        return new Promise((resolve) => {
+          img.onload = resolve;
+          img.onerror = resolve; // Use resolve for errors too
+        });
+      });
+      
+      await Promise.all(imagePromises);
       
       // Generate PDF
       const canvas = await html2canvas(container, {
@@ -134,18 +124,18 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
       
       document.body.removeChild(container);
       
-      // Create PDF
+      // Create PDF in landscape orientation
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
       
-      // Get PDF dimensions
-      const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
+      // A4 landscape dimensions
+      const pdfWidth = 297; // mm
+      const pdfHeight = 210; // mm
       
-      // Calculate image dimensions to fit in PDF
+      // Add the image to the PDF
       const imgWidth = pdfWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
@@ -155,13 +145,13 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
         0,
         0,
         imgWidth,
-        imgHeight <= pdfHeight ? imgHeight : pdfHeight // Ensure it fits on the page
+        imgHeight <= pdfHeight ? imgHeight : pdfHeight
       );
       
       // Save the PDF
-      const filename = nextOrder 
-        ? `JobTickets_${currentOrder.projectName || currentOrder.id}_and_${nextOrder.projectName || nextOrder.id}.pdf`
-        : `JobTicket_${currentOrder.projectName || currentOrder.id}.pdf`;
+      const filename = rightOrder 
+        ? `JobTickets_${leftOrder.projectName || leftOrder.id}_and_${rightOrder.projectName || rightOrder.id}.pdf`
+        : `JobTicket_${leftOrder.projectName || leftOrder.id}.pdf`;
       
       pdf.save(filename);
       
@@ -179,81 +169,90 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     
     setIsGeneratingPDF(true);
     try {
-      // Create a combined PDF
+      // Create a PDF in landscape format
       const pdf = new jsPDF({
-        orientation: 'portrait',
+        orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
+      
+      // A4 landscape dimensions
+      const pdfWidth = 297; // mm
+      const pdfHeight = 210; // mm
       
       let isFirstPage = true;
       
       // Process each pair of orders
       for (let i = 0; i < orders.length; i += 2) {
-        // Get the current pair of orders
-        const firstOrder = orders[i];
-        const secondOrder = i + 1 < orders.length ? orders[i + 1] : null;
+        const leftOrder = orders[i];
+        const rightOrder = i + 1 < orders.length ? orders[i + 1] : null;
         
-        if (!firstOrder) continue;
+        if (!leftOrder) continue;
         
-        // Create container for both tickets
+        // Create container for both tickets side by side
         const container = document.createElement('div');
         container.style.position = 'absolute';
         container.style.top = '-9999px';
         container.style.left = '-9999px';
-        container.style.width = '800px';
-        container.style.padding = '20px';
+        container.style.width = '900px'; // Wider container for landscape
+        container.style.display = 'flex'; // Flexbox for side-by-side
+        container.style.flexDirection = 'row'; // Horizontal layout
+        container.style.justifyContent = 'space-between'; // Space between tickets
         container.style.backgroundColor = 'white';
+        container.style.padding = '20px';
         
-        // Create first ticket element
-        const firstElement = document.createElement('div');
-        firstElement.className = 'bg-white shadow-lg rounded-lg overflow-hidden';
-        
-        // Render the first job ticket
-        const firstTicket = document.createElement('div');
-        ReactDOM.render(
+        // Create and render left ticket
+        const leftElement = document.createElement('div');
+        const leftTicketRoot = createRoot(leftElement);
+        leftTicketRoot.render(
           <JobTicket 
             order={{
-              ...firstOrder,
-              notes: ticketNotes[firstOrder.id] || ''
+              ...leftOrder,
+              notes: ticketNotes[leftOrder.id] || ''
             }}
-          />,
-          firstTicket
+          />
         );
         
-        firstElement.appendChild(firstTicket);
-        container.appendChild(firstElement);
-        
-        // Add separator
-        const separator = document.createElement('div');
-        separator.style.height = '30px';
-        container.appendChild(separator);
-        
-        // Create second ticket element if needed
-        if (secondOrder) {
-          const secondElement = document.createElement('div');
-          secondElement.className = 'bg-white shadow-lg rounded-lg overflow-hidden';
-          
-          // Render the second job ticket
-          const secondTicket = document.createElement('div');
-          ReactDOM.render(
+        // Create and render right ticket if available
+        let rightElement = null;
+        if (rightOrder) {
+          rightElement = document.createElement('div');
+          const rightTicketRoot = createRoot(rightElement);
+          rightTicketRoot.render(
             <JobTicket 
               order={{
-                ...secondOrder,
-                notes: ticketNotes[secondOrder.id] || ''
+                ...rightOrder,
+                notes: ticketNotes[rightOrder.id] || ''
               }}
-            />,
-            secondTicket
+            />
           );
-          
-          secondElement.appendChild(secondTicket);
-          container.appendChild(secondElement);
+        }
+        
+        // Wait for React to finish rendering
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Add elements to container
+        container.appendChild(leftElement);
+        if (rightElement) {
+          container.appendChild(rightElement);
         }
         
         document.body.appendChild(container);
         
         // Wait for a moment to ensure rendering completes
         await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Wait for images to load
+        const allImages = Array.from(container.querySelectorAll('img'));
+        const imagePromises = allImages.map(img => {
+          if (img.complete) return Promise.resolve();
+          return new Promise((resolve) => {
+            img.onload = resolve;
+            img.onerror = resolve; // Use resolve for errors too
+          });
+        });
+        
+        await Promise.all(imagePromises);
         
         // Generate image of the job tickets
         const canvas = await html2canvas(container, {
@@ -273,11 +272,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
           isFirstPage = false;
         }
         
-        // Get PDF dimensions
-        const pdfWidth = 210; // A4 width in mm
-        const pdfHeight = 297; // A4 height in mm
-        
-        // Calculate image dimensions to fit in PDF
+        // Add the image to the PDF
         const imgWidth = pdfWidth;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         
@@ -287,7 +282,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
           0,
           0,
           imgWidth,
-          imgHeight <= pdfHeight ? imgHeight : pdfHeight // Ensure it fits on the page
+          imgHeight <= pdfHeight ? imgHeight : pdfHeight
         );
       }
       
@@ -303,7 +298,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }
   };
   
-  if (!currentOrder) {
+  if (!leftOrder) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
         <div className="bg-white rounded-lg shadow-xl p-6">
@@ -322,16 +317,16 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl max-h-[90vh] flex flex-col">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl max-h-[90vh] flex flex-col">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">
             Generate Job Ticket {Array.isArray(orders) && orders.length > 1 ? 
-              `(${Math.floor(currentTicketIndex/2) + 1}/${Math.ceil(orders.length/2)})` : ''}
+              `(Pair ${currentPairIndex + 1}/${Math.ceil(orders.length/2)})` : ''}
           </h2>
           <div className="flex items-center gap-4">
             <button
-              onClick={generateSinglePDF}
+              onClick={generateCurrentPDF}
               disabled={isGeneratingPDF}
               className="px-4 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 flex items-center gap-2 disabled:bg-green-400"
             >
@@ -344,11 +339,11 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
                   Generating...
                 </>
               ) : (
-                <>Download Current Page</>
+                <>Download Current Pair</>
               )}
             </button>
             
-            {Array.isArray(orders) && orders.length > 1 && (
+            {Array.isArray(orders) && orders.length > 2 && (
               <button
                 onClick={generateAllPDFs}
                 disabled={isGeneratingPDF}
@@ -374,84 +369,88 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
           </div>
         </div>
         
-        {/* Modal Body */}
+        {/* Modal Body - Side by side tickets in landscape */}
         <div className="flex flex-col flex-1 overflow-hidden">
           {/* Job Ticket Previews */}
-          <div className="flex-1 overflow-y-auto bg-gray-50">
-            <div className="p-4 space-y-4">
-              {/* First Job Ticket */}
+          <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
+            <div className="flex gap-4 justify-center items-start">
+              {/* Left Job Ticket */}
               <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-                <div ref={contentRef}>
+                <div ref={leftTicketRef}>
                   <JobTicket 
                     order={{
-                      ...currentOrder,
-                      notes: ticketNotes[currentOrder.id] || ''
+                      ...leftOrder,
+                      notes: ticketNotes[leftOrder.id] || ''
                     }}
                   />
                 </div>
                 
-                {/* Notes for first ticket */}
+                {/* Notes for left ticket */}
                 <div className="p-4 border-t">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Notes for Job #{currentOrder.id?.substring(0, 8) || 'N/A'}
+                    Notes for Job #{leftOrder.id?.substring(0, 8) || 'N/A'}
                   </label>
                   <textarea
-                    value={ticketNotes[currentOrder.id] || ''}
-                    onChange={(e) => handleNotesChange(currentOrder.id, e.target.value)}
+                    value={ticketNotes[leftOrder.id] || ''}
+                    onChange={(e) => handleNotesChange(leftOrder.id, e.target.value)}
                     className="w-full border border-gray-300 rounded-md p-2 h-24 text-sm"
                     placeholder="Add any special instructions or notes for this job..."
                   />
                 </div>
               </div>
               
-              {/* Second Job Ticket (if available) */}
-              {nextOrder && (
+              {/* Right Job Ticket (if available) */}
+              {rightOrder ? (
                 <div className="bg-white shadow-lg rounded-lg overflow-hidden">
-                  <div ref={secondTicketRef}>
+                  <div ref={rightTicketRef}>
                     <JobTicket 
                       order={{
-                        ...nextOrder,
-                        notes: ticketNotes[nextOrder.id] || ''
+                        ...rightOrder,
+                        notes: ticketNotes[rightOrder.id] || ''
                       }}
                     />
                   </div>
                   
-                  {/* Notes for second ticket */}
+                  {/* Notes for right ticket */}
                   <div className="p-4 border-t">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Notes for Job #{nextOrder.id?.substring(0, 8) || 'N/A'}
+                      Notes for Job #{rightOrder.id?.substring(0, 8) || 'N/A'}
                     </label>
                     <textarea
-                      value={ticketNotes[nextOrder.id] || ''}
-                      onChange={(e) => handleNotesChange(nextOrder.id, e.target.value)}
+                      value={ticketNotes[rightOrder.id] || ''}
+                      onChange={(e) => handleNotesChange(rightOrder.id, e.target.value)}
                       className="w-full border border-gray-300 rounded-md p-2 h-24 text-sm"
                       placeholder="Add any special instructions or notes for this job..."
                     />
                   </div>
                 </div>
+              ) : (
+                <div className="bg-gray-100 border border-dashed border-gray-300 rounded-lg p-8 flex items-center justify-center" style={{ width: '430px', height: '400px' }}>
+                  <span className="text-gray-500">No second ticket for this pair</span>
+                </div>
               )}
             </div>
           </div>
           
-          {/* Pagination Controls - Updated for two tickets per page */}
+          {/* Pagination Controls - Updated for pairs */}
           {Array.isArray(orders) && orders.length > 2 && (
             <div className="flex justify-between p-4 border-t">
               <button
-                onClick={goToPreviousTicket}
-                disabled={currentTicketIndex === 0 || isGeneratingPDF}
+                onClick={goToPreviousPair}
+                disabled={currentPairIndex === 0 || isGeneratingPDF}
                 className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
               >
-                Previous
+                Previous Pair
               </button>
               <span className="text-gray-600">
-                {Math.floor(currentTicketIndex/2) + 1} of {Math.ceil(orders.length/2)}
+                Pair {currentPairIndex + 1} of {Math.ceil(orders.length/2)}
               </span>
               <button
-                onClick={goToNextTicket}
-                disabled={currentTicketIndex >= orders.length - 1 || isGeneratingPDF}
+                onClick={goToNextPair}
+                disabled={currentPairIndex >= Math.ceil(orders.length/2) - 1 || isGeneratingPDF}
                 className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
               >
-                Next
+                Next Pair
               </button>
             </div>
           )}
