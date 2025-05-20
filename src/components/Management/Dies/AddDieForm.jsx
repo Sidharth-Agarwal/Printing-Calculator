@@ -1,28 +1,11 @@
 import React, { useEffect, useState } from "react";
 import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
+import { JOB_TYPE_OPTIONS, DEFAULT_DIE_FORM_DATA, calculateCM } from "../../../constants/dieContants";
 
 const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage, isSubmitting, onCancel }) => {
-  const [formData, setFormData] = useState({
-    jobType: "",
-    type: "",
-    dieCode: "",
-    frags: "",
-    productSizeL: "",
-    productSizeB: "",
-    dieSizeL: "",
-    dieSizeB: "",
-    dieSizeL_CM: "",
-    dieSizeB_CM: "",
-    plateSizeL: "",
-    plateSizeB: "",
-    clsdPrntSizeL_CM: "",
-    clsdPrntSizeB_CM: "",
-    imageUrl: "",
-  });
-
+  const [formData, setFormData] = useState(DEFAULT_DIE_FORM_DATA);
   const [image, setImage] = useState(null);
   const [error, setError] = useState(null);
-  const jobTypeOptions = ["Card", "Biz Card", "Envelope", "Seal", "Magnet", "Packaging", "Notebook", "Liner"];
 
   useEffect(() => {
     if (editingDie) {
@@ -35,6 +18,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
         plateSizeB: editingDie.plateSizeB || editingDie.productSizeB || "",
         clsdPrntSizeL_CM: editingDie.clsdPrntSizeL_CM || calculateCM(editingDie.productSizeL),
         clsdPrntSizeB_CM: editingDie.clsdPrntSizeB_CM || calculateCM(editingDie.productSizeB),
+        isTemporary: editingDie.isTemporary || false, // Default for isTemporary if missing
       };
       setFormData(updatedDie);
       setImage(null); // Reset the selected image when editing
@@ -42,12 +26,6 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
       resetForm();
     }
   }, [editingDie]);
-
-  // Calculate CM from inches
-  const calculateCM = (inches) => {
-    if (!inches || isNaN(inches)) return "";
-    return (parseFloat(inches) * 2.54).toFixed(2);
-  };
 
   // Update calculated fields whenever input fields change
   useEffect(() => {
@@ -75,32 +53,16 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
   }, [formData.dieSizeL, formData.dieSizeB, formData.productSizeL, formData.productSizeB]);
 
   const resetForm = () => {
-    setFormData({
-      jobType: "",
-      type: "",
-      dieCode: "",
-      frags: "",
-      productSizeL: "",
-      productSizeB: "",
-      dieSizeL: "",
-      dieSizeB: "",
-      dieSizeL_CM: "",
-      dieSizeB_CM: "",
-      plateSizeL: "",
-      plateSizeB: "",
-      clsdPrntSizeL_CM: "",
-      clsdPrntSizeB_CM: "",
-      imageUrl: "",
-    });
+    setFormData(DEFAULT_DIE_FORM_DATA);
     setImage(null);
     setError(null);
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: value,
+      [name]: type === 'checkbox' ? checked : value,
     }));
     
     // Clear the error when the die code is changed
@@ -191,7 +153,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             disabled={isSubmitting}
           >
             <option value="">Select</option>
-            {jobTypeOptions.map((option, index) => (
+            {JOB_TYPE_OPTIONS.map((option, index) => (
               <option key={index} value={option}>
                 {option}
               </option>
@@ -293,6 +255,27 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             disabled={isSubmitting}
           />
         </div>
+      </div>
+
+      {/* Temporary Die Checkbox */}
+      <div className="mb-4">
+        <div className="flex items-center">
+          <input
+            type="checkbox"
+            name="isTemporary"
+            id="isTemporary"
+            checked={formData.isTemporary || false}
+            onChange={handleChange}
+            className="h-4 w-4 text-red-600 rounded border-gray-300 focus:ring-red-500"
+            disabled={isSubmitting}
+          />
+          <label htmlFor="isTemporary" className="ml-2 block text-sm text-gray-700">
+            Temporary Die
+          </label>
+        </div>
+        <p className="text-xs text-gray-500 mt-1">
+          Check this box if this die is temporary and not part of the permanent inventory.
+        </p>
       </div>
 
       {/* Calculated fields section - all 6 fields in 2 rows of 3 */}

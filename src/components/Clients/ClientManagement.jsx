@@ -9,7 +9,8 @@ import AdminPasswordModal from "./AdminPasswordModal";
 import ActivateClientModal from "./ActivateClientModal";
 import Modal from "../Shared/Modal";
 import ConfirmationModal from "../Shared/ConfirmationModal";
-import DeleteConfirmationModal from "../Shared/DeleteConfirmationModal"
+import DeleteConfirmationModal from "../Shared/DeleteConfirmationModal";
+import { CLIENT_FIELDS } from "../../constants/entityFields";
 
 const ClientManagement = () => {
   const [clients, setClients] = useState([]);
@@ -49,17 +50,66 @@ const ClientManagement = () => {
     directClients: 0
   });
 
+  // Get default form data structure based on CLIENT_FIELDS
+  const getDefaultClientData = () => {
+    // Start with an empty object
+    const clientData = {};
+    
+    // Add basic info fields with defaults
+    CLIENT_FIELDS.BASIC_INFO.forEach(field => {
+      if (field.name.includes('.')) {
+        // Handle nested fields
+        const [parent, child] = field.name.split('.');
+        if (!clientData[parent]) clientData[parent] = {};
+        clientData[parent][child] = field.defaultValue || "";
+      } else {
+        clientData[field.name] = field.defaultValue || "";
+      }
+    });
+    
+    // Add address fields
+    clientData.address = {};
+    CLIENT_FIELDS.ADDRESS.forEach(field => {
+      const child = field.name.split('.')[1];
+      clientData.address[child] = "";
+    });
+    
+    // Add billing address fields
+    clientData.billingAddress = {};
+    CLIENT_FIELDS.BILLING_ADDRESS.forEach(field => {
+      const child = field.name.split('.')[1];
+      clientData.billingAddress[child] = "";
+    });
+    
+    // Add notes
+    clientData.notes = "";
+    
+    // Add other required properties
+    clientData.isActive = true;
+    
+    return clientData;
+  };
+
   useEffect(() => {
     const clientsCollection = collection(db, "clients");
     const unsubscribe = onSnapshot(clientsCollection, (snapshot) => {
-      const clientsData = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-        // Ensure clientType exists for all clients and is uppercase for consistency
-        clientType: (doc.data().clientType || "DIRECT").toUpperCase(),
-        // Ensure isActive exists for all clients
-        isActive: doc.data().isActive !== undefined ? doc.data().isActive : true
-      }));
+      const clientsData = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        
+        // Ensure all fields exist with defaults based on CLIENT_FIELDS
+        const clientData = {
+          id: doc.id,
+          ...getDefaultClientData(),
+          ...data,
+          // Ensure clientType exists for all clients and is uppercase for consistency
+          clientType: (data.clientType || "DIRECT").toUpperCase(),
+          // Ensure isActive exists for all clients
+          isActive: data.isActive !== undefined ? data.isActive : true
+        };
+        
+        return clientData;
+      });
+      
       setClients(clientsData);
       
       // Calculate client statistics
@@ -172,7 +222,7 @@ const ClientManagement = () => {
         }
       }
       
-      // Add the client
+      // Add the client with additional metadata fields
       const clientsCollection = collection(db, "clients");
       await addDoc(clientsCollection, {
         ...clientData,

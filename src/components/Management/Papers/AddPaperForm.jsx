@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
+import { PAPER_FIELDS } from "../../../constants/paperContants";
 
-const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel }) => {
+const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }) => {
   const [formData, setFormData] = useState({
     paperName: "",
     company: "",
@@ -77,163 +78,93 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel }) => {
     onSubmit(formData);
   };
 
+  // Prepare vendor options for the company dropdown
+  const companyOptions = vendors.map(vendor => ({
+    value: vendor.name,
+    label: vendor.name
+  }));
+
+  // Create an updated copy of the field definitions with vendor options
+  const updatedBasicInfoFields = PAPER_FIELDS.BASIC_INFO.map(field => {
+    if (field.name === "company") {
+      return { ...field, options: companyOptions };
+    }
+    return field;
+  });
+
+  // Render a field based on its type and configuration
+  const renderField = (field) => {
+    const { name, label, type, required, readOnly, options } = field;
+    
+    switch (type) {
+      case "select":
+        return (
+          <div key={name}>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+            <select
+              name={name}
+              value={formData[name] || ""}
+              onChange={handleChange}
+              className={`w-full p-2 border border-gray-300 rounded text-sm ${
+                readOnly ? "bg-gray-100" : ""
+              }`}
+              required={required}
+              disabled={readOnly}
+            >
+              <option value="">Select {label}</option>
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+        
+      default: // text, number, etc.
+        return (
+          <div key={name}>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+            <input
+              type={type}
+              name={name}
+              value={formData[name] || ""}
+              onChange={handleChange}
+              placeholder={field.placeholder || `Enter ${label.toLowerCase()}`}
+              readOnly={readOnly}
+              className={`w-full p-2 border border-gray-300 rounded text-sm ${
+                readOnly ? "bg-gray-100" : ""
+              }`}
+              required={required}
+            />
+          </div>
+        );
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="mb-6">
-        {/* User input fields - now in 4 columns instead of 3 */}
+        {/* User input fields */}
         <div className="grid grid-cols-4 gap-4 mb-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Paper Name:</label>
-            <input
-              type="text"
-              name="paperName"
-              value={formData.paperName || ""}
-              onChange={handleChange}
-              placeholder="Enter paper name"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Company:</label>
-            <input
-              type="text"
-              name="company"
-              value={formData.company || ""}
-              onChange={handleChange}
-              placeholder="Enter company"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">GSM:</label>
-            <input
-              type="number"
-              name="gsm"
-              value={formData.gsm || ""}
-              onChange={handleChange}
-              placeholder="Enter GSM"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Price/Sheet (INR):</label>
-            <input
-              type="number"
-              name="pricePerSheet"
-              value={formData.pricePerSheet || ""}
-              onChange={handleChange}
-              placeholder="Enter price per sheet"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
-              required
-            />
-          </div>
+          {updatedBasicInfoFields.map(field => renderField(field))}
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Length (CM):</label>
-            <input
-              type="number"
-              name="length"
-              value={formData.length || ""}
-              onChange={handleChange}
-              placeholder="Enter length"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Breadth (CM):</label>
-            <input
-              type="number"
-              name="breadth"
-              value={formData.breadth || ""}
-              onChange={handleChange}
-              placeholder="Enter breadth"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">Freight/KG (INR):</label>
-            <input
-              type="number"
-              name="freightPerKg"
-              value={formData.freightPerKg || ""}
-              onChange={handleChange}
-              placeholder="Enter freight/KG"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
-              required
-            />
-          </div>
+        <div className="grid grid-cols-3 gap-4">
+          {PAPER_FIELDS.DIMENSIONS_SHIPPING.map(field => renderField(field))}
         </div>
       </div>
 
-      {/* Calculated Values section - now in a 2x3 grid layout */}
+      {/* Calculated Values section */}
       <div className="mb-6 bg-gray-50 p-4 rounded-lg">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Calculated Values</h3>
         
         <div className="grid grid-cols-3 gap-4 mb-3">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Rate/Gram (INR):</label>
-            <input
-              type="text"
-              value={formData.ratePerGram || ""}
-              readOnly
-              className="w-full p-2 bg-gray-100 border border-gray-200 rounded text-sm text-gray-700"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Area (sqcm):</label>
-            <input
-              type="text"
-              value={formData.area || ""}
-              readOnly
-              className="w-full p-2 bg-gray-100 border border-gray-200 rounded text-sm text-gray-700"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">1 Sqcm in Gram:</label>
-            <input
-              type="text"
-              value={formData.oneSqcmInGram || ""}
-              readOnly
-              className="w-full p-2 bg-gray-100 border border-gray-200 rounded text-sm text-gray-700"
-            />
-          </div>
+          {PAPER_FIELDS.CALCULATED_VALUES.slice(0, 3).map(field => renderField(field))}
         </div>
 
         <div className="grid grid-cols-3 gap-4">
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">GSM/Sheet:</label>
-            <input
-              type="text"
-              value={formData.gsmPerSheet || ""}
-              readOnly
-              className="w-full p-2 bg-gray-100 border border-gray-200 rounded text-sm text-gray-700"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Freight/Sheet (INR):</label>
-            <input
-              type="text"
-              value={formData.freightPerSheet || ""}
-              readOnly
-              className="w-full p-2 bg-gray-100 border border-gray-200 rounded text-sm text-gray-700"
-            />
-          </div>
-          <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">Final Rate (INR):</label>
-            <input
-              type="text"
-              value={formData.finalRate || ""}
-              readOnly
-              className="w-full p-2 bg-gray-100 border border-gray-200 rounded text-sm text-gray-700 font-medium"
-            />
-          </div>
+          {PAPER_FIELDS.CALCULATED_VALUES.slice(3).map(field => renderField(field))}
         </div>
       </div>
 
