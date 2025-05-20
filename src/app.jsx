@@ -10,6 +10,7 @@ import OverheadManagement from "./components/Management/Overheads/OverheadManage
 import LoyaltyTierManagement from "./components/Management/LoyaltyTierManagement/LoyaltyTierManagement"
 import LoyaltyDashboard from "./components/Loyalty/LoyaltyDashboard";
 import ClientManagement from "./components/Clients/ClientManagement";
+import VendorManagement from "./components/Vendors/VendorManagement";
 import Header from "./components/Header";
 import Login from "./components/Login/login";
 import ChangePassword from "./components/Login/ChangePassword";
@@ -96,10 +97,18 @@ function App() {
                 </ProtectedRoute>
               } 
             />
+
+            <Route 
+              path="/vendors" 
+              element={
+                <ProtectedRoute>
+                  <VendorManagement />
+                </ProtectedRoute>
+              } 
+            />
             
             <Route 
               path="/estimates" 
-              
               element={
                 <ProtectedRoute>
                   <EstimatesPage />

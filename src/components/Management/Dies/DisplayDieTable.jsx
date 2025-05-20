@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { calculateDieValues } from "../../../constants/dieContants";
 
 const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
   const [searchTerm, setSearchTerm] = useState("");
@@ -47,6 +48,11 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
     const productBPattern = lowerSearchTerm.match(/b:([0-9.]+)/i);
     const dieLPattern = lowerSearchTerm.match(/dl:([0-9.]+)/i);
     const dieBPattern = lowerSearchTerm.match(/db:([0-9.]+)/i);
+    
+    // Check for temporary flag
+    if (lowerSearchTerm === "temporary") {
+      return die.isTemporary === true;
+    }
     
     // With dimension patterns - check dimensions specifically
     if (productLPattern || productBPattern || dieLPattern || dieBPattern) {
@@ -118,6 +124,17 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
         return bValue.localeCompare(aValue, undefined, { numeric: true, sensitivity: 'base' });
       }
     }
+    // For isTemporary field, sort booleans
+    else if (sortField === 'isTemporary') {
+      const aValue = !!a[sortField];
+      const bValue = !!b[sortField];
+      
+      if (sortDirection === "asc") {
+        return aValue === bValue ? 0 : aValue ? 1 : -1;
+      } else {
+        return aValue === bValue ? 0 : aValue ? -1 : 1;
+      }
+    }
     // For other fields, use the existing text sorting
     else {
       const aValue = (a[sortField] || "").toString().toLowerCase();
@@ -147,24 +164,6 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
       </div>
     </th>
   );
-
-  // Calculate any missing values for a die
-  const calculateDieValues = (die) => {
-    const calculateCM = (inches) => {
-      if (!inches || isNaN(inches)) return "-";
-      return (parseFloat(inches) * 2.54).toFixed(2);
-    };
-    
-    return {
-      ...die,
-      dieSizeL_CM: die.dieSizeL_CM || calculateCM(die.dieSizeL),
-      dieSizeB_CM: die.dieSizeB_CM || calculateCM(die.dieSizeB),
-      plateSizeL: die.plateSizeL || die.productSizeL || "-",
-      plateSizeB: die.plateSizeB || die.productSizeB || "-",
-      clsdPrntSizeL_CM: die.clsdPrntSizeL_CM || calculateCM(die.productSizeL),
-      clsdPrntSizeB_CM: die.clsdPrntSizeB_CM || calculateCM(die.productSizeB),
-    };
-  };
 
   // Renders the action buttons with the correct styling
   const renderActionButtons = (die) => (
@@ -196,6 +195,17 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
     </div>
   );
 
+  // Render temporary badge
+  const renderTemporaryBadge = (isTemporary) => {
+    if (!isTemporary) return null;
+    
+    return (
+      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">
+        Temporary
+      </span>
+    );
+  };
+
   // Compact view - shows only essential columns
   const renderCompactView = () => {
     return (
@@ -209,6 +219,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
               <SortableHeader field="frags" label="Frags" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Product Size (L×B)</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Die Size (L×B)</th>
+              <SortableHeader field="isTemporary" label="Status" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Image</th>
               {hasEditAccess && (
                 <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
@@ -221,13 +232,26 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                 <tr className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
                   <td className="px-3 py-3">{die.jobType || "-"}</td>
                   <td className="px-3 py-3">{die.type || "-"}</td>
-                  <td className="px-3 py-3 font-medium">{die.dieCode || "-"}</td>
+                  <td className="px-3 py-3 font-medium">
+                    {die.dieCode || "-"}
+                  </td>
                   <td className="px-3 py-3">{die.frags || "-"}</td>
                   <td className="px-3 py-3">
                     {die.productSizeL || "-"}×{die.productSizeB || "-"}
                   </td>
                   <td className="px-3 py-3">
                     {die.dieSizeL || "-"}×{die.dieSizeB || "-"}
+                  </td>
+                  <td className="px-3 py-3">
+                    {die.isTemporary ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Temporary
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        Permanent
+                      </span>
+                    )}
                   </td>
                   <td className="px-3 py-3">
                     {die.imageUrl ? (
@@ -248,8 +272,8 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                   )}
                 </tr>
                 {expandedRows[die.id] && (
-                  <tr className="bg-gray-50">
-                    <td colSpan={hasEditAccess ? 8 : 7} className="px-4 py-3 border-b border-gray-200">
+                  <tr className={`${die.isTemporary ? 'bg-yellow-50' : 'bg-gray-50'}`}>
+                    <td colSpan={hasEditAccess ? 9 : 8} className="px-4 py-3 border-b border-gray-200">
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="font-medium text-gray-700">Converted Sizes:</p>
@@ -302,6 +326,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
               <SortableHeader field="dieSizeB_CM" label="Paper B (CM)" />
               <SortableHeader field="clsdPrntSizeL_CM" label="CLSD PRNT L (CM)" />
               <SortableHeader field="clsdPrntSizeB_CM" label="CLSD PRNT B (CM)" />
+              <SortableHeader field="isTemporary" label="Status" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Image</th>
               {hasEditAccess && (
                 <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
@@ -313,7 +338,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
               const calculatedDie = calculateDieValues(die);
               
               return (
-                <tr key={die.id} className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}`}>
+                <tr key={die.id} className={`border-b border-gray-200 hover:bg-gray-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50'} ${die.isTemporary ? 'bg-yellow-50' : ''}`}>
                   <td className="px-3 py-3">{die.jobType || "-"}</td>
                   <td className="px-3 py-3">{die.type || "-"}</td>
                   <td className="px-3 py-3 font-medium">{die.dieCode || "-"}</td>
@@ -326,6 +351,17 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                   <td className="px-3 py-3">{calculatedDie.dieSizeB_CM}</td>
                   <td className="px-3 py-3">{calculatedDie.clsdPrntSizeL_CM}</td>
                   <td className="px-3 py-3">{calculatedDie.clsdPrntSizeB_CM}</td>
+                  <td className="px-3 py-3">
+                    {die.isTemporary ? (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800">
+                        Temporary
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
+                        Permanent
+                      </span>
+                    )}
+                  </td>
                   <td className="px-3 py-3">
                     {die.imageUrl ? (
                       <img 
@@ -384,12 +420,19 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
           const calculatedDie = calculateDieValues(die);
           
           return (
-            <div key={die.id} className="border border-gray-200 shadow-sm overflow-hidden bg-white">
+            <div key={die.id} className={`border border-gray-200 shadow-sm overflow-hidden bg-white ${die.isTemporary ? 'border-yellow-300' : ''}`}>
               {/* Main die information always visible */}
-              <div className="p-4">
+              <div className={`p-4 ${die.isTemporary ? 'bg-yellow-50' : ''}`}>
                 <div className="flex justify-between items-start">
                   <div>
-                    <h3 className="font-medium text-gray-800">{die.dieCode || "Unnamed Die"}</h3>
+                    <div className="flex items-center">
+                      <h3 className="font-medium text-gray-800">{die.dieCode || "Unnamed Die"}</h3>
+                      {die.isTemporary && (
+                        <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-yellow-100 text-yellow-800 ml-2">
+                          Temporary
+                        </span>
+                      )}
+                    </div>
                     <p className="text-sm text-gray-600">{die.jobType || "No type"} | {die.type || "-"}</p>
                   </div>
                   <div className="text-right">
@@ -464,7 +507,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
               
               {/* Expandable detailed information */}
               {expandedRows[die.id] && (
-                <div className="border-t border-gray-200 p-4 bg-gray-50">
+                <div className={`border-t border-gray-200 p-4 ${die.isTemporary ? 'bg-yellow-50' : 'bg-gray-50'}`}>
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                     <div>
                       <p className="font-medium text-gray-700">Product Size</p>
@@ -509,7 +552,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
           </div>
           <input
             type="text"
-            placeholder="Search dies..."
+            placeholder="Search dies... (type 'temporary' to filter)"
             value={searchTerm}
             onChange={handleSearch}
             className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
