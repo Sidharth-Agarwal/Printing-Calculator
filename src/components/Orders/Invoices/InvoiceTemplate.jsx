@@ -237,16 +237,26 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           <div className="flex justify-between py-0.5 text-xs border-t border-gray-200">
             <div className="text-gray-700">Subtotal:</div>
             <div className="text-gray-900 font-medium font-mono">
-              {formatCurrency(lineItems.reduce((sum, item) => sum + item.originalTotal, 0))}
+              {formatCurrency(totals.subtotal)}
             </div>
           </div>
           
           {/* Total Loyalty Discount */}
-          {lineItems.some(item => item.loyaltyDiscountAmount > 0) && (
+          {totals.loyaltyDiscount > 0 && (
             <div className="flex justify-between py-0.5 text-xs text-red-600">
               <div>Loyalty Discount:</div>
               <div className="font-mono">
-                -{formatCurrency(lineItems.reduce((sum, item) => sum + item.loyaltyDiscountAmount, 0))}
+                -{formatCurrency(totals.loyaltyDiscount)}
+              </div>
+            </div>
+          )}
+          
+          {/* Additional Invoice Discount */}
+          {invoiceData.discount > 0 && (
+            <div className="flex justify-between py-0.5 text-xs text-red-600">
+              <div>Invoice Discount ({invoiceData.discount}%):</div>
+              <div className="font-mono">
+                -{formatCurrency(totals.discount)}
               </div>
             </div>
           )}
@@ -254,14 +264,14 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           <div className="flex justify-between py-0.5 text-xs">
             <div className="text-gray-700">GST Amount:</div>
             <div className="text-gray-900 font-mono">
-              {formatCurrency(lineItems.reduce((sum, item) => sum + item.gstAmount, 0))}
+              {formatCurrency(totals.tax)}
             </div>
           </div>
           
           <div className="flex justify-between py-0.5 font-bold border-t border-gray-300">
             <div>Total:</div>
             <div className="font-mono">
-              {formatCurrency(lineItems.reduce((sum, item) => sum + item.finalTotal, 0))}
+              {formatCurrency(totals.total)}
             </div>
           </div>
         </div>
@@ -287,6 +297,16 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           </tbody>
         </table>
       </div>
+      
+      {/* Notes Section - Added if there are notes */}
+      {invoiceData.notes && (
+        <div className="mb-1">
+          <div className="font-medium text-xs mb-0.5">Notes:</div>
+          <div className="text-xs text-gray-600 border border-gray-300 p-1 rounded">
+            {invoiceData.notes}
+          </div>
+        </div>
+      )}
       
       {/* Footer - Declaration */}
       <div className="mt-1 pt-0.5 border-t border-gray-200">
