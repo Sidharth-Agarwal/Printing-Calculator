@@ -347,12 +347,12 @@ const OrdersPage = () => {
       return (
         <div className="flex justify-center">
           <div 
-            className={`w-5 h-5 rounded-full flex items-center justify-center
+            className={`w-4 h-4 rounded-full flex items-center justify-center
               transition duration-150 ease-in-out
               ${isCompleted ? colors.bg : 'bg-gray-200'}`}
           >
             {isCompleted && (
-              <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+              <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
                 <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
               </svg>
             )}
@@ -384,12 +384,12 @@ const OrdersPage = () => {
       <div className="flex justify-center">
         <div 
           onClick={handleStageClick}
-          className={`w-5 h-5 rounded-full flex items-center justify-center cursor-pointer
+          className={`w-4 h-4 rounded-full flex items-center justify-center cursor-pointer
             transition duration-150 ease-in-out
             ${isCompleted ? colors.bg : 'bg-gray-200'}`}
         >
           {isCompleted && (
-            <svg className="w-3 h-3 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <svg className="w-2 h-2 text-white" fill="currentColor" viewBox="0 0 20 20">
               <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
             </svg>
           )}
@@ -593,52 +593,56 @@ const OrdersPage = () => {
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
         {filteredOrders.length > 0 ? (
           <div className="overflow-x-auto">
-            <table className="w-full">
+            <table className="w-full text-xs">
               <thead>
-                <tr className="bg-gray-50 text-xs border-b border-gray-200">
+                <tr className="bg-gray-50 border-b border-gray-200">
                   {!isB2BClient && (
-                    <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                    <th className="px-2 py-2 text-left font-medium text-gray-500">
                       Client
                     </th>
                   )}
-                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                  <th className="px-2 py-2 text-left font-medium text-gray-500">
                     Project
                   </th>
-                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                  <th className="px-2 py-2 text-left font-medium text-gray-500">
                     Type
                   </th>
-                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                  <th className="px-2 py-2 text-left font-medium text-gray-500">
                     Quantity
                   </th>
-                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                  <th className="px-2 py-2 text-left font-medium text-gray-500">
                     Delivery
                   </th>
-                  {/* Assigned production staff column */}
-                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
-                    Assigned To
+                  {/* Deadline column */}
+                  <th className="px-2 py-2 text-left font-medium text-gray-500">
+                    Deadline
                   </th>
-                  <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                  {/* Assigned production staff column */}
+                  <th className="px-2 py-2 text-left font-medium text-gray-500">
+                    Assigned
+                  </th>
+                  <th className="px-2 py-2 text-left font-medium text-gray-500">
                     Status
                   </th>
                   {/* Loyalty column for admins and staff */}
                   {(userRole === "admin" || userRole === "staff") && (
-                    <th className="px-3 py-2.5 text-left font-medium text-gray-500">
+                    <th className="px-2 py-2 text-left font-medium text-gray-500">
                       Discount
                     </th>
                   )}
                   {stages.slice(1).map((stage) => (
-                    <th key={stage} className="px-2 py-2.5 text-center font-medium text-gray-500 whitespace-nowrap text-xs">
+                    <th key={stage} className="px-1 py-2 text-center font-medium text-gray-500 whitespace-nowrap">
                       {stage.split(' ')[0]}
                     </th>
                   ))}
                   {canAssignProduction && (
-                    <th className="px-3 py-2.5 text-center font-medium text-gray-500">
+                    <th className="px-2 py-2 text-center font-medium text-gray-500 w-10">
                       Actions
                     </th>
                   )}
                 </tr>
               </thead>
-              <tbody className="text-sm">
+              <tbody>
                 {filteredOrders.map((order) => (
                   <tr 
                     key={order.id} 
@@ -646,62 +650,75 @@ const OrdersPage = () => {
                     onClick={() => setSelectedOrder(order)}
                   >
                     {!isB2BClient && (
-                      <td className="px-3 py-2.5">
+                      <td className="px-2 py-1.5">
                         <div className="flex items-center">
-                          <span className="text-blue-600 hover:text-blue-800 font-medium">
+                          <span className="text-blue-600 hover:text-blue-800 font-medium truncate max-w-[100px]">
                             {order.clientName}
                           </span>
                         </div>
                       </td>
                     )}
-                    <td className="px-3 py-2.5">
-                      <span className="font-medium text-gray-800">{order.projectName || 'Unnamed Project'}</span>
+                    <td className="px-2 py-1.5">
+                      <span className="font-medium text-gray-800 truncate max-w-[100px] block">{order.projectName || 'Unnamed'}</span>
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-1.5">
                       {order.jobDetails?.jobType || 'N/A'}
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-1.5">
                       {order.jobDetails?.quantity || 'N/A'}
                     </td>
-                    <td className="px-3 py-2.5">
+                    <td className="px-2 py-1.5">
                       {formatDate(order.deliveryDate)}
                     </td>
+                    {/* Deadline cell */}
+                    <td className="px-2 py-1.5">
+                      {order.productionAssignments?.deadlineDate ? (
+                        <span className={`${
+                          new Date(order.productionAssignments.deadlineDate) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
+                          order.stage !== 'Completed' ? 'text-red-600 font-medium' : 'text-gray-600'
+                        }`}>
+                          {formatDate(order.productionAssignments.deadlineDate)}
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 italic">Not set</span>
+                      )}
+                    </td>
                     {/* Assigned production staff cell */}
-                    <td className="px-3 py-2.5">
-                      <span className={`${order.productionAssignments?.assigned ? 'text-teal-600 font-medium' : 'text-gray-500 italic'}`}>
+                    <td className="px-2 py-1.5">
+                      <span className={`${order.productionAssignments?.assigned ? 'text-teal-600 font-medium' : 'text-gray-500 italic'} truncate max-w-[80px] block`}>
                         {getAssignedStaffName(order.productionAssignments)}
                       </span>
                     </td>
-                    <td className="px-3 py-2.5">
-                    <span className={`px-2 py-0.5 text-xs rounded-full text-white inline-block
-                        ${stageColors[order.stage]?.bg || 'bg-gray-100'}`}
-                      >
-                        {order.stage || 'Not started yet'}
+                    <td className="px-2 py-1.5">
+                      <span className={`px-1.5 py-0.5 text-xs rounded-full text-white inline-block
+                          ${stageColors[order.stage]?.bg || 'bg-gray-100'}`}
+                        >
+                        {order.stage || 'Not started'}
                       </span>
                     </td>
                     {/* Loyalty column for admins and staff */}
                     {(userRole === "admin" || userRole === "staff") && (
-                      <td className="px-3 py-2.5">
+                      <td className="px-2 py-1.5">
                         {order.isLoyaltyEligible ? (
                           order.loyaltyInfo ? (
                             <div className="text-xs">
                               <div className="text-green-600">
-                                <strong>{order.loyaltyInfo.discount}% applied</strong>
+                                <strong>{order.loyaltyInfo.discount}%</strong>
                               </div>
                             </div>
                           ) : (
                             <span className="text-xs text-purple-700">
-                              B2B Eligible
+                              B2B
                             </span>
                           )
                         ) : (
-                          <span className="text-xs text-blue-600"><strong>Direct client</strong></span>
+                          <span className="text-xs text-blue-600"><strong>Direct</strong></span>
                         )}
                       </td>
                     )}
                     {/* Status indicators for each stage */}
                     {stages.slice(1).map((stage) => (
-                      <td key={`${order.id}-${stage}`} className="px-2 py-2.5 text-center">
+                      <td key={`${order.id}-${stage}`} className="px-1 py-1.5 text-center">
                         <StatusCircle 
                           stage={stage} 
                           currentStage={order.stage} 
@@ -711,16 +728,16 @@ const OrdersPage = () => {
                     ))}
                     {/* Actions column */}
                     {canAssignProduction && (
-                      <td className="px-3 py-2.5 text-center">
+                      <td className="px-2 py-1.5 text-center">
                         <button
                           onClick={(e) => {
                             e.stopPropagation(); // Prevent row click action
                             handleOpenAssignmentModal(order);
                           }}
-                          className="p-1 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50 transition-colors"
+                          className="p-0.5 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50 transition-colors"
                           title="Assign Production Staff"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                             <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
                           </svg>
                         </button>
@@ -775,7 +792,7 @@ const OrdersPage = () => {
               
               return (
                 <div key={stage} className="flex flex-col items-center">
-                  <div className={`${colors.bg} rounded-full w-8 h-8 flex items-center justify-center mb-1`}>
+                  <div className={`${colors.bg} rounded-full w-7 h-7 flex items-center justify-center mb-1`}>
                     <span className="text-xs text-white font-medium">{count}</span>
                   </div>
                   <div className="text-xs text-center">

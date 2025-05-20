@@ -1,12 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 
 const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [productionStaff, setProductionStaff] = useState([]);
   const [assignedStaff, setAssignedStaff] = useState('');
+  const [deadlineDate, setDeadlineDate] = useState('');
   const [updating, setUpdating] = useState(false);
+
+  // Calculate min date (today) for the deadline picker
+  const today = new Date().toISOString().split('T')[0];
+
+  // Format date for display (dd/mm/yyyy)
+  const formatDateForDisplay = (dateString) => {
+    if (!dateString) return "";
+    try {
+      const date = new Date(dateString);
+      return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+    } catch (error) {
+      return dateString;
+    }
+  };
 
   // Fetch production staff on component mount
   useEffect(() => {
@@ -28,8 +45,14 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
         setProductionStaff(staff);
         
         // Initialize assignment from order data if available
-        if (order.productionAssignments && order.productionAssignments.assigned) {
-          setAssignedStaff(order.productionAssignments.assigned);
+        if (order.productionAssignments) {
+          if (order.productionAssignments.assigned) {
+            setAssignedStaff(order.productionAssignments.assigned);
+          }
+          
+          if (order.productionAssignments.deadlineDate) {
+            setDeadlineDate(order.productionAssignments.deadlineDate);
+          }
         }
         
       } catch (error) {
@@ -49,7 +72,9 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
       const orderRef = doc(db, "orders", order.id);
       
       const productionAssignments = {
-        assigned: assignedStaff
+        assigned: assignedStaff,
+        deadlineDate: deadlineDate,
+        assignedAt: new Date().toISOString()
       };
       
       await updateDoc(orderRef, {
@@ -67,9 +92,12 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
     }
   };
 
+  // Validate if we can save (staff selected and deadline provided)
+  const canSave = assignedStaff && deadlineDate;
+
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[60] p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl"> {/* Wider modal */}
         {/* Modal Header */}
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-bold text-gray-700">Assign Production Staff</h2>
@@ -103,32 +131,61 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
             <>
               <div className="mb-4">
                 <p className="mb-3 text-gray-600 text-sm">
-                  Assign a production staff member to {order.projectName || "this order"}.
+                  Assign a production staff member to {order.projectName || "this order"} and set a production deadline.
                 </p>
               </div>
               
-              <div className="mb-6">
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Select Production Staff
-                </label>
-                <select
-                  value={assignedStaff}
-                  onChange={(e) => setAssignedStaff(e.target.value)}
-                  className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
-                >
-                  <option value="">-- Not Assigned --</option>
-                  {productionStaff.map(staff => (
-                    <option key={staff.id} value={staff.id}>
-                      {staff.displayName || staff.email || "Staff Member"}
-                    </option>
-                  ))}
-                </select>
+              {/* Side-by-side fields */}
+              <div className="flex flex-wrap gap-4 mb-4">
+                <div className="flex-1 min-w-[240px]">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Select Production Staff
+                  </label>
+                  <select
+                    value={assignedStaff}
+                    onChange={(e) => setAssignedStaff(e.target.value)}
+                    className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                  >
+                    <option value="">-- Not Assigned --</option>
+                    {productionStaff.map(staff => (
+                      <option key={staff.id} value={staff.id}>
+                        {staff.displayName || staff.email || "Staff Member"}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="flex-1 min-w-[240px]">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Production Deadline
+                  </label>
+                  <div className="relative">
+                    <DatePicker
+                      selected={deadlineDate ? new Date(deadlineDate) : null}
+                      onChange={(date) => {
+                        if (date) {
+                          const isoDate = date.toISOString().split('T')[0]; // Format to yyyy-mm-dd
+                          setDeadlineDate(isoDate);
+                        }
+                      }}
+                      dateFormat="dd/MM/yyyy"
+                      placeholderText="DD/MM/YYYY"
+                      minDate={new Date()}
+                      className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                    />
+                  </div>
+                  {order.deliveryDate && (
+                    <p className="mt-1 text-xs text-gray-500">
+                      <span className="font-medium">Note:</span> Customer delivery date is {formatDateForDisplay(order.deliveryDate)}
+                    </p>
+                  )}
+                </div>
               </div>
               
               {/* Order Details */}
-              <div className="bg-gray-50 p-3 rounded-md border border-gray-200 mb-6">
+              <div className="bg-gray-50 p-3 rounded-md border border-gray-200 mb-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Order Details</h4>
-                <div className="grid grid-cols-2 gap-2 text-xs">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 text-sm">
                   <div>
                     <span className="text-gray-500">Project:</span>
                     <span className="ml-1 font-medium">{order.projectName || "Unnamed Project"}</span>
@@ -144,6 +201,14 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
                   <div>
                     <span className="text-gray-500">Quantity:</span>
                     <span className="ml-1">{order.jobDetails?.quantity || "N/A"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Stage:</span>
+                    <span className="ml-1">{order.stage || "Not started yet"}</span>
+                  </div>
+                  <div>
+                    <span className="text-gray-500">Delivery:</span>
+                    <span className="ml-1">{order.deliveryDate ? formatDateForDisplay(order.deliveryDate) : "Not set"}</span>
                   </div>
                 </div>
               </div>
@@ -162,8 +227,8 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
           </button>
           <button
             onClick={saveAssignments}
-            className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
-            disabled={updating || loading || productionStaff.length === 0}
+            className={`px-4 py-2 ${canSave ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-300 cursor-not-allowed'} text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2`}
+            disabled={updating || loading || productionStaff.length === 0 || !canSave}
           >
             {updating ? (
               <span className="flex items-center">
