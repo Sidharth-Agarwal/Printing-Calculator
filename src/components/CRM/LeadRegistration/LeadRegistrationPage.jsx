@@ -228,7 +228,7 @@ const LeadRegistrationPage = () => {
       )}
       
       {/* Lead Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg border border-gray-200">
           <h2 className="text-sm font-medium text-gray-500 mb-2">Total Leads</h2>
           <p className="text-2xl font-bold text-gray-800">{leads.length}</p>
@@ -256,7 +256,7 @@ const LeadRegistrationPage = () => {
               : "0%"}
           </p>
         </div>
-      </div>
+      </div> */}
 
       {/* Action Button and Search/Filters */}
       <div className="flex justify-between items-center mb-4">
