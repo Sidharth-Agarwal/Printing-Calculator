@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, query, where, orderBy, onSnapshot } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, getDocs } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import LeadStatusBadge from "../../Shared/LeadStatusBadge";
 import { LeadSourceDisplay } from "../../Shared/LeadSourceSelector";
@@ -28,6 +28,21 @@ const LeadDetailsModal = ({
   const [discussions, setDiscussions] = useState([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(true);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [notification, setNotification] = useState({
+    show: false,
+    message: "",
+    type: "success"
+  });
+  
+  // Show notification
+  const showNotification = (message, type = "success") => {
+    setNotification({ show: true, message, type });
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
   
   // Fetch discussions when lead changes - using real-time updates
   useEffect(() => {
@@ -64,6 +79,34 @@ const LeadDetailsModal = ({
     // Cleanup subscription on unmount
     return () => unsubscribe();
   }, [lead]);
+
+  // Handle discussion updates (refresh when edited/deleted)
+  const refreshDiscussions = async () => {
+    if (!lead || !lead.id) return;
+    
+    setIsLoadingDiscussions(true);
+    try {
+      // Fetch discussions again
+      const discussionsQuery = query(
+        collection(db, "discussions"),
+        where("leadId", "==", lead.id),
+        orderBy("date", "desc")
+      );
+      
+      const querySnapshot = await getDocs(discussionsQuery);
+      const discussionsData = querySnapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setDiscussions(discussionsData);
+    } catch (error) {
+      console.error("Error refreshing discussions:", error);
+      showNotification("Error updating discussions", "error");
+    } finally {
+      setIsLoadingDiscussions(false);
+    }
+  };
   
   // Handle status advancement
   const handleAdvanceStatus = async () => {
@@ -78,8 +121,10 @@ const LeadDetailsModal = ({
     
     try {
       await updateLeadStatus(lead.id, nextStatus.id);
+      showNotification(`Lead status updated to ${nextStatus.label}`, "success");
     } catch (error) {
       console.error("Error updating status:", error);
+      showNotification("Error updating lead status", "error");
     } finally {
       setIsUpdatingStatus(false);
     }
@@ -126,6 +171,17 @@ const LeadDetailsModal = ({
             </svg>
           </button>
         </div>
+        
+        {/* Notification */}
+        {notification.show && (
+          <div className={`mx-4 mt-4 p-3 rounded ${
+            notification.type === "success" 
+              ? "bg-green-100 text-green-700 border border-green-200" 
+              : "bg-red-100 text-red-700 border border-red-200"
+          }`}>
+            {notification.message}
+          </div>
+        )}
         
         <div className="flex flex-col md:flex-row h-[calc(90vh-4rem)] overflow-hidden">
           {/* Lead Information */}
@@ -237,6 +293,7 @@ const LeadDetailsModal = ({
               loading={isLoadingDiscussions}
               formatDate={formatDate}
               lead={lead}
+              onUpdate={refreshDiscussions}
             />
           </div>
         </div>

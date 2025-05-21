@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../firebaseConfig';
+import { updateDiscussion, deleteDiscussion } from '../../services/discussionService';
+import Modal from '../Shared/Modal';
+import CRMActionButton from '../Shared/CRMActionButton';
 
 /**
  * Component to display a history of discussions with a lead
@@ -9,6 +12,7 @@ import { db } from '../../firebaseConfig';
  * @param {boolean} props.loading - Loading state
  * @param {function} props.formatDate - Function to format dates
  * @param {Object} props.lead - Lead object
+ * @param {function} props.onUpdate - Optional callback when a discussion is updated
  */
 const DiscussionHistory = ({ 
   discussions = [], 
@@ -26,7 +30,8 @@ const DiscussionHistory = ({
       year: "numeric"
     });
   },
-  lead = null
+  lead = null,
+  onUpdate = null
 }) => {
   console.log("DiscussionHistory received:", { 
     discussions, 
@@ -34,6 +39,106 @@ const DiscussionHistory = ({
     discussionsLength: discussions?.length,
     leadId: lead?.id
   });
+
+  const [editingDiscussion, setEditingDiscussion] = useState(null);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [discussionToDelete, setDiscussionToDelete] = useState(null);
+  const [editFormData, setEditFormData] = useState({
+    summary: '',
+    nextSteps: ''
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [notification, setNotification] = useState({
+    show: false,
+    message: '',
+    type: 'success'
+  });
+
+  // Show notification
+  const showNotification = (message, type = 'success') => {
+    setNotification({ show: true, message, type });
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+      setNotification(prev => ({ ...prev, show: false }));
+    }, 3000);
+  };
+
+  // Handle edit button click
+  const handleEditClick = (discussion) => {
+    setEditingDiscussion(discussion);
+    setEditFormData({
+      summary: discussion.summary || '',
+      nextSteps: discussion.nextSteps || ''
+    });
+    setIsEditModalOpen(true);
+  };
+
+  // Handle delete button click
+  const handleDeleteClick = (discussion) => {
+    setDiscussionToDelete(discussion);
+    setIsDeleteModalOpen(true);
+  };
+
+  // Handle form input changes
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setEditFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+  };
+
+  // Handle form submission for editing
+  const handleSubmitEdit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    try {
+      await updateDiscussion(editingDiscussion.id, {
+        summary: editFormData.summary,
+        nextSteps: editFormData.nextSteps
+      });
+      
+      showNotification('Discussion updated successfully');
+      
+      // Close modal
+      setIsEditModalOpen(false);
+      setEditingDiscussion(null);
+      
+      // Call update callback if provided
+      if (onUpdate) {
+        onUpdate();
+      }
+    } catch (error) {
+      console.error('Error updating discussion:', error);
+      showNotification(`Error: ${error.message}`, 'error');
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle delete confirmation
+  const handleConfirmDelete = async () => {
+    try {
+      await deleteDiscussion(discussionToDelete.id);
+      
+      showNotification('Discussion deleted successfully');
+      
+      // Close modal
+      setIsDeleteModalOpen(false);
+      setDiscussionToDelete(null);
+      
+      // Call update callback if provided
+      if (onUpdate) {
+        onUpdate();
+      }
+    } catch (error) {
+      console.error('Error deleting discussion:', error);
+      showNotification(`Error: ${error.message}`, 'error');
+    }
+  };
 
   if (loading) {
     return (
@@ -69,13 +174,116 @@ const DiscussionHistory = ({
 
   return (
     <div className="space-y-4">
+      {/* Notification */}
+      {notification.show && (
+        <div className={`mb-4 p-3 rounded ${
+          notification.type === "success" 
+            ? "bg-green-100 text-green-700 border border-green-200" 
+            : "bg-red-100 text-red-700 border border-red-200"
+        }`}>
+          {notification.message}
+        </div>
+      )}
+      
       {sortedDiscussions.map((discussion) => (
         <DiscussionItem 
           key={discussion.id} 
           discussion={discussion} 
           formatDate={formatDate}
+          onEdit={() => handleEditClick(discussion)}
+          onDelete={() => handleDeleteClick(discussion)}
         />
       ))}
+
+      {/* Edit Discussion Modal */}
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Edit Discussion"
+        size="md"
+      >
+        <form onSubmit={handleSubmitEdit} className="space-y-4">
+          <div>
+            <label htmlFor="summary" className="block text-sm font-medium text-gray-700 mb-1">
+              Discussion Summary <span className="text-red-500">*</span>
+            </label>
+            <textarea
+              id="summary"
+              name="summary"
+              value={editFormData.summary}
+              onChange={handleChange}
+              required
+              rows="3"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              placeholder="Summarize what was discussed with the lead..."
+            ></textarea>
+          </div>
+          
+          <div>
+            <label htmlFor="nextSteps" className="block text-sm font-medium text-gray-700 mb-1">
+              Next Steps
+            </label>
+            <textarea
+              id="nextSteps"
+              name="nextSteps"
+              value={editFormData.nextSteps}
+              onChange={handleChange}
+              rows="2"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              placeholder="What are the next actions to be taken?"
+            ></textarea>
+          </div>
+          
+          <div className="flex justify-end space-x-2 pt-2">
+            <CRMActionButton
+              type="secondary"
+              onClick={() => setIsEditModalOpen(false)}
+              disabled={isSubmitting}
+            >
+              Cancel
+            </CRMActionButton>
+            
+            <CRMActionButton
+              type="primary"
+              isLoading={isSubmitting}
+              disabled={isSubmitting}
+              submit={true}
+            >
+              Update Discussion
+            </CRMActionButton>
+          </div>
+        </form>
+      </Modal>
+
+      {/* Delete Confirmation Modal */}
+      <Modal
+        isOpen={isDeleteModalOpen}
+        onClose={() => setIsDeleteModalOpen(false)}
+        title="Delete Discussion"
+        size="sm"
+      >
+        <div className="p-2">
+          <p className="mb-4">
+            Are you sure you want to delete this discussion? This action cannot be undone.
+          </p>
+          
+          <div className="flex justify-end space-x-2">
+            <CRMActionButton
+              type="secondary"
+              onClick={() => setIsDeleteModalOpen(false)}
+            >
+              Cancel
+            </CRMActionButton>
+            
+            <CRMActionButton
+              type="danger"
+              onClick={handleConfirmDelete}
+            >
+              Delete Discussion
+            </CRMActionButton>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };
@@ -85,8 +293,10 @@ const DiscussionHistory = ({
  * @param {Object} props - Component props
  * @param {Object} props.discussion - Discussion object
  * @param {function} props.formatDate - Function to format dates
+ * @param {function} props.onEdit - Edit handler
+ * @param {function} props.onDelete - Delete handler
  */
-const DiscussionItem = ({ discussion, formatDate }) => {
+const DiscussionItem = ({ discussion, formatDate, onEdit, onDelete }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -189,7 +399,7 @@ const DiscussionItem = ({ discussion, formatDate }) => {
   }
 
   return (
-    <div className="bg-white p-2 rounded-md border border-gray-200 shadow-sm">
+    <div className="bg-white p-2 rounded-md border border-gray-200 shadow-sm hover:shadow-md transition-shadow">
       <div className="flex justify-between items-start">
         <div className="flex items-center">
           <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium mr-2">
@@ -201,9 +411,33 @@ const DiscussionItem = ({ discussion, formatDate }) => {
             </span>
           </div>
         </div>
-        <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
-          {formatDate(discussion.date)}
-        </span>
+        <div className="flex items-center space-x-2">
+          <span className="text-xs text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            {formatDate(discussion.date)}
+          </span>
+          
+          {/* Action buttons */}
+          <div className="flex space-x-1">
+            <button 
+              onClick={onEdit}
+              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+              title="Edit discussion"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+              </svg>
+            </button>
+            <button 
+              onClick={onDelete}
+              className="p-1 text-red-600 hover:bg-red-50 rounded"
+              title="Delete discussion"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
+          </div>
+        </div>
       </div>
       
       <div className="ml-10">

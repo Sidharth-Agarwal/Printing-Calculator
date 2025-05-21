@@ -9,6 +9,7 @@ import { useCRM } from "../../../context/CRMContext";
 import DisplayLeadsTable from "../LeadRegistration/DisplayLeadsTable";
 import { LEAD_PIPELINE_FIELDS } from "../../../constants/leadFields";
 import { 
+  createLead,  // Added this import for creating new leads
   updateLead, 
   deleteLead, 
   getLeadById, 
@@ -21,7 +22,7 @@ import { useAuth } from "../../Login/AuthContext";
  */
 const LeadManagementPage = () => {
   const { currentUser, userRole } = useAuth();
-  const { leads, isLoadingLeads, qualificationBadges } = useCRM();
+  const { leads, isLoadingLeads, qualificationBadges, refreshLeads } = useCRM();
   
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -109,19 +110,30 @@ const LeadManagementPage = () => {
     }
   };
   
-  // Handle form submission for editing
+  // Handle form submission for editing or creating
   const handleSubmitForm = async (formData) => {
     setIsSubmitting(true);
     
     try {
-      // Update existing lead
-      await updateLead(selectedLead.id, formData);
-      showNotification(`Lead "${formData.name}" updated successfully`);
-      
-      // Refresh view if this lead is being viewed
-      if (viewingLead && viewingLead.id === selectedLead.id) {
-        const updatedLead = await getLeadById(selectedLead.id);
-        setViewingLead(updatedLead);
+      if (selectedLead) {
+        // Update existing lead
+        await updateLead(selectedLead.id, formData);
+        showNotification(`Lead "${formData.name}" updated successfully`);
+        
+        // Refresh view if this lead is being viewed
+        if (viewingLead && viewingLead.id === selectedLead.id) {
+          const updatedLead = await getLeadById(selectedLead.id);
+          setViewingLead(updatedLead);
+        }
+      } else {
+        // Create new lead
+        const newLead = await createLead(formData);
+        showNotification(`Lead "${formData.name}" created successfully`);
+        
+        // Refresh the lead list if needed
+        if (refreshLeads) {
+          refreshLeads();
+        }
       }
       
       // Close form modal
@@ -171,9 +183,10 @@ const LeadManagementPage = () => {
     setConvertingLead(null);
   };
   
-  // Handle Add New Lead click
+  // Handle Add New Lead click - UPDATED to open modal instead of redirect
   const handleAddNew = () => {
-    window.location.href = "/crm/lead-registration";
+    setSelectedLead(null); // Ensure we're not in edit mode
+    setIsFormModalOpen(true);
   };
   
   // Filter leads based on search and filter criteria
@@ -444,15 +457,15 @@ const LeadManagementPage = () => {
         />
       )}
       
-      {/* Edit Lead Modal */}
-      {isFormModalOpen && selectedLead && (
+      {/* Add/Edit Lead Modal */}
+      {isFormModalOpen && (
         <Modal
           isOpen={true}
           onClose={() => {
             setIsFormModalOpen(false);
             setSelectedLead(null);
           }}
-          title="Edit Lead"
+          title={selectedLead ? "Edit Lead" : "Add New Lead"}
           size="xl"
         >
           <LeadRegistrationForm
