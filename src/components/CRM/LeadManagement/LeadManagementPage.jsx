@@ -7,6 +7,7 @@ import LeadConversionModal from "./LeadConversionModal";
 import CRMActionButton from "../../Shared/CRMActionButton";
 import { useCRM } from "../../../context/CRMContext";
 import DisplayLeadsTable from "../LeadRegistration/DisplayLeadsTable"; // Import DisplayLeadsTable for List View
+import { LEAD_PIPELINE_FIELDS } from "../../../constants/leadFields"; // Import the pipeline fields
 import { 
   updateLead, 
   deleteLead, 
@@ -312,6 +313,7 @@ const LeadManagementPage = () => {
             onDelete={handleDelete}
             onAddDiscussion={handleAddDiscussion}
             loading={isLoadingLeads}
+            fields={LEAD_PIPELINE_FIELDS} // Use the pipeline fields for list view
           />
         </div>
       )}

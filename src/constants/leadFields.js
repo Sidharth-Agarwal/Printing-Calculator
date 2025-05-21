@@ -179,10 +179,21 @@ export const LEAD_FIELDS = {
   ]
 };
 
-// Fields displayed in the leads table
+// Fields displayed in the leads registration table
 export const LEAD_TABLE_FIELDS = [
   { field: "name", label: "Name", sortable: true },
-  { field: "phone", label: "Phone/Email", sortable: false },
+  { field: "company", label: "Company", sortable: true },
+  { field: "phone", label: "Phone", sortable: false },
+  { field: "email", label: "Email", sortable: false },
+  { field: "source", label: "Source", sortable: true },
+  { field: "status", label: "Status", sortable: true },
+  { field: "createdAt", label: "Created", sortable: true, type: "date" },
+  { field: "lastDiscussionDate", label: "Last Contact", sortable: true, type: "date" }
+];
+
+// Fields displayed in the lead pipeline table/list view
+export const LEAD_PIPELINE_FIELDS = [
+  { field: "name", label: "Name", sortable: true },
   { field: "source", label: "Source", sortable: true },
   { field: "badgeId", label: "Qualification", sortable: false },
   { field: "status", label: "Status", sortable: true },

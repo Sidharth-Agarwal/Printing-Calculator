@@ -6,6 +6,7 @@ import LeadDiscussionModal from "../LeadManagement/LeadDiscussionModal";
 import LeadConversionModal from "../LeadManagement/LeadConversionModal";
 import CRMActionButton from "../../Shared/CRMActionButton";
 import { useCRM } from "../../../context/CRMContext";
+import { LEAD_TABLE_FIELDS } from "../../../constants/leadFields"; // Import the registration table fields
 import { 
   createLead, 
   updateLead, 
@@ -294,6 +295,7 @@ const LeadRegistrationPage = () => {
             onDelete={handleDelete}
             onAddDiscussion={handleAddDiscussion}
             loading={isLoadingLeads}
+            fields={LEAD_TABLE_FIELDS} // Use registration table fields
           />
         )}
       </div>

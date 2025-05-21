@@ -14,6 +14,7 @@ import CRMActionButton from "../../Shared/CRMActionButton";
  * @param {function} props.onDelete - Delete handler
  * @param {function} props.onAddDiscussion - Add discussion handler
  * @param {boolean} props.loading - Loading state
+ * @param {Array} props.fields - Fields to display in the table
  */
 const DisplayLeadsTable = ({ 
   leads = [], 
@@ -21,7 +22,8 @@ const DisplayLeadsTable = ({
   onEdit,
   onDelete,
   onAddDiscussion,
-  loading = false
+  loading = false,
+  fields = LEAD_TABLE_FIELDS // Default to LEAD_TABLE_FIELDS if not provided
 }) => {
   // State for search term and sorting
   const [searchTerm, setSearchTerm] = useState("");
@@ -112,6 +114,49 @@ const DisplayLeadsTable = ({
     }
   });
   
+  // Render cell content based on field type
+  const renderCellContent = (lead, field) => {
+    const value = lead[field.field];
+    
+    if (field.field === 'phone') {
+      return (
+        <div className="flex flex-col">
+          {lead.phone && <span className="text-gray-600">{lead.phone}</span>}
+        </div>
+      );
+    }
+    
+    if (field.field === 'email') {
+      return (
+        <div className="flex flex-col">
+          {lead.email && <span className="text-gray-600">{lead.email}</span>}
+        </div>
+      );
+    }
+    
+    if (field.field === 'source') {
+      return <LeadSourceDisplay sourceId={value} />;
+    }
+    
+    if (field.field === 'badgeId') {
+      return <QualificationBadge badgeId={value} size="sm" />;
+    }
+    
+    if (field.field === 'status') {
+      return <LeadStatusBadge status={value} size="sm" />;
+    }
+    
+    if (field.type === 'date' && value) {
+      return formatDate(value);
+    }
+    
+    if (field.truncate && typeof value === 'string') {
+      return <div className="truncate max-w-xs">{truncateText(value, 60)}</div>;
+    }
+    
+    return value || "-";
+  };
+  
   // Create a sortable table header
   const SortableHeader = ({ field, label, className = "" }) => (
     <th 
@@ -201,14 +246,22 @@ const DisplayLeadsTable = ({
         <table className="min-w-full text-sm text-left">
           <thead>
             <tr className="bg-gray-100">
-              <SortableHeader field="name" label="Name" />
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Phone/Email</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Source</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Qualification</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
-              <SortableHeader field="lastDiscussionDate" label="Last Contact" />
-              {/* Last Discussion Summary column */}
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Last Discussion Summary</th>
+              {fields.map((field) => (
+                field.sortable ? (
+                  <SortableHeader 
+                    key={field.field}
+                    field={field.field} 
+                    label={field.label} 
+                  />
+                ) : (
+                  <th 
+                    key={field.field}
+                    className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 text-left"
+                  >
+                    {field.label}
+                  </th>
+                )
+              ))}
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
             </tr>
           </thead>
@@ -219,33 +272,11 @@ const DisplayLeadsTable = ({
                 className="border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
                 onClick={() => onView(lead)}
               >
-                <td className="px-3 py-3 font-medium">
-                  {lead.name}
-                </td>
-                <td className="px-3 py-3">
-                  <div className="flex flex-col">
-                    {lead.phone && <span className="text-gray-600">{lead.phone}</span>}
-                    {lead.email && <span className="text-gray-600 text-xs">{lead.email}</span>}
-                  </div>
-                </td>
-                <td className="px-3 py-3">
-                  <LeadSourceDisplay sourceId={lead.source} />
-                </td>
-                <td className="px-3 py-3">
-                  <QualificationBadge badgeId={lead.badgeId} size="sm" />
-                </td>
-                <td className="px-3 py-3">
-                  <LeadStatusBadge status={lead.status} size="sm" />
-                </td>
-                <td className="px-3 py-3 text-gray-600">
-                  {lead.lastDiscussionDate ? formatDate(lead.lastDiscussionDate) : "-"}
-                </td>
-                {/* Last Discussion Summary column */}
-                <td className="px-3 py-3 text-gray-600 max-w-xs">
-                  <div className="truncate">
-                    {lead.lastDiscussionSummary ? truncateText(lead.lastDiscussionSummary, 60) : "-"}
-                  </div>
-                </td>
+                {fields.map((field) => (
+                  <td key={field.field} className="px-3 py-3">
+                    {renderCellContent(lead, field)}
+                  </td>
+                ))}
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex space-x-1">
                     <CRMActionButton
