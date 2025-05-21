@@ -189,8 +189,8 @@ const DiscussionItem = ({ discussion, formatDate }) => {
   }
 
   return (
-    <div className="bg-white p-4 rounded-md border border-gray-200 shadow-sm">
-      <div className="flex justify-between items-start mb-3">
+    <div className="bg-white p-2 rounded-md border border-gray-200 shadow-sm">
+      <div className="flex justify-between items-start">
         <div className="flex items-center">
           <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 font-medium mr-2">
             {userData?.initials || "UN"}
