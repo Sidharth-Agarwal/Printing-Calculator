@@ -69,6 +69,11 @@ const LeadPool = ({
     return groups;
   }, [leads]);
   
+  // Helper function to check if lead is added to clients
+  const isLeadAddedToClients = useCallback((lead) => {
+    return lead.status === "converted" && lead.movedToClients;
+  }, []);
+  
   // Optimized mouse move handler with requestAnimationFrame
   const handleMouseMove = useCallback((e) => {
     if (!isDragging || !ghostRef.current) return;
@@ -156,6 +161,12 @@ const LeadPool = ({
   
   // Optimized drag start
   const handleDragStart = useCallback((e, lead, status, index) => {
+    // Don't allow dragging if lead is moved to clients
+    if (isLeadAddedToClients(lead)) {
+      e.preventDefault();
+      return;
+    }
+    
     setIsDragging(true);
     setDraggedLead({ ...lead, status, index });
     dragNode.current = e.target;
@@ -201,7 +212,7 @@ const LeadPool = ({
     
     e.dataTransfer.setData("text/plain", lead.id);
     e.dataTransfer.effectAllowed = "move";
-  }, []);
+  }, [isLeadAddedToClients]);
   
   // Optimized drag end
   const handleDragEnd = useCallback(() => {
@@ -458,9 +469,11 @@ const LeadPool = ({
                           draggedLead?.id === lead.id ? "opacity-0" : ""
                         } ${
                           updatingLeadId === lead.id ? "animate-pulse" : ""
+                        } ${
+                          isLeadAddedToClients(lead) ? "cursor-default opacity-75" : ""
                         }`}
                         onClick={() => onView(lead)}
-                        draggable
+                        draggable={!isLeadAddedToClients(lead)}
                         onDragStart={(e) => handleDragStart(e, lead, status.id, index)}
                         onDragEnd={handleDragEnd}
                         onDragOver={(e) => handleDragOverCard(e, status.id, index, lead.id)}
@@ -496,51 +509,66 @@ const LeadPool = ({
                             </div>
                           )}
                           
-                          {/* Action buttons */}
+                          {/* Action buttons - Updated logic */}
                           <div className="mt-2 flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
-                            {lead.status === "converted" ? (
-                              <CRMActionButton
-                                type="primary"
-                                size="xs"
-                                onClick={() => onConvert(lead)}
-                                aria-label="Move to Clients"
-                                icon={
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                  </svg>
-                                }
-                              >
-                                Move to Clients
-                              </CRMActionButton>
+                            {isLeadAddedToClients(lead) ? (
+                              // Only show "Added to Clients" status for leads that have been moved
+                              <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                </svg>
+                                Added to Clients
+                              </div>
                             ) : (
+                              // Show action buttons for all other leads
                               <>
-                                <CRMActionButton
-                                  type="info"
-                                  size="xs"
-                                  onClick={() => onAddDiscussion(lead)}
-                                  aria-label="Add discussion"
-                                  icon={
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                                    </svg>
-                                  }
-                                >
-                                  Talk
-                                </CRMActionButton>
-                                
-                                <CRMActionButton
-                                  type="success"
-                                  size="xs"
-                                  onClick={() => updateLeadStatus(lead.id, "converted")}
-                                  aria-label="Convert lead"
-                                  icon={
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                    </svg>
-                                  }
-                                >
-                                  Convert
-                                </CRMActionButton>
+                                {lead.status === "converted" ? (
+                                  // For converted leads that haven't been moved to clients yet
+                                  <CRMActionButton
+                                    type="primary"
+                                    size="xs"
+                                    onClick={() => onConvert(lead)}
+                                    aria-label="Move to Clients"
+                                    icon={
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                      </svg>
+                                    }
+                                  >
+                                    Move to Clients
+                                  </CRMActionButton>
+                                ) : (
+                                  // For all non-converted leads
+                                  <>
+                                    <CRMActionButton
+                                      type="info"
+                                      size="xs"
+                                      onClick={() => onAddDiscussion(lead)}
+                                      aria-label="Add discussion"
+                                      icon={
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                        </svg>
+                                      }
+                                    >
+                                      Talk
+                                    </CRMActionButton>
+                                    
+                                    <CRMActionButton
+                                      type="success"
+                                      size="xs"
+                                      onClick={() => updateLeadStatus(lead.id, "converted")}
+                                      aria-label="Convert lead"
+                                      icon={
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                      }
+                                    >
+                                      Convert
+                                    </CRMActionButton>
+                                  </>
+                                )}
                               </>
                             )}
                           </div>

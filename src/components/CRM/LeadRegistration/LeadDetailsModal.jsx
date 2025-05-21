@@ -34,6 +34,11 @@ const LeadDetailsModal = ({
     type: "success"
   });
   
+  // Helper function to check if lead is added to clients
+  const isLeadAddedToClients = (lead) => {
+    return lead.status === "converted" && lead.movedToClients;
+  };
+  
   // Show notification
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type });
@@ -153,6 +158,9 @@ const LeadDetailsModal = ({
   // Check if lead is already converted
   const isConverted = lead.status === "converted";
   
+  // Check if converted lead has been moved to clients
+  const isAddedToClients = isLeadAddedToClients(lead);
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-hidden">
@@ -221,6 +229,72 @@ const LeadDetailsModal = ({
               </div>
             </div>
             
+            {/* Action Buttons Section - Updated Logic */}
+            {isAddedToClients ? (
+              // Only show "Added to Clients" status for leads that have been moved
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+                <div className="flex items-center justify-center">
+                  <div className="flex items-center px-4 py-2 bg-blue-100 text-blue-800 rounded-md text-sm font-medium">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                    Lead Successfully Added to Clients
+                  </div>
+                </div>
+                <p className="text-xs text-blue-600 mt-2 text-center">
+                  This lead has been moved to the clients section and is no longer editable from here.
+                </p>
+              </div>
+            ) : (
+              // Show action buttons for all other leads
+              <>
+                {/* Conversion Action for converted leads that haven't been moved yet */}
+                {isConverted && (
+                  <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-md">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h4 className="text-sm font-medium text-green-800">Lead Converted</h4>
+                        <p className="text-xs text-green-600 mt-1">
+                          This lead has been successfully converted to client status.
+                        </p>
+                      </div>
+                      
+                      <CRMActionButton
+                        type="primary"
+                        size="sm"
+                        onClick={() => onConvert(lead)}
+                        icon={
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          </svg>
+                        }
+                      >
+                        Move to Clients
+                      </CRMActionButton>
+                    </div>
+                  </div>
+                )}
+
+                {/* Convert Button for non-converted leads */}
+                {!isConverted && canConvert && (
+                  <div className="mb-4">
+                    <CRMActionButton
+                      type="success"
+                      size="sm"
+                      onClick={() => onConvert(lead)}
+                      icon={
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3..42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                        </svg>
+                      }
+                    >
+                      Convert to Client
+                    </CRMActionButton>
+                  </div>
+                )}
+              </>
+            )}
+            
             {/* Job Details */}
             <div className="mb-6 p-4 bg-gray-50 rounded-md">
               <h3 className="text-md font-medium mb-3 border-b border-gray-200 pb-1">Job Details</h3>
@@ -274,18 +348,20 @@ const LeadDetailsModal = ({
           <div className="w-full md:w-1/2 border-t md:border-t-0 md:border-l border-gray-200 p-4 overflow-y-auto bg-gray-50">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">Discussions</h3>
-              <CRMActionButton
-                type="primary"
-                size="sm"
-                onClick={() => onAddDiscussion(lead)}
-                icon={
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                  </svg>
-                }
-              >
-                Add Discussion
-              </CRMActionButton>
+              {!isAddedToClients && (
+                <CRMActionButton
+                  type="primary"
+                  size="sm"
+                  onClick={() => onAddDiscussion(lead)}
+                  icon={
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                    </svg>
+                  }
+                >
+                  Add Discussion
+                </CRMActionButton>
+              )}
             </div>
             
             <DiscussionHistory
@@ -294,6 +370,7 @@ const LeadDetailsModal = ({
               formatDate={formatDate}
               lead={lead}
               onUpdate={refreshDiscussions}
+              readOnly={isAddedToClients} // Pass read-only state to discussion history
             />
           </div>
         </div>

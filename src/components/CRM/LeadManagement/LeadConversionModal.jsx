@@ -5,6 +5,8 @@ import {
   convertLeadToClient,
   checkClientCodeExists
 } from "../../../services";
+import { updateDoc, doc } from "firebase/firestore";
+import { db } from "../../../firebaseConfig";
 
 /**
  * Modal for converting a lead to a client
@@ -122,6 +124,12 @@ const LeadConversionModal = ({ lead, onClose, onSubmit }) => {
     try {
       // Convert lead to client
       const newClient = await convertLeadToClient(lead.id, formData);
+      
+      // Update lead to mark it as moved to clients
+      await updateDoc(doc(db, "leads", lead.id), {
+        movedToClients: true,
+        movedToClientsAt: new Date()
+      });
       
       // Call onSubmit with success
       onSubmit(lead.id, true, newClient);

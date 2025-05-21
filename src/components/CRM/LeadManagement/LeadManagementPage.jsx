@@ -43,6 +43,9 @@ const LeadManagementPage = () => {
   const [filterBadge, setFilterBadge] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   
+  // NEW: Toggle state for showing leads moved to clients
+  const [showMovedToClients, setShowMovedToClients] = useState(false);
+  
   // Notification state
   const [notification, setNotification] = useState({
     show: false,
@@ -62,6 +65,11 @@ const LeadManagementPage = () => {
   
   // Check if user has permission to manage leads
   const hasPermission = userRole === "admin" || userRole === "staff";
+  
+  // Helper function to check if lead is added to clients
+  const isLeadAddedToClients = (lead) => {
+    return lead.status === "converted" && lead.movedToClients;
+  };
   
   // Handle viewing a lead
   const handleView = (lead) => {
@@ -203,7 +211,10 @@ const LeadManagementPage = () => {
     const matchesBadge = filterBadge === "" || lead.badgeId === filterBadge;
     const matchesStatus = filterStatus === "" || lead.status === filterStatus;
     
-    return matchesSearch && matchesSource && matchesBadge && matchesStatus;
+    // NEW: Filter based on showMovedToClients toggle
+    const matchesMovedToClients = showMovedToClients || !isLeadAddedToClients(lead);
+    
+    return matchesSearch && matchesSource && matchesBadge && matchesStatus && matchesMovedToClients;
   });
   
   // Reset all filters
@@ -212,6 +223,7 @@ const LeadManagementPage = () => {
     setFilterSource('');
     setFilterBadge('');
     setFilterStatus('');
+    setShowMovedToClients(false); // Reset the toggle as well
   };
   
   // If user doesn't have permission, show unauthorized message
@@ -229,21 +241,25 @@ const LeadManagementPage = () => {
     );
   }
   
-  // Calculate lead statistics
+  // Calculate lead statistics - Updated to consider showMovedToClients toggle
+  const displayedLeads = showMovedToClients ? leads : leads.filter(lead => !isLeadAddedToClients(lead));
   const leadStats = {
-    total: leads.length,
-    new: leads.filter(lead => lead.status === "newLead").length,
-    contacted: leads.filter(lead => lead.status === "contacted").length,
-    qualified: leads.filter(lead => lead.status === "qualified").length,
-    negotiation: leads.filter(lead => lead.status === "negotiation").length,
-    converted: leads.filter(lead => lead.status === "converted").length,
-    lost: leads.filter(lead => lead.status === "lost").length
+    total: displayedLeads.length,
+    new: displayedLeads.filter(lead => lead.status === "newLead").length,
+    contacted: displayedLeads.filter(lead => lead.status === "contacted").length,
+    qualified: displayedLeads.filter(lead => lead.status === "qualified").length,
+    negotiation: displayedLeads.filter(lead => lead.status === "negotiation").length,
+    converted: displayedLeads.filter(lead => lead.status === "converted").length,
+    lost: displayedLeads.filter(lead => lead.status === "lost").length
   };
   
   // Calculate conversion rate
-  const conversionRate = leads.length > 0 
-    ? Math.round((leadStats.converted / leads.length) * 100)
+  const conversionRate = displayedLeads.length > 0 
+    ? Math.round((leadStats.converted / displayedLeads.length) * 100)
     : 0;
+  
+  // Count leads moved to clients
+  const movedToClientsCount = leads.filter(lead => isLeadAddedToClients(lead)).length;
   
   return (
     <div className="p-4 max-w-screen-xl mx-auto">
@@ -267,7 +283,7 @@ const LeadManagementPage = () => {
       )}
       
       {/* Lead Statistics */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Total Leads</span>
           <span className="text-2xl font-bold text-gray-800 mt-1">{leadStats.total}</span>
@@ -301,6 +317,12 @@ const LeadManagementPage = () => {
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Conversion Rate</span>
           <span className="text-2xl font-bold text-purple-600 mt-1">{conversionRate}%</span>
+        </div>
+        
+        {/* NEW: Added to Clients Count */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
+          <span className="text-xs font-medium text-gray-500">Added to Clients</span>
+          <span className="text-2xl font-bold text-blue-600 mt-1">{movedToClientsCount}</span>
         </div>
       </div>
       
@@ -414,13 +436,44 @@ const LeadManagementPage = () => {
                 </option>
               ))}
             </select>
+            
+            {/* NEW: Show Moved to Clients Toggle */}
+            <label className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white cursor-pointer hover:bg-gray-50">
+              <input
+                type="checkbox"
+                checked={showMovedToClients}
+                onChange={(e) => setShowMovedToClients(e.target.checked)}
+                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
+              />
+              <span className="text-sm font-medium text-gray-700">Show Added to Clients</span>
+              {movedToClientsCount > 0 && (
+                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
+                  {movedToClientsCount}
+                </span>
+              )}
+            </label>
+            
+            {/* Clear Filters Button */}
+            {(searchTerm || filterSource || filterBadge || filterStatus || showMovedToClients) && (
+              <button
+                onClick={clearFilters}
+                className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md border border-gray-300"
+              >
+                Clear All
+              </button>
+            )}
           </div>
         </div>
       </div>
       
       {/* Lead Count */}
-      <div className="px-4 py-2 text-sm text-gray-600 mb-4">
-        Showing {filteredLeads.length} of {leads.length} leads
+      <div className="px-4 py-2 text-sm text-gray-600 mb-4 flex justify-between items-center">
+        <span>Showing {filteredLeads.length} of {leads.length} leads</span>
+        {showMovedToClients && movedToClientsCount > 0 && (
+          <span className="text-blue-600 font-medium">
+            Including {movedToClientsCount} leads moved to clients
+          </span>
+        )}
       </div>
       
       {/* Main Content - Conditionally render based on viewMode */}
@@ -433,6 +486,7 @@ const LeadManagementPage = () => {
           onConvert={handleConvert}
           onDelete={handleDelete}
           loading={isLoadingLeads}
+          showMovedToClients={showMovedToClients} // Pass the toggle state
         />
       ) : (
         <DisplayLeadsTable
@@ -441,8 +495,10 @@ const LeadManagementPage = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onAddDiscussion={handleAddDiscussion}
+          onConvert={handleConvert} // Make sure this prop is passed
           loading={isLoadingLeads}
           fields={LEAD_PIPELINE_FIELDS} // Use the pipeline fields for list view
+          showMovedToClients={showMovedToClients} // Pass the toggle state
         />
       )}
       

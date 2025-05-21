@@ -13,6 +13,7 @@ import CRMActionButton from "../../Shared/CRMActionButton";
  * @param {function} props.onEdit - Edit handler
  * @param {function} props.onDelete - Delete handler
  * @param {function} props.onAddDiscussion - Add discussion handler
+ * @param {function} props.onConvert - Convert handler (optional)
  * @param {boolean} props.loading - Loading state
  * @param {Array} props.fields - Fields to display in the table
  */
@@ -22,12 +23,18 @@ const DisplayLeadsTable = ({
   onEdit,
   onDelete,
   onAddDiscussion,
+  onConvert,
   loading = false,
   fields = LEAD_TABLE_FIELDS // Default to LEAD_TABLE_FIELDS if not provided
 }) => {
   // State for sorting
   const [sortField, setSortField] = useState("createdAt");
   const [sortDirection, setSortDirection] = useState("desc");
+  
+  // Helper function to check if lead is added to clients
+  const isLeadAddedToClients = (lead) => {
+    return lead.status === "converted" && lead.movedToClients;
+  };
   
   // Handle sort
   const handleSort = (field) => {
@@ -203,47 +210,77 @@ const DisplayLeadsTable = ({
               ))}
               <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                 <div className="flex space-x-1">
-                  <CRMActionButton
-                    type="info"
-                    size="xs"
-                    onClick={() => onAddDiscussion(lead)}
-                    aria-label="Add discussion"
-                    icon={
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                  {isLeadAddedToClients(lead) ? (
+                    // Only show "Added to Clients" status for leads that have been moved
+                    <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                       </svg>
-                    }
-                  >
-                    Talk
-                  </CRMActionButton>
-                  
-                  <CRMActionButton
-                    type="secondary"
-                    size="xs"
-                    onClick={() => onEdit(lead)}
-                    aria-label="Edit lead"
-                    icon={
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                      </svg>
-                    }
-                  >
-                    Edit
-                  </CRMActionButton>
-                  
-                  <CRMActionButton
-                    type="danger"
-                    size="xs"
-                    onClick={() => confirmDelete(lead)}
-                    aria-label="Delete lead"
-                    icon={
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                      </svg>
-                    }
-                  >
-                    Delete
-                  </CRMActionButton>
+                      Added to Clients
+                    </div>
+                  ) : (
+                    // Show action buttons for all other leads
+                    <>
+                      <CRMActionButton
+                        type="info"
+                        size="xs"
+                        onClick={() => onAddDiscussion(lead)}
+                        aria-label="Add discussion"
+                        icon={
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                          </svg>
+                        }
+                      >
+                        Talk
+                      </CRMActionButton>
+                      
+                      <CRMActionButton
+                        type="secondary"
+                        size="xs"
+                        onClick={() => onEdit(lead)}
+                        aria-label="Edit lead"
+                        icon={
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        }
+                      >
+                        Edit
+                      </CRMActionButton>
+                      
+                      {/* Show appropriate action for converted leads */}
+                      {lead.status === "converted" && onConvert && (
+                        <CRMActionButton
+                          type="success"
+                          size="xs"
+                          onClick={() => onConvert(lead)}
+                          aria-label="Move to clients"
+                          icon={
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                          }
+                        >
+                          Move to Clients
+                        </CRMActionButton>
+                      )}
+                      
+                      <CRMActionButton
+                        type="danger"
+                        size="xs"
+                        onClick={() => confirmDelete(lead)}
+                        aria-label="Delete lead"
+                        icon={
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        }
+                      >
+                        Delete
+                      </CRMActionButton>
+                    </>
+                  )}
                 </div>
               </td>
             </tr>
