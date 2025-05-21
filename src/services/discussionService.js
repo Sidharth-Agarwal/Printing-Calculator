@@ -141,25 +141,53 @@ export const getDiscussionsForLead = async (leadId) => {
       return [];
     }
     
-    const discussionsQuery = query(
-      collection(db, COLLECTION_NAME),
-      where("leadId", "==", leadId),
-      orderBy("date", "desc")
-    );
+    let discussions = [];
     
-    console.log("Executing Firestore query for discussions");
-    const querySnapshot = await getDocs(discussionsQuery);
+    // First try with orderBy (which requires an index)
+    try {
+      const discussionsQuery = query(
+        collection(db, COLLECTION_NAME),
+        where("leadId", "==", leadId),
+        orderBy("date", "desc")
+      );
+      
+      const querySnapshot = await getDocs(discussionsQuery);
+      
+      discussions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+    } catch (indexError) {
+      // If we get an index error, fall back to simpler query without orderBy
+      console.warn("Index error in getDiscussionsForLead, falling back to unordered query:", indexError);
+      
+      const simpleQuery = query(
+        collection(db, COLLECTION_NAME),
+        where("leadId", "==", leadId)
+      );
+      
+      const querySnapshot = await getDocs(simpleQuery);
+      
+      discussions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Sort manually client-side
+      discussions.sort((a, b) => {
+        const dateA = a.date ? (a.date.seconds ? a.date.seconds * 1000 : new Date(a.date).getTime()) : 0;
+        const dateB = b.date ? (b.date.seconds ? b.date.seconds * 1000 : new Date(b.date).getTime()) : 0;
+        return dateB - dateA; // descending order
+      });
+    }
     
-    const discussions = querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
-    
-    console.log(`Found ${discussions.length} discussions for lead ${leadId}:`, discussions);
+    console.log(`Found ${discussions.length} discussions for lead ${leadId}`);
     return discussions;
   } catch (error) {
     console.error(`Error fetching discussions for lead ${leadId}:`, error);
-    throw error;
+    // Return empty array rather than throwing to prevent application from crashing
+    return [];
   }
 };
 
@@ -194,19 +222,43 @@ export const getDiscussionById = async (discussionId) => {
  */
 export const getRecentDiscussions = async (limit = 10) => {
   try {
-    const discussionsQuery = query(
-      collection(db, COLLECTION_NAME),
-      orderBy("date", "desc"),
-      limit(limit)
-    );
-    
-    const querySnapshot = await getDocs(discussionsQuery);
-    return querySnapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data()
-    }));
+    // First try with orderBy
+    try {
+      const discussionsQuery = query(
+        collection(db, COLLECTION_NAME),
+        orderBy("date", "desc"),
+        limit(limit)
+      );
+      
+      const querySnapshot = await getDocs(discussionsQuery);
+      return querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (indexError) {
+      // If index error occurs, get all and sort manually
+      console.warn("Index error in getRecentDiscussions, fetching all and sorting manually:", indexError);
+      
+      const allDiscussionsQuery = query(collection(db, COLLECTION_NAME));
+      const querySnapshot = await getDocs(allDiscussionsQuery);
+      
+      const allDiscussions = querySnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      // Sort by date manually
+      allDiscussions.sort((a, b) => {
+        const dateA = a.date ? (a.date.seconds ? a.date.seconds * 1000 : new Date(a.date).getTime()) : 0;
+        const dateB = b.date ? (b.date.seconds ? b.date.seconds * 1000 : new Date(b.date).getTime()) : 0;
+        return dateB - dateA; // descending order
+      });
+      
+      // Return only the requested limit
+      return allDiscussions.slice(0, limit);
+    }
   } catch (error) {
     console.error(`Error fetching recent discussions:`, error);
-    throw error;
+    return []; // Return empty array rather than throwing
   }
 };
