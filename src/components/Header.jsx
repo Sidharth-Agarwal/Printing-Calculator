@@ -104,7 +104,7 @@ const Header = () => {
   // Navigation items array for animated hover effects
   const navItems = [
     { key: 'newBill', label: 'New Bill', path: '/new-bill', visible: isMenuItemVisible('newBill') },
-    { key: 'materials', label: 'Material & Stock', path: '/material-stock', visible: isMenuItemVisible('materials'), isDropdown: true,
+    { key: 'materials', label: 'Inventory', path: '/material-stock', visible: isMenuItemVisible('materials'), isDropdown: true,
       dropdownItems: [
         { label: 'Papers DB', path: '/material-stock/paper-db' },
         { label: 'Materials DB', path: '/material-stock/material-db' },
@@ -115,7 +115,16 @@ const Header = () => {
         { label: 'Loyalty Program', path: '/material-stock/loyalty-tiers', visible: isMenuItemVisible('loyaltyProgram') }
       ]
     },
+    // Add CRM dropdown menu here
+    { key: 'crm', label: 'CRM', path: '/crm', visible: isMenuItemVisible('crm'), isDropdown: true,
+      dropdownItems: [
+        { label: 'Lead Registration', path: '/crm/lead-registration' },
+        { label: 'Lead Pipeline', path: '/crm/lead-management' },
+        { label: 'Qualification Badges', path: '/crm/badges' }
+      ]
+    },
     { key: 'clients', label: 'Clients', path: '/clients', visible: isMenuItemVisible('clients') },
+    { key: 'vendors', label: 'Vendors', path: '/vendors', visible: isMenuItemVisible('clients') }, // Using same permissions as clients
     { key: 'estimates', label: 'Estimates', path: '/estimates', visible: isMenuItemVisible('estimates') },
     { key: 'escrow', label: 'B2B Escrow', path: '/escrow', visible: userRole === "admin" || userRole === "staff" },
     { key: 'orders', label: 'Job Dashboard', path: '/orders', visible: isMenuItemVisible('orders') },

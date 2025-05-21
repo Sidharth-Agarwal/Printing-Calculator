@@ -1,17 +1,15 @@
 import React, { useState } from "react";
-import { TABLE_DISPLAY_FIELDS, DETAILED_DISPLAY_FIELDS } from "../../constants/entityFields";
-import ClientDetailsModal from "./ClientDetailsModal";
+import VendorDetailsModal from "./VendorDetailsModal";
 
-const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, onActivateClient, onToggleStatus, isAdmin }) => {
+const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin }) => {
   // State for search term, filter, sorting, and view type
   const [searchTerm, setSearchTerm] = useState("");
-  const [filterClientType, setFilterClientType] = useState("");
   const [filterActiveStatus, setFilterActiveStatus] = useState("");
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
   const [viewType, setViewType] = useState('compact');
   const [expandedRows, setExpandedRows] = useState({});
-  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedVendor, setSelectedVendor] = useState(null);
   
   // Handle sort
   const handleSort = (field) => {
@@ -32,9 +30,9 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     }));
   };
 
-  // Sort clients
-  const sortedClients = [...clients].sort((a, b) => {
-    // Handle nested fields (e.g., address.city)
+  // Sort vendors
+  const sortedVendors = [...vendors].sort((a, b) => {
+    // Handle nested fields (e.g., paymentTerms.creditDays)
     const getNestedValue = (obj, path) => {
       const keys = path.split('.');
       let value = obj;
@@ -60,34 +58,28 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     }
   });
 
-  // Filter sorted clients based on search term, client type, and active status
-  const filteredClients = sortedClients.filter((client) => {
+  // Filter sorted vendors based on search term and active status
+  const filteredVendors = sortedVendors.filter((vendor) => {
     // Handle search
     const matchesSearch =
       searchTerm === "" ||
-      client.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.clientCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.contactPerson?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email?.toLowerCase().includes(searchTerm.toLowerCase());
-
-    // Handle client type filter
-    let matchesClientType = true;
-    if (filterClientType !== "") {
-      const normalizedClientType = (client.clientType || "DIRECT").toUpperCase();
-      matchesClientType = normalizedClientType === filterClientType.toUpperCase();
-    }
+      vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.vendorCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      vendor.gstin?.toLowerCase().includes(searchTerm.toLowerCase());
     
     // Handle active status filter
     let matchesActiveStatus = true;
     if (filterActiveStatus !== "") {
-      const isActive = client.isActive === true;
+      const isActive = vendor.isActive === true;
       matchesActiveStatus = 
         (filterActiveStatus === "active" && isActive) || 
         (filterActiveStatus === "inactive" && !isActive);
     }
 
-    return matchesSearch && matchesClientType && matchesActiveStatus;
+    return matchesSearch && matchesActiveStatus;
   });
 
   // Format currency
@@ -123,79 +115,20 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     </th>
   );
 
-  // Open client details modal
-  const handleViewClient = (client) => {
-    setSelectedClient(client);
+  // Open vendor details modal
+  const handleViewVendor = (vendor) => {
+    setSelectedVendor(vendor);
   };
 
-  // Close client details modal
+  // Close vendor details modal
   const handleCloseModal = () => {
-    setSelectedClient(null);
+    setSelectedVendor(null);
   };
 
-  // Toggle client active status
-  const handleToggleStatus = (e, client) => {
+  // Toggle vendor active status
+  const handleToggleStatus = (e, vendor) => {
     e.stopPropagation(); // Stop event from triggering row click
-    onToggleStatus(client.id, !client.isActive);
-  };
-
-  // Get row style based on loyalty tier for B2B clients
-  const getRowStyle = (client) => {
-    // Check if client is B2B and has loyalty tier
-    const isB2B = client.clientType?.toUpperCase() === "B2B";
-    const hasLoyaltyTier = isB2B && client.loyaltyTierId && client.loyaltyTierColor;
-    
-    if (hasLoyaltyTier) {
-      const tierColor = client.loyaltyTierColor;
-      return {
-        backgroundColor: `${tierColor}15`, // 15% opacity for background
-        borderLeft: `4px solid ${tierColor}` // Solid left border with tier color
-      };
-    }
-    
-    return {}; // Default empty style
-  };
-
-  // Classes for loyalty tier rows
-  const getRowClassName = (client) => {
-    const isB2B = client.clientType?.toUpperCase() === "B2B";
-    const hasLoyaltyTier = isB2B && client.loyaltyTierId;
-    
-    return `border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer 
-            ${hasLoyaltyTier ? 'hover:bg-opacity-70' : ''}`;
-  };
-
-  // Render loyalty status for a client
-  const renderLoyaltyStatus = (client) => {
-    const isB2B = client.clientType?.toUpperCase() === "B2B";
-    
-    if (!isB2B) {
-      return <span className="text-gray-400">Not Applicable</span>;
-    }
-    
-    if (client.loyaltyTierId && client.loyaltyTierName) {
-      return (
-        <div className="flex items-center">
-          <span 
-            className="px-2 py-0.5 rounded text-xs font-medium text-white"
-            style={{ backgroundColor: client.loyaltyTierColor || "#9f7aea" }}
-          >
-            {client.loyaltyTierName}
-          </span>
-        </div>
-      );
-    }
-    
-    return <span className="text-gray-500">Not enrolled</span>;
-  };
-
-  // Get field value from client object
-  const getFieldValue = (client, fieldName) => {
-    if (fieldName.includes('.')) {
-      const [parent, child] = fieldName.split('.');
-      return client[parent] && client[parent][child] ? client[parent][child] : '-';
-    }
-    return client[fieldName] || '-';
+    onToggleStatus(vendor.id, !vendor.isActive);
   };
 
   // Compact view - shows essential information
@@ -205,62 +138,42 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
         <table className="min-w-full text-sm text-left">
           <thead>
             <tr className="bg-gray-100">
-              {TABLE_DISPLAY_FIELDS.map(field => (
-                <SortableHeader key={field.field} field={field.field} label={field.label} />
-              ))}
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Loyalty Status</th>
+              <SortableHeader field="vendorCode" label="Vendor Code" />
+              <SortableHeader field="name" label="Name" />
+              <SortableHeader field="email" label="Email" />
+              <SortableHeader field="phone" label="Phone" />
+              <SortableHeader field="gstin" label="GSTIN" />
+              <SortableHeader field="paymentTerms.creditDays" label="Credit Days" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredClients.map((client) => (
-              <React.Fragment key={client.id}>
+            {filteredVendors.map((vendor) => (
+              <React.Fragment key={vendor.id}>
                 <tr 
-                  className={getRowClassName(client)}
-                  style={getRowStyle(client)}
-                  onClick={() => handleViewClient(client)}
+                  className="border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
+                  onClick={() => handleViewVendor(vendor)}
                 >
-                  {TABLE_DISPLAY_FIELDS.map(field => (
-                    <td key={field.field} className="px-3 py-3">
-                      {field.field === 'name' ? (
-                        <span className="font-medium">
-                          {client.name}
-                          {client.hasAccount && (
-                            <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                              Account
-                            </span>
-                          )}
-                        </span>
-                      ) : field.field === 'clientType' ? (
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          client.clientType?.toUpperCase() === "B2B"
-                            ? "bg-purple-100 text-purple-800" 
-                            : "bg-blue-100 text-blue-800"
-                        }`}>
-                          {(client.clientType || "Direct").toUpperCase()}
-                        </span>
-                      ) : (
-                        getFieldValue(client, field.field)
-                      )}
-                    </td>
-                  ))}
-                  <td className="px-3 py-3">
-                    {renderLoyaltyStatus(client)}
-                  </td>
+                  <td className="px-3 py-3">{vendor.vendorCode}</td>
+                  <td className="px-3 py-3 font-medium">{vendor.name}</td>
+                  <td className="px-3 py-3">{vendor.email || "-"}</td>
+                  <td className="px-3 py-3">{vendor.phone || "-"}</td>
+                  <td className="px-3 py-3">{vendor.gstin || "-"}</td>
+                  <td className="px-3 py-3">{vendor.paymentTerms?.creditDays || 0} days</td>
                   <td className="px-3 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      client.isActive
+                      vendor.isActive
                         ? "bg-green-100 text-green-800" 
                         : "bg-red-100 text-red-800"
                     }`}>
-                      {client.isActive ? "Active" : "Inactive"}
+                      {vendor.isActive ? "Active" : "Inactive"}
                     </span>
                   </td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex space-x-1">
                       <button
-                        onClick={() => onEdit(client)}
+                        onClick={() => onEdit(vendor)}
                         className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
                       >
                         <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -269,7 +182,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                         Edit
                       </button>
                       <button
-                        onClick={(e) => onDelete(client.id)}
+                        onClick={(e) => onDelete(vendor.id)}
                         className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
                       >
                         <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -280,9 +193,9 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                       
                       {/* Toggle Status Button */}
                       <button
-                        onClick={(e) => handleToggleStatus(e, client)}
+                        onClick={(e) => handleToggleStatus(e, vendor)}
                         className={`px-2 py-1 text-xs ${
-                          client.isActive 
+                          vendor.isActive 
                             ? "bg-yellow-100 text-yellow-800" 
                             : "bg-green-100 text-green-800"
                         } rounded hover:bg-opacity-80 transition-colors flex items-center`}
@@ -290,74 +203,42 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                         <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
-                        {client.isActive ? "Deactivate" : "Activate"}
+                        {vendor.isActive ? "Deactivate" : "Activate"}
                       </button>
                       
-                      {/* Only show B2B account buttons for B2B clients and admins */}
-                      {isAdmin && (client.clientType === "B2B" || client.clientType === "b2b" || client.clientType?.toUpperCase() === "B2B") && (
-                        <>
-                          {client.hasAccount ? (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onManageCredentials(client);
-                              }}
-                              className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded hover:bg-purple-200 transition-colors flex items-center"
-                            >
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                              </svg>
-                              Credentials
-                            </button>
-                          ) : (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                onActivateClient(client);
-                              }}
-                              className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors flex items-center"
-                            >
-                              <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-                              </svg>
-                              Setup Account
-                            </button>
-                          )}
-                        </>
-                      )}
-                      
+                      {/* Show More Button */}
                       <button
-                        onClick={(e) => toggleRowExpand(e, client.id)}
+                        onClick={(e) => toggleRowExpand(e, vendor.id)}
                         className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors flex items-center"
                       >
-                        <svg className={`w-3 h-3 mr-1 transition-transform ${expandedRows[client.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg className={`w-3 h-3 mr-1 transition-transform ${expandedRows[vendor.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
-                        {expandedRows[client.id] ? 'Less' : 'More'}
+                        {expandedRows[vendor.id] ? 'Less' : 'More'}
                       </button>
                     </div>
                   </td>
                 </tr>
-                {expandedRows[client.id] && (
-                  <tr className="bg-gray-50" onClick={() => handleViewClient(client)}>
+                {expandedRows[vendor.id] && (
+                  <tr className="bg-gray-50" onClick={() => handleViewVendor(vendor)}>
                     <td colSpan={8} className="px-4 py-3 border-b border-gray-200">
-                      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
                         <div>
-                          <p className="font-medium text-gray-700">Email:</p>
-                          <p>{client.email || "-"}</p>
+                          <p className="font-medium text-gray-700">Bank:</p>
+                          <p>{vendor.accountDetails?.bankName || "-"}</p>
                         </div>
                         <div>
                           <p className="font-medium text-gray-700">Address:</p>
-                          <p>{client.address?.city || "-"}, {client.address?.state || "-"}</p>
+                          <p>{vendor.address?.city || "-"}, {vendor.address?.state || "-"}</p>
                         </div>
                         <div>
-                          <p className="font-medium text-gray-700">Account Stats:</p>
-                          <p>Orders: {client.totalOrders || 0}</p>
-                          <p>Spend: {formatCurrency(client.totalSpend || 0)}</p>
+                          <p className="font-medium text-gray-700">Account Details:</p>
+                          <p>Account: {vendor.accountDetails?.accountNumber || "-"}</p>
+                          <p>IFSC: {vendor.accountDetails?.ifscCode || "-"}</p>
                         </div>
                         <div>
                           <p className="font-medium text-gray-700">Added On:</p>
-                          <p>{formatDate(client.createdAt)}</p>
+                          <p>{formatDate(vendor.createdAt)}</p>
                         </div>
                       </div>
                     </td>
@@ -367,9 +248,9 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
             ))}
           </tbody>
         </table>
-        {filteredClients.length === 0 && (
+        {filteredVendors.length === 0 && (
           <div className="py-8 text-center text-gray-500 bg-white">
-            <p>No clients match your search criteria.</p>
+            <p>No vendors match your search criteria.</p>
           </div>
         )}
       </div>
@@ -383,91 +264,69 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
         <table className="min-w-full text-sm text-left">
           <thead>
             <tr className="bg-gray-100">
-              {DETAILED_DISPLAY_FIELDS.map(field => (
-                <SortableHeader key={field.field} field={field.field} label={field.label} />
-              ))}
+              <SortableHeader field="vendorCode" label="Vendor Code" />
+              <SortableHeader field="name" label="Name" />
+              <SortableHeader field="email" label="Email" />
+              <SortableHeader field="phone" label="Phone" />
+              <SortableHeader field="gstin" label="GSTIN" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Address</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Loyalty Status</th>
-              <SortableHeader field="totalOrders" label="Orders" />
-              <SortableHeader field="totalSpend" label="Total Spend" />
+              <SortableHeader field="accountDetails.bankName" label="Bank" />
+              <SortableHeader field="paymentTerms.creditDays" label="Credit Days" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
             </tr>
           </thead>
           <tbody>
-            {filteredClients.map((client) => (
+            {filteredVendors.map((vendor) => (
               <tr 
-                key={client.id} 
-                className={getRowClassName(client)}
-                style={getRowStyle(client)}
-                onClick={() => handleViewClient(client)}
+                key={vendor.id} 
+                className="border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
+                onClick={() => handleViewVendor(vendor)}
               >
-                {DETAILED_DISPLAY_FIELDS.map(field => (
-                  <td key={field.field} className="px-3 py-3">
-                    {field.field === 'name' ? (
-                      <span className="font-medium">
-                        {client.name}
-                        {client.hasAccount && (
-                          <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                            Account
-                          </span>
-                        )}
-                      </span>
-                    ) : field.field === 'clientType' ? (
-                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                        client.clientType?.toUpperCase() === "B2B"
-                          ? "bg-purple-100 text-purple-800" 
-                          : "bg-blue-100 text-blue-800"
-                      }`}>
-                        {(client.clientType || "Direct").toUpperCase()}
-                      </span>
-                    ) : (
-                      getFieldValue(client, field.field)
-                    )}
-                  </td>
-                ))}
+                <td className="px-3 py-3">{vendor.vendorCode}</td>
+                <td className="px-3 py-3 font-medium">{vendor.name}</td>
+                <td className="px-3 py-3">{vendor.email || "-"}</td>
+                <td className="px-3 py-3">{vendor.phone || "-"}</td>
+                <td className="px-3 py-3">{vendor.gstin || "-"}</td>
                 <td className="px-3 py-3">
-                  {client.address?.city ? `${client.address.city}, ${client.address.state || ""}` : "-"}
+                  {vendor.address?.city ? `${vendor.address.city}, ${vendor.address.state || ""}` : "-"}
                 </td>
-                <td className="px-3 py-3">
-                  {renderLoyaltyStatus(client)}
-                </td>
-                <td className="px-3 py-3">{client.totalOrders || 0}</td>
-                <td className="px-3 py-3 font-medium">{formatCurrency(client.totalSpend || 0)}</td>
+                <td className="px-3 py-3">{vendor.accountDetails?.bankName || "-"}</td>
+                <td className="px-3 py-3">{vendor.paymentTerms?.creditDays || 0} days</td>
                 <td className="px-3 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    client.isActive
+                    vendor.isActive
                       ? "bg-green-100 text-green-800" 
                       : "bg-red-100 text-red-800"
                   }`}>
-                    {client.isActive ? "Active" : "Inactive"}
+                    {vendor.isActive ? "Active" : "Inactive"}
                   </span>
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex space-x-1">
                     <button
-                      onClick={() => onEdit(client)}
-                      className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
+                      onClick={() => onEdit(vendor)}
+                      className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
                     >
                       Edit
                     </button>
                     <button
-                      onClick={() => onDelete(client.id)}
-                      className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
+                      onClick={() => onDelete(vendor.id)}
+                      className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors"
                     >
                       Delete
                     </button>
                     
                     {/* Toggle Status Button */}
                     <button
-                      onClick={(e) => handleToggleStatus(e, client)}
+                      onClick={(e) => handleToggleStatus(e, vendor)}
                       className={`px-2 py-1 text-xs ${
-                        client.isActive 
+                        vendor.isActive 
                           ? "bg-yellow-100 text-yellow-800" 
                           : "bg-green-100 text-green-800"
-                      } rounded hover:bg-opacity-80 transition-colors flex items-center`}
+                      } rounded hover:bg-opacity-80 transition-colors`}
                     >
-                      {client.isActive ? "Deactivate" : "Activate"}
+                      {vendor.isActive ? "Deactivate" : "Activate"}
                     </button>
                   </div>
                 </td>
@@ -475,9 +334,9 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
             ))}
           </tbody>
         </table>
-        {filteredClients.length === 0 && (
+        {filteredVendors.length === 0 && (
           <div className="py-8 text-center text-gray-500 bg-white">
-            <p>No clients match your search criteria.</p>
+            <p>No vendors match your search criteria.</p>
           </div>
         )}
       </div>
@@ -488,61 +347,47 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
   const renderMobileCardView = () => {
     return (
       <div className="space-y-4">
-        {filteredClients.map((client) => (
+        {filteredVendors.map((vendor) => (
           <div 
-            key={client.id} 
+            key={vendor.id} 
             className="border border-gray-200 shadow-sm overflow-hidden bg-white cursor-pointer"
-            onClick={() => handleViewClient(client)}
-            style={getRowStyle(client)}
+            onClick={() => handleViewVendor(vendor)}
           >
-            {/* Main client information always visible */}
+            {/* Main vendor information always visible */}
             <div className="p-4">
               <div className="flex justify-between items-start">
                 <div>
-                  <h3 className="font-medium text-gray-800">{client.name}</h3>
-                  <p className="text-sm text-gray-600">{client.clientCode} | {(client.clientType || "Direct").toUpperCase()}</p>
+                  <h3 className="font-medium text-gray-800">{vendor.name}</h3>
+                  <p className="text-sm text-gray-600">{vendor.vendorCode}</p>
                 </div>
                 <div className="text-right">
                   <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                    client.isActive
+                    vendor.isActive
                       ? "bg-green-100 text-green-800" 
                       : "bg-red-100 text-red-800"
                   }`}>
-                    {client.isActive ? "Active" : "Inactive"}
+                    {vendor.isActive ? "Active" : "Inactive"}
                   </span>
-                  {client.hasAccount && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                      Account
-                    </span>
-                  )}
                 </div>
               </div>
               
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <div className="flex justify-between">
                   <div className="text-sm">
-                    <span className="text-gray-500">Contact:</span> {client.contactPerson || "N/A"}
+                    <span className="text-gray-500">Email:</span> {vendor.email || "N/A"}
                   </div>
                   <div className="text-sm">
-                    <span className="text-gray-500">Phone:</span> {client.phone || "N/A"}
+                    <span className="text-gray-500">Phone:</span> {vendor.phone || "N/A"}
                   </div>
                 </div>
-                
-                {/* Show loyalty status in mobile view too */}
-                {client.clientType?.toUpperCase() === "B2B" && (
-                  <div className="mt-2">
-                    <span className="text-gray-500 text-sm">Loyalty:</span>
-                    <div className="mt-1">{renderLoyaltyStatus(client)}</div>
-                  </div>
-                )}
               </div>
               
               <div className="mt-3 flex justify-between items-center">
                 <button
-                  onClick={(e) => toggleRowExpand(e, client.id)}
+                  onClick={(e) => toggleRowExpand(e, vendor.id)}
                   className="text-xs text-gray-600 flex items-center"
                 >
-                  {expandedRows[client.id] ? (
+                  {expandedRows[vendor.id] ? (
                     <>
                       <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path>
@@ -561,7 +406,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                 
                 <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={() => onEdit(client)}
+                    onClick={() => onEdit(vendor)}
                     className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
                   >
                     <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -574,33 +419,33 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
             </div>
             
             {/* Expandable detailed information */}
-            {expandedRows[client.id] && (
+            {expandedRows[vendor.id] && (
               <div className="border-t border-gray-200 p-4 bg-gray-50">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="font-medium text-gray-700">Email:</p>
-                    <p>{client.email || "N/A"}</p>
+                    <p className="font-medium text-gray-700">GSTIN:</p>
+                    <p>{vendor.gstin || "N/A"}</p>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-700">GSTIN:</p>
-                    <p>{client.gstin || "N/A"}</p>
+                    <p className="font-medium text-gray-700">Credit Period:</p>
+                    <p>{vendor.paymentTerms?.creditDays || 0} days</p>
                   </div>
                   <div>
                     <p className="font-medium text-gray-700">Address:</p>
-                    <p>{client.address?.line1 ? `${client.address.line1}, ${client.address.city || ""}, ${client.address.state || ""}` : "N/A"}</p>
+                    <p>{vendor.address?.line1 ? `${vendor.address.line1}, ${vendor.address.city || ""}, ${vendor.address.state || ""}` : "N/A"}</p>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-700">Activity:</p>
-                    <p>Orders: {client.totalOrders || 0}</p>
-                    <p>Spend: {formatCurrency(client.totalSpend || 0)}</p>
+                    <p className="font-medium text-gray-700">Bank:</p>
+                    <p>{vendor.accountDetails?.bankName || "N/A"}</p>
+                    <p>Account: {vendor.accountDetails?.accountNumber || "N/A"}</p>
                   </div>
                 </div>
                 
                 <div className="mt-3 flex justify-between" onClick={(e) => e.stopPropagation()}>
                   <button
-                    onClick={(e) => handleToggleStatus(e, client)}
+                    onClick={(e) => handleToggleStatus(e, vendor)}
                     className={`px-2 py-1 text-xs ${
-                      client.isActive 
+                      vendor.isActive 
                         ? "bg-yellow-100 text-yellow-800" 
                         : "bg-green-100 text-green-800"
                     } rounded hover:bg-opacity-80 transition-colors flex items-center`}
@@ -608,62 +453,27 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                     <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
-                    {client.isActive ? "Deactivate Client" : "Activate Client"}
+                    {vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
                   </button>
                   
                   <button
-                    onClick={() => onDelete(client.id)}
+                    onClick={() => onDelete(vendor.id)}
                     className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
                   >
                     <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                     </svg>
-                    Delete Client
+                    Delete Vendor
                   </button>
                 </div>
-                
-                {/* Account management buttons for B2B clients */}
-                {isAdmin && (client.clientType === "B2B" || client.clientType === "b2b" || client.clientType?.toUpperCase() === "B2B") && (
-                  <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex justify-center">
-                      {client.hasAccount ? (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onManageCredentials(client);
-                          }}
-                          className="px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded hover:bg-purple-200 transition-colors flex items-center"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
-                          </svg>
-                          Manage Account Credentials
-                        </button>
-                      ) : (
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            onActivateClient(client);
-                          }}
-                          className="px-3 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors flex items-center"
-                        >
-                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
-                          </svg>
-                          Setup B2B Account
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>
         ))}
         
-        {filteredClients.length === 0 && (
+        {filteredVendors.length === 0 && (
           <div className="py-8 text-center text-gray-500 bg-gray-50 rounded">
-            <p>No clients match your search criteria.</p>
+            <p>No vendors match your search criteria.</p>
           </div>
         )}
       </div>
@@ -682,7 +492,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
           </div>
           <input
             type="text"
-            placeholder="Search clients..."
+            placeholder="Search vendors..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
@@ -691,23 +501,13 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
         
         <div className="flex items-center space-x-2 w-full md:w-auto">
           <select
-            value={filterClientType}
-            onChange={(e) => setFilterClientType(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          >
-            <option value="">All Client Types</option>
-            <option value="DIRECT">Direct Clients</option>
-            <option value="B2B">B2B Clients</option>
-          </select>
-          
-          <select
             value={filterActiveStatus}
             onChange={(e) => setFilterActiveStatus(e.target.value)}
             className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
           >
             <option value="">All Statuses</option>
-            <option value="active">Active Clients</option>
-            <option value="inactive">Inactive Clients</option>
+            <option value="active">Active Vendors</option>
+            <option value="inactive">Inactive Vendors</option>
           </select>
 
           <div className="flex border border-gray-300 rounded-md overflow-hidden">
@@ -741,13 +541,13 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
         </div>
       </div>
       
-      {/* Client Count */}
+      {/* Vendor Count */}
       <div className="px-4 py-2 text-sm text-gray-600">
-        Showing {filteredClients.length} of {clients.length} clients
+        Showing {filteredVendors.length} of {vendors.length} vendors
       </div>
 
       {/* Table Content */}
-      {filteredClients.length > 0 ? (
+      {filteredVendors.length > 0 ? (
         <div>
           {/* Responsive views based on screen size and selected view type */}
           <div className="hidden md:block">
@@ -762,16 +562,15 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
       ) : (
         <div className="bg-white p-8 text-center text-gray-500">
           <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path>
           </svg>
-          {searchTerm || filterClientType || filterActiveStatus ? (
+          {searchTerm || filterActiveStatus ? (
             <>
-              <p className="text-lg font-medium">No clients match your search</p>
+              <p className="text-lg font-medium">No vendors match your search</p>
               <p className="mt-1">Try using different filters or clear your search</p>
               <button 
                 onClick={() => {
                   setSearchTerm('');
-                  setFilterClientType('');
                   setFilterActiveStatus('');
                 }}
                 className="mt-4 px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
@@ -781,24 +580,24 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
             </>
           ) : (
             <>
-              <p className="text-lg font-medium">No clients found</p>
-              <p className="mt-1">Add your first client to get started</p>
+              <p className="text-lg font-medium">No vendors found</p>
+              <p className="mt-1">Add your first vendor to get started</p>
             </>
           )}
         </div>
       )}
       
-      {/* Client Details Modal */}
-      {selectedClient && (
-        <ClientDetailsModal 
-          client={selectedClient} 
+      {/* Vendor Details Modal */}
+      {selectedVendor && (
+        <VendorDetailsModal 
+          vendor={selectedVendor} 
           onClose={handleCloseModal}
           onEdit={() => {
             handleCloseModal();
-            onEdit(selectedClient);
+            onEdit(selectedVendor);
           }}
           onToggleStatus={() => {
-            handleToggleStatus(new Event('click'), selectedClient);
+            handleToggleStatus(new Event('click'), selectedVendor);
             handleCloseModal();
           }}
           isAdmin={isAdmin}
@@ -808,4 +607,4 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
   );
 };
 
-export default DisplayClientTable;
+export default DisplayVendorTable;

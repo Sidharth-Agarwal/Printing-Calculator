@@ -1,4 +1,5 @@
 import React from "react";
+import { CLIENT_FIELDS } from "../../constants/entityFields";
 
 const ClientDetailsModal = ({ client, onClose, onEdit, onToggleStatus, isAdmin }) => {
   if (!client) return null;
@@ -43,6 +44,45 @@ const ClientDetailsModal = ({ client, onClose, onEdit, onToggleStatus, isAdmin }
   const hasLoyaltyTier = client.clientType?.toUpperCase() === "B2B" && 
                           client.loyaltyTierId && 
                           client.loyaltyTierName;
+
+  // Get field value from client object using field name
+  const getFieldValue = (fieldName) => {
+    if (fieldName.includes('.')) {
+      const [parent, child] = fieldName.split('.');
+      return client[parent] && client[parent][child] ? client[parent][child] : 'N/A';
+    }
+    return client[fieldName] !== undefined ? client[fieldName] : 'N/A';
+  };
+
+  // Render address section from fields array
+  const renderAddressSection = (title, fields, addressObject) => {
+    if (!addressObject || !addressObject.line1) {
+      return (
+        <div className="bg-gray-50 rounded p-3">
+          <h4 className="text-base font-semibold mb-2 text-gray-700">{title}</h4>
+          <p className="text-sm text-gray-500">N/A</p>
+        </div>
+      );
+    }
+
+    return (
+      <div className="bg-gray-50 rounded p-3">
+        <h4 className="text-base font-semibold mb-2 text-gray-700">{title}</h4>
+        <div className="space-y-0.5 text-sm">
+          <p>{addressObject.line1}</p>
+          {addressObject.line2 && <p>{addressObject.line2}</p>}
+          <p>
+            {[
+              addressObject.city, 
+              addressObject.state, 
+              addressObject.postalCode
+            ].filter(Boolean).join(", ")}
+          </p>
+          <p>{addressObject.country || ""}</p>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
@@ -128,45 +168,19 @@ const ClientDetailsModal = ({ client, onClose, onEdit, onToggleStatus, isAdmin }
               <div className="bg-gray-50 rounded p-3">
                 <h4 className="text-base font-semibold mb-2 text-gray-700">Contact Information</h4>
                 <div className="space-y-1 text-sm">
-                  <div>
-                    <span className="text-gray-500">Contact Person:</span> 
-                    <span className="ml-1 font-medium">{client.contactPerson || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Email:</span> 
-                    <span className="ml-1 font-medium">{client.email || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">Phone:</span> 
-                    <span className="ml-1 font-medium">{client.phone || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="text-gray-500">GSTIN:</span> 
-                    <span className="ml-1 font-medium">{client.gstin || "N/A"}</span>
-                  </div>
+                  {CLIENT_FIELDS.BASIC_INFO.filter(field => 
+                    !['clientCode', 'name', 'clientType', 'isActive'].includes(field.name)
+                  ).map(field => (
+                    <div key={field.name}>
+                      <span className="text-gray-500">{field.label}:</span> 
+                      <span className="ml-1 font-medium">{getFieldValue(field.name) || "N/A"}</span>
+                    </div>
+                  ))}
                 </div>
               </div>
               
-              {/* Billing Address */}
-              <div className="bg-gray-50 rounded p-3">
-                <h4 className="text-base font-semibold mb-2 text-gray-700">Billing Address</h4>
-                {client.billingAddress?.line1 ? (
-                  <div className="space-y-0.5 text-sm">
-                    <p>{client.billingAddress.line1}</p>
-                    {client.billingAddress.line2 && <p>{client.billingAddress.line2}</p>}
-                    <p>
-                      {[
-                        client.billingAddress.city, 
-                        client.billingAddress.state, 
-                        client.billingAddress.postalCode
-                      ].filter(Boolean).join(", ")}
-                    </p>
-                    <p>{client.billingAddress.country || ""}</p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">N/A</p>
-                )}
-              </div>
+              {/* Primary Address */}
+              {renderAddressSection("Primary Address", CLIENT_FIELDS.ADDRESS, client.address)}
               
               {/* Added or Updated Date Information */}
               <div className="bg-gray-50 rounded p-3">
@@ -186,26 +200,8 @@ const ClientDetailsModal = ({ client, onClose, onEdit, onToggleStatus, isAdmin }
             
             {/* Right column */}
             <div className="space-y-4">
-              {/* Primary Address */}
-              <div className="bg-gray-50 rounded p-3">
-                <h4 className="text-base font-semibold mb-2 text-gray-700">Primary Address</h4>
-                {client.address?.line1 ? (
-                  <div className="space-y-0.5 text-sm">
-                    <p>{client.address.line1}</p>
-                    {client.address.line2 && <p>{client.address.line2}</p>}
-                    <p>
-                      {[
-                        client.address.city, 
-                        client.address.state, 
-                        client.address.postalCode
-                      ].filter(Boolean).join(", ")}
-                    </p>
-                    <p>{client.address.country || ""}</p>
-                  </div>
-                ) : (
-                  <p className="text-sm text-gray-500">N/A</p>
-                )}
-              </div>
+              {/* Billing Address */}
+              {renderAddressSection("Billing Address", CLIENT_FIELDS.BILLING_ADDRESS, client.billingAddress)}
               
               {/* Account Statistics */}
               <div className="bg-gray-50 rounded p-3">

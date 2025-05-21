@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { CLIENT_FIELDS } from "../../constants/entityFields";
+import { VENDOR_FIELDS } from "../../constants/entityFields";
 
-const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, generateClientCode }) => {
+const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, generateVendorCode }) => {
   const [formData, setFormData] = useState({
-    clientCode: "",
+    vendorCode: "",
     name: "",
-    clientType: "Direct", // Default to Direct
-    contactPerson: "",
     email: "",
     phone: "",
     address: {
@@ -18,67 +16,66 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
       country: "",
     },
     gstin: "",
-    billingAddress: {
-      line1: "",
-      line2: "",
-      city: "",
-      state: "",
-      postalCode: "",
-      country: "",
+    accountDetails: {
+      bankName: "",
+      accountNumber: "",
+      ifscCode: "",
+      accountType: "Current",
+      upiId: ""
+    },
+    paymentTerms: {
+      creditDays: 30
     },
     notes: "",
-    isActive: true, // Default to active
+    isActive: true,
   });
 
-  const [sameAsAddress, setSameAsAddress] = useState(true);
   const [submitLoading, setSubmitLoading] = useState(false);
 
   useEffect(() => {
-    if (selectedClient) {
+    if (selectedVendor) {
       setFormData({
-        ...selectedClient,
-        // Set default clientType if it doesn't exist in the selected client
-        clientType: selectedClient.clientType || "Direct",
+        ...selectedVendor,
         // Ensure isActive exists
-        isActive: selectedClient.isActive !== undefined ? selectedClient.isActive : true
+        isActive: selectedVendor.isActive !== undefined ? selectedVendor.isActive : true,
+        // Ensure accountDetails exists
+        accountDetails: selectedVendor.accountDetails || {
+          bankName: "",
+          accountNumber: "",
+          ifscCode: "",
+          accountType: "Current", 
+          upiId: ""
+        },
+        // Ensure paymentTerms exists
+        paymentTerms: selectedVendor.paymentTerms || {
+          creditDays: 30
+        }
       });
-      // Check if billing address is the same as primary address
-      const isSameAddress = 
-        selectedClient.address.line1 === selectedClient.billingAddress.line1 &&
-        selectedClient.address.line2 === selectedClient.billingAddress.line2 &&
-        selectedClient.address.city === selectedClient.billingAddress.city &&
-        selectedClient.address.state === selectedClient.billingAddress.state &&
-        selectedClient.address.postalCode === selectedClient.billingAddress.postalCode &&
-        selectedClient.address.country === selectedClient.billingAddress.country;
-      
-      setSameAsAddress(isSameAddress);
     } else {
       resetForm();
     }
-  }, [selectedClient]);
+  }, [selectedVendor]);
 
-  // Auto-generate client code when name changes (for new clients only)
+  // Auto-generate vendor code when name changes (for new vendors only)
   useEffect(() => {
-    const updateClientCode = async () => {
-      // Only generate code if this is a new client (not editing) and we have a name
-      if (!selectedClient && formData.name && formData.name.trim() !== "") {
-        const generatedCode = await generateClientCode(formData.name);
+    const updateVendorCode = async () => {
+      // Only generate code if this is a new vendor (not editing) and we have a name
+      if (!selectedVendor && formData.name && formData.name.trim() !== "") {
+        const generatedCode = await generateVendorCode(formData.name);
         setFormData(prev => ({
           ...prev,
-          clientCode: generatedCode
+          vendorCode: generatedCode
         }));
       }
     };
 
-    updateClientCode();
-  }, [formData.name, selectedClient, generateClientCode]);
+    updateVendorCode();
+  }, [formData.name, selectedVendor, generateVendorCode]);
 
   const resetForm = () => {
     setFormData({
-      clientCode: "",
+      vendorCode: "",
       name: "",
-      clientType: "Direct",
-      contactPerson: "",
       email: "",
       phone: "",
       address: {
@@ -90,25 +87,26 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
         country: "",
       },
       gstin: "",
-      billingAddress: {
-        line1: "",
-        line2: "",
-        city: "",
-        state: "",
-        postalCode: "",
-        country: "",
+      accountDetails: {
+        bankName: "",
+        accountNumber: "",
+        ifscCode: "",
+        accountType: "Current",
+        upiId: ""
+      },
+      paymentTerms: {
+        creditDays: 30
       },
       notes: "",
       isActive: true,
     });
-    setSameAsAddress(true);
   };
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     
-    // Don't allow changing client code manually
-    if (name === "clientCode") {
+    // Don't allow changing vendor code manually
+    if (name === "vendorCode") {
       return;
     }
     
@@ -129,34 +127,10 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
           [child]: value,
         },
       }));
-      
-      // If same as address is checked, update billing address too
-      if (sameAsAddress && parent === "address") {
-        setFormData((prev) => ({
-          ...prev,
-          billingAddress: {
-            ...prev.billingAddress,
-            [child]: value,
-          },
-        }));
-      }
     } else {
       setFormData((prev) => ({
         ...prev,
         [name]: value,
-      }));
-    }
-  };
-
-  const handleSameAddressChange = (e) => {
-    const isChecked = e.target.checked;
-    setSameAsAddress(isChecked);
-    
-    if (isChecked) {
-      // Copy primary address to billing address
-      setFormData((prev) => ({
-        ...prev,
-        billingAddress: { ...prev.address },
       }));
     }
   };
@@ -166,8 +140,8 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
     setSubmitLoading(true);
 
     let success = false;
-    if (selectedClient) {
-      success = await onUpdate(selectedClient.id, formData);
+    if (selectedVendor) {
+      success = await onUpdate(selectedVendor.id, formData);
     } else {
       success = await onSubmit(formData);
     }
@@ -259,9 +233,9 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               required={required}
               readOnly={readOnly}
             />
-            {name === "clientCode" && (
+            {name === "vendorCode" && (
               <p className="mt-1 text-xs text-gray-500">
-                Automatically generated based on client name
+                Automatically generated based on vendor name
               </p>
             )}
           </div>
@@ -275,53 +249,44 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
       <div className="mb-6">
         <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Basic Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          {CLIENT_FIELDS.BASIC_INFO.map(field => renderField(field))}
+          {VENDOR_FIELDS.BASIC_INFO.map(field => renderField(field))}
         </div>
       </div>
       
-      {/* Primary Address */}
+      {/* Address */}
       <div className="mb-6">
-        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Primary Address</h3>
+        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Address</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          {CLIENT_FIELDS.ADDRESS.map(field => renderField(field))}
+          {VENDOR_FIELDS.ADDRESS.map(field => renderField(field))}
         </div>
       </div>
       
-      {/* Billing Address */}
+      {/* Account Details */}
       <div className="mb-6">
-        <div className="flex items-center mb-4">
-          <h3 className="text-lg font-medium text-gray-700 border-b border-gray-200 pb-2 flex-grow">Billing Address</h3>
-          <div className="flex items-center ml-4">
-            <input
-              id="sameAsAddress"
-              type="checkbox"
-              checked={sameAsAddress}
-              onChange={handleSameAddressChange}
-              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-            />
-            <label htmlFor="sameAsAddress" className="ml-2 text-sm text-gray-700">
-              Same as Primary Address
-            </label>
-          </div>
+        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Account Details</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          {VENDOR_FIELDS.ACCOUNT_DETAILS.map(field => renderField(field))}
         </div>
-        
-        {!sameAsAddress && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            {CLIENT_FIELDS.BILLING_ADDRESS.map(field => renderField(field))}
-          </div>
-        )}
+      </div>
+      
+      {/* Payment Terms */}
+      <div className="mb-6">
+        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Payment Terms</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          {VENDOR_FIELDS.PAYMENT_TERMS.map(field => renderField(field))}
+        </div>
       </div>
       
       {/* Notes */}
       <div className="mb-6">
-        {CLIENT_FIELDS.NOTES.map(field => renderField(field))}
+        {VENDOR_FIELDS.NOTES.map(field => renderField(field))}
       </div>
       
       <div className="flex justify-end pt-3 border-t border-gray-200">
-        {selectedClient && (
+        {selectedVendor && (
           <button
             type="button"
-            onClick={() => setSelectedClient(null)}
+            onClick={() => setSelectedVendor(null)}
             className="mr-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-sm"
           >
             Cancel
@@ -342,7 +307,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
               Processing...
             </span>
           ) : (
-            selectedClient ? 'Update Client' : 'Add Client'
+            selectedVendor ? 'Update Vendor' : 'Add Vendor'
           )}
         </button>
       </div>
@@ -350,4 +315,4 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
   );
 };
 
-export default AddClientForm;
+export default AddVendorForm;
