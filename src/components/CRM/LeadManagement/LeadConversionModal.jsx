@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from "react";
 import LeadStatusBadge from "../../Shared/LeadStatusBadge";
 import QualificationBadge from "../../Shared/QualificationBadge";
-import CRMActionButton from "../../Shared/CRMActionButton";
 import { 
   convertLeadToClient,
   checkClientCodeExists
