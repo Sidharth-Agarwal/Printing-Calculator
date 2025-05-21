@@ -4,7 +4,7 @@ import LeadDetailsModal from "../LeadRegistration/LeadDetailsModal";
 import LeadRegistrationForm from "../LeadRegistration/LeadRegistrationForm";
 import LeadDiscussionModal from "./LeadDiscussionModal";
 import LeadConversionModal from "./LeadConversionModal";
-import CRMActionButton from "../../Shared/CRMActionButton";
+import Modal from "../../Shared/Modal";
 import { useCRM } from "../../../context/CRMContext";
 import DisplayLeadsTable from "../LeadRegistration/DisplayLeadsTable"; // Import DisplayLeadsTable for List View
 import { LEAD_PIPELINE_FIELDS } from "../../../constants/leadFields"; // Import the pipeline fields
@@ -331,36 +331,25 @@ const LeadManagementPage = () => {
       
       {/* Edit Lead Modal */}
       {isFormModalOpen && selectedLead && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-4xl max-h-[90vh] overflow-auto">
-            <div className="p-4 border-b border-gray-200 flex justify-between items-center">
-              <h3 className="text-lg font-semibold">Edit Lead</h3>
-              <button
-                onClick={() => {
-                  setIsFormModalOpen(false);
-                  setSelectedLead(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <div className="p-4">
-              <LeadRegistrationForm
-                lead={selectedLead}
-                onSubmit={handleSubmitForm}
-                onCancel={() => {
-                  setIsFormModalOpen(false);
-                  setSelectedLead(null);
-                }}
-                isSubmitting={isSubmitting}
-              />
-            </div>
-          </div>
-        </div>
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setIsFormModalOpen(false);
+            setSelectedLead(null);
+          }}
+          title="Edit Lead"
+          size="xl"
+        >
+          <LeadRegistrationForm
+            lead={selectedLead}
+            onSubmit={handleSubmitForm}
+            onCancel={() => {
+              setIsFormModalOpen(false);
+              setSelectedLead(null);
+            }}
+            isSubmitting={isSubmitting}
+          />
+        </Modal>
       )}
       
       {/* Lead Discussion Modal */}

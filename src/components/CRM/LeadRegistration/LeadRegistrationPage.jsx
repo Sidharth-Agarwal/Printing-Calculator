@@ -5,6 +5,7 @@ import LeadDetailsModal from "./LeadDetailsModal";
 import LeadDiscussionModal from "../LeadManagement/LeadDiscussionModal";
 import LeadConversionModal from "../LeadManagement/LeadConversionModal";
 import CRMActionButton from "../../Shared/CRMActionButton";
+import Modal from "../../Shared/Modal";
 import { useCRM } from "../../../context/CRMContext";
 import { LEAD_TABLE_FIELDS } from "../../../constants/leadFields"; // Import the registration table fields
 import { 
@@ -53,7 +54,7 @@ const LeadRegistrationPage = () => {
   // Check if user has permission to manage leads
   const hasPermission = userRole === "admin" || userRole === "staff";
   
-  // Handle opening the form modal
+  // Handle opening the form modal for a new lead
   const handleAddNew = () => {
     setSelectedLead(null);
     setIsFormModalOpen(true);
@@ -258,46 +259,15 @@ const LeadRegistrationPage = () => {
       
       {/* Main Content */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        {isFormModalOpen ? (
-          <div className="p-4">
-            <div className="flex justify-between items-center mb-4">
-              <h2 className="text-lg font-medium">
-                {selectedLead ? "Edit Lead" : "Add New Lead"}
-              </h2>
-              <button
-                onClick={() => {
-                  setIsFormModalOpen(false);
-                  setSelectedLead(null);
-                }}
-                className="text-gray-500 hover:text-gray-700"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              </button>
-            </div>
-            
-            <LeadRegistrationForm
-              lead={selectedLead}
-              onSubmit={handleSubmitForm}
-              onCancel={() => {
-                setIsFormModalOpen(false);
-                setSelectedLead(null);
-              }}
-              isSubmitting={isSubmitting}
-            />
-          </div>
-        ) : (
-          <DisplayLeadsTable
-            leads={leads}
-            onView={handleView}
-            onEdit={handleEdit}
-            onDelete={handleDelete}
-            onAddDiscussion={handleAddDiscussion}
-            loading={isLoadingLeads}
-            fields={LEAD_TABLE_FIELDS} // Use registration table fields
-          />
-        )}
+        <DisplayLeadsTable
+          leads={leads}
+          onView={handleView}
+          onEdit={handleEdit}
+          onDelete={handleDelete}
+          onAddDiscussion={handleAddDiscussion}
+          loading={isLoadingLeads}
+          fields={LEAD_TABLE_FIELDS} // Use registration table fields
+        />
       </div>
       
       {/* Lead Details Modal */}
@@ -309,6 +279,29 @@ const LeadRegistrationPage = () => {
           onAddDiscussion={handleAddDiscussion}
           onConvert={handleConvert}
         />
+      )}
+      
+      {/* Add/Edit Lead Modal */}
+      {isFormModalOpen && (
+        <Modal
+          isOpen={true}
+          onClose={() => {
+            setIsFormModalOpen(false);
+            setSelectedLead(null);
+          }}
+          title={selectedLead ? "Edit Lead" : "Add New Lead"}
+          size="xl"
+        >
+          <LeadRegistrationForm
+            lead={selectedLead}
+            onSubmit={handleSubmitForm}
+            onCancel={() => {
+              setIsFormModalOpen(false);
+              setSelectedLead(null);
+            }}
+            isSubmitting={isSubmitting}
+          />
+        </Modal>
       )}
       
       {/* Lead Discussion Modal */}

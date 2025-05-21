@@ -156,154 +156,132 @@ const LeadRegistrationForm = ({
     }
   };
   
-  // Render a field based on its type and configuration
-  const renderField = (field) => {
-    const { name, label, type, required, placeholder, options } = field;
-    
-    switch (type) {
-      case "select":
-        // Special handling for source field
-        if (name === 'source') {
-          return (
-            <div key={name} className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {label} {required && <span className="text-red-500">*</span>}
-              </label>
-              <LeadSourceSelector
-                value={formData[name] || ""}
-                onChange={(value) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    [name]: value
-                  }));
-                }}
-                required={required}
-                disabled={isSubmitting}
-              />
-              {errors[name] && <p className="mt-1 text-xs text-red-500">{errors[name]}</p>}
-            </div>
-          );
-        }
-        
-        // Special handling for status field
-        if (name === 'status') {
-          return (
-            <div key={name} className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                {label} {required && <span className="text-red-500">*</span>}
-              </label>
-              <LeadStatusSelector
-                value={formData[name] || ""}
-                onChange={(value) => {
-                  setFormData(prev => ({
-                    ...prev,
-                    [name]: value
-                  }));
-                }}
-                required={required}
-                disabled={isSubmitting}
-              />
-              {errors[name] && <p className="mt-1 text-xs text-red-500">{errors[name]}</p>}
-            </div>
-          );
-        }
-        
-        // Default handling for other select fields
-        return (
-          <div key={name} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <select
-              name={name}
-              value={formData[name] || ""}
-              onChange={handleChange}
-              required={required}
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
-                errors[name] ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            >
-              <option value="">Select {label}</option>
-              {options && options.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-            {errors[name] && <p className="mt-1 text-xs text-red-500">{errors[name]}</p>}
-          </div>
-        );
-        
-      case "textarea":
-        return (
-          <div key={name} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <textarea
-              name={name}
-              value={formData[name] || ""}
-              onChange={handleChange}
-              placeholder={placeholder}
-              required={required}
-              disabled={isSubmitting}
-              rows="3"
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
-                errors[name] ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            ></textarea>
-            {errors[name] && <p className="mt-1 text-xs text-red-500">{errors[name]}</p>}
-          </div>
-        );
-        
-      default: // text, email, tel, etc.
-        return (
-          <div key={name} className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              {label} {required && <span className="text-red-500">*</span>}
-            </label>
-            <input
-              type={type}
-              name={name.includes('.') ? name : name}
-              value={
-                name.includes('.')
-                  ? formData[name.split('.')[0]][name.split('.')[1]] || ""
-                  : formData[name] || ""
-              }
-              onChange={handleChange}
-              placeholder={placeholder}
-              required={required}
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
-                errors[name] ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            />
-            {errors[name] && <p className="mt-1 text-xs text-red-500">{errors[name]}</p>}
-          </div>
-        );
-    }
-  };
-  
   return (
     <form onSubmit={handleSubmit} className="bg-white">
       {/* Basic Information */}
-      <div className="mb-6">
-        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">
+      <div className="mb-4">
+        <h3 className="text-lg font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">
           Basic Information
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {LEAD_FIELDS.BASIC_INFO.map(field => renderField(field))}
-        </div>
-      </div>
-      
-      {/* Qualification */}
-      <div className="mb-6">
-        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">
-          Lead Qualification
-        </h3>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div className="mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Name */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Lead Name <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="text"
+              name="name"
+              value={formData.name || ""}
+              onChange={handleChange}
+              placeholder="Enter lead name"
+              required
+              disabled={isSubmitting}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                errors.name ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "bg-gray-100" : ""}`}
+            />
+            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
+          </div>
+          
+          {/* Company */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Company Name
+            </label>
+            <input
+              type="text"
+              name="company"
+              value={formData.company || ""}
+              onChange={handleChange}
+              placeholder="Enter company name (if applicable)"
+              disabled={isSubmitting}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                errors.company ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "bg-gray-100" : ""}`}
+            />
+            {errors.company && <p className="mt-1 text-xs text-red-500">{errors.company}</p>}
+          </div>
+          
+          {/* Email */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Email
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData.email || ""}
+              onChange={handleChange}
+              placeholder="Enter email address"
+              disabled={isSubmitting}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                errors.email ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "bg-gray-100" : ""}`}
+            />
+            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
+          </div>
+          
+          {/* Phone */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Phone Number <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="tel"
+              name="phone"
+              value={formData.phone || ""}
+              onChange={handleChange}
+              placeholder="Enter phone number"
+              required
+              disabled={isSubmitting}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                errors.phone ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "bg-gray-100" : ""}`}
+            />
+            {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
+          </div>
+          
+          {/* Source */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Lead Source <span className="text-red-500">*</span>
+            </label>
+            <LeadSourceSelector
+              value={formData.source || ""}
+              onChange={(value) => {
+                setFormData(prev => ({
+                  ...prev,
+                  source: value
+                }));
+              }}
+              required
+              disabled={isSubmitting}
+            />
+            {errors.source && <p className="mt-1 text-xs text-red-500">{errors.source}</p>}
+          </div>
+          
+          {/* Status */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Lead Status <span className="text-red-500">*</span>
+            </label>
+            <LeadStatusSelector
+              value={formData.status || ""}
+              onChange={(value) => {
+                setFormData(prev => ({
+                  ...prev,
+                  status: value
+                }));
+              }}
+              required
+              disabled={isSubmitting}
+            />
+            {errors.status && <p className="mt-1 text-xs text-red-500">{errors.status}</p>}
+          </div>
+          
+          {/* Qualification Badge */}
+          <div className="mb-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Qualification Badge
             </label>
@@ -313,23 +291,197 @@ const LeadRegistrationForm = ({
               disabled={isSubmitting}
             />
           </div>
-          {LEAD_FIELDS.LEAD_DETAILS.map(field => renderField(field))}
+          
+          {/* Job Type */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Job Type
+            </label>
+            <select
+              name="jobType"
+              value={formData.jobType || ""}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                errors.jobType ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "bg-gray-100" : ""}`}
+            >
+              <option value="">Select Job Type</option>
+              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "jobType")?.options?.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Budget */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Budget Range
+            </label>
+            <select
+              name="budget"
+              value={formData.budget || ""}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                errors.budget ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "bg-gray-100" : ""}`}
+            >
+              <option value="">Select Budget Range</option>
+              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "budget")?.options?.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {/* Urgency */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Urgency
+            </label>
+            <select
+              name="urgency"
+              value={formData.urgency || ""}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+                errors.urgency ? "border-red-500" : "border-gray-300"
+              } ${isSubmitting ? "bg-gray-100" : ""}`}
+            >
+              <option value="">Select Urgency</option>
+              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "urgency")?.options?.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
       </div>
       
       {/* Contact Information */}
-      <div className="mb-6">
-        <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">
+      <div className="mb-4">
+        <h3 className="text-lg font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">
           Contact Information
         </h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          {LEAD_FIELDS.CONTACT_INFO.map(field => renderField(field))}
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {/* Address Line 1 */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Address Line 1
+            </label>
+            <input
+              type="text"
+              name="address.line1"
+              value={formData.address?.line1 || ""}
+              onChange={handleChange}
+              placeholder="Enter street address"
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+          
+          {/* Address Line 2 */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Address Line 2
+            </label>
+            <input
+              type="text"
+              name="address.line2"
+              value={formData.address?.line2 || ""}
+              onChange={handleChange}
+              placeholder="Enter apartment, suite, etc."
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+          
+          {/* City */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              City
+            </label>
+            <input
+              type="text"
+              name="address.city"
+              value={formData.address?.city || ""}
+              onChange={handleChange}
+              placeholder="Enter city"
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+          
+          {/* State */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              State
+            </label>
+            <input
+              type="text"
+              name="address.state"
+              value={formData.address?.state || ""}
+              onChange={handleChange}
+              placeholder="Enter state or province"
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+          
+          {/* Postal Code */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Postal Code
+            </label>
+            <input
+              type="text"
+              name="address.postalCode"
+              value={formData.address?.postalCode || ""}
+              onChange={handleChange}
+              placeholder="Enter postal code"
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
+          
+          {/* Country */}
+          <div className="mb-2">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Country
+            </label>
+            <input
+              type="text"
+              name="address.country"
+              value={formData.address?.country || "India"}
+              onChange={handleChange}
+              disabled={isSubmitting}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            />
+          </div>
         </div>
       </div>
       
       {/* Notes */}
-      <div className="mb-6">
-        {LEAD_FIELDS.NOTES.map(field => renderField(field))}
+      <div className="mb-4">
+        <h3 className="text-lg font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">
+          Additional Notes
+        </h3>
+        <div>
+          <textarea
+            name="notes"
+            value={formData.notes || ""}
+            onChange={handleChange}
+            rows="3"
+            placeholder="Enter any additional notes about this lead"
+            disabled={isSubmitting}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+          ></textarea>
+        </div>
       </div>
       
       {/* Form Actions */}
@@ -347,6 +499,7 @@ const LeadRegistrationForm = ({
           type="primary"
           isLoading={isSubmitting}
           disabled={isSubmitting}
+          submit={true}
         >
           {lead ? "Update Lead" : "Create Lead"}
         </CRMActionButton>
