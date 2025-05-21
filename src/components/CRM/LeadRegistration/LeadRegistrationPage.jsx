@@ -258,7 +258,7 @@ const LeadRegistrationPage = () => {
       </div>
       
       {/* Main Content */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div>
         <DisplayLeadsTable
           leads={leads}
           onView={handleView}
