@@ -6,7 +6,7 @@ export const ROUTE_ACCESS = {
   '/invoices': ['admin', 'staff'],
   '/clients': ['admin', 'staff'],
   '/estimates': ['admin', 'staff', 'b2b'],
-  '/escrow': ['admin', 'staff'], // NEW: Added escrow route access
+  '/escrow': ['admin', 'staff'], 
   '/material-stock/paper-db': ['admin', 'staff'],
   '/material-stock/material-db': ['admin', 'staff'],
   '/material-stock/dies-db': ['admin', 'staff'],
@@ -14,7 +14,10 @@ export const ROUTE_ACCESS = {
   '/material-stock/overheads': ['admin', 'staff'],
   '/material-stock/loyalty-tiers': ['admin', 'staff'],
   '/loyalty-dashboard': ['admin', 'staff'],
-  '/b2b-dashboard': ['b2b']
+  '/b2b-dashboard': ['b2b'],
+  '/crm/lead-registration': ['admin', 'staff'],
+  '/crm/lead-management': ['admin', 'staff'],
+  '/crm/badges': ['admin', 'staff']
 };
 
 export const MENU_ACCESS = {
@@ -22,10 +25,11 @@ export const MENU_ACCESS = {
   materials: ['admin', 'staff'],
   clients: ['admin', 'staff'],
   estimates: ['admin', 'staff', 'b2b'],
-  escrow: ['admin', 'staff'], // NEW: Added escrow menu access
+  escrow: ['admin', 'staff'],
   orders: ['admin', 'staff', 'production', 'b2b'],
   invoices: ['admin', 'staff'],
   transactions: ['admin'],
   userManagement: ['admin'],
-  loyaltyProgram: ['admin', 'staff']
+  loyaltyProgram: ['admin', 'staff'],
+  crm: ['admin', 'staff']
 };

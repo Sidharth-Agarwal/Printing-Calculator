@@ -115,6 +115,14 @@ const Header = () => {
         { label: 'Loyalty Program', path: '/material-stock/loyalty-tiers', visible: isMenuItemVisible('loyaltyProgram') }
       ]
     },
+    // Add CRM dropdown menu here
+    { key: 'crm', label: 'CRM', path: '/crm', visible: isMenuItemVisible('crm'), isDropdown: true,
+      dropdownItems: [
+        { label: 'Lead Registration', path: '/crm/lead-registration' },
+        { label: 'Lead Pipeline', path: '/crm/lead-management' },
+        { label: 'Qualification Badges', path: '/crm/badges' }
+      ]
+    },
     { key: 'clients', label: 'Clients', path: '/clients', visible: isMenuItemVisible('clients') },
     { key: 'vendors', label: 'Vendors', path: '/vendors', visible: isMenuItemVisible('clients') }, // Using same permissions as clients
     { key: 'estimates', label: 'Estimates', path: '/estimates', visible: isMenuItemVisible('estimates') },
