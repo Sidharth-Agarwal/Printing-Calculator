@@ -8,7 +8,7 @@ import { updateLeadStatus } from "../../../services";
 /**
  * Lead Pool component for kanban-style lead management
  * @param {Object} props - Component props
- * @param {Array} props.leads - Array of lead objects
+ * @param {Array} props.leads - Array of lead objects (pre-filtered)
  * @param {function} props.onView - View handler
  * @param {function} props.onEdit - Edit handler
  * @param {function} props.onAddDiscussion - Add discussion handler
@@ -27,36 +27,19 @@ const LeadPool = ({
 }) => {
   const [draggedLead, setDraggedLead] = useState(null);
   const [updatingLeadId, setUpdatingLeadId] = useState(null);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterSource, setFilterSource] = useState("");
-  const [filterBadge, setFilterBadge] = useState("");
+  const [dragOverStatus, setDragOverStatus] = useState(null);
+  const [dragOverIndex, setDragOverIndex] = useState(null);
   
   // Group leads by status
   const groupedLeads = {};
-  
-  // Filter leads
-  const filteredLeads = leads.filter(lead => {
-    const matchesSearch = 
-      searchTerm === "" ||
-      lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lead.lastDiscussionSummary?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesSource = filterSource === "" || lead.source === filterSource;
-    const matchesBadge = filterBadge === "" || lead.badgeId === filterBadge;
-    
-    return matchesSearch && matchesSource && matchesBadge;
-  });
   
   // Initialize groups with empty arrays
   LEAD_STATUSES.forEach(status => {
     groupedLeads[status.id] = [];
   });
   
-  // Group filtered leads by status
-  filteredLeads.forEach(lead => {
+  // Group leads by status
+  leads.forEach(lead => {
     if (groupedLeads[lead.status]) {
       groupedLeads[lead.status].push(lead);
     } else {
@@ -66,40 +49,62 @@ const LeadPool = ({
   });
   
   // Handle drag start
-  const handleDragStart = (e, lead) => {
-    setDraggedLead(lead);
+  const handleDragStart = (e, lead, status, index) => {
+    setDraggedLead({ ...lead, status, index });
     e.dataTransfer.setData("text/plain", lead.id); // Fallback
     e.dataTransfer.effectAllowed = "move";
   };
   
-  // Handle drag over
+  // Handle drag over (for status columns)
   const handleDragOver = (e, status) => {
     e.preventDefault();
     e.dataTransfer.dropEffect = "move";
+    if (dragOverStatus !== status) {
+      setDragOverStatus(status);
+    }
   };
   
-  // Handle drop
-  const handleDrop = async (e, statusId) => {
+  // Handle drag over (for lead cards)
+  const handleDragOverCard = (e, status, index) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOverIndex(index);
+    setDragOverStatus(status);
+  };
+  
+  // Handle drop (for both status change and reordering)
+  const handleDrop = async (e, statusId, dropIndex = -1) => {
     e.preventDefault();
     
     if (!draggedLead) return;
     
-    // If dropping in the same status, do nothing
-    if (draggedLead.status === statusId) {
-      setDraggedLead(null);
-      return;
+    // Reset drag over states
+    setDragOverStatus(null);
+    setDragOverIndex(null);
+    
+    // Case 1: Moving to a different status
+    if (draggedLead.status !== statusId) {
+      try {
+        setUpdatingLeadId(draggedLead.id);
+        // Call API to update lead status
+        await updateLeadStatus(draggedLead.id, statusId);
+        setUpdatingLeadId(null);
+      } catch (error) {
+        console.error("Error updating lead status:", error);
+      }
+    } 
+    // Case 2: Reordering within the same status
+    else if (dropIndex !== -1 && draggedLead.index !== dropIndex) {
+      // In a real implementation, you would call an API to update the order
+      // For now, just log the reorder action
+      console.log(`Reordering lead ${draggedLead.id} from position ${draggedLead.index} to position ${dropIndex} in status ${statusId}`);
+      
+      // Here you would call a service like:
+      // await updateLeadOrder(draggedLead.id, statusId, dropIndex);
     }
     
-    // Update lead status
-    try {
-      setUpdatingLeadId(draggedLead.id);
-      await updateLeadStatus(draggedLead.id, statusId);
-      setUpdatingLeadId(null);
-    } catch (error) {
-      console.error("Error updating lead status:", error);
-    } finally {
-      setDraggedLead(null);
-    }
+    // Reset dragged lead
+    setDraggedLead(null);
   };
   
   // Format date
@@ -154,78 +159,12 @@ const LeadPool = ({
   
   return (
     <div className="pb-6">
-      {/* Search and Filter */}
-      <div className="flex flex-col md:flex-row justify-between items-center gap-3 py-4 mb-4 bg-white rounded-md shadow-sm border border-gray-200 p-4">
-        <div className="relative w-full md:w-64">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 0110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-            </svg>
-          </div>
-          <input
-            type="text"
-            placeholder="Search leads..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
-        </div>
-        
-        <div className="flex items-center space-x-2 w-full md:w-auto">
-          <select
-            value={filterSource}
-            onChange={(e) => setFilterSource(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          >
-            <option value="">All Sources</option>
-            <option value="facebook">Facebook</option>
-            <option value="instagram">Instagram</option>
-            <option value="whatsapp">WhatsApp</option>
-            <option value="website">Website</option>
-            <option value="email">Email</option>
-            <option value="phone">Phone</option>
-            <option value="walkIn">Walk-in</option>
-            <option value="referral">Referral</option>
-            <option value="exhibition">Exhibition</option>
-            <option value="other">Other</option>
-          </select>
-          
-          <select
-            value={filterBadge}
-            onChange={(e) => setFilterBadge(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          >
-            <option value="">All Badges</option>
-            {/* This would be populated dynamically from the qualificationBadges */}
-          </select>
-          
-          <button
-            onClick={() => {
-              setSearchTerm('');
-              setFilterSource('');
-              setFilterBadge('');
-            }}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm text-gray-600 hover:bg-gray-100"
-            title="Clear filters"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-      </div>
-      
-      {/* Lead Count */}
-      <div className="px-4 py-2 text-sm text-gray-600 bg-white rounded-md shadow-sm border border-gray-200 mb-4">
-        Showing {filteredLeads.length} of {leads.length} leads
-      </div>
-      
       {/* Lead Pool Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
         {LEAD_STATUSES.map((status) => (
           <div 
             key={status.id}
-            className="bg-white rounded-md shadow-sm border border-gray-200 flex flex-col h-full"
+            className="bg-white rounded-md border border-gray-200 flex flex-col"
             onDragOver={(e) => handleDragOver(e, status.id)}
             onDrop={(e) => handleDrop(e, status.id)}
           >
@@ -251,19 +190,22 @@ const LeadPool = ({
               </div>
             </div>
             
-            {/* Lead Cards */}
-            <div className="p-2 flex-grow overflow-y-auto max-h-[calc(100vh-14rem)]">
+            {/* Lead Cards - No scroll, with reordering */}
+            <div className="p-2 flex-grow">
               {groupedLeads[status.id].length > 0 ? (
                 <div className="space-y-2">
-                  {groupedLeads[status.id].map((lead) => (
+                  {groupedLeads[status.id].map((lead, index) => (
                     <div
                       key={lead.id}
-                      className={`bg-white border rounded-md shadow-sm p-3 cursor-pointer
+                      className={`bg-white border rounded-md p-3 cursor-pointer
                                 ${draggedLead?.id === lead.id ? "opacity-50" : ""}
-                                ${updatingLeadId === lead.id ? "animate-pulse" : ""}`}
+                                ${updatingLeadId === lead.id ? "animate-pulse" : ""}
+                                ${dragOverStatus === status.id && dragOverIndex === index ? "border-2 border-blue-400" : ""}`}
                       onClick={() => onView(lead)}
                       draggable
-                      onDragStart={(e) => handleDragStart(e, lead)}
+                      onDragStart={(e) => handleDragStart(e, lead, status.id, index)}
+                      onDragOver={(e) => handleDragOverCard(e, status.id, index)}
+                      onDrop={(e) => handleDrop(e, status.id, index)}
                     >
                       <div className="flex flex-col">
                         <div className="flex justify-between items-start mb-2">
@@ -283,60 +225,69 @@ const LeadPool = ({
                           <div>{formatDate(lead.createdAt)}</div>
                         </div>
                         
+                        {/* Simplified last discussion summary to avoid overflow */}
                         {lead.lastDiscussionSummary && (
                           <div className="mb-2 p-2 bg-gray-50 rounded-md text-xs text-gray-600">
-                            <div className="text-xs text-gray-500 mb-1 flex justify-between">
-                              <span>Last contact:</span>
-                              <span>{formatRelativeTime(lead.lastDiscussionDate)}</span>
+                            <div className="text-xs text-gray-500 mb-1">
+                              <span>Last contact: {formatRelativeTime(lead.lastDiscussionDate)}</span>
                             </div>
-                            <p className="break-words line-clamp-3">{truncateText(lead.lastDiscussionSummary, 80)}</p>
+                            <p className="break-words line-clamp-2">{truncateText(lead.lastDiscussionSummary, 60)}</p>
                           </div>
                         )}
                         
-                        {/* Actions */}
-                        <div className="mt-2 flex gap-1 justify-end" onClick={(e) => e.stopPropagation()}>
-                          <CRMActionButton
-                            type="info"
-                            size="xs"
-                            onClick={() => onAddDiscussion(lead)}
-                            aria-label="Add discussion"
-                            icon={
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                              </svg>
-                            }
-                          >
-                            Talk
-                          </CRMActionButton>
-                          
-                          <CRMActionButton
-                            type="secondary"
-                            size="xs"
-                            onClick={() => onEdit(lead)}
-                            aria-label="Edit lead"
-                            icon={
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                              </svg>
-                            }
-                          >
-                            Edit
-                          </CRMActionButton>
-                          
-                          {(status.id === "qualified" || status.id === "negotiation") && (
+                        {/* Actions - Conditionally render based on lead status */}
+                        <div className="mt-2 flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          {lead.status === "converted" ? (
+                            // For converted leads, only show Move to Clients button
                             <CRMActionButton
-                              type="success"
+                              type="primary"
                               size="xs"
                               onClick={() => onConvert(lead)}
-                              aria-label="Convert lead"
+                              aria-label="Move to Clients"
                               icon={
                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                                 </svg>
                               }
                             >
-                              Convert
+                              Move to Clients
                             </CRMActionButton>
+                          ) : (
+                            // For non-converted leads, show Talk and Convert buttons
+                            <>
+                              {/* Talk button - available for all non-converted leads */}
+                              <CRMActionButton
+                                type="info"
+                                size="xs"
+                                onClick={() => onAddDiscussion(lead)}
+                                aria-label="Add discussion"
+                                icon={
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                  </svg>
+                                }
+                              >
+                                Talk
+                              </CRMActionButton>
+                              
+                              {/* Convert button */}
+                              <CRMActionButton
+                                type="success"
+                                size="xs"
+                                onClick={() => {
+                                  // Update lead status to converted
+                                  updateLeadStatus(lead.id, "converted");
+                                }}
+                                aria-label="Convert lead"
+                                icon={
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                  </svg>
+                                }
+                              >
+                                Convert
+                              </CRMActionButton>
+                            </>
                           )}
                         </div>
                       </div>

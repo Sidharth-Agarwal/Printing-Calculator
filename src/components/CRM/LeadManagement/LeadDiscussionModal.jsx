@@ -1,4 +1,6 @@
 import React, { useState } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { LEAD_FIELDS } from "../../../constants/leadFields";
 import LeadStatusBadge from "../../Shared/LeadStatusBadge";
 import QualificationBadge from "../../Shared/QualificationBadge";
@@ -7,7 +9,7 @@ import { LeadStatusSelector } from "../../Shared/LeadStatusBadge";
 import { updateLeadStatus } from "../../../services";
 
 /**
- * Modal for adding a discussion to a lead
+ * Modal for adding a discussion to a lead (Compact version)
  * @param {Object} props - Component props
  * @param {Object} props.lead - Lead object
  * @param {function} props.onClose - Close handler
@@ -15,7 +17,7 @@ import { updateLeadStatus } from "../../../services";
  */
 const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
   const [formData, setFormData] = useState({
-    discussionDate: new Date().toISOString().split('T')[0],
+    discussionDate: new Date(),
     discussionSummary: "",
     nextSteps: ""
   });
@@ -39,6 +41,22 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
       setErrors(prev => ({
         ...prev,
         [name]: null
+      }));
+    }
+  };
+  
+  // Handle date change
+  const handleDateChange = (date) => {
+    setFormData(prev => ({
+      ...prev,
+      discussionDate: date
+    }));
+    
+    // Clear date error if exists
+    if (errors.discussionDate) {
+      setErrors(prev => ({
+        ...prev,
+        discussionDate: null
       }));
     }
   };
@@ -68,20 +86,17 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
     }
     
     setIsSubmitting(true);
-    console.log("Submitting discussion with data:", formData);
     
     try {
       // If status has changed, update it first
       if (newStatus && newStatus !== lead.status) {
         setIsUpdatingStatus(true);
-        console.log("Updating lead status to:", newStatus);
         await updateLeadStatus(lead.id, newStatus);
         setIsUpdatingStatus(false);
       }
       
       // Submit discussion
       await onSubmit(lead.id, formData);
-      console.log("Discussion submitted successfully");
     } catch (error) {
       console.error("Error submitting discussion:", error);
       setErrors(prev => ({
@@ -93,17 +108,46 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
     }
   };
   
+  // Custom styles for the datepicker
+  const customStyles = `
+    /* DatePicker Styles */
+    .react-datepicker {
+      font-size: 0.8rem;
+      width: 200px;
+    }
+    .react-datepicker__month-container {
+      width: 200px;
+    }
+    .react-datepicker__day {
+      width: 1.5rem;
+      line-height: 1.5rem;
+      margin: 0.1rem;
+    }
+    .react-datepicker__day-name {
+      width: 1.5rem;
+      line-height: 1.5rem;
+      margin: 0.1rem;
+    }
+    .react-datepicker__header {
+      padding-top: 0.5rem;
+    }
+    .react-datepicker__current-month {
+      font-size: 0.9rem;
+    }
+  `;
+  
   if (!lead) return null;
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-lg p-6">
+      <style>{customStyles}</style>
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-md">
         {/* Header */}
-        <div className="flex justify-between items-start mb-4">
+        <div className="flex justify-between items-center p-4 border-b">
           <div>
-            <h3 className="text-lg font-semibold">Record Discussion</h3>
+            <h3 className="text-base font-semibold">Record Discussion</h3>
             <div className="flex items-center mt-1 space-x-2">
-              <span className="text-sm text-gray-600">{lead.name}</span>
+              <span className="text-xs text-gray-600">{lead.name}</span>
               <LeadStatusBadge status={lead.status} size="sm" />
               <QualificationBadge badgeId={lead.badgeId} size="sm" />
             </div>
@@ -112,17 +156,17 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
             onClick={onClose}
             className="text-gray-500 hover:text-gray-700"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
             </svg>
           </button>
         </div>
         
         {/* Form */}
-        <form onSubmit={handleSubmit}>
+        <form onSubmit={handleSubmit} className="p-4">
           {/* Update Status */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
               Update Lead Status
             </label>
             <LeadStatusSelector
@@ -135,20 +179,19 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
             </p>
           </div>
           
-          {/* Discussion Date */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          {/* Discussion Date - Using DatePicker */}
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
               Discussion Date <span className="text-red-500">*</span>
             </label>
-            <input
-              type="date"
-              name="discussionDate"
-              value={formData.discussionDate}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+            <DatePicker
+              selected={formData.discussionDate}
+              onChange={handleDateChange}
+              maxDate={new Date()} // Can't select future dates
+              dateFormat="dd/MM/yyyy"
+              className={`border rounded-md p-2 w-full text-sm ${
                 errors.discussionDate ? "border-red-500" : "border-gray-300"
               }`}
-              max={new Date().toISOString().split('T')[0]} // Can't select future dates
             />
             {errors.discussionDate && (
               <p className="mt-1 text-xs text-red-500">{errors.discussionDate}</p>
@@ -156,16 +199,16 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
           </div>
           
           {/* Discussion Summary */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
               Discussion Summary <span className="text-red-500">*</span>
             </label>
             <textarea
               name="discussionSummary"
               value={formData.discussionSummary}
               onChange={handleChange}
-              rows="4"
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              rows="3"
+              className={`w-full px-3 py-2 border rounded-md text-sm ${
                 errors.discussionSummary ? "border-red-500" : "border-gray-300"
               }`}
               placeholder="Summarize what was discussed with the lead..."
@@ -176,8 +219,8 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
           </div>
           
           {/* Next Steps */}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+          <div className="mb-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
               Next Steps
             </label>
             <textarea
@@ -185,22 +228,23 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
               value={formData.nextSteps}
               onChange={handleChange}
               rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm"
               placeholder="What are the next actions to be taken?"
             ></textarea>
           </div>
           
           {/* Error message */}
           {errors.submit && (
-            <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+            <div className="mb-3 p-2 bg-red-100 text-red-700 rounded-md text-xs">
               {errors.submit}
             </div>
           )}
           
           {/* Form Actions */}
-          <div className="flex justify-end space-x-2">
+          <div className="flex justify-end space-x-2 pt-2">
             <CRMActionButton
               type="secondary"
+              size="sm"
               onClick={onClose}
               disabled={isSubmitting}
             >
@@ -209,8 +253,10 @@ const LeadDiscussionModal = ({ lead, onClose, onSubmit }) => {
             
             <CRMActionButton
               type="primary"
+              size="sm"
               isLoading={isSubmitting}
               disabled={isSubmitting}
+              submit={true}
             >
               Save Discussion
             </CRMActionButton>
