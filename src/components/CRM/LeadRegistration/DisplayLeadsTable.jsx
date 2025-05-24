@@ -1,21 +1,164 @@
 import React, { useState } from "react";
 import { LEAD_TABLE_FIELDS } from "../../../constants/leadFields";
+import { LEAD_STATUSES } from "../../../constants/leadStatuses";
 import LeadStatusBadge from "../../Shared/LeadStatusBadge";
 import { LeadSourceDisplay } from "../../Shared/LeadSourceSelector";
 import QualificationBadge from "../../Shared/QualificationBadge";
 import CRMActionButton from "../../Shared/CRMActionButton";
+import { useCRM } from "../../../context/CRMContext";
+import { updateLead, updateLeadStatus } from "../../../services";
 
 /**
- * Component to display leads in a table
- * @param {Object} props - Component props
- * @param {Array} props.leads - Array of lead objects (pre-filtered)
- * @param {function} props.onView - View handler
- * @param {function} props.onEdit - Edit handler
- * @param {function} props.onDelete - Delete handler
- * @param {function} props.onAddDiscussion - Add discussion handler
- * @param {function} props.onConvert - Convert handler (optional)
- * @param {boolean} props.loading - Loading state
- * @param {Array} props.fields - Fields to display in the table
+ * Inline dropdown component for editing qualification badges
+ */
+const InlineQualificationDropdown = ({ 
+  leadId, 
+  currentBadgeId, 
+  onUpdate, 
+  disabled = false 
+}) => {
+  const { qualificationBadges } = useCRM();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleBadgeChange = async (newBadgeId) => {
+    if (newBadgeId === currentBadgeId) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await updateLead(leadId, { badgeId: newBadgeId });
+      onUpdate?.();
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating badge:", error);
+      // Could add toast notification here
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  if (disabled) {
+    return <QualificationBadge badgeId={currentBadgeId} size="sm" />;
+  }
+
+  if (isEditing) {
+    return (
+      <div className="relative">
+        <select
+          value={currentBadgeId || ""}
+          onChange={(e) => handleBadgeChange(e.target.value)}
+          onBlur={() => setIsEditing(false)}
+          autoFocus
+          disabled={isUpdating}
+          className="text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white min-w-[120px]"
+        >
+          <option value="">No Badge</option>
+          {qualificationBadges?.map((badge) => (
+            <option key={badge.id} value={badge.id}>
+              {badge.name}
+            </option>
+          ))}
+        </select>
+        {isUpdating && (
+          <div className="absolute right-1 top-1">
+            <div className="animate-spin h-3 w-3 border border-gray-300 border-t-blue-600 rounded-full"></div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={() => setIsEditing(true)}
+      className="cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"
+      title="Click to edit qualification"
+    >
+      <QualificationBadge badgeId={currentBadgeId} size="sm" />
+      {!currentBadgeId && (
+        <span className="text-gray-400 text-xs italic">Click to add</span>
+      )}
+    </div>
+  );
+};
+
+/**
+ * Inline dropdown component for editing lead status
+ */
+const InlineStatusDropdown = ({ 
+  leadId, 
+  currentStatus, 
+  onUpdate, 
+  disabled = false 
+}) => {
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleStatusChange = async (newStatus) => {
+    if (newStatus === currentStatus) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await updateLeadStatus(leadId, newStatus);
+      onUpdate?.();
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating status:", error);
+      // Could add toast notification here
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  if (disabled) {
+    return <LeadStatusBadge status={currentStatus} size="sm" />;
+  }
+
+  if (isEditing) {
+    return (
+      <div className="relative">
+        <select
+          value={currentStatus || ""}
+          onChange={(e) => handleStatusChange(e.target.value)}
+          onBlur={() => setIsEditing(false)}
+          autoFocus
+          disabled={isUpdating}
+          className="text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white min-w-[120px]"
+        >
+          {LEAD_STATUSES.map((status) => (
+            <option key={status.id} value={status.id}>
+              {status.label}
+            </option>
+          ))}
+        </select>
+        {isUpdating && (
+          <div className="absolute right-1 top-1">
+            <div className="animate-spin h-3 w-3 border border-gray-300 border-t-blue-600 rounded-full"></div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={() => setIsEditing(true)}
+      className="cursor-pointer hover:bg-gray-50 rounded px-1 py-0.5 transition-colors"
+      title="Click to edit status"
+    >
+      <LeadStatusBadge status={currentStatus} size="sm" />
+    </div>
+  );
+};
+
+/**
+ * Component to display leads in a table with inline editing
  */
 const DisplayLeadsTable = ({ 
   leads = [], 
@@ -25,7 +168,8 @@ const DisplayLeadsTable = ({
   onAddDiscussion,
   onConvert,
   loading = false,
-  fields = LEAD_TABLE_FIELDS // Default to LEAD_TABLE_FIELDS if not provided
+  fields = LEAD_TABLE_FIELDS,
+  onLeadUpdate // New prop to handle lead updates
 }) => {
   // State for sorting
   const [sortField, setSortField] = useState("createdAt");
@@ -104,9 +248,10 @@ const DisplayLeadsTable = ({
     }
   });
   
-  // Render cell content based on field type
+  // Render cell content based on field type with inline editing
   const renderCellContent = (lead, field) => {
     const value = lead[field.field];
+    const isAddedToClients = isLeadAddedToClients(lead);
     
     if (field.field === 'phone') {
       return (
@@ -128,12 +273,28 @@ const DisplayLeadsTable = ({
       return <LeadSourceDisplay sourceId={value} />;
     }
     
+    // Inline editable qualification badge
     if (field.field === 'badgeId') {
-      return <QualificationBadge badgeId={value} size="sm" />;
+      return (
+        <InlineQualificationDropdown
+          leadId={lead.id}
+          currentBadgeId={value}
+          onUpdate={onLeadUpdate}
+          disabled={isAddedToClients}
+        />
+      );
     }
     
+    // Inline editable status
     if (field.field === 'status') {
-      return <LeadStatusBadge status={value} size="sm" />;
+      return (
+        <InlineStatusDropdown
+          leadId={lead.id}
+          currentStatus={value}
+          onUpdate={onLeadUpdate}
+          disabled={isAddedToClients}
+        />
+      );
     }
     
     if (field.type === 'date' && value) {
@@ -200,11 +361,20 @@ const DisplayLeadsTable = ({
           {sortedLeads.map((lead) => (
             <tr 
               key={lead.id} 
-              className="border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer"
-              onClick={() => onView(lead)}
+              className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
             >
               {fields.map((field) => (
-                <td key={field.field} className="px-3 py-3">
+                <td 
+                  key={field.field} 
+                  className="px-3 py-3"
+                  onClick={(e) => {
+                    // Don't trigger row click for inline editable fields
+                    if (field.field !== 'badgeId' && field.field !== 'status') {
+                      onView(lead);
+                    }
+                  }}
+                  style={{ cursor: field.field === 'badgeId' || field.field === 'status' ? 'default' : 'pointer' }}
+                >
                   {renderCellContent(lead, field)}
                 </td>
               ))}
@@ -274,7 +444,7 @@ const DisplayLeadsTable = ({
                         icon={
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
+          </svg>
                         }
                       >
                         Delete

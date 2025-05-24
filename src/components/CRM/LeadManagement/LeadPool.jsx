@@ -3,9 +3,84 @@ import { LEAD_STATUSES, getStatusById } from "../../../constants/leadStatuses";
 import QualificationBadge from "../../Shared/QualificationBadge";
 import { LeadSourceDisplay } from "../../Shared/LeadSourceSelector";
 import CRMActionButton from "../../Shared/CRMActionButton";
-import { updateLeadStatus } from "../../../services";
+import { updateLeadStatus, updateLead } from "../../../services";
+import { useCRM } from "../../../context/CRMContext";
 import { doc, updateDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
+
+/**
+ * Inline badge editor for Kanban cards
+ */
+const InlineKanbanBadgeEditor = ({ leadId, currentBadgeId, onUpdate, disabled = false }) => {
+  const { qualificationBadges } = useCRM();
+  const [isEditing, setIsEditing] = useState(false);
+  const [isUpdating, setIsUpdating] = useState(false);
+
+  const handleBadgeChange = async (newBadgeId) => {
+    if (newBadgeId === currentBadgeId) {
+      setIsEditing(false);
+      return;
+    }
+
+    setIsUpdating(true);
+    try {
+      await updateLead(leadId, { badgeId: newBadgeId });
+      onUpdate?.();
+      setIsEditing(false);
+    } catch (error) {
+      console.error("Error updating badge:", error);
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  if (disabled) {
+    return <QualificationBadge badgeId={currentBadgeId} size="sm" />;
+  }
+
+  if (isEditing) {
+    return (
+      <div className="relative" onClick={(e) => e.stopPropagation()}>
+        <select
+          value={currentBadgeId || ""}
+          onChange={(e) => handleBadgeChange(e.target.value)}
+          onBlur={() => setIsEditing(false)}
+          autoFocus
+          disabled={isUpdating}
+          className="text-xs px-1 py-0.5 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white max-w-[100px]"
+        >
+          <option value="">No Badge</option>
+          {qualificationBadges?.map((badge) => (
+            <option key={badge.id} value={badge.id}>
+              {badge.name}
+            </option>
+          ))}
+        </select>
+        {isUpdating && (
+          <div className="absolute -right-1 -top-1">
+            <div className="animate-spin h-2 w-2 border border-gray-300 border-t-blue-600 rounded-full"></div>
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div
+      onClick={(e) => {
+        e.stopPropagation();
+        setIsEditing(true);
+      }}
+      className="cursor-pointer hover:bg-white hover:bg-opacity-50 rounded px-1 py-0.5 transition-colors"
+      title="Click to edit qualification"
+    >
+      <QualificationBadge badgeId={currentBadgeId} size="sm" />
+      {!currentBadgeId && (
+        <span className="text-gray-400 text-xs italic">+ Badge</span>
+      )}
+    </div>
+  );
+};
 
 /**
  * Lead Pool component for kanban-style lead management with Notion-like drag and drop
@@ -17,6 +92,7 @@ import { db } from "../../../firebaseConfig";
  * @param {function} props.onConvert - Convert handler
  * @param {function} props.onDelete - Delete handler
  * @param {boolean} props.loading - Loading state
+ * @param {function} props.onLeadUpdate - Lead update callback for inline editing
  */
 const LeadPool = ({ 
   leads = [], 
@@ -25,7 +101,8 @@ const LeadPool = ({
   onAddDiscussion,
   onConvert,
   onDelete,
-  loading = false
+  loading = false,
+  onLeadUpdate // NEW: Callback for lead updates
 }) => {
   const [draggedLead, setDraggedLead] = useState(null);
   const [updatingLeadId, setUpdatingLeadId] = useState(null);
@@ -73,6 +150,13 @@ const LeadPool = ({
   const isLeadAddedToClients = useCallback((lead) => {
     return lead.status === "converted" && lead.movedToClients;
   }, []);
+  
+  // Handle lead update with callback
+  const handleLeadUpdate = useCallback(() => {
+    if (onLeadUpdate) {
+      onLeadUpdate();
+    }
+  }, [onLeadUpdate]);
   
   // Optimized mouse move handler with requestAnimationFrame
   const handleMouseMove = useCallback((e) => {
@@ -154,10 +238,11 @@ const LeadPool = ({
       
       await batch.commit();
       console.log(`Successfully reordered ${reorderedLeadIds.length} leads in status ${statusId}`);
+      handleLeadUpdate(); // Trigger update callback
     } catch (error) {
       console.error(`Error reordering leads in status ${statusId}:`, error);
     }
-  }, []);
+  }, [handleLeadUpdate]);
   
   // Optimized drag start
   const handleDragStart = useCallback((e, lead, status, index) => {
@@ -324,6 +409,8 @@ const LeadPool = ({
           order: newOrder,
           updatedAt: serverTimestamp()
         });
+        
+        handleLeadUpdate(); // Trigger update callback
       } else if (dropIndex !== -1 && draggedLead.index !== dropIndex) {
         // Reordering within same status
         const leadsInStatus = groupedLeads[statusId] || [];
@@ -343,7 +430,7 @@ const LeadPool = ({
     }
     
     setDraggedLead(null);
-  }, [draggedLead, groupedLeads, handleReorderLeads]);
+  }, [draggedLead, groupedLeads, handleReorderLeads, handleLeadUpdate]);
   
   // Memoized utility functions
   const formatDate = useCallback((timestamp) => {
@@ -488,7 +575,13 @@ const LeadPool = ({
                               )}
                             </div>
                             <div className="flex-shrink-0 ml-2">
-                              <QualificationBadge badgeId={lead.badgeId} size="sm" />
+                              {/* NEW: Inline badge editor */}
+                              <InlineKanbanBadgeEditor
+                                leadId={lead.id}
+                                currentBadgeId={lead.badgeId}
+                                onUpdate={handleLeadUpdate}
+                                disabled={isLeadAddedToClients(lead)}
+                              />
                             </div>
                           </div>
                           
@@ -557,7 +650,14 @@ const LeadPool = ({
                                     <CRMActionButton
                                       type="success"
                                       size="xs"
-                                      onClick={() => updateLeadStatus(lead.id, "converted")}
+                                      onClick={async () => {
+                                        try {
+                                          await updateLeadStatus(lead.id, "converted");
+                                          handleLeadUpdate();
+                                        } catch (error) {
+                                          console.error("Error converting lead:", error);
+                                        }
+                                      }}
                                       aria-label="Convert lead"
                                       icon={
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
