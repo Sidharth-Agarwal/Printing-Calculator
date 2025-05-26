@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { getStockStatus, getStockStatusInfo } from "../../../constants/materialConstants";
 
 const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
   // State for search term
@@ -13,6 +14,9 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
   
   // State for view type (compact or detailed)
   const [viewType, setViewType] = useState('compact');
+  
+  // State for stock filter
+  const [stockFilter, setStockFilter] = useState('all');
   
   // Check if edit functionality is enabled
   const hasEditAccess = typeof onEdit === "function" && typeof onDelete === "function";
@@ -40,34 +44,58 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
     }));
   };
 
-  // Filter materials based on search term
+  // Filter materials based on search term and stock status
   const filteredMaterials = materials.filter(material => {
-    if (!searchTerm.trim()) return true;
+    // Search filter
+    if (searchTerm.trim()) {
+      const lowerSearchTerm = searchTerm.toLowerCase().trim();
+      const searchFields = [
+        material.materialType || "",
+        material.materialName || "",
+        material.company || "",
+        material.skuCode || "",
+        material.rate?.toString() || "",
+        material.finalCostPerUnit?.toString() || ""
+      ];
+      
+      const matchesSearch = searchFields.some(field => 
+        field.toLowerCase().includes(lowerSearchTerm)
+      );
+      
+      if (!matchesSearch) return false;
+    }
     
-    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    // Stock filter
+    if (stockFilter !== 'all') {
+      const stockStatus = getStockStatus(
+        material.currentStock, 
+        material.minStockLevel, 
+        material.maxStockLevel
+      );
+      
+      if (stockFilter !== stockStatus) return false;
+    }
     
-    const searchFields = [
-      material.materialType || "",
-      material.materialName || "",
-      material.company || "",
-      material.rate?.toString() || "",
-      material.finalCostPerUnit?.toString() || ""
-    ];
-    
-    return searchFields.some(field => 
-      field.toLowerCase().includes(lowerSearchTerm)
-    );
+    return true;
   });
   
   // Sort materials based on sort field and direction
   const sortedMaterials = [...filteredMaterials].sort((a, b) => {
-    const aValue = (a[sortField] || "").toString().toLowerCase();
-    const bValue = (b[sortField] || "").toString().toLowerCase();
+    let aValue, bValue;
+    
+    // Handle special sorting for stock levels
+    if (sortField === 'currentStock' || sortField === 'minStockLevel') {
+      aValue = parseFloat(a[sortField] || 0);
+      bValue = parseFloat(b[sortField] || 0);
+    } else {
+      aValue = (a[sortField] || "").toString().toLowerCase();
+      bValue = (b[sortField] || "").toString().toLowerCase();
+    }
     
     if (sortDirection === "asc") {
-      return aValue.localeCompare(bValue, undefined, { numeric: true });
+      return typeof aValue === 'number' ? aValue - bValue : aValue.localeCompare(bValue, undefined, { numeric: true });
     } else {
-      return bValue.localeCompare(aValue, undefined, { numeric: true });
+      return typeof aValue === 'number' ? bValue - aValue : bValue.localeCompare(aValue, undefined, { numeric: true });
     }
   });
 
@@ -93,6 +121,18 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
       </div>
     </th>
   );
+
+  // Render stock status badge
+  const renderStockBadge = (material) => {
+    const status = getStockStatus(material.currentStock, material.minStockLevel, material.maxStockLevel);
+    const statusInfo = getStockStatusInfo(status);
+    
+    return (
+      <span className={`px-2 py-1 rounded-full text-xs font-medium ${statusInfo.color}`}>
+        {statusInfo.icon} {statusInfo.label}
+      </span>
+    );
+  };
 
   // Renders the action buttons with the correct styling
   const renderActionButtons = (material) => (
@@ -124,18 +164,19 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
     </div>
   );
 
-  // Compact view - shows only essential columns
+  // Compact view - shows essential columns including stock
   const renderCompactView = () => {
     return (
       <div className="overflow-x-auto bg-white">
         <table className="min-w-full text-sm text-left">
           <thead>
             <tr className="bg-gray-100">
+              <SortableHeader field="skuCode" label="SKU Code" />
               <SortableHeader field="materialType" label="Material Type" />
               <SortableHeader field="materialName" label="Material Name" />
               <SortableHeader field="company" label="Company" />
-              <SortableHeader field="rate" label="Rate" />
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Size (L×B)</th>
+              <SortableHeader field="currentStock" label="Stock (sqcm)" />
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Stock Status</th>
               <SortableHeader field="finalCostPerUnit" label="Final Cost/Unit" />
               {hasEditAccess && (
                 <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
@@ -146,11 +187,19 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
             {sortedMaterials.map((material) => (
               <React.Fragment key={material.id}>
                 <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
+                  <td className="px-3 py-3 font-mono text-xs">{material.skuCode || "-"}</td>
                   <td className="px-3 py-3 font-medium">{material.materialType || "-"}</td>
                   <td className="px-3 py-3">{material.materialName || "-"}</td>
                   <td className="px-3 py-3">{material.company || "-"}</td>
-                  <td className="px-3 py-3">₹{material.rate || "-"}</td>
-                  <td className="px-3 py-3">{material.sizeL || "-"}×{material.sizeB || "-"}</td>
+                  <td className="px-3 py-3">
+                    <div className="flex flex-col">
+                      <span className="font-medium">{material.currentStock || 0}</span>
+                      {material.minStockLevel && (
+                        <span className="text-xs text-gray-500">Min: {material.minStockLevel}</span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="px-3 py-3">{renderStockBadge(material)}</td>
                   <td className="px-3 py-3 font-medium text-red-600">₹{material.finalCostPerUnit || "-"}</td>
                   {hasEditAccess && (
                     <td className="px-3 py-3">
@@ -160,25 +209,28 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                 </tr>
                 {expandedRows[material.id] && (
                   <tr className="bg-gray-50">
-                    <td colSpan={hasEditAccess ? 7 : 6} className="px-4 py-3 border-b border-gray-200">
+                    <td colSpan={hasEditAccess ? 8 : 7} className="px-4 py-3 border-b border-gray-200">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
-                          <p className="font-medium text-gray-700">Quantity:</p>
-                          <p>{material.quantity || "-"}</p>
+                          <p className="font-medium text-gray-700">Dimensions:</p>
+                          <p>Size: {material.sizeL || "-"}×{material.sizeB || "-"} cm</p>
+                          <p>Area: {material.area || "-"} sqcm</p>
                         </div>
                         <div>
-                          <p className="font-medium text-gray-700">Area:</p>
-                          <p>{material.area || "-"} sqcm</p>
+                          <p className="font-medium text-gray-700">Stock Details:</p>
+                          <p>Location: {material.stockLocation || "-"}</p>
+                          <p>Max Stock: {material.maxStockLevel || "-"}</p>
                         </div>
                         <div>
                           <p className="font-medium text-gray-700">Costs:</p>
+                          <p>Rate: ₹{material.rate || "-"}</p>
                           <p>Courier: ₹{material.courier || "-"}</p>
                           <p>Mark Up: {material.markUp || "-"}</p>
                         </div>
                         <div>
-                          <p className="font-medium text-gray-700">Pricing:</p>
-                          <p>Landed: ₹{material.landedCost || "-"}</p>
-                          <p>Per Unit: ₹{material.costPerUnit || "-"}</p>
+                          <p className="font-medium text-gray-700">Usage:</p>
+                          <p>Total Purchased: {material.totalPurchased || 0} sqcm</p>
+                          <p>Total Used: {material.totalUsed || 0} sqcm</p>
                         </div>
                       </div>
                     </td>
@@ -197,25 +249,23 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
     );
   };
 
-  // Detailed view - shows all columns with more width
+  // Detailed view - shows all columns
   const renderDetailedView = () => {
     return (
       <div className="overflow-x-auto bg-white">
         <table className="min-w-full text-sm text-left">
           <thead>
             <tr className="bg-gray-100">
-              <SortableHeader field="materialType" label="Material Type" />
-              <SortableHeader field="materialName" label="Material Name" />
+              <SortableHeader field="skuCode" label="SKU Code" />
+              <SortableHeader field="materialType" label="Type" />
+              <SortableHeader field="materialName" label="Name" />
               <SortableHeader field="company" label="Company" />
               <SortableHeader field="rate" label="Rate" />
-              <SortableHeader field="quantity" label="Quantity" />
-              <SortableHeader field="sizeL" label="Length" />
-              <SortableHeader field="sizeB" label="Breadth" />
-              <SortableHeader field="area" label="Area" />
-              <SortableHeader field="courier" label="Courier" />
-              <SortableHeader field="markUp" label="Mark Up" />
-              <SortableHeader field="landedCost" label="Landed Cost" />
-              <SortableHeader field="costPerUnit" label="Cost/Unit" />
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Size (L×B)</th>
+              <SortableHeader field="currentStock" label="Stock (sqcm)" />
+              <SortableHeader field="minStockLevel" label="Min Stock" />
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
+              <SortableHeader field="stockLocation" label="Location" />
               <SortableHeader field="finalCostPerUnit" label="Final Cost/Unit" />
               {hasEditAccess && (
                 <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
@@ -225,18 +275,16 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
           <tbody>
             {sortedMaterials.map((material, index) => (
               <tr key={material.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
+                <td className="px-3 py-3 font-mono text-xs">{material.skuCode || "-"}</td>
                 <td className="px-3 py-3 font-medium">{material.materialType || "-"}</td>
                 <td className="px-3 py-3">{material.materialName || "-"}</td>
                 <td className="px-3 py-3">{material.company || "-"}</td>
                 <td className="px-3 py-3">₹{material.rate || "-"}</td>
-                <td className="px-3 py-3">{material.quantity || "-"}</td>
-                <td className="px-3 py-3">{material.sizeL || "-"}</td>
-                <td className="px-3 py-3">{material.sizeB || "-"}</td>
-                <td className="px-3 py-3">{material.area || "-"}</td>
-                <td className="px-3 py-3">₹{material.courier || "-"}</td>
-                <td className="px-3 py-3">{material.markUp || "-"}</td>
-                <td className="px-3 py-3">₹{material.landedCost || "-"}</td>
-                <td className="px-3 py-3">₹{material.costPerUnit || "-"}</td>
+                <td className="px-3 py-3">{material.sizeL || "-"}×{material.sizeB || "-"}</td>
+                <td className="px-3 py-3 font-medium">{material.currentStock || 0}</td>
+                <td className="px-3 py-3">{material.minStockLevel || "-"}</td>
+                <td className="px-3 py-3">{renderStockBadge(material)}</td>
+                <td className="px-3 py-3">{material.stockLocation || "-"}</td>
                 <td className="px-3 py-3 font-medium text-red-600">₹{material.finalCostPerUnit || "-"}</td>
                 {hasEditAccess && (
                   <td className="px-3 py-3">
@@ -287,21 +335,22 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                 <div>
                   <h3 className="font-medium text-gray-800">{material.materialType || "Unknown Type"}</h3>
                   <p className="text-sm text-gray-600">{material.materialName || "Unknown"}</p>
+                  <p className="text-xs font-mono text-gray-500">{material.skuCode || "No SKU"}</p>
                 </div>
                 <div className="text-right">
                   <p className="text-sm text-gray-600">Company: {material.company || "-"}</p>
-                  <p className="text-sm text-gray-600">Rate: ₹{material.rate || "-"}</p>
-                  <p className="font-medium text-red-600">Final: ₹{material.finalCostPerUnit || "-"}</p>
+                  <p className="font-medium text-red-600">₹{material.finalCostPerUnit || "-"}</p>
+                  {renderStockBadge(material)}
                 </div>
               </div>
               
               <div className="mt-3 pt-3 border-t border-gray-200">
                 <div className="flex justify-between">
                   <div className="text-sm">
-                    <span className="text-gray-500">Size:</span> {material.sizeL || "-"}×{material.sizeB || "-"}
+                    <span className="text-gray-500">Stock:</span> {material.currentStock || 0} sqcm
                   </div>
                   <div className="text-sm">
-                    <span className="text-gray-500">Quantity:</span> {material.quantity || "-"}
+                    <span className="text-gray-500">Min:</span> {material.minStockLevel || "-"} sqcm
                   </div>
                 </div>
               </div>
@@ -358,16 +407,18 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
               <div className="border-t border-gray-200 p-4 bg-gray-50">
                 <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                   <div>
-                    <p className="font-medium text-gray-700">Area:</p>
-                    <p>{material.area || "-"} sqcm</p>
+                    <p className="font-medium text-gray-700">Dimensions:</p>
+                    <p>Size: {material.sizeL || "-"}×{material.sizeB || "-"} cm</p>
+                    <p>Area: {material.area || "-"} sqcm</p>
                   </div>
                   <div>
-                    <p className="font-medium text-gray-700">Costs:</p>
-                    <p>Courier: ₹{material.courier || "-"}</p>
-                    <p>Mark Up: {material.markUp || "-"}</p>
+                    <p className="font-medium text-gray-700">Stock Info:</p>
+                    <p>Location: {material.stockLocation || "-"}</p>
+                    <p>Max: {material.maxStockLevel || "-"} sqcm</p>
                   </div>
                   <div>
                     <p className="font-medium text-gray-700">Pricing:</p>
+                    <p>Rate: ₹{material.rate || "-"}</p>
                     <p>Landed: ₹{material.landedCost || "-"}</p>
                     <p>Per Unit: ₹{material.costPerUnit || "-"}</p>
                   </div>
@@ -388,21 +439,35 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
 
   return (
     <div className="bg-white rounded-lg">
-      {/* Search and View Options */}
+      {/* Search, Filter and View Options */}
       <div className="flex flex-col md:flex-row justify-between items-center gap-3 pb-4">
-        <div className="relative w-full md:w-64">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
-            </svg>
+        <div className="flex flex-col md:flex-row gap-3 w-full md:w-auto">
+          <div className="relative w-full md:w-64">
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+              </svg>
+            </div>
+            <input
+              type="text"
+              placeholder="Search materials..."
+              value={searchTerm}
+              onChange={handleSearch}
+              className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            />
           </div>
-          <input
-            type="text"
-            placeholder="Search materials..."
-            value={searchTerm}
-            onChange={handleSearch}
-            className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
-          />
+          
+          <select
+            value={stockFilter}
+            onChange={(e) => setStockFilter(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          >
+            <option value="all">All Stock Levels</option>
+            <option value="IN_STOCK">In Stock</option>
+            <option value="LOW_STOCK">Low Stock</option>
+            <option value="OUT_OF_STOCK">Out of Stock</option>
+            <option value="OVERSTOCK">Overstock</option>
+          </select>
         </div>
         
         <div className="flex items-center space-x-2">
@@ -437,6 +502,30 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
           </div>
         </div>
       </div>
+
+      {/* Stock Summary */}
+      {materials.length > 0 && (
+        <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+            <div className="text-center">
+              <p className="text-blue-800 font-medium">{materials.filter(m => getStockStatus(m.currentStock, m.minStockLevel, m.maxStockLevel) === 'IN_STOCK').length}</p>
+              <p className="text-blue-600 text-xs">In Stock</p>
+            </div>
+            <div className="text-center">
+              <p className="text-yellow-800 font-medium">{materials.filter(m => getStockStatus(m.currentStock, m.minStockLevel, m.maxStockLevel) === 'LOW_STOCK').length}</p>
+              <p className="text-yellow-600 text-xs">Low Stock</p>
+            </div>
+            <div className="text-center">
+              <p className="text-red-800 font-medium">{materials.filter(m => getStockStatus(m.currentStock, m.minStockLevel, m.maxStockLevel) === 'OUT_OF_STOCK').length}</p>
+              <p className="text-red-600 text-xs">Out of Stock</p>
+            </div>
+            <div className="text-center">
+              <p className="text-purple-800 font-medium">{materials.filter(m => getStockStatus(m.currentStock, m.minStockLevel, m.maxStockLevel) === 'OVERSTOCK').length}</p>
+              <p className="text-purple-600 text-xs">Overstock</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Table Content */}
       {sortedMaterials.length > 0 ? (

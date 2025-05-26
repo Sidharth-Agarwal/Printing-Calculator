@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc } from "firebase/firestore";
+import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import AddPaperForm from "./AddPaperForm";
 import DisplayPaperTable from "./DisplayPaperTable";
@@ -8,12 +8,13 @@ import ConfirmationModal from "../../Shared/ConfirmationModal";
 import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 import { useAuth } from "../../Login/AuthContext";
 import DBExportImport from "../../Shared/DBExportImport";
+import { generatePaperSKU, getPaperStockStatus } from "../../../constants/paperContants";
 
 const PaperManagement = () => {
   const { userRole } = useAuth();
   const [papers, setPapers] = useState([]);
   const [vendors, setVendors] = useState([]);
-  const [editingPaper, setEditingPaper] = useState(null);
+  const [selectedPaper, setSelectedPaper] = useState(null);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
@@ -31,15 +32,18 @@ const PaperManagement = () => {
   // Check if user is admin
   const isAdmin = userRole === "admin";
 
-  // Paper statistics
+  // Paper statistics with stock tracking
   const [paperStats, setPaperStats] = useState({
     totalPapers: 0,
     activePapers: 0,
-    weightCategories: 0,
-    averageGSM: 0
+    gsmCategories: 0,
+    lowStockItems: 0,
+    outOfStockItems: 0,
+    totalStockValue: 0,
+    totalSheets: 0,
+    totalAreaCoverage: 0
   });
 
-  // Real-time listener for papers and vendors
   useEffect(() => {
     // Fetch papers
     const papersCollection = collection(db, "papers");
@@ -51,20 +55,44 @@ const PaperManagement = () => {
       
       setPapers(papersData);
       
-      // Calculate statistics
-      const uniqueWeights = new Set(papersData.map(paper => paper.gsm)).size;
-      
+      // Calculate statistics with stock data
+      const uniqueGsm = new Set(papersData.map(paper => paper.gsm)).size;
       const activeCount = papersData.filter(paper => paper.isActive !== false).length;
       
-      const avgGSM = papersData.length > 0
-        ? papersData.reduce((sum, paper) => sum + (parseInt(paper.gsm) || 0), 0) / papersData.length
-        : 0;
+      // Stock-related statistics
+      const lowStockCount = papersData.filter(paper => 
+        getPaperStockStatus(paper.currentStock, paper.minStockLevel, paper.maxStockLevel) === 'LOW_STOCK'
+      ).length;
+      
+      const outOfStockCount = papersData.filter(paper => 
+        getPaperStockStatus(paper.currentStock, paper.minStockLevel, paper.maxStockLevel) === 'OUT_OF_STOCK'
+      ).length;
+      
+      // Calculate total stock value and coverage
+      let totalStockValue = 0;
+      let totalSheets = 0;
+      let totalAreaCoverage = 0;
+      
+      papersData.forEach(paper => {
+        const stock = parseFloat(paper.currentStock) || 0;
+        const rate = parseFloat(paper.finalRate) || 0;
+        const length = parseFloat(paper.length) || 0;
+        const breadth = parseFloat(paper.breadth) || 0;
+        
+        totalStockValue += (stock * rate);
+        totalSheets += stock;
+        totalAreaCoverage += (stock * length * breadth);
+      });
       
       setPaperStats({
         totalPapers: papersData.length,
         activePapers: activeCount,
-        weightCategories: uniqueWeights,
-        averageGSM: avgGSM
+        gsmCategories: uniqueGsm,
+        lowStockItems: lowStockCount,
+        outOfStockItems: outOfStockCount,
+        totalStockValue: totalStockValue,
+        totalSheets: totalSheets,
+        totalAreaCoverage: totalAreaCoverage
       });
       
       setIsLoading(false);
@@ -83,27 +111,112 @@ const PaperManagement = () => {
       setVendors(activeVendors);
     });
 
+    // Cleanup listeners
     return () => {
-      papersUnsubscribe(); 
+      papersUnsubscribe();
       vendorsUnsubscribe();
-    }; // Cleanup listeners on unmount
+    };
   }, []);
 
-  // Add paper to Firestore
-  const addPaper = async (newPaper) => {
+  // Generate unique SKU for papers
+  const generateSKUCode = async (type, paperName, company, gsm) => {
+    try {
+      // Get all existing SKUs to ensure uniqueness
+      const papersCollection = collection(db, "papers");
+      const snapshot = await getDocs(papersCollection);
+      const existingSkus = snapshot.docs.map(doc => doc.data().skuCode).filter(Boolean);
+      
+      return await generatePaperSKU(paperName, company, gsm, existingSkus);
+    } catch (error) {
+      console.error("Error generating SKU:", error);
+      throw error;
+    }
+  };
+
+  // Create stock transaction record
+  const createStockTransaction = async (skuCode, type, quantity, reference, vendorName = null) => {
+    try {
+      const stockTransactionsCollection = collection(db, "stockTransactions");
+      await addDoc(stockTransactionsCollection, {
+        skuCode,
+        type, // 'IN', 'OUT', 'ADJUSTMENT'
+        quantity: parseFloat(quantity),
+        date: new Date(),
+        reference,
+        vendorName,
+        itemType: "Paper",
+        createdAt: new Date()
+      });
+    } catch (error) {
+      console.error("Error creating stock transaction:", error);
+    }
+  };
+
+  // Update vendor SKU relationship
+  const updateVendorSkuRelationship = async (vendorName, skuCode) => {
+    try {
+      const vendorsCollection = collection(db, "vendors");
+      const q = query(vendorsCollection, where("name", "==", vendorName));
+      const querySnapshot = await getDocs(q);
+      
+      if (!querySnapshot.empty) {
+        const vendorDoc = querySnapshot.docs[0];
+        const vendorData = vendorDoc.data();
+        const currentSkus = vendorData.activeSkus || [];
+        
+        if (!currentSkus.includes(skuCode)) {
+          await updateDoc(vendorDoc.ref, {
+            activeSkus: [...currentSkus, skuCode],
+            lastPurchaseDate: new Date(),
+            updatedAt: new Date()
+          });
+        }
+      }
+    } catch (error) {
+      console.error("Error updating vendor SKU relationship:", error);
+    }
+  };
+
+  const addPaper = async (paperData) => {
+    if (!isAdmin) return;
+    
     setIsSubmitting(true);
     try {
       const papersCollection = collection(db, "papers");
-      await addDoc(papersCollection, { 
-        ...newPaper, 
+      
+      // Prepare paper data with stock tracking
+      const newPaperData = {
+        ...paperData,
+        currentStock: paperData.initialStock || 0,
+        totalPurchased: paperData.initialStock || 0,
+        totalUsed: 0,
+        lastStockUpdate: new Date(),
         timestamp: new Date(),
         createdAt: new Date(),
-        updatedAt: new Date() 
-      });
+        updatedAt: new Date()
+      };
+      
+      // Add the paper
+      const docRef = await addDoc(papersCollection, newPaperData);
+      
+      // Create initial stock transaction
+      if (paperData.initialStock && parseFloat(paperData.initialStock) > 0) {
+        await createStockTransaction(
+          paperData.skuCode,
+          'IN',
+          paperData.initialStock,
+          'Initial Stock Entry'
+        );
+      }
+      
+      // Update vendor relationship if company is specified
+      if (paperData.company) {
+        await updateVendorSkuRelationship(paperData.company, paperData.skuCode);
+      }
       
       setNotification({
         isOpen: true,
-        message: "Paper added successfully!",
+        message: `Paper added successfully! SKU: ${paperData.skuCode}`,
         title: "Success",
         status: "success"
       });
@@ -122,15 +235,39 @@ const PaperManagement = () => {
     }
   };
 
-  // Update paper in Firestore
   const updatePaper = async (id, updatedData) => {
+    if (!isAdmin) return;
+    
     setIsSubmitting(true);
     try {
       const paperDoc = doc(db, "papers", id);
-      await updateDoc(paperDoc, {
+      
+      // Prepare update data
+      const updatePayload = {
         ...updatedData,
         updatedAt: new Date()
-      });
+      };
+      
+      // If stock quantity changed, create a transaction
+      if (selectedPaper && updatedData.currentStock !== selectedPaper.currentStock) {
+        const stockDifference = parseFloat(updatedData.currentStock) - parseFloat(selectedPaper.currentStock || 0);
+        
+        await createStockTransaction(
+          updatedData.skuCode,
+          stockDifference > 0 ? 'IN' : 'OUT',
+          Math.abs(stockDifference),
+          'Manual Stock Adjustment'
+        );
+        
+        updatePayload.lastStockUpdate = new Date();
+      }
+      
+      await updateDoc(paperDoc, updatePayload);
+      
+      // Update vendor relationship if company changed
+      if (updatedData.company && updatedData.company !== selectedPaper?.company) {
+        await updateVendorSkuRelationship(updatedData.company, updatedData.skuCode);
+      }
       
       setNotification({
         isOpen: true,
@@ -139,7 +276,7 @@ const PaperManagement = () => {
         status: "success"
       });
       setIsFormModalOpen(false);
-      setEditingPaper(null); // Clear the editing state
+      setSelectedPaper(null);
     } catch (error) {
       console.error("Error updating paper:", error);
       
@@ -157,20 +294,20 @@ const PaperManagement = () => {
   const handleAddClick = () => {
     if (!isAdmin) return;
     
-    setEditingPaper(null); // Ensure we're not in edit mode
+    setSelectedPaper(null); // Ensure we're not in edit mode
     setIsFormModalOpen(true);
   };
 
   const handleEditClick = (paper) => {
     if (!isAdmin) return;
     
-    setEditingPaper({...paper}); // Make a copy to ensure we don't modify the original
+    setSelectedPaper({...paper}); // Make a copy to ensure we don't modify the original
     setIsFormModalOpen(true);
   };
 
   const handleCloseModal = () => {
     setIsFormModalOpen(false);
-    setEditingPaper(null);
+    setSelectedPaper(null);
   };
 
   const confirmDelete = (id) => {
@@ -198,11 +335,44 @@ const PaperManagement = () => {
     });
   };
 
+  // Handle notification from export/import operations
+  const handleExportImportSuccess = (message) => {
+    setNotification({
+      isOpen: true,
+      message: message,
+      title: "Success",
+      status: "success"
+    });
+  };
+
+  const handleExportImportError = (message) => {
+    setNotification({
+      isOpen: true,
+      message: message,
+      title: "Error",
+      status: "error"
+    });
+  };
+
   const handleDeleteConfirm = async () => {
     if (!isAdmin) return;
     
     try {
+      const paper = papers.find(p => p.id === deleteConfirmation.itemId);
+      
+      // Create transaction for stock removal if there's remaining stock
+      if (paper?.currentStock && parseFloat(paper.currentStock) > 0) {
+        await createStockTransaction(
+          paper.skuCode,
+          'OUT',
+          paper.currentStock,
+          'Paper Deleted'
+        );
+      }
+      
+      // Delete the paper
       await deleteDoc(doc(db, "papers", deleteConfirmation.itemId));
+      
       closeDeleteModal();
       
       setNotification({
@@ -224,23 +394,18 @@ const PaperManagement = () => {
     }
   };
 
-  // Handle notification from export/import operations
-  const handleExportImportSuccess = (message) => {
-    setNotification({
-      isOpen: true,
-      message: message,
-      title: "Success",
-      status: "success"
-    });
+  // Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount || 0);
   };
 
-  const handleExportImportError = (message) => {
-    setNotification({
-      isOpen: true,
-      message: message,
-      title: "Error",
-      status: "error"
-    });
+  // Format large numbers
+  const formatNumber = (number) => {
+    return new Intl.NumberFormat("en-IN").format(number || 0);
   };
 
   // Redirect non-authorized users
@@ -267,7 +432,10 @@ const PaperManagement = () => {
           <div className="animate-pulse w-64 h-8 bg-gray-200 rounded-md"></div>
         </div>
         <div className="animate-pulse space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
+            <div className="h-32 bg-gray-200 rounded-lg"></div>
             <div className="h-32 bg-gray-200 rounded-lg"></div>
             <div className="h-32 bg-gray-200 rounded-lg"></div>
             <div className="h-32 bg-gray-200 rounded-lg"></div>
@@ -285,9 +453,87 @@ const PaperManagement = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Paper Management</h1>
         <p className="text-gray-600 mt-1">
-          Manage paper types, specifications, and pricing for printing projects
+          Manage paper inventory with sheet-based stock tracking and area coverage
         </p>
       </div>
+
+      {/* Enhanced Statistics with Stock Information */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-7 gap-4 mb-6">
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Total Papers</h2>
+          <p className="text-2xl font-bold text-gray-800">{paperStats.totalPapers}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {paperStats.gsmCategories} GSM types
+          </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Active Papers</h2>
+          <p className="text-2xl font-bold text-green-600">{paperStats.activePapers}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Available for use
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-yellow-200 bg-yellow-50">
+          <h2 className="text-sm font-medium text-yellow-700 mb-2">Low Stock Items</h2>
+          <p className="text-2xl font-bold text-yellow-800">{paperStats.lowStockItems}</p>
+          <p className="text-xs text-yellow-600 mt-1">
+            Need restocking
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-red-200 bg-red-50">
+          <h2 className="text-sm font-medium text-red-700 mb-2">Out of Stock</h2>
+          <p className="text-2xl font-bold text-red-800">{paperStats.outOfStockItems}</p>
+          <p className="text-xs text-red-600 mt-1">
+            Immediate attention
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-200 bg-blue-50">
+          <h2 className="text-sm font-medium text-blue-700 mb-2">Stock Value</h2>
+          <p className="text-lg font-bold text-blue-800">{formatCurrency(paperStats.totalStockValue)}</p>
+          <p className="text-xs text-blue-600 mt-1">
+            Total inventory value
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-green-200 bg-green-50">
+          <h2 className="text-sm font-medium text-green-700 mb-2">Total Sheets</h2>
+          <p className="text-xl font-bold text-green-800">{formatNumber(paperStats.totalSheets)}</p>
+          <p className="text-xs text-green-600 mt-1">
+            Sheets in stock
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-purple-200 bg-purple-50">
+          <h2 className="text-sm font-medium text-purple-700 mb-2">Area Coverage</h2>
+          <p className="text-lg font-bold text-purple-800">{formatNumber(paperStats.totalAreaCoverage)}</p>
+          <p className="text-xs text-purple-600 mt-1">
+            Total sqcm available
+          </p>
+        </div>
+      </div>
+
+      {/* Stock Alerts */}
+      {(paperStats.lowStockItems > 0 || paperStats.outOfStockItems > 0) && (
+        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-orange-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-orange-800 font-medium">Paper Stock Alert</p>
+              <p className="text-orange-700 text-sm">
+                {paperStats.outOfStockItems > 0 && `${paperStats.outOfStockItems} papers out of stock`}
+                {paperStats.outOfStockItems > 0 && paperStats.lowStockItems > 0 && ", "}
+                {paperStats.lowStockItems > 0 && `${paperStats.lowStockItems} papers low on stock`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
       
       {/* Action buttons with Export/Import options */}
       <div className="flex flex-col md:flex-row justify-between mb-4">
@@ -299,7 +545,7 @@ const PaperManagement = () => {
               collectionName="papers"
               onSuccess={handleExportImportSuccess}
               onError={handleExportImportError}
-              dateFields={['timestamp', 'createdAt', 'updatedAt']}
+              dateFields={['timestamp', 'createdAt', 'updatedAt', 'lastStockUpdate']}
             />
           )}
         </div>
@@ -319,37 +565,36 @@ const PaperManagement = () => {
         </div>
       </div>
 
-      {/* Table component */}
+      {/* Table component - visible to all users */}
       <div className="overflow-hidden">
         <DisplayPaperTable
           papers={papers}
-          onEditPaper={isAdmin ? handleEditClick : null}
-          onDeletePaper={isAdmin ? confirmDelete : null}
+          onDelete={isAdmin ? confirmDelete : null}
+          onEdit={isAdmin ? handleEditClick : null}
         />
       </div>
 
-      {/* Modal for adding/editing paper - now with lg size */}
+      {/* Modals - only rendered for admins */}
       {isAdmin && (
         <>
+          {/* Modal for adding/editing paper */}
           <Modal
             isOpen={isFormModalOpen}
             onClose={handleCloseModal}
-            title={editingPaper ? "Edit Paper" : "Add New Paper"}
-            size="lg" // Using the larger size for the form
+            title={selectedPaper ? "Edit Paper" : "Add New Paper"}
+            size="lg"
           >
             <AddPaperForm
-              onSubmit={editingPaper ? 
-                (data) => updatePaper(editingPaper.id, data) : 
-                addPaper
-              }
-              initialData={editingPaper}
+              onSubmit={addPaper}
+              selectedPaper={selectedPaper}
+              onUpdate={updatePaper}
               isSubmitting={isSubmitting}
               onCancel={handleCloseModal}
               vendors={vendors}
+              generateSKUCode={generateSKUCode}
             />
           </Modal>
 
-          {/* Confirmation modals */}
           <DeleteConfirmationModal
             isOpen={deleteConfirmation.isOpen}
             onClose={closeDeleteModal}

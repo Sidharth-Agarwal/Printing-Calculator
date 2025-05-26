@@ -33,6 +33,11 @@ import LeadRegistrationPage from "./components/CRM/LeadRegistration/LeadRegistra
 import LeadManagementPage from "./components/CRM/LeadManagement/LeadManagementPage";
 import BadgeManagementPage from "./components/CRM/BadgeManagement/BadgeManagementPage";
 
+// Import SKU Management components
+import SKUManagement from "./components/Management/SKUManagement/SKUManagement";
+import StockDashboard from "./components/Management/SKUManagement/StockDashboard";
+import TransactionHistory from "./components/Management/SKUManagement/TransactionHistory";
+
 import "./styles/tailwind.css";
 
 function App() {
@@ -179,6 +184,18 @@ function App() {
                 } 
               />
               
+              {/* Material Stock Management Routes */}
+              
+              {/* Stock Dashboard Route - First in inventory section */}
+              <Route 
+                path="/material-stock/stock-dashboard" 
+                element={
+                  <ProtectedRoute>
+                    <StockDashboard />
+                  </ProtectedRoute>
+                } 
+              />
+              
               <Route 
                 path="/material-stock/paper-db" 
                 element={
@@ -215,7 +232,6 @@ function App() {
                 } 
               />
               
-              {/* NEW: Route for GST & HSN management */}
               <Route 
                 path="/material-stock/gst-hsn-db" 
                 element={
@@ -234,7 +250,27 @@ function App() {
                 } 
               />
               
-              {/* Route for loyalty tier management */}
+              {/* SKU Management Routes */}
+              <Route 
+                path="/material-stock/sku-management" 
+                element={
+                  <ProtectedRoute>
+                    <SKUManagement />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* NEW: Transaction History Route - Replaces Stock Alerts */}
+              <Route 
+                path="/material-stock/transaction-history" 
+                element={
+                  <ProtectedRoute>
+                    <TransactionHistory />
+                  </ProtectedRoute>
+                } 
+              />
+              
+              {/* Loyalty Management Routes */}
               <Route 
                 path="/material-stock/loyalty-tiers" 
                 element={
@@ -244,7 +280,6 @@ function App() {
                 } 
               />
               
-              {/* Route for loyalty dashboard */}
               <Route 
                 path="/loyalty-dashboard" 
                 element={

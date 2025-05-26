@@ -106,13 +106,16 @@ const Header = () => {
     { key: 'newBill', label: 'New Bill', path: '/new-bill', visible: isMenuItemVisible('newBill') },
     { key: 'materials', label: 'Inventory', path: '/material-stock', visible: isMenuItemVisible('materials'), isDropdown: true,
       dropdownItems: [
-        { label: 'Papers DB', path: '/material-stock/paper-db' },
-        { label: 'Materials DB', path: '/material-stock/material-db' },
-        { label: 'Dies DB', path: '/material-stock/dies-db' },
-        { label: 'Labours DB', path: '/material-stock/standard-rates-db' },
-        { label: 'GST & HSN DB', path: '/material-stock/gst-hsn-db' },
-        { label: 'Standard Parameters', path: '/material-stock/overheads' },
-        { label: 'Loyalty Program', path: '/material-stock/loyalty-tiers', visible: isMenuItemVisible('loyaltyProgram') }
+        { label: '📊 Stock Dashboard', path: '/material-stock/stock-dashboard' },
+        { label: '📄 Papers DB', path: '/material-stock/paper-db' },
+        { label: '🔧 Materials DB', path: '/material-stock/material-db' },
+        { label: '⚙️ Dies DB', path: '/material-stock/dies-db' },
+        { label: '👥 Labours DB', path: '/material-stock/standard-rates-db' },
+        { label: '📋 GST & HSN DB', path: '/material-stock/gst-hsn-db' },
+        { label: '⚖️ Standard Parameters', path: '/material-stock/overheads' },
+        { label: '📦 SKU Management', path: '/material-stock/sku-management' },
+        { label: '📊 Transaction History', path: '/material-stock/transaction-history' }, // UPDATED: Replaced Stock Alerts
+        { label: '🎁 Loyalty Program', path: '/material-stock/loyalty-tiers', visible: isMenuItemVisible('loyaltyProgram') }
       ]
     },
     // Add CRM dropdown menu here
@@ -142,11 +145,7 @@ const Header = () => {
           to={userRole === "b2b" ? "/b2b-dashboard" : "/"} 
           className="block"
         >
-          <img 
-            src={logo} 
-            alt="Famous Logo" 
-            className="h-10 w-10 transition-transform hover:rotate-12 duration-300 cursor-pointer" 
-          />
+          <img src={logo} alt="Famous Logo" className="h-10 w-10 transition-transform hover:rotate-12 duration-300 cursor-pointer" />
         </Link>
         
         {/* Centered Navigation */}

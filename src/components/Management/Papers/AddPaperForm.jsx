@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
-import { PAPER_FIELDS } from "../../../constants/paperContants";
+import React, { useState, useEffect } from "react";
+import { PAPER_FIELDS, generatePaperSKU, getPaperStockStatus, getPaperStockStatusInfo, calculatePaperAreaCoverage } from "../../../constants/paperContants";
 
-const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }) => {
+const AddPaperForm = ({ onSubmit, selectedPaper, onUpdate, isSubmitting, onCancel, vendors, generateSKUCode }) => {
   const [formData, setFormData] = useState({
     paperName: "",
     company: "",
@@ -16,14 +16,36 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
     gsmPerSheet: "",
     freightPerSheet: "",
     finalRate: "",
+    // New stock tracking fields (sheet-based)
+    skuCode: "",
+    initialStock: "", // Initial sheets
+    currentStock: "", // Current sheets
+    minStockLevel: "", // Min sheets alert threshold
+    maxStockLevel: "", // Max sheets capacity
+    stockLocation: "Paper Storage A",
+    unitOfMeasure: "sheets", // Fixed for papers
+    totalPurchased: 0,
+    totalUsed: 0,
   });
 
-  // Populate form with initial data if provided
+  const [stockStatus, setStockStatus] = useState(null);
+  const [areaCoverage, setAreaCoverage] = useState(null);
+
   useEffect(() => {
-    if (initialData) {
-      setFormData(initialData);
+    if (selectedPaper) {
+      setFormData({
+        ...selectedPaper,
+        // Ensure stock fields exist with defaults
+        initialStock: selectedPaper.initialStock || selectedPaper.currentStock || "",
+        currentStock: selectedPaper.currentStock || selectedPaper.initialStock || "",
+        minStockLevel: selectedPaper.minStockLevel || "",
+        maxStockLevel: selectedPaper.maxStockLevel || "",
+        stockLocation: selectedPaper.stockLocation || "Paper Storage A",
+        unitOfMeasure: selectedPaper.unitOfMeasure || "sheets",
+        totalPurchased: selectedPaper.totalPurchased || 0,
+        totalUsed: selectedPaper.totalUsed || 0,
+      });
     } else {
-      // Reset form when not editing
       setFormData({
         paperName: "",
         company: "",
@@ -38,44 +60,118 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
         gsmPerSheet: "",
         freightPerSheet: "",
         finalRate: "",
+        skuCode: "",
+        initialStock: "",
+        currentStock: "",
+        minStockLevel: "",
+        maxStockLevel: "",
+        stockLocation: "Paper Storage A",
+        unitOfMeasure: "sheets",
+        totalPurchased: 0,
+        totalUsed: 0,
       });
     }
-  }, [initialData]);
+  }, [selectedPaper]);
+
+  // Auto-generate SKU code when paper details change (for new papers only)
+  useEffect(() => {
+    const generateSKU = async () => {
+      if (!selectedPaper && formData.paperName && formData.company && formData.gsm && generateSKUCode) {
+        try {
+          const generatedSKU = await generateSKUCode("Paper", formData.paperName, formData.company, formData.gsm);
+          setFormData(prev => ({
+            ...prev,
+            skuCode: generatedSKU
+          }));
+        } catch (error) {
+          console.error("Error generating SKU:", error);
+        }
+      }
+    };
+
+    generateSKU();
+  }, [formData.paperName, formData.company, formData.gsm, selectedPaper, generateSKUCode]);
+
+  // Set currentStock to initialStock when initialStock changes (for new papers)
+  useEffect(() => {
+    if (!selectedPaper && formData.initialStock) {
+      setFormData(prev => ({
+        ...prev,
+        currentStock: formData.initialStock
+      }));
+    }
+  }, [formData.initialStock, selectedPaper]);
+
+  // Update stock status when stock levels change
+  useEffect(() => {
+    if (formData.currentStock && formData.minStockLevel) {
+      const status = getPaperStockStatus(formData.currentStock, formData.minStockLevel, formData.maxStockLevel);
+      setStockStatus(status);
+    }
+  }, [formData.currentStock, formData.minStockLevel, formData.maxStockLevel]);
+
+  // Calculate area coverage when stock or dimensions change
+  useEffect(() => {
+    if (formData.currentStock && formData.length && formData.breadth) {
+      const coverage = calculatePaperAreaCoverage(formData.currentStock, formData.length, formData.breadth);
+      setAreaCoverage(coverage);
+    }
+  }, [formData.currentStock, formData.length, formData.breadth]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => {
-      const updatedForm = { ...prev, [name]: value };
-
-      // Update calculated fields
-      const freightPerKg = parseFloat(updatedForm.freightPerKg || 0);
-      const length = parseFloat(updatedForm.length || 0);
-      const breadth = parseFloat(updatedForm.breadth || 0);
-      const gsm = parseFloat(updatedForm.gsm || 0);
-      const pricePerSheet = parseFloat(updatedForm.pricePerSheet || 0);
-
-      const ratePerGram = freightPerKg / 1000;
-      const area = length * breadth;
-      const oneSqcmInGram = gsm / 10000;
-      const gsmPerSheet = (area * oneSqcmInGram)/1000;
-      const freightPerSheet = ratePerGram * gsmPerSheet;
-      const finalRate = pricePerSheet + freightPerSheet;
-
+      const updatedData = { ...prev, [name]: value };
+      
+      // Calculate derived values for papers
+      const length = parseFloat(updatedData.length || 0);
+      const breadth = parseFloat(updatedData.breadth || 0);
+      const gsm = parseFloat(updatedData.gsm || 0);
+      const pricePerSheet = parseFloat(updatedData.pricePerSheet || 0);
+      const freightPerKg = parseFloat(updatedData.freightPerKg || 0);
+      
+      // Paper calculations
+      const area = (length * breadth).toFixed(4);
+      const oneSqcmInGram = area > 0 ? (gsm / area).toFixed(6) : "0.000000";
+      const gsmPerSheet = (gsm * area / 10000).toFixed(4); // Convert sqcm to sqm for GSM calculation
+      const freightPerSheet = area > 0 ? (parseFloat(oneSqcmInGram) * area * freightPerKg / 1000).toFixed(4) : "0.00";
+      const ratePerGram = gsm > 0 ? (pricePerSheet / gsmPerSheet * 1000).toFixed(4) : "0.00";
+      const finalRate = (pricePerSheet + parseFloat(freightPerSheet)).toFixed(4);
+      
       return {
-        ...updatedForm,
-        ratePerGram: ratePerGram.toFixed(4),
-        area: area.toFixed(4),
-        oneSqcmInGram: oneSqcmInGram.toFixed(6),
-        gsmPerSheet: gsmPerSheet.toFixed(4),
-        freightPerSheet: freightPerSheet.toFixed(4),
-        finalRate: finalRate.toFixed(4),
+        ...updatedData,
+        area,
+        oneSqcmInGram,
+        gsmPerSheet,
+        freightPerSheet,
+        ratePerGram,
+        finalRate,
       };
     });
   };
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    onSubmit(formData);
+
+    // Prepare data with proper stock initialization
+    const submitData = {
+      ...formData,
+      // For new papers, set up initial stock tracking
+      currentStock: selectedPaper ? formData.currentStock : formData.initialStock,
+      lastStockUpdate: new Date(),
+      stockHistory: selectedPaper ? formData.stockHistory || [] : [{
+        date: new Date(),
+        type: "INITIAL_STOCK",
+        quantity: formData.initialStock,
+        notes: "Initial stock entry"
+      }]
+    };
+
+    if (selectedPaper) {
+      onUpdate(selectedPaper.id, submitData);
+    } else {
+      onSubmit(submitData);
+    }
   };
 
   // Prepare vendor options for the company dropdown
@@ -94,7 +190,7 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
 
   // Render a field based on its type and configuration
   const renderField = (field) => {
-    const { name, label, type, required, readOnly, options } = field;
+    const { name, label, type, required, readOnly, options, placeholder, value } = field;
     
     switch (type) {
       case "select":
@@ -103,16 +199,16 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
             <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
             <select
               name={name}
-              value={formData[name] || ""}
+              value={formData[name] || value || ""}
               onChange={handleChange}
               className={`w-full p-2 border border-gray-300 rounded text-sm ${
                 readOnly ? "bg-gray-100" : ""
               }`}
               required={required}
-              disabled={readOnly}
+              disabled={readOnly || isSubmitting}
             >
               <option value="">Select {label}</option>
-              {options.map((option) => (
+              {options && options.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
                 </option>
@@ -128,15 +224,21 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
             <input
               type={type}
               name={name}
-              value={formData[name] || ""}
+              value={formData[name] || value || ""}
               onChange={handleChange}
-              placeholder={field.placeholder || `Enter ${label.toLowerCase()}`}
+              placeholder={placeholder || `Enter ${label.toLowerCase()}`}
               readOnly={readOnly}
               className={`w-full p-2 border border-gray-300 rounded text-sm ${
                 readOnly ? "bg-gray-100" : ""
               }`}
               required={required}
+              disabled={isSubmitting}
             />
+            {name === "skuCode" && (
+              <p className="mt-1 text-xs text-gray-500">
+                Automatically generated based on paper name, company, and GSM
+              </p>
+            )}
           </div>
         );
     }
@@ -144,29 +246,77 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
 
   return (
     <form onSubmit={handleSubmit}>
+      {/* Basic Information */}
       <div className="mb-6">
-        {/* User input fields */}
-        <div className="grid grid-cols-4 gap-4 mb-4">
-          {updatedBasicInfoFields.map(field => renderField(field))}
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          {PAPER_FIELDS.DIMENSIONS_SHIPPING.map(field => renderField(field))}
+        <h3 className="text-sm font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">Basic Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+          {updatedBasicInfoFields.map((field) => renderField(field))}
         </div>
       </div>
 
-      {/* Calculated Values section */}
+      {/* Dimensions & Shipping */}
+      <div className="mb-6">
+        <h3 className="text-sm font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">Dimensions & Shipping</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          {PAPER_FIELDS.DIMENSIONS_SHIPPING.map((field) => renderField(field))}
+        </div>
+      </div>
+
+      {/* Calculated Values */}
       <div className="mb-6 bg-gray-50 p-4 rounded-lg">
         <h3 className="text-sm font-medium text-gray-700 mb-3">Calculated Values</h3>
-        
-        <div className="grid grid-cols-3 gap-4 mb-3">
-          {PAPER_FIELDS.CALCULATED_VALUES.slice(0, 3).map(field => renderField(field))}
-        </div>
-
-        <div className="grid grid-cols-3 gap-4">
-          {PAPER_FIELDS.CALCULATED_VALUES.slice(3).map(field => renderField(field))}
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
+          {PAPER_FIELDS.CALCULATED_VALUES.map((field) => renderField(field))}
         </div>
       </div>
+
+      {/* Stock Management */}
+      <div className="mb-6 bg-green-50 p-4 rounded-lg">
+        <h3 className="text-sm font-medium text-green-800 mb-3">Stock Management (Sheet-based)</h3>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+          {PAPER_FIELDS.STOCK_MANAGEMENT.map((field) => renderField(field))}
+        </div>
+        
+        {/* Stock Status Indicator */}
+        {stockStatus && (
+          <div className="mt-3 p-2 rounded border border-green-200">
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-gray-600">Current Stock Status:</span>
+              <span className={`px-2 py-1 rounded text-xs font-medium ${getPaperStockStatusInfo(stockStatus).color}`}>
+                {getPaperStockStatusInfo(stockStatus).icon} {getPaperStockStatusInfo(stockStatus).label}
+              </span>
+            </div>
+            {areaCoverage && (
+              <div className="mt-2 text-xs text-gray-600">
+                <p>Current: {formData.currentStock} sheets | Area per sheet: {areaCoverage.areaPerSheet} sqcm</p>
+                <p>Total area coverage: {areaCoverage.totalArea} sqcm available</p>
+                <p>Sheets available: {areaCoverage.sheetsCount}</p>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Area Coverage Summary */}
+      {areaCoverage && formData.currentStock && (
+        <div className="mb-6 bg-blue-50 p-4 rounded-lg border border-blue-200">
+          <h3 className="text-sm font-medium text-blue-800 mb-2">Area Coverage Summary</h3>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+            <div>
+              <p className="text-blue-700 font-medium">Per Sheet</p>
+              <p className="text-blue-600">{areaCoverage.areaPerSheet} sqcm</p>
+            </div>
+            <div>
+              <p className="text-blue-700 font-medium">Total Coverage</p>
+              <p className="text-blue-600">{areaCoverage.totalArea} sqcm</p>
+            </div>
+            <div>
+              <p className="text-blue-700 font-medium">Sheet Count</p>
+              <p className="text-blue-600">{areaCoverage.sheetsCount} sheets</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Form buttons */}
       <div className="flex justify-end space-x-3">
@@ -192,7 +342,7 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
               Processing...
             </span>
           ) : (
-            initialData ? 'Update Paper' : 'Add Paper'
+            selectedPaper ? 'Update Paper' : 'Add Paper'
           )}
         </button>
       </div>

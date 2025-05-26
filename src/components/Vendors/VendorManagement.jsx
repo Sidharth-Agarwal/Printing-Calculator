@@ -31,11 +31,24 @@ const VendorManagement = () => {
     itemName: ""
   });
 
-  // Vendor statistics
+  // Enhanced vendor statistics with SKU data
   const [vendorStats, setVendorStats] = useState({
     totalVendors: 0,
-    activeVendors: 0
+    activeVendors: 0,
+    inactiveVendors: 0,
+    totalSkus: 0,
+    totalMaterialSkus: 0,
+    totalPaperSkus: 0,
+    totalStockValue: 0,
+    vendorsWithLowStock: 0,
+    vendorsWithOutOfStock: 0,
+    totalTransactions: 0,
+    averageSkusPerVendor: 0
   });
+
+  // State for SKU and transaction data
+  const [vendorSkuData, setVendorSkuData] = useState({});
+  const [isLoadingSkuData, setIsLoadingSkuData] = useState(true);
 
   useEffect(() => {
     const vendorsCollection = collection(db, "vendors");
@@ -60,18 +73,179 @@ const VendorManagement = () => {
       }));
       setVendors(vendorsData);
       
-      // Calculate vendor statistics
+      // Calculate basic vendor statistics
       const stats = {
         totalVendors: vendorsData.length,
-        activeVendors: vendorsData.filter(vendor => vendor.isActive).length
+        activeVendors: vendorsData.filter(vendor => vendor.isActive).length,
+        inactiveVendors: vendorsData.filter(vendor => !vendor.isActive).length
       };
-      setVendorStats(stats);
+      
+      // Fetch SKU data for enhanced statistics
+      fetchVendorSkuData(vendorsData, stats);
       
       setIsLoading(false);
     });
 
     return () => unsubscribe();
   }, []);
+
+  // Fetch SKU and transaction data for enhanced statistics
+  const fetchVendorSkuData = async (vendorsData, basicStats) => {
+    setIsLoadingSkuData(true);
+    
+    try {
+      const vendorNames = vendorsData.map(v => v.name);
+      const skuData = {};
+      let totalSkus = 0;
+      let totalMaterialSkus = 0;
+      let totalPaperSkus = 0;
+      let totalStockValue = 0;
+      let vendorsWithLowStock = 0;
+      let vendorsWithOutOfStock = 0;
+      let totalTransactions = 0;
+
+      // Fetch materials data
+      if (vendorNames.length > 0) {
+        // Split vendor names into chunks of 10 (Firestore limit for 'in' queries)
+        const vendorNameChunks = [];
+        for (let i = 0; i < vendorNames.length; i += 10) {
+          vendorNameChunks.push(vendorNames.slice(i, i + 10));
+        }
+
+        for (const chunk of vendorNameChunks) {
+          // Fetch materials
+          const materialsQuery = query(
+            collection(db, "materials"),
+            where("company", "in", chunk)
+          );
+          const materialsSnapshot = await getDocs(materialsQuery);
+          
+          materialsSnapshot.docs.forEach(doc => {
+            const material = doc.data();
+            const vendorName = material.company;
+            
+            if (!skuData[vendorName]) {
+              skuData[vendorName] = {
+                totalSkus: 0,
+                materialSkus: 0,
+                paperSkus: 0,
+                stockValue: 0,
+                lowStockCount: 0,
+                outOfStockCount: 0,
+                transactions: 0
+              };
+            }
+            
+            skuData[vendorName].totalSkus++;
+            skuData[vendorName].materialSkus++;
+            totalSkus++;
+            totalMaterialSkus++;
+            
+            const stock = parseFloat(material.currentStock) || 0;
+            const cost = parseFloat(material.finalCostPerUnit) || 0;
+            const stockValue = stock * cost;
+            skuData[vendorName].stockValue += stockValue;
+            totalStockValue += stockValue;
+            
+            const minStock = parseFloat(material.minStockLevel) || 0;
+            if (stock <= 0) {
+              skuData[vendorName].outOfStockCount++;
+            } else if (stock <= minStock) {
+              skuData[vendorName].lowStockCount++;
+            }
+          });
+
+          // Fetch papers
+          const papersQuery = query(
+            collection(db, "papers"),
+            where("company", "in", chunk)
+          );
+          const papersSnapshot = await getDocs(papersQuery);
+          
+          papersSnapshot.docs.forEach(doc => {
+            const paper = doc.data();
+            const vendorName = paper.company;
+            
+            if (!skuData[vendorName]) {
+              skuData[vendorName] = {
+                totalSkus: 0,
+                materialSkus: 0,
+                paperSkus: 0,
+                stockValue: 0,
+                lowStockCount: 0,
+                outOfStockCount: 0,
+                transactions: 0
+              };
+            }
+            
+            skuData[vendorName].totalSkus++;
+            skuData[vendorName].paperSkus++;
+            totalSkus++;
+            totalPaperSkus++;
+            
+            const stock = parseFloat(paper.currentStock) || 0;
+            const cost = parseFloat(paper.finalRate) || 0;
+            const stockValue = stock * cost;
+            skuData[vendorName].stockValue += stockValue;
+            totalStockValue += stockValue;
+            
+            const minStock = parseFloat(paper.minStockLevel) || 0;
+            if (stock <= 0) {
+              skuData[vendorName].outOfStockCount++;
+            } else if (stock <= minStock) {
+              skuData[vendorName].lowStockCount++;
+            }
+          });
+
+          // Fetch stock transactions
+          const transactionsQuery = query(
+            collection(db, "stockTransactions"),
+            where("vendorName", "in", chunk)
+          );
+          const transactionsSnapshot = await getDocs(transactionsQuery);
+          
+          transactionsSnapshot.docs.forEach(doc => {
+            const transaction = doc.data();
+            const vendorName = transaction.vendorName;
+            
+            if (skuData[vendorName]) {
+              skuData[vendorName].transactions++;
+            }
+            totalTransactions++;
+          });
+        }
+      }
+
+      // Count vendors with stock issues
+      Object.values(skuData).forEach(data => {
+        if (data.lowStockCount > 0) vendorsWithLowStock++;
+        if (data.outOfStockCount > 0) vendorsWithOutOfStock++;
+      });
+
+      // Calculate average SKUs per vendor
+      const averageSkusPerVendor = vendorsData.length > 0 ? totalSkus / vendorsData.length : 0;
+
+      // Update statistics
+      setVendorStats({
+        ...basicStats,
+        totalSkus,
+        totalMaterialSkus,
+        totalPaperSkus,
+        totalStockValue,
+        vendorsWithLowStock,
+        vendorsWithOutOfStock,
+        totalTransactions,
+        averageSkusPerVendor
+      });
+
+      setVendorSkuData(skuData);
+      
+    } catch (error) {
+      console.error("Error fetching SKU data:", error);
+    } finally {
+      setIsLoadingSkuData(false);
+    }
+  };
 
   const checkVendorCodeExists = async (code) => {
     const vendorsCollection = collection(db, "vendors");
@@ -157,6 +331,9 @@ const VendorManagement = () => {
         totalOrders: 0,
         totalSpend: 0,
         averageOrderValue: 0,
+        activeSkus: [], // Initialize empty SKU list
+        totalTransactions: 0,
+        lastPurchaseDate: null,
         createdAt: new Date(),
         updatedAt: new Date()
       });
@@ -295,6 +472,21 @@ const VendorManagement = () => {
 
   const handleDeleteConfirm = async () => {
     try {
+      // Check if vendor has associated SKUs
+      const vendor = vendors.find(v => v.id === deleteConfirmation.itemId);
+      const vendorSkus = vendorSkuData[vendor?.name];
+      
+      if (vendorSkus && vendorSkus.totalSkus > 0) {
+        setNotification({
+          isOpen: true,
+          message: `Cannot delete vendor "${vendor.name}". This vendor has ${vendorSkus.totalSkus} associated SKUs. Please remove or reassign the SKUs first.`,
+          title: "Cannot Delete Vendor",
+          status: "error"
+        });
+        closeDeleteModal();
+        return;
+      }
+      
       // Now delete the vendor
       await deleteDoc(doc(db, "vendors", deleteConfirmation.itemId));
       
@@ -317,6 +509,20 @@ const VendorManagement = () => {
         status: "error"
       });
     }
+  };
+
+  // Format currency
+  const formatCurrency = (amount) => {
+    return new Intl.NumberFormat("en-IN", {
+      style: "currency",
+      currency: "INR",
+      maximumFractionDigits: 0,
+    }).format(amount || 0);
+  };
+
+  // Format large numbers
+  const formatNumber = (number) => {
+    return new Intl.NumberFormat("en-IN").format(number || 0);
   };
 
   // Check if user is admin or staff - only they should access this page
@@ -343,28 +549,126 @@ const VendorManagement = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1>
         <p className="text-gray-600 mt-1">
-          Add, edit, and manage your suppliers and service providers
+          Manage suppliers and service providers with comprehensive SKU tracking
         </p>
       </div>
 
-      {/* Vendor Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+      {/* Enhanced Vendor Statistics with SKU Data */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-8 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-sm font-medium text-gray-500 mb-2">Total Vendors</h2>
           <p className="text-2xl font-bold text-gray-800">{vendorStats.totalVendors}</p>
           <p className="text-xs text-gray-500 mt-1">
-            {vendorStats.activeVendors} active vendors
+            {vendorStats.activeVendors} active
           </p>
         </div>
         
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-green-200 bg-green-50">
+          <h2 className="text-sm font-medium text-green-700 mb-2">Active Vendors</h2>
+          <p className="text-2xl font-bold text-green-800">{vendorStats.activeVendors}</p>
+          <p className="text-xs text-green-600 mt-1">
+            {((vendorStats.activeVendors / vendorStats.totalVendors) * 100 || 0).toFixed(1)}% of total
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-blue-200 bg-blue-50">
+          <h2 className="text-sm font-medium text-blue-700 mb-2">Total SKUs</h2>
+          <p className="text-2xl font-bold text-blue-800">{vendorStats.totalSkus}</p>
+          <p className="text-xs text-blue-600 mt-1">
+            Across all vendors
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-indigo-200 bg-indigo-50">
+          <h2 className="text-sm font-medium text-indigo-700 mb-2">Materials</h2>
+          <p className="text-2xl font-bold text-indigo-800">{vendorStats.totalMaterialSkus}</p>
+          <p className="text-xs text-indigo-600 mt-1">
+            Material SKUs
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-purple-200 bg-purple-50">
+          <h2 className="text-sm font-medium text-purple-700 mb-2">Papers</h2>
+          <p className="text-2xl font-bold text-purple-800">{vendorStats.totalPaperSkus}</p>
+          <p className="text-xs text-purple-600 mt-1">
+            Paper SKUs
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-green-200 bg-green-50">
+          <h2 className="text-sm font-medium text-green-700 mb-2">Stock Value</h2>
+          <p className="text-lg font-bold text-green-800">{formatCurrency(vendorStats.totalStockValue)}</p>
+          <p className="text-xs text-green-600 mt-1">
+            Total inventory
+          </p>
+        </div>
+
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-yellow-200 bg-yellow-50">
+          <h2 className="text-sm font-medium text-yellow-700 mb-2">Stock Alerts</h2>
+          <p className="text-2xl font-bold text-yellow-800">{vendorStats.vendorsWithLowStock + vendorStats.vendorsWithOutOfStock}</p>
+          <p className="text-xs text-yellow-600 mt-1">
+            Vendors with issues
+          </p>
+        </div>
+
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Inactive Vendors</h2>
-          <p className="text-2xl font-bold text-gray-400">{vendorStats.totalVendors - vendorStats.activeVendors}</p>
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Avg SKUs</h2>
+          <p className="text-2xl font-bold text-gray-800">{vendorStats.averageSkusPerVendor.toFixed(1)}</p>
           <p className="text-xs text-gray-500 mt-1">
-            {((vendorStats.totalVendors - vendorStats.activeVendors) / vendorStats.totalVendors * 100 || 0).toFixed(1)}% of total vendors
+            Per vendor
           </p>
         </div>
       </div>
+
+      {/* Stock Alerts */}
+      {(vendorStats.vendorsWithLowStock > 0 || vendorStats.vendorsWithOutOfStock > 0) && (
+        <div className="mb-6 p-4 bg-orange-50 border border-orange-200 rounded-lg">
+          <div className="flex items-center">
+            <svg className="w-5 h-5 text-orange-500 mr-2" fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+            </svg>
+            <div>
+              <p className="text-orange-800 font-medium">Vendor Stock Alert</p>
+              <p className="text-orange-700 text-sm">
+                {vendorStats.vendorsWithOutOfStock > 0 && `${vendorStats.vendorsWithOutOfStock} vendors have out-of-stock items`}
+                {vendorStats.vendorsWithOutOfStock > 0 && vendorStats.vendorsWithLowStock > 0 && ", "}
+                {vendorStats.vendorsWithLowStock > 0 && `${vendorStats.vendorsWithLowStock} vendors have low-stock items`}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SKU Insights */}
+      {!isLoadingSkuData && vendorStats.totalSkus > 0 && (
+        <div className="mb-6 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <h3 className="text-blue-800 font-medium mb-2">SKU Distribution Insights</h3>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+            <div className="text-center">
+              <p className="text-blue-800 font-bold text-lg">{formatNumber(vendorStats.totalTransactions)}</p>
+              <p className="text-blue-600 text-xs">Total Transactions</p>
+            </div>
+            <div className="text-center">
+              <p className="text-blue-800 font-bold text-lg">
+                {((vendorStats.totalMaterialSkus / vendorStats.totalSkus) * 100).toFixed(1)}%
+              </p>
+              <p className="text-blue-600 text-xs">Materials vs Papers</p>
+            </div>
+            <div className="text-center">
+              <p className="text-blue-800 font-bold text-lg">
+                {vendors.filter(v => vendorSkuData[v.name]?.totalSkus > 0).length}
+              </p>
+              <p className="text-blue-600 text-xs">Vendors with SKUs</p>
+            </div>
+            <div className="text-center">
+              <p className="text-blue-800 font-bold text-lg">
+                {formatCurrency(vendorStats.totalStockValue / vendorStats.totalSkus)}
+              </p>
+              <p className="text-blue-600 text-xs">Avg value per SKU</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Action buttons */}
       <div className="flex justify-end mb-4">
@@ -395,6 +699,7 @@ const VendorManagement = () => {
             onEdit={handleEditClick}
             onToggleStatus={toggleVendorStatus}
             isAdmin={isAdmin}
+            vendorSkuData={vendorSkuData}
           />
         )}
       </div>
