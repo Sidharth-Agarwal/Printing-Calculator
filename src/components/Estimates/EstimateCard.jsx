@@ -31,6 +31,55 @@ const EstimateCard = ({
   
   // Check if this client is eligible for loyalty benefits (B2B client)
   const isLoyaltyEligible = estimate.clientInfo?.clientType === "B2B";
+
+  // ADDED: Format last activity date
+  const formatLastActivity = () => {
+    const updatedAt = estimate.updatedAt;
+    const createdAt = estimate.createdAt;
+    
+    // Use updatedAt if available, otherwise createdAt
+    const timestamp = updatedAt || createdAt;
+    
+    if (!timestamp) return "Unknown";
+    
+    try {
+      const date = new Date(timestamp);
+      const now = new Date();
+      const diffInHours = (now - date) / (1000 * 60 * 60);
+      
+      if (diffInHours < 1) {
+        const diffInMinutes = Math.floor((now - date) / (1000 * 60));
+        return `${diffInMinutes}m ago`;
+      } else if (diffInHours < 24) {
+        return `${Math.floor(diffInHours)}h ago`;
+      } else if (diffInHours < 168) { // 7 days
+        const diffInDays = Math.floor(diffInHours / 24);
+        return `${diffInDays}d ago`;
+      } else {
+        return date.toLocaleDateString('en-GB', {
+          day: '2-digit',
+          month: 'short'
+        });
+      }
+    } catch (error) {
+      return "Unknown";
+    }
+  };
+
+  // ADDED: Check if this estimate was recently updated (within 24 hours)
+  const isRecentlyUpdated = () => {
+    const updatedAt = estimate.updatedAt;
+    if (!updatedAt) return false;
+    
+    try {
+      const updateDate = new Date(updatedAt);
+      const now = new Date();
+      const diffInHours = (now - updateDate) / (1000 * 60 * 60);
+      return diffInHours < 24;
+    } catch (error) {
+      return false;
+    }
+  };
   
   // Handle card click - different behavior in multi-select mode
   const handleCardClick = (e) => {
@@ -201,6 +250,13 @@ const EstimateCard = ({
           <span className={`px-2 py-0.5 text-xs rounded-full ${getStatusBadgeColor()}`}>
             {getStatusBadgeText()}
           </span>
+
+          {/* ADDED: Recently updated indicator */}
+          {isRecentlyUpdated() && (
+            <span className="px-1.5 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 font-medium">
+              NEW
+            </span>
+          )}
         </div>
         
         {/* Quick Actions */}
@@ -237,7 +293,7 @@ const EstimateCard = ({
         {estimate?.projectName || "No Project Name"}
       </p>
       
-      {/* Info line */}
+      {/* UPDATED: Info line with last activity */}
       <div className="flex justify-between text-xs text-gray-500 mb-1.5">
         <div className="flex items-center gap-2">
           <span>HSN: {estimate?.jobDetails?.hsnCode || "N/A"}</span>
@@ -247,7 +303,13 @@ const EstimateCard = ({
             </span>
           )}
         </div>
-        <span>Qty: {estimate?.jobDetails?.quantity || "N/A"}</span>
+        <div className="flex items-center gap-2">
+          <span>Qty: {estimate?.jobDetails?.quantity || "N/A"}</span>
+          {/* ADDED: Last activity indicator */}
+          <span className="text-xs text-gray-400" title={`Last activity: ${formatLastActivity()}`}>
+            • {formatLastActivity()}
+          </span>
+        </div>
       </div>
 
       {/* Action Buttons - Hide in multi-select mode to avoid confusion */}
