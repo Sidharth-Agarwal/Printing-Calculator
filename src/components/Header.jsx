@@ -190,10 +190,23 @@ const Header = () => {
         { label: 'Papers DB', path: '/material-stock/paper-db', icon: '📄' },
         { label: 'Materials DB', path: '/material-stock/material-db', icon: '🔧' },
         { label: 'Dies DB', path: '/material-stock/dies-db', icon: '⚙️' },
-        { label: 'Labours DB', path: '/material-stock/standard-rates-db', icon: '💰' },
-        { label: 'GST & HSN DB', path: '/material-stock/gst-hsn-db', icon: '📋' },
-        { label: 'Standard Parameters', path: '/material-stock/overheads', icon: '⚖️' },
-        { label: 'Loyalty Program', path: '/material-stock/loyalty-tiers', icon: '⭐', visible: isMenuItemVisible('loyaltyProgram') }
+        { label: 'Standard Rates', path: '/material-stock/standard-rates-db', icon: '💰' },
+        { label: 'GST & HSN', path: '/material-stock/gst-hsn-db', icon: '📋' },
+        { label: 'Parameters', path: '/material-stock/overheads', icon: '⚖️' }
+      ]
+    },
+    { 
+      key: 'warehouse', 
+      label: 'Warehouse', 
+      icon: '🏭',
+      path: '/warehouse', 
+      visible: isMenuItemVisible('materials'), 
+      isDropdown: true,
+      priority: 5,
+      dropdownItems: [
+        { label: 'Stock Dashboard', path: '/material-stock/stock-dashboard', icon: '📊' },
+        { label: 'SKU Management', path: '/material-stock/sku-management', icon: '📦' },
+        { label: 'Transaction History', path: '/material-stock/transaction-history', icon: '📋' }
       ]
     },
     { 
@@ -203,7 +216,7 @@ const Header = () => {
       path: '/crm', 
       visible: isMenuItemVisible('crm'), 
       isDropdown: true,
-      priority: 5,
+      priority: 6,
       dropdownItems: [
         { label: 'Lead Registration', path: '/crm/lead-registration', icon: '✏️' },
         { label: 'Lead Pipeline', path: '/crm/lead-management', icon: '🔄' },
@@ -217,7 +230,7 @@ const Header = () => {
       path: '/analytics', 
       visible: isMenuItemVisible('loyaltyProgram') || isMenuItemVisible('transactions'), 
       isDropdown: true,
-      priority: 6,
+      priority: 7,
       dropdownItems: [
         { label: 'Loyalty Dashboard', path: '/loyalty-dashboard', icon: '⭐', visible: isMenuItemVisible('loyaltyProgram') },
         { label: 'Transactions', path: '/transactions', icon: '💳', visible: isMenuItemVisible('transactions') }
