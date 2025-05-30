@@ -156,13 +156,6 @@ const OrderAndPaper = ({
     }
   };
 
-  // Prevent scroll wheel from changing quantity value
-  const handleQuantityWheel = (e) => {
-    // Prevent the default scroll behavior when the quantity input is focused
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
   const handleDieSelect = (dieData) => {
     console.log("OrderAndPaper receiving die data:", dieData);
     
@@ -315,7 +308,7 @@ const OrderAndPaper = ({
                 value={orderAndPaper.quantity || ""}
                 onChange={handleChange}
                 ref={quantityInputRef}
-                onWheel={handleQuantityWheel}
+                onWheel={(e) => e.target.blur()}
                 className={`border rounded-md p-2 w-full text-sm no-spinner ${
                   validationErrors.quantity ? "border-red-500" : ""
                 }`}

@@ -63,6 +63,41 @@ const EstimatesPage = () => {
   // State to show all versions of a client simultaneously
   const [showAllVersions, setShowAllVersions] = useState(false);
 
+  // ADDED: Helper function to safely parse dates and provide fallbacks
+  const getEstimateTimestamp = (estimate) => {
+    // Try to use updatedAt first (most recent activity), then createdAt, then fallback
+    const updatedAt = estimate.updatedAt;
+    const createdAt = estimate.createdAt;
+    
+    if (updatedAt) {
+      const updatedDate = new Date(updatedAt);
+      if (!isNaN(updatedDate.getTime())) {
+        return updatedDate.getTime();
+      }
+    }
+    
+    if (createdAt) {
+      const createdDate = new Date(createdAt);
+      if (!isNaN(createdDate.getTime())) {
+        return createdDate.getTime();
+      }
+    }
+    
+    // Fallback to current time if no valid dates found
+    return new Date().getTime();
+  };
+
+  // ADDED: Sort estimates by creation/update time (newest first)
+  const sortEstimatesByTimestamp = (estimates) => {
+    return [...estimates].sort((a, b) => {
+      const timestampA = getEstimateTimestamp(a);
+      const timestampB = getEstimateTimestamp(b);
+      
+      // Sort in descending order (newest first)
+      return timestampB - timestampA;
+    });
+  };
+
   // Fetch B2B client data if applicable
   useEffect(() => {
     const fetchB2BClientData = async () => {
@@ -157,7 +192,7 @@ const EstimatesPage = () => {
     }
   }, [isB2BClient, linkedClientId]);
 
-  // Process estimates into client groups
+  // UPDATED: Process estimates into client groups with proper ordering
   const clientGroups = React.useMemo(() => {
     // Apply search filter
     let filtered = [...allEstimates];
@@ -186,7 +221,7 @@ const EstimatesPage = () => {
     }
     
     // Group by client and filter by active status unless showInactiveClients is true
-    return filtered.reduce((acc, estimate) => {
+    const groups = filtered.reduce((acc, estimate) => {
       const clientId = estimate.clientId || "unknown";
       const clientName = estimate.clientInfo?.name || estimate.clientName || "Unknown Client";
       
@@ -230,6 +265,20 @@ const EstimatesPage = () => {
       
       return acc;
     }, {});
+
+    // ADDED: Sort estimates within each client group and version
+    Object.values(groups).forEach(client => {
+      // Sort all estimates for this client
+      client.estimates = sortEstimatesByTimestamp(client.estimates);
+      
+      // Sort estimates within each version
+      client.versions.forEach((versionData, versionId) => {
+        versionData.estimates = sortEstimatesByTimestamp(versionData.estimates);
+        client.versions.set(versionId, versionData);
+      });
+    });
+
+    return groups;
   }, [allEstimates, searchQuery, filterStatus, activeClientsMap, showInactiveClients, isB2BClient, linkedClientId]);
 
   // UPDATED: Get a count of selected valid estimates (not canceled or already moved)
@@ -346,7 +395,7 @@ const EstimatesPage = () => {
     setIsEditModalOpen(true);
   };
 
-  // Handle save edited estimate
+  // UPDATED: Handle save edited estimate with proper timestamp update
   const handleSaveEditedEstimate = async (editedEstimate) => {
     try {
       // Ensure we have an estimate object to work with
@@ -365,6 +414,9 @@ const EstimatesPage = () => {
       
       // Verify projectName exists and is properly set
       console.log("Project name before saving:", editedEstimate.projectName);
+      
+      // ADDED: Ensure updatedAt timestamp is set to current time
+      editedEstimate.updatedAt = new Date().toISOString();
       
       // Update the estimate in Firestore
       const estimateRef = doc(db, "estimates", editedEstimate.id);
@@ -397,18 +449,20 @@ const EstimatesPage = () => {
       if (isB2B) {
         // Move to escrow instead of orders
         const estimateRef = doc(db, "estimates", estimate.id);
-        await updateDoc(estimateRef, { 
+        const updateData = { 
           inEscrow: true,
           movedToEscrow: true,
-          movedToEscrowAt: new Date().toISOString()
-        });
+          movedToEscrowAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString() // ADDED: Update timestamp
+        };
+        
+        await updateDoc(estimateRef, updateData);
         
         // Update local state
         setAllEstimates(prev => 
           prev.map(est => est.id === estimate.id ? { 
             ...est, 
-            inEscrow: true,
-            movedToEscrow: true
+            ...updateData
           } : est)
         );
         
@@ -428,11 +482,16 @@ const EstimatesPage = () => {
 
         // Update the estimate
         const estimateRef = doc(db, "estimates", estimate.id);
-        await updateDoc(estimateRef, { movedToOrders: true });
+        const updateData = { 
+          movedToOrders: true,
+          updatedAt: new Date().toISOString() // ADDED: Update timestamp
+        };
+        
+        await updateDoc(estimateRef, updateData);
 
         // Update local state
         setAllEstimates(prev => 
-          prev.map(est => est.id === estimate.id ? { ...est, movedToOrders: true } : est)
+          prev.map(est => est.id === estimate.id ? { ...est, ...updateData } : est)
         );
         
         console.log("Successfully moved estimate to orders");
@@ -471,6 +530,7 @@ const EstimatesPage = () => {
       // Create counters for tracking operations
       let directMoveCount = 0;
       let escrowMoveCount = 0;
+      const currentTimestamp = new Date().toISOString();
       
       // Process each estimate one by one, handling B2B and direct clients differently
       for (const estimate of estimatesToMove) {
@@ -485,7 +545,8 @@ const EstimatesPage = () => {
             await updateDoc(estimateRef, { 
               inEscrow: true,
               movedToEscrow: true,
-              movedToEscrowAt: new Date().toISOString()
+              movedToEscrowAt: currentTimestamp,
+              updatedAt: currentTimestamp // ADDED: Update timestamp
             });
             
             escrowMoveCount++;
@@ -498,7 +559,10 @@ const EstimatesPage = () => {
             await addDoc(collection(db, "orders"), normalizedEstimate);
             
             const estimateRef = doc(db, "estimates", estimate.id);
-            await updateDoc(estimateRef, { movedToOrders: true });
+            await updateDoc(estimateRef, { 
+              movedToOrders: true,
+              updatedAt: currentTimestamp // ADDED: Update timestamp
+            });
             
             directMoveCount++;
           }
@@ -515,9 +579,18 @@ const EstimatesPage = () => {
                           (est.clientInfo?.clientType || "").toUpperCase() === "B2B";
             
             if (isB2B) {
-              return { ...est, inEscrow: true, movedToEscrow: true };
+              return { 
+                ...est, 
+                inEscrow: true, 
+                movedToEscrow: true,
+                updatedAt: currentTimestamp
+              };
             } else {
-              return { ...est, movedToOrders: true };
+              return { 
+                ...est, 
+                movedToOrders: true,
+                updatedAt: currentTimestamp
+              };
             }
           }
           return est;
@@ -539,7 +612,7 @@ const EstimatesPage = () => {
     }
   };
 
-  // Handle cancel estimate
+  // UPDATED: Handle cancel estimate with timestamp update
   const handleCancelEstimate = async (estimate) => {
     try {
       // Check if estimate is in escrow
@@ -549,11 +622,16 @@ const EstimatesPage = () => {
       }
       
       const estimateRef = doc(db, "estimates", estimate.id);
-      await updateDoc(estimateRef, { isCanceled: true });
+      const updateData = { 
+        isCanceled: true,
+        updatedAt: new Date().toISOString() // ADDED: Update timestamp
+      };
+      
+      await updateDoc(estimateRef, updateData);
       
       // Update local state
       setAllEstimates(prev => 
-        prev.map(est => est.id === estimate.id ? { ...est, isCanceled: true } : est)
+        prev.map(est => est.id === estimate.id ? { ...est, ...updateData } : est)
       );
     } catch (error) {
       console.error("Error cancelling estimate:", error);
@@ -714,6 +792,7 @@ const EstimatesPage = () => {
     }
   };
 
+  // UPDATED: Handle duplicate estimate with proper timestamps
   const handleDuplicateEstimate = async (estimate) => {
     try {
       // Create a new object from the original estimate
@@ -724,9 +803,10 @@ const EstimatesPage = () => {
       // Remove the id completely instead of setting it to undefined
       delete duplicatedEstimate.id;
       
-      // Update timestamps and reset flags
-      duplicatedEstimate.createdAt = new Date().toISOString();
-      duplicatedEstimate.updatedAt = new Date().toISOString();
+      // UPDATED: Update timestamps and reset flags
+      const currentTimestamp = new Date().toISOString();
+      duplicatedEstimate.createdAt = currentTimestamp;
+      duplicatedEstimate.updatedAt = currentTimestamp;
       duplicatedEstimate.movedToOrders = false;
       duplicatedEstimate.isCanceled = false;
       duplicatedEstimate.inEscrow = false;
@@ -1072,7 +1152,8 @@ const EstimatesPage = () => {
                       <div className="flex justify-between items-center mb-4">
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium text-gray-800">
-                            Version {selectedVersions[client.id]} Estimates
+                            Version {selectedVersions[client.id]} Estimates 
+                            <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
                           </h3>
                           
                           {/* Multi-select toggle */}
@@ -1194,6 +1275,7 @@ const EstimatesPage = () => {
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium text-gray-800">
                             All Versions - {client.totalEstimates} Estimates
+                            <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
                           </h3>
                           
                           {/* Multi-select toggle */}
@@ -1262,6 +1344,7 @@ const EstimatesPage = () => {
                               <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">
                                 {versionData.count} Estimate{versionData.count !== 1 ? 's' : ''}
                               </span>
+                              <span className="ml-2 text-xs text-gray-500">(ordered by latest activity)</span>
                             </div>
                             
                             <div className="flex items-center gap-2">

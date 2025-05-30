@@ -1,3 +1,4 @@
+// ClientManagement.jsx
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
@@ -11,6 +12,7 @@ import Modal from "../Shared/Modal";
 import ConfirmationModal from "../Shared/ConfirmationModal";
 import DeleteConfirmationModal from "../Shared/DeleteConfirmationModal";
 import { CLIENT_FIELDS } from "../../constants/entityFields";
+import { generateClientCode, checkClientCodeExists } from "../../services/clientCodeService";
 
 const ClientManagement = () => {
   const [clients, setClients] = useState([]);
@@ -144,56 +146,6 @@ const ClientManagement = () => {
   const handleAdminPasswordCancel = () => {
     setShowPasswordModal(false);
     setPendingClient(null);
-  };
-
-  const checkClientCodeExists = async (code) => {
-    const clientsCollection = collection(db, "clients");
-    const q = query(clientsCollection, where("clientCode", "==", code));
-    const querySnapshot = await getDocs(q);
-    return !querySnapshot.empty;
-  };
-
-  const generateClientCode = async (clientName) => {
-    try {
-      // Clean the name: remove spaces, special characters, and take first 4 letters
-      const prefix = clientName
-        .replace(/[^a-zA-Z0-9]/g, '')
-        .substring(0, 4)
-        .toUpperCase();
-      
-      // Get all clients with this prefix to find the highest number
-      const clientsCollection = collection(db, "clients");
-      const querySnapshot = await getDocs(clientsCollection);
-      
-      let highestNum = 0;
-      const pattern = new RegExp(`^${prefix}(\\d+)$`);
-      
-      // Look for existing codes with the same prefix
-      querySnapshot.forEach(doc => {
-        const clientData = doc.data();
-        if (clientData.clientCode) {
-          const match = clientData.clientCode.match(pattern);
-          if (match && match[1]) {
-            const num = parseInt(match[1]);
-            if (!isNaN(num) && num > highestNum) {
-              highestNum = num;
-            }
-          }
-        }
-      });
-      
-      // Generate new code with incremented number
-      const nextNum = highestNum + 1;
-      // Pad to ensure at least 3 digits
-      const paddedNum = nextNum.toString().padStart(3, '0');
-      
-      return `${prefix}${paddedNum}`;
-    } catch (error) {
-      console.error("Error generating client code:", error);
-      // Fallback to a simple random code if there's an error
-      const randomNum = Math.floor(Math.random() * 900) + 100;
-      return `${clientName.substring(0, 4).toUpperCase()}${randomNum}`;
-    }
   };
 
   const handleAddClick = () => {

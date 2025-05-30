@@ -1,3 +1,4 @@
+// leadConversionService.js
 import { 
   doc, 
   getDoc, 
@@ -46,9 +47,10 @@ export const convertLeadToClient = async (leadId, clientData = {}) => {
     
     // Prepare client data from lead
     const newClient = {
-      // Map lead fields to client fields
-      name: lead.company || lead.name,
-      contactPerson: lead.name,
+      // IMPORTANT: Use lead.name as the client name, NOT company
+      name: lead.name,
+      contactPerson: lead.name, // The lead name is also the contact person
+      company: lead.company || "", // Company is a separate field if available
       phone: lead.phone,
       email: lead.email,
       
@@ -170,25 +172,11 @@ export const checkLeadConversionReadiness = async (leadId) => {
       console.warn("Error fetching discussions during readiness check, continuing with empty list:", discussionError);
     }
     
-    // Check if client code already exists - this prevents duplication
-    let clientCodeExists = false;
-    if (clientData && clientData.clientCode) {
-      try {
-        const clientsRef = collection(db, "clients");
-        const codeQuery = query(clientsRef, where("clientCode", "==", clientData.clientCode));
-        const codeSnapshot = await getDocs(codeQuery);
-        clientCodeExists = !codeSnapshot.empty;
-      } catch (error) {
-        console.warn("Error checking client code uniqueness:", error);
-      }
-    }
-    
     // Check various criteria
     const isReady = {
       status: lead.status === "qualified" || lead.status === "negotiation" || lead.status === "converted",
       contactInfo: !!lead.phone && !!lead.email,
       hasDiscussions: discussions.length > 0,
-      uniqueCode: !clientCodeExists, 
       overall: false,
       reasons: []
     };
@@ -206,12 +194,8 @@ export const checkLeadConversionReadiness = async (leadId) => {
       isReady.reasons.push("No discussions recorded with this lead");
     }
     
-    if (!isReady.uniqueCode) {
-      isReady.reasons.push("The client code is already in use");
-    }
-    
     // Overall readiness - if at least contact info is available, proceed
-    isReady.overall = isReady.contactInfo && isReady.uniqueCode;
+    isReady.overall = isReady.contactInfo;
     
     return isReady;
   } catch (error) {
@@ -221,25 +205,5 @@ export const checkLeadConversionReadiness = async (leadId) => {
       overall: true,
       reasons: ["Could not fully check conversion readiness, but you can still proceed."]
     };
-  }
-};
-
-/**
- * Check if a client code is already in use
- * @param {string} clientCode - The client code to check
- * @returns {Promise<boolean>} - True if code exists, false otherwise
- */
-export const checkClientCodeExists = async (clientCode) => {
-  try {
-    if (!clientCode) return false;
-    
-    const clientsRef = collection(db, "clients");
-    const codeQuery = query(clientsRef, where("clientCode", "==", clientCode));
-    const codeSnapshot = await getDocs(codeQuery);
-    
-    return !codeSnapshot.empty;
-  } catch (error) {
-    console.error("Error checking client code existence:", error);
-    return false; // Default to false on error
   }
 };

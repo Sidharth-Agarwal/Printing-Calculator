@@ -508,19 +508,6 @@ const ReviewAndSubmit = ({
               )}
             </div>
           )}
-
-          {/* Die Cutting Section */}
-          {hasDieCutting && localCalculations.dieCuttingCostPerCard && (
-            <div className="space-y-1 border-b pb-2 mb-2">
-              <CostItem label="Die Cutting" value={localCalculations.dieCuttingCostPerCard} isTotal />
-              {localCalculations.dieCuttingMRCostPerCard && (
-                <CostItem label="Die Cutting MR Cost" value={localCalculations.dieCuttingMRCostPerCard} isSubItem />
-              )}
-              {localCalculations.dieCuttingImpressionCostPerCard && (
-                <CostItem label="Die Cutting Impression" value={localCalculations.dieCuttingImpressionCostPerCard} isSubItem />
-              )}
-            </div>
-          )}
           
           {/* Post Die Cutting Section */}
           {hasPostDC && localCalculations.postDCCostPerCard && (

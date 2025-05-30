@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { performCompleteCalculations, recalculateTotals } from "./Services/Calculations/calculationsService";
+import { fetchGSTRate } from "./Services/Calculations/Calculators/finalCalculator/gstCalculator";
 import { ChevronDown, ChevronUp } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
 
@@ -367,6 +368,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [hsnRates, setHsnRates] = useState([]); // Store HSN rates from standard_rates
   const [formChangeDebug, setFormChangeDebug] = useState({}); // Track form changes for debugging
   
+  // ⭐ NEW: GST Rate Caching States
+  const [cachedGSTRate, setCachedGSTRate] = useState(null);
+  const [currentJobTypeForGST, setCurrentJobTypeForGST] = useState(null);
+  const [gstError, setGstError] = useState(null);
+  
   // Success notification state
   const [showSuccessNotification, setShowSuccessNotification] = useState(false);
   
@@ -383,6 +389,53 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [directInitializationDone, setDirectInitializationDone] = useState(false);
 
   const formRef = useRef(null);
+  
+  // ⭐ NEW: GST Rate Caching Effect
+  useEffect(() => {
+    const cacheGSTRate = async () => {
+      const jobType = state.orderAndPaper.jobType || "Card";
+      
+      // Only fetch if job type changed
+      if (jobType !== currentJobTypeForGST) {
+        try {
+          setGstError(null); // Clear any previous errors
+          console.log(`Fetching GST rate for job type: ${jobType}`);
+          const gstRate = await fetchGSTRate(jobType);
+          setCachedGSTRate(gstRate);
+          setCurrentJobTypeForGST(jobType);
+          console.log(`Cached GST rate for ${jobType}: ${gstRate}%`);
+          
+          // Automatically recalculate with new GST rate if we have existing calculations
+          if (calculations && !calculations.error) {
+            console.log("Auto-recalculating with new GST rate...");
+            const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
+              ? parseFloat(state.misc.miscCharge) 
+              : null;
+            
+            const result = await performCompleteCalculations(
+              state,
+              miscCharge,
+              markupPercentage,
+              selectedMarkupType,
+              gstRate // Use the new GST rate immediately
+            );
+            
+            if (result.error) {
+              console.error("Error during auto-recalculation:", result.error);
+            } else {
+              setCalculations(result);
+            }
+          }
+        } catch (error) {
+          console.error("Error caching GST rate:", error);
+          setGstError(`Failed to fetch GST rate for ${jobType}: ${error.message}`);
+          setCachedGSTRate(null); // Set to null instead of default
+        }
+      }
+    };
+
+    cacheGSTRate();
+  }, [state.orderAndPaper.jobType, currentJobTypeForGST, markupPercentage, selectedMarkupType, calculations]);
   
   // Fetch HSN codes from standard_rates collection
   useEffect(() => {
@@ -1234,7 +1287,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
-  // Function to handle markup changes from ReviewAndSubmit component
+  // ⭐ UPDATED: Function to handle markup changes from ReviewAndSubmit component
   const handleMarkupChange = async (markupType, markupPercentage) => {
     // For B2B clients, only allow MARKUP B2B MERCH to be selected
     if (isB2BClient && markupType !== "MARKUP B2B MERCH") {
@@ -1256,7 +1309,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     setShowSuccessNotification(false);
   };
 
-  // Function to recalculate totals when markup changes
+  // ⭐ UPDATED: Function to recalculate totals when markup changes (with cached GST)
   const recalculateWithMarkup = async (markupType, markupPercentage) => {
     console.log("Recalculating with new markup:", markupType, markupPercentage);
     setIsCalculating(true);
@@ -1264,17 +1317,20 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       // Get the misc charge from the form state if available and misc is enabled
       const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
         ? parseFloat(state.misc.miscCharge) 
-        : null; // Pass null to let the calculator fetch from DB
-      
+        : null;
+
       // Use the recalculateTotals function from calculationsService if we already have base calculations
       if (calculations && !calculations.error) {
-        // Call recalculateTotals with the existing calculations, updated markup info, and quantity
+        // Call recalculateTotals with the existing calculations, updated markup info, quantity, and cached GST rate
         const result = await recalculateTotals(
           calculations,
           miscCharge, // Use the custom misc charge if available
           markupPercentage,
           parseInt(state.orderAndPaper?.quantity, 10) || 0,
-          markupType
+          markupType,
+          state.orderAndPaper?.jobType || "Card",
+          null, // clientLoyaltyTier
+          cachedGSTRate // ⭐ Pass cached GST rate
         );
 
         if (result.error) {
@@ -1289,7 +1345,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           state,
           miscCharge, // Use the custom misc charge if available
           markupPercentage,
-          markupType
+          markupType,
+          cachedGSTRate // ⭐ Pass cached GST rate
         );
         
         if (result.error) {
@@ -1305,7 +1362,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
-  // Enhanced calculation function using the centralized calculation service
+  // ⭐ UPDATED: Enhanced calculation function using the centralized calculation service (with cached GST)
   const performCalculations = async () => {
     // Check if client and essential fields are filled
     const { projectName, quantity, paperName, dieCode, dieSize } = state.orderAndPaper;
@@ -1323,12 +1380,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         ? parseFloat(state.misc.miscCharge) 
         : null; // Pass null to let the calculator fetch from DB
       
-      // Pass the current markup values and misc charge to the calculation service
+      // Pass the current markup values, misc charge, and cached GST rate to the calculation service
       const result = await performCompleteCalculations(
         state,
         miscCharge, // Use the custom misc charge if available
         markupPercentage,
-        selectedMarkupType
+        selectedMarkupType,
+        cachedGSTRate // ⭐ Pass cached GST rate
       );
       
       if (result.error) {
@@ -1339,6 +1397,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           markupType: result.markupType,
           markupPercentage: result.markupPercentage,
           markupAmount: result.markupAmount,
+          gstRate: result.gstRate,
           miscCharge: miscCharge ? `Custom: ${miscCharge}` : "From DB"
         });
         
@@ -1378,7 +1437,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     console.log("Enhanced calculations from ReviewAndSubmit:", {
       markupType: enhancedCalculations?.markupType,
       markupPercentage: enhancedCalculations?.markupPercentage,
-      markupAmount: enhancedCalculations?.markupAmount
+      markupAmount: enhancedCalculations?.markupAmount,
+      gstRate: enhancedCalculations?.gstRate
     });
     
     // Store the enhanced calculations to use in handleSubmit
@@ -1658,6 +1718,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     // Reset markup to defaults
     setSelectedMarkupType(defaultMarkup.type);
     setMarkupPercentage(defaultMarkup.percentage);
+    
+    // Reset GST cache
+    setCachedGSTRate(null);
+    setCurrentJobTypeForGST(null);
+    setGstError(null);
     
     // Reset direct initialization flag
     setDirectInitializationDone(false);
@@ -2504,6 +2569,18 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </button>
           </div>
         </div>
+
+        {/* ⭐ NEW: GST Error Display */}
+        {gstError && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+            <p className="text-red-600 text-sm">
+              <strong>GST Configuration Error:</strong> {gstError}
+            </p>
+            <p className="text-red-500 text-xs mt-1">
+              Please ensure GST rates are configured in the database for all job types.
+            </p>
+          </div>
+        )}
 
         {/* Success Notification Component */}
         <SuccessNotification

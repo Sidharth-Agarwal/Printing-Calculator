@@ -57,6 +57,41 @@ const EscrowDashboard = () => {
   const [redirectTimer, setRedirectTimer] = useState(5);
   const [redirectTimerId, setRedirectTimerId] = useState(null);
 
+  // ADDED: Helper function to safely parse dates and provide fallbacks
+  const getEstimateTimestamp = (estimate) => {
+    // Try to use updatedAt first (most recent activity), then createdAt, then fallback
+    const updatedAt = estimate.updatedAt;
+    const createdAt = estimate.createdAt;
+    
+    if (updatedAt) {
+      const updatedDate = new Date(updatedAt);
+      if (!isNaN(updatedDate.getTime())) {
+        return updatedDate.getTime();
+      }
+    }
+    
+    if (createdAt) {
+      const createdDate = new Date(createdAt);
+      if (!isNaN(createdDate.getTime())) {
+        return createdDate.getTime();
+      }
+    }
+    
+    // Fallback to current time if no valid dates found
+    return new Date().getTime();
+  };
+
+  // ADDED: Sort estimates by creation/update time (newest first)
+  const sortEstimatesByTimestamp = (estimates) => {
+    return [...estimates].sort((a, b) => {
+      const timestampA = getEstimateTimestamp(a);
+      const timestampB = getEstimateTimestamp(b);
+      
+      // Sort in descending order (newest first)
+      return timestampB - timestampA;
+    });
+  };
+
   // Handle timer for auto-dismiss without redirecting
   useEffect(() => {
     // If loyalty notification is shown, start the timer
@@ -147,7 +182,7 @@ const EscrowDashboard = () => {
     fetchEscrowEstimates();
   }, []);
 
-  // Process estimates into client groups
+  // UPDATED: Process estimates into client groups with proper ordering
   const clientGroups = React.useMemo(() => {
     // Apply search filter
     let filtered = [...escrowEstimates];
@@ -174,7 +209,7 @@ const EscrowDashboard = () => {
     }
     
     // Group by client
-    return filtered.reduce((acc, estimate) => {
+    const groups = filtered.reduce((acc, estimate) => {
       const clientId = estimate.clientId || "unknown";
       const clientName = estimate.clientInfo?.name || estimate.clientName || "Unknown Client";
       
@@ -213,6 +248,20 @@ const EscrowDashboard = () => {
       
       return acc;
     }, {});
+
+    // ADDED: Sort estimates within each client group and version
+    Object.values(groups).forEach(client => {
+      // Sort all estimates for this client
+      client.estimates = sortEstimatesByTimestamp(client.estimates);
+      
+      // Sort estimates within each version
+      client.versions.forEach((versionData, versionId) => {
+        versionData.estimates = sortEstimatesByTimestamp(versionData.estimates);
+        client.versions.set(versionId, versionData);
+      });
+    });
+
+    return groups;
   }, [escrowEstimates, searchQuery, filterStatus, activeClientsMap]);
 
   // Get a count of selected valid estimates (not approved or rejected)
@@ -316,10 +365,13 @@ const EscrowDashboard = () => {
     setIsApprovalModalOpen(true);
   };
 
-  // Process approval for a single estimate directly from card
+  // UPDATED: Process approval for a single estimate directly from card with timestamp
   const processApproveEstimate = async (estimate, notes = "") => {
     try {
       setIsProcessingApproval(true);
+      
+      // ADDED: Current timestamp for all updates
+      const currentTimestamp = new Date().toISOString();
       
       // Normalize the data to ensure proper structure
       const normalizedEstimate = normalizeDataForOrders(estimate);
@@ -328,8 +380,12 @@ const EscrowDashboard = () => {
       normalizedEstimate.stage = "Not started yet";
       normalizedEstimate.status = "In Progress";
       normalizedEstimate.approvalNotes = notes;
-      normalizedEstimate.approvedAt = new Date().toISOString();
+      normalizedEstimate.approvedAt = currentTimestamp;
       normalizedEstimate.approvedBy = currentUser.uid;
+      
+      // ADDED: Ensure proper timestamp handling
+      normalizedEstimate.createdAt = estimate.createdAt || currentTimestamp;
+      normalizedEstimate.updatedAt = currentTimestamp;
       
       // Get the client ID
       const clientId = normalizedEstimate.clientId;
@@ -401,25 +457,25 @@ const EscrowDashboard = () => {
       // Add to orders collection
       await addDoc(collection(db, "orders"), normalizedEstimate);
 
-      // Update the estimate in escrow
+      // UPDATED: Update the estimate in escrow with proper timestamps
       const estimateRef = doc(db, "estimates", estimate.id);
-      await updateDoc(estimateRef, { 
+      const updateData = { 
         isApproved: true,
         isRejected: false,
         movedToOrders: true,
         approvalNotes: notes,
-        approvedAt: new Date().toISOString(),
-        approvedBy: currentUser.uid
-      });
+        approvedAt: currentTimestamp,
+        approvedBy: currentUser.uid,
+        updatedAt: currentTimestamp // ADDED: Update timestamp for ordering
+      };
+      
+      await updateDoc(estimateRef, updateData);
 
       // Update local state
       setEscrowEstimates(prev => 
         prev.map(est => est.id === estimate.id ? { 
           ...est, 
-          isApproved: true,
-          isRejected: false,
-          movedToOrders: true,
-          approvalNotes: notes
+          ...updateData
         } : est)
       );
       
@@ -457,28 +513,32 @@ const EscrowDashboard = () => {
     }
   };
 
-  // Handle rejection of an estimate directly from card
+  // UPDATED: Handle rejection of an estimate directly from card with timestamp
   const processRejectEstimate = async (estimate, notes) => {
     try {
       setIsProcessingApproval(true);
       
+      // ADDED: Current timestamp for updates
+      const currentTimestamp = new Date().toISOString();
+      
       // Update the estimate in escrow
       const estimateRef = doc(db, "estimates", estimate.id);
-      await updateDoc(estimateRef, { 
+      const updateData = { 
         isRejected: true,
         isApproved: false,
         rejectionNotes: notes,
-        rejectedAt: new Date().toISOString(),
-        rejectedBy: currentUser.uid
-      });
+        rejectedAt: currentTimestamp,
+        rejectedBy: currentUser.uid,
+        updatedAt: currentTimestamp // ADDED: Update timestamp for ordering
+      };
+      
+      await updateDoc(estimateRef, updateData);
 
       // Update local state
       setEscrowEstimates(prev => 
         prev.map(est => est.id === estimate.id ? { 
           ...est, 
-          isRejected: true,
-          isApproved: false,
-          rejectionNotes: notes
+          ...updateData
         } : est)
       );
       
@@ -498,7 +558,7 @@ const EscrowDashboard = () => {
     }
   };
 
-  // Handle approving multiple estimates
+  // UPDATED: Handle approving multiple estimates with proper timestamps
   const handleApproveMultiple = async () => {
     try {
       setIsApprovingMultiple(true);
@@ -555,7 +615,7 @@ const EscrowDashboard = () => {
     }
   };
 
-  // Handle rejection of multiple estimates
+  // UPDATED: Handle rejection of multiple estimates with proper timestamps
   const handleRejectMultiple = async () => {
     try {
       setIsApprovingMultiple(true);
@@ -843,6 +903,7 @@ const EscrowDashboard = () => {
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium text-gray-800">
                             Version {selectedVersions[client.id]} Estimates
+                            <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
                           </h3>
                           
                           {/* Multi-select toggle */}
@@ -976,6 +1037,7 @@ const EscrowDashboard = () => {
                         <div className="flex items-center gap-2">
                           <h3 className="font-medium text-gray-800">
                             All Versions - {client.totalEstimates} Estimates
+                            <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
                           </h3>
                           
                           {/* Multi-select toggle */}
@@ -1071,6 +1133,7 @@ const EscrowDashboard = () => {
                               <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">
                                 {versionData.count} Estimate{versionData.count !== 1 ? 's' : ''}
                               </span>
+                              <span className="ml-2 text-xs text-gray-500">(ordered by latest activity)</span>
                             </div>
                             
                             <div className="flex items-center gap-2">

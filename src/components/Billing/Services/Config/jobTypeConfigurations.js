@@ -1,7 +1,7 @@
 export const jobTypeConfigurations = {
     "Card": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["QC", "PACKING"]
@@ -10,7 +10,7 @@ export const jobTypeConfigurations = {
     },
     "Liner": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["QC", "PACKING"]
@@ -19,7 +19,7 @@ export const jobTypeConfigurations = {
     },
     "Biz Card": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["DC", "PRE DC", "QC", "PACKING"]
@@ -28,7 +28,7 @@ export const jobTypeConfigurations = {
     },
     "Envelope": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "FOLD & PASTE", "QC", "PACKING", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "QC", "PACKING", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["FOLD & PASTE", "DC", "QC", "PACKING"]
@@ -37,7 +37,7 @@ export const jobTypeConfigurations = {
     },
     "Seal": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "FOLD & PASTE", "QC", "PACKING", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "QC", "PACKING", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["FOLD & PASTE", "DC", "QC", "PACKING"]
@@ -46,7 +46,7 @@ export const jobTypeConfigurations = {
     },
     "Magnet": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "FOLD & PASTE", "MAGNET", "QC", "PACKING", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "MAGNET", "QC", "PACKING", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["FOLD & PASTE", "DC", "QC", "PACKING", "MAGNET"]
@@ -55,7 +55,7 @@ export const jobTypeConfigurations = {
     },
     "Packaging": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "FOLD & PASTE", "DUPLEX", "QC", "PACKING", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "DUPLEX", "QC", "PACKING", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["FOLD & PASTE", "DC", "QC", "PACKING"]
@@ -64,7 +64,7 @@ export const jobTypeConfigurations = {
     },
     "Notebook": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN", "NOTEBOOK"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "POST DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "POST DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
         defaultActiveServices: {
             production: ["NOTEBOOK"],
             postProduction: ["QC", "PACKING"]
@@ -73,7 +73,7 @@ export const jobTypeConfigurations = {
     },
     "Custom": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "DST PASTE", "POST DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "POST DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["QC", "PACKING"]

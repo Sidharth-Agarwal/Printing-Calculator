@@ -71,6 +71,26 @@ const LeadManagementPage = () => {
     return lead.status === "converted" && lead.movedToClients;
   };
   
+  // NEW: Handle lead updates from inline editing
+  const handleLeadUpdate = () => {
+    // Refresh the leads list after inline updates
+    if (refreshLeads) {
+      refreshLeads();
+    }
+    
+    // If a lead is currently being viewed, refresh that lead's data
+    if (viewingLead) {
+      getLeadById(viewingLead.id).then(updatedLead => {
+        setViewingLead(updatedLead);
+      }).catch(error => {
+        console.error("Error refreshing viewed lead:", error);
+      });
+    }
+    
+    // Show a subtle notification for inline updates
+    showNotification("Lead updated successfully", "success");
+  };
+  
   // Handle viewing a lead
   const handleView = (lead) => {
     setViewingLead(lead);
@@ -499,6 +519,7 @@ const LeadManagementPage = () => {
           loading={isLoadingLeads}
           fields={LEAD_PIPELINE_FIELDS} // Use the pipeline fields for list view
           showMovedToClients={showMovedToClients} // Pass the toggle state
+          onLeadUpdate={handleLeadUpdate} // NEW: Add this prop for inline editing
         />
       )}
       
