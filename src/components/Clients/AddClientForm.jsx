@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { CLIENT_FIELDS } from "../../constants/entityFields";
 
 const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, generateClientCode }) => {
   const [formData, setFormData] = useState({
@@ -104,10 +105,18 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
   };
 
   const handleChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
     
     // Don't allow changing client code manually
     if (name === "clientCode") {
+      return;
+    }
+    
+    if (type === "checkbox") {
+      setFormData(prev => ({
+        ...prev,
+        [name]: checked
+      }));
       return;
     }
     
@@ -131,12 +140,6 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
           },
         }));
       }
-    } else if (name === "isActive") {
-      // Handle checkbox for isActive status
-      setFormData((prev) => ({
-        ...prev,
-        [name]: e.target.checked,
-      }));
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -176,115 +179,103 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
     setSubmitLoading(false);
   };
 
+  // Render a field based on its type and configuration
+  const renderField = (field) => {
+    const { name, label, type, required, readOnly, options } = field;
+    
+    switch (type) {
+      case "select":
+        return (
+          <div key={name} className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            <select
+              name={name}
+              value={name.includes(".") 
+                ? formData[name.split(".")[0]][name.split(".")[1]] 
+                : formData[name]}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              required={required}
+              disabled={readOnly}
+            >
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+        
+      case "textarea":
+        return (
+          <div key={name} className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            <textarea
+              name={name}
+              value={formData[name]}
+              onChange={handleChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              rows="4"
+              required={required}
+            ></textarea>
+          </div>
+        );
+        
+      case "checkbox":
+        return (
+          <div key={name} className="mb-3 flex items-center">
+            <input
+              id={name}
+              name={name}
+              type="checkbox"
+              checked={formData[name]}
+              onChange={handleChange}
+              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+            />
+            <div className="ml-2">
+              <label htmlFor={name} className="text-sm font-medium text-gray-700">
+                {label}
+              </label>
+            </div>
+          </div>
+        );
+        
+      default: // text, email, tel, number, etc.
+        return (
+          <div key={name} className="mb-3">
+            <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+            <input
+              type={type}
+              name={name}
+              value={name.includes(".") 
+                ? formData[name.split(".")[0]][name.split(".")[1]] 
+                : formData[name]}
+              onChange={handleChange}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-md ${
+                readOnly ? "bg-gray-100 cursor-not-allowed" : "focus:outline-none focus:ring-1 focus:ring-red-500"
+              }`}
+              placeholder={`Enter ${label.toLowerCase()}`}
+              required={required}
+              readOnly={readOnly}
+            />
+            {name === "clientCode" && (
+              <p className="mt-1 text-xs text-gray-500">
+                Automatically generated based on client name
+              </p>
+            )}
+          </div>
+        );
+    }
+  };
+
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded">
       {/* Basic Information */}
       <div className="mb-6">
         <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Basic Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client Code</label>
-            <input
-              type="text"
-              name="clientCode"
-              value={formData.clientCode}
-              className="w-full px-3 py-2 border border-gray-300 bg-gray-100 rounded-md cursor-not-allowed"
-              readOnly
-              placeholder="Auto-generated from client name"
-            />
-            <p className="mt-1 text-xs text-gray-500">
-              Automatically generated based on client name
-            </p>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client / Company Name</label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name}
-              onChange={handleChange}
-              placeholder="Enter client name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Client Type</label>
-            <select
-              name="clientType"
-              value={formData.clientType}
-              onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              required
-            >
-              <option value="Direct">Direct Client</option>
-              <option value="B2B">B2B</option>
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Contact Person</label>
-            <input
-              type="text"
-              name="contactPerson"
-              value={formData.contactPerson}
-              onChange={handleChange}
-              placeholder="Enter contact person name"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email}
-              onChange={handleChange}
-              placeholder="Enter client email"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone}
-              onChange={handleChange}
-              placeholder="Enter phone number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              required
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">GSTIN</label>
-            <input
-              type="text"
-              name="gstin"
-              value={formData.gstin}
-              onChange={handleChange}
-              placeholder="Enter GST identification number"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-          </div>
-          <div className="flex items-center">
-            <div className="flex items-center">
-              <input
-                id="isActive"
-                name="isActive"
-                type="checkbox"
-                checked={formData.isActive}
-                onChange={handleChange}
-                className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-              />
-              <div className="ml-2">
-                <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
-                  Client is Active
-                </label>
-                <p className="text-xs text-gray-500">Active clients appear in dropdown lists</p>
-              </div>
-            </div>
-          </div>
+          {CLIENT_FIELDS.BASIC_INFO.map(field => renderField(field))}
         </div>
       </div>
       
@@ -292,72 +283,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
       <div className="mb-6">
         <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Primary Address</h3>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
-            <input
-              type="text"
-              name="address.line1"
-              value={formData.address.line1}
-              onChange={handleChange}
-              placeholder="Enter address line 1"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
-            <input
-              type="text"
-              name="address.line2"
-              value={formData.address.line2}
-              onChange={handleChange}
-              placeholder="Enter address line 2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-            <input
-              type="text"
-              name="address.city"
-              value={formData.address.city}
-              onChange={handleChange}
-              placeholder="Enter city"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-            <input
-              type="text"
-              name="address.state"
-              value={formData.address.state}
-              onChange={handleChange}
-              placeholder="Enter state"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
-            <input
-              type="text"
-              name="address.postalCode"
-              value={formData.address.postalCode}
-              onChange={handleChange}
-              placeholder="Enter postal code"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-            <input
-              type="text"
-              name="address.country"
-              value={formData.address.country}
-              onChange={handleChange}
-              placeholder="Enter country"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-            />
-          </div>
+          {CLIENT_FIELDS.ADDRESS.map(field => renderField(field))}
         </div>
       </div>
       
@@ -381,87 +307,14 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
         
         {!sameAsAddress && (
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 1</label>
-              <input
-                type="text"
-                name="billingAddress.line1"
-                value={formData.billingAddress.line1}
-                onChange={handleChange}
-                placeholder="Enter address line 1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Address Line 2</label>
-              <input
-                type="text"
-                name="billingAddress.line2"
-                value={formData.billingAddress.line2}
-                onChange={handleChange}
-                placeholder="Enter address line 2"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
-              <input
-                type="text"
-                name="billingAddress.city"
-                value={formData.billingAddress.city}
-                onChange={handleChange}
-                placeholder="Enter city"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
-              <input
-                type="text"
-                name="billingAddress.state"
-                value={formData.billingAddress.state}
-                onChange={handleChange}
-                placeholder="Enter state"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Postal Code</label>
-              <input
-                type="text"
-                name="billingAddress.postalCode"
-                value={formData.billingAddress.postalCode}
-                onChange={handleChange}
-                placeholder="Enter postal code"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Country</label>
-              <input
-                type="text"
-                name="billingAddress.country"
-                value={formData.billingAddress.country}
-                onChange={handleChange}
-                placeholder="Enter country"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-              />
-            </div>
+            {CLIENT_FIELDS.BILLING_ADDRESS.map(field => renderField(field))}
           </div>
         )}
       </div>
       
       {/* Notes */}
       <div className="mb-6">
-        <label className="block text-sm font-medium text-gray-700 mb-1">Notes</label>
-        <textarea
-          name="notes"
-          value={formData.notes}
-          onChange={handleChange}
-          placeholder="Enter any additional notes"
-          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
-          rows="4"
-        ></textarea>
+        {CLIENT_FIELDS.NOTES.map(field => renderField(field))}
       </div>
       
       <div className="flex justify-end pt-3 border-t border-gray-200">

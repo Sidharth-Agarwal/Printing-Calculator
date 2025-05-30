@@ -15,6 +15,7 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
   const [isReady, setIsReady] = useState(false);
   const [logoLoaded, setLogoLoaded] = useState(false);
 
+  // UPDATED: Enhanced date formatting with last updated info
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     try {
@@ -30,8 +31,56 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
     }
   };
 
+  // ADDED: Get the most recent activity date from estimates
+  const getLastUpdatedDate = () => {
+    if (!estimates || estimates.length === 0) return null;
+    
+    // Find the most recent updatedAt timestamp across all estimates
+    let latestTimestamp = null;
+    let latestEstimate = null;
+    
+    estimates.forEach(estimate => {
+      const updatedAt = estimate.updatedAt || estimate.createdAt;
+      if (updatedAt) {
+        const timestamp = new Date(updatedAt).getTime();
+        if (!latestTimestamp || timestamp > latestTimestamp) {
+          latestTimestamp = timestamp;
+          latestEstimate = estimate;
+        }
+      }
+    });
+    
+    return {
+      date: latestTimestamp ? formatDate(new Date(latestTimestamp)) : null,
+      estimate: latestEstimate
+    };
+  };
+
+  // ADDED: Check if any estimate was recently updated (within 24 hours)
+  const hasRecentUpdates = () => {
+    if (!estimates || estimates.length === 0) return false;
+    
+    const now = new Date().getTime();
+    return estimates.some(estimate => {
+      const updatedAt = estimate.updatedAt;
+      if (!updatedAt) return false;
+      
+      try {
+        const updateTime = new Date(updatedAt).getTime();
+        const hoursDiff = (now - updateTime) / (1000 * 60 * 60);
+        return hoursDiff < 24;
+      } catch {
+        return false;
+      }
+    });
+  };
+
   // Get the current date for the document
   const currentDate = formatDate(new Date());
+  
+  // ADDED: Get last updated information
+  const lastUpdatedInfo = getLastUpdatedDate();
+  const recentlyUpdated = hasRecentUpdates();
 
   // Calculate total quantities and amounts
   const totals = React.useMemo(() => {
@@ -175,7 +224,15 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
         {/* Header with Title and Logo */}
         <div className="flex justify-between mb-1">
           <div>
-            <h1 className="text-xl font-bold text-gray-900">ESTIMATE</h1>
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-xl font-bold text-gray-900">ESTIMATE</h1>
+              {/* ADDED: Recently updated indicator */}
+              {recentlyUpdated && (
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+                  RECENTLY UPDATED
+                </span>
+              )}
+            </div>
             <div className="text-sm text-gray-500 mb-2">Version: {version}</div>
             
             {/* Client Info - Positioned directly under version */}
@@ -191,11 +248,24 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
               <div className="text-gray-600 text-sm">Client Code: {clientInfo?.clientCode || "N/A"}</div>
             </div>
             
-            {/* Date Information */}
+            {/* UPDATED: Date Information with Last Updated */}
             <div className="mt-2 mb-2">
               <div className="text-sm">
                 <div className="text-gray-600">Estimate Date: {currentDate}</div>
                 <div className="text-gray-600">Tentative Delivery Date: {formatDate(estimates[0]?.deliveryDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000))}</div>
+                
+                {/* ADDED: Last updated information */}
+                {/* {lastUpdatedInfo.date && (
+                  <div className="text-gray-500 text-xs mt-1 flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-12a1 1 0 10-2 0v4a1 1 0 00.293.707l2.828 2.829a1 1 0 101.415-1.415L11 9.586V6z" clipRule="evenodd" />
+                    </svg>
+                    Last Updated: {lastUpdatedInfo.date}
+                    {lastUpdatedInfo.estimate?.projectName && (
+                      <span className="ml-1">({lastUpdatedInfo.estimate.projectName})</span>
+                    )}
+                  </div>
+                )} */}
               </div>
             </div>
           </div>
@@ -358,7 +428,7 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
           </table>
         </div>
         
-        {/* Terms and Conditions */}
+        {/* UPDATED: Terms and Conditions with version note */}
         <div className="mb-3">
           <div className="font-medium text-gray-700 mb-1 text-xs">Terms and Conditions:</div>
           <div className="text-gray-600 text-xs">
@@ -368,6 +438,11 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
               <div>3. Final artwork approval is required before production.</div>
               <div>4. Delivery time will be confirmed upon order confirmation.</div>
               <div>5. Prices are subject to change based on final specifications.</div>
+              {lastUpdatedInfo.date && currentDate !== lastUpdatedInfo.date && (
+                <div className="mt-1 text-gray-500">
+                  6. This estimate was last updated on {lastUpdatedInfo.date}. Please confirm current pricing before proceeding.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -379,6 +454,11 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
               <div className="font-medium mb-1 text-xs">Note</div>
               <div className="text-xs text-gray-600">
                 This is just an estimate, not a tax invoice. Prices may vary based on final specifications and quantity.
+                {recentlyUpdated && (
+                  <div className="mt-1 text-blue-600">
+                    This estimate includes recent updates - please review all details carefully.
+                  </div>
+                )}
               </div>
             </div>
             <div className="text-right">
@@ -391,6 +471,9 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
         {/* Print Info */}
         <div className="mt-3 text-center text-xs text-gray-500">
           <p>This is a computer generated estimate and does not require a signature.</p>
+          {/* {lastUpdatedInfo.date && (
+            <p>Document generated on {currentDate} | Last updated: {lastUpdatedInfo.date}</p>
+          )} */}
         </div>
       </div>
     </div>

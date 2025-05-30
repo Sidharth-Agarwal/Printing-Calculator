@@ -354,7 +354,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     return sanitized;
   };
 
-  // This is the key fix - properly extract values from formData
+  // UPDATED: This is the key fix - properly extract values from formData with timestamp handling
   const handleSave = async (formData) => {
     // Show a warning if client is inactive
     if (isClientInactive) {
@@ -464,6 +464,9 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
                          estimate.clientName || 
                          "Unknown Client";
       
+      // UPDATED: Proper timestamp handling
+      const currentTimestamp = new Date().toISOString();
+      
       // Create updated estimate with explicit values for critical fields
       const updatedEstimate = {
         // Start with a completely fresh object
@@ -525,9 +528,9 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         movedToOrders: estimate.movedToOrders || false,
         isCanceled: estimate.isCanceled || false,
         
-        // Update timestamps
-        updatedAt: new Date().toISOString(),
-        createdAt: estimate.createdAt || new Date().toISOString(),
+        // UPDATED: Proper timestamp handling - preserve createdAt, update updatedAt
+        createdAt: estimate.createdAt || currentTimestamp, // Preserve original creation time
+        updatedAt: currentTimestamp, // Always update to current time when editing
       };
       
       // Double-check critical fields are properly set before saving
@@ -536,7 +539,9 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         jobType: updatedEstimate.jobDetails.jobType,
         quantity: updatedEstimate.jobDetails.quantity,
         paperName: updatedEstimate.jobDetails.paperName,
-        dieCode: updatedEstimate.dieDetails.dieCode
+        dieCode: updatedEstimate.dieDetails.dieCode,
+        createdAt: updatedEstimate.createdAt,
+        updatedAt: updatedEstimate.updatedAt
       });
       
       // Sanitize data before saving to Firestore to prevent undefined values
@@ -548,7 +553,9 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         jobType: sanitizedEstimate.jobDetails.jobType,
         quantity: sanitizedEstimate.jobDetails.quantity,
         paperName: sanitizedEstimate.jobDetails.paperName,
-        dieCode: sanitizedEstimate.dieDetails.dieCode
+        dieCode: sanitizedEstimate.dieDetails.dieCode,
+        createdAt: sanitizedEstimate.createdAt,
+        updatedAt: sanitizedEstimate.updatedAt
       });
       
       await onSave(sanitizedEstimate);

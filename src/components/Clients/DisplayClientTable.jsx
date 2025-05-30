@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { TABLE_DISPLAY_FIELDS, DETAILED_DISPLAY_FIELDS } from "../../constants/entityFields";
 import ClientDetailsModal from "./ClientDetailsModal";
 
 const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, onActivateClient, onToggleStatus, isAdmin }) => {
@@ -33,8 +34,24 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
 
   // Sort clients
   const sortedClients = [...clients].sort((a, b) => {
-    const aValue = (a[sortField] || "").toString().toLowerCase();
-    const bValue = (b[sortField] || "").toString().toLowerCase();
+    // Handle nested fields (e.g., address.city)
+    const getNestedValue = (obj, path) => {
+      const keys = path.split('.');
+      let value = obj;
+      for (const key of keys) {
+        if (value === undefined || value === null) return '';
+        value = value[key];
+      }
+      return value || '';
+    };
+
+    const aValue = typeof sortField === 'string' && sortField.includes('.') 
+      ? getNestedValue(a, sortField).toString().toLowerCase() 
+      : (a[sortField] || "").toString().toLowerCase();
+      
+    const bValue = typeof sortField === 'string' && sortField.includes('.')
+      ? getNestedValue(b, sortField).toString().toLowerCase()
+      : (b[sortField] || "").toString().toLowerCase();
     
     if (sortDirection === "asc") {
       return aValue.localeCompare(bValue, undefined, { numeric: true });
@@ -172,6 +189,15 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
     return <span className="text-gray-500">Not enrolled</span>;
   };
 
+  // Get field value from client object
+  const getFieldValue = (client, fieldName) => {
+    if (fieldName.includes('.')) {
+      const [parent, child] = fieldName.split('.');
+      return client[parent] && client[parent][child] ? client[parent][child] : '-';
+    }
+    return client[fieldName] || '-';
+  };
+
   // Compact view - shows essential information
   const renderCompactView = () => {
     return (
@@ -179,11 +205,9 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
         <table className="min-w-full text-sm text-left">
           <thead>
             <tr className="bg-gray-100">
-              <SortableHeader field="clientCode" label="Client Code" />
-              <SortableHeader field="name" label="Name" />
-              <SortableHeader field="clientType" label="Type" />
-              <SortableHeader field="contactPerson" label="Contact Person" />
-              <SortableHeader field="phone" label="Phone" />
+              {TABLE_DISPLAY_FIELDS.map(field => (
+                <SortableHeader key={field.field} field={field.field} label={field.label} />
+              ))}
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Loyalty Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
@@ -197,26 +221,30 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                   style={getRowStyle(client)}
                   onClick={() => handleViewClient(client)}
                 >
-                  <td className="px-3 py-3">{client.clientCode}</td>
-                  <td className="px-3 py-3 font-medium">
-                    {client.name}
-                    {client.hasAccount && (
-                      <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                        Account
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-3 py-3">
-                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                      client.clientType?.toUpperCase() === "B2B"
-                        ? "bg-purple-100 text-purple-800" 
-                        : "bg-blue-100 text-blue-800"
-                    }`}>
-                      {(client.clientType || "Direct").toUpperCase()}
-                    </span>
-                  </td>
-                  <td className="px-3 py-3">{client.contactPerson || "-"}</td>
-                  <td className="px-3 py-3">{client.phone || "-"}</td>
+                  {TABLE_DISPLAY_FIELDS.map(field => (
+                    <td key={field.field} className="px-3 py-3">
+                      {field.field === 'name' ? (
+                        <span className="font-medium">
+                          {client.name}
+                          {client.hasAccount && (
+                            <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                              Account
+                            </span>
+                          )}
+                        </span>
+                      ) : field.field === 'clientType' ? (
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                          client.clientType?.toUpperCase() === "B2B"
+                            ? "bg-purple-100 text-purple-800" 
+                            : "bg-blue-100 text-blue-800"
+                        }`}>
+                          {(client.clientType || "Direct").toUpperCase()}
+                        </span>
+                      ) : (
+                        getFieldValue(client, field.field)
+                      )}
+                    </td>
+                  ))}
                   <td className="px-3 py-3">
                     {renderLoyaltyStatus(client)}
                   </td>
@@ -298,7 +326,15 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                         </>
                       )}
                       
-                      {/* Remove dropdown arrow button - now entire row is clickable */}
+                      <button
+                        onClick={(e) => toggleRowExpand(e, client.id)}
+                        className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors flex items-center"
+                      >
+                        <svg className={`w-3 h-3 mr-1 transition-transform ${expandedRows[client.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+                        </svg>
+                        {expandedRows[client.id] ? 'Less' : 'More'}
+                      </button>
                     </div>
                   </td>
                 </tr>
@@ -347,13 +383,9 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
         <table className="min-w-full text-sm text-left">
           <thead>
             <tr className="bg-gray-100">
-              <SortableHeader field="clientCode" label="Client Code" />
-              <SortableHeader field="name" label="Name" />
-              <SortableHeader field="clientType" label="Type" />
-              <SortableHeader field="contactPerson" label="Contact Person" />
-              <SortableHeader field="email" label="Email" />
-              <SortableHeader field="phone" label="Phone" />
-              <SortableHeader field="gstin" label="GSTIN" />
+              {DETAILED_DISPLAY_FIELDS.map(field => (
+                <SortableHeader key={field.field} field={field.field} label={field.label} />
+              ))}
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Address</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Loyalty Status</th>
               <SortableHeader field="totalOrders" label="Orders" />
@@ -363,35 +395,37 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
             </tr>
           </thead>
           <tbody>
-            {filteredClients.map((client, index) => (
+            {filteredClients.map((client) => (
               <tr 
                 key={client.id} 
                 className={getRowClassName(client)}
                 style={getRowStyle(client)}
                 onClick={() => handleViewClient(client)}
               >
-                <td className="px-3 py-3">{client.clientCode}</td>
-                <td className="px-3 py-3 font-medium">
-                  {client.name}
-                  {client.hasAccount && (
-                    <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                      Account
-                    </span>
-                  )}
-                </td>
-                <td className="px-3 py-3">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    client.clientType?.toUpperCase() === "B2B"
-                      ? "bg-purple-100 text-purple-800" 
-                      : "bg-blue-100 text-blue-800"
-                  }`}>
-                    {(client.clientType || "Direct").toUpperCase()}
-                  </span>
-                </td>
-                <td className="px-3 py-3">{client.contactPerson || "-"}</td>
-                <td className="px-3 py-3">{client.email || "-"}</td>
-                <td className="px-3 py-3">{client.phone || "-"}</td>
-                <td className="px-3 py-3">{client.gstin || "-"}</td>
+                {DETAILED_DISPLAY_FIELDS.map(field => (
+                  <td key={field.field} className="px-3 py-3">
+                    {field.field === 'name' ? (
+                      <span className="font-medium">
+                        {client.name}
+                        {client.hasAccount && (
+                          <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                            Account
+                          </span>
+                        )}
+                      </span>
+                    ) : field.field === 'clientType' ? (
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        client.clientType?.toUpperCase() === "B2B"
+                          ? "bg-purple-100 text-purple-800" 
+                          : "bg-blue-100 text-blue-800"
+                      }`}>
+                        {(client.clientType || "Direct").toUpperCase()}
+                      </span>
+                    ) : (
+                      getFieldValue(client, field.field)
+                    )}
+                  </td>
+                ))}
                 <td className="px-3 py-3">
                   {client.address?.city ? `${client.address.city}, ${client.address.state || ""}` : "-"}
                 </td>
@@ -458,8 +492,8 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
           <div 
             key={client.id} 
             className="border border-gray-200 shadow-sm overflow-hidden bg-white cursor-pointer"
-            style={getRowStyle(client)}
             onClick={() => handleViewClient(client)}
+            style={getRowStyle(client)}
           >
             {/* Main client information always visible */}
             <div className="p-4">

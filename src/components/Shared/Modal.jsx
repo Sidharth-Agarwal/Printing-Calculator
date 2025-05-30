@@ -3,14 +3,14 @@ import React, { useEffect, useRef } from "react";
 const Modal = ({ isOpen, onClose, title, children, size = "md" }) => {
   const modalRef = useRef(null);
 
-  // Updated size class to make modals wider
+  // Updated size class to make modals wider - added "xl" option for extra wide forms
   const sizeClass = {
     sm: "max-w-md",
-    md: "max-w-3xl", // Increased from max-w-2xl
-    lg: "max-w-4xl", // Increased from max-w-3xl
-    xl: "max-w-5xl", // Increased from max-w-4xl
+    md: "max-w-3xl", 
+    lg: "max-w-4xl", 
+    xl: "max-w-6xl", // Extra wide option for forms with 4 columns
     full: "max-w-full mx-4"
-  }[size] || "max-w-3xl"; // Default is now wider
+  }[size] || "max-w-3xl";
 
   // Close modal when clicking outside
   useEffect(() => {

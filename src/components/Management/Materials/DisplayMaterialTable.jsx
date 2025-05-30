@@ -49,6 +49,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
     const searchFields = [
       material.materialType || "",
       material.materialName || "",
+      material.company || "",
       material.rate?.toString() || "",
       material.finalCostPerUnit?.toString() || ""
     ];
@@ -132,6 +133,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
             <tr className="bg-gray-100">
               <SortableHeader field="materialType" label="Material Type" />
               <SortableHeader field="materialName" label="Material Name" />
+              <SortableHeader field="company" label="Company" />
               <SortableHeader field="rate" label="Rate" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Size (L×B)</th>
               <SortableHeader field="finalCostPerUnit" label="Final Cost/Unit" />
@@ -146,6 +148,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                 <tr className="border-b border-gray-200 hover:bg-gray-50 transition-colors">
                   <td className="px-3 py-3 font-medium">{material.materialType || "-"}</td>
                   <td className="px-3 py-3">{material.materialName || "-"}</td>
+                  <td className="px-3 py-3">{material.company || "-"}</td>
                   <td className="px-3 py-3">₹{material.rate || "-"}</td>
                   <td className="px-3 py-3">{material.sizeL || "-"}×{material.sizeB || "-"}</td>
                   <td className="px-3 py-3 font-medium text-red-600">₹{material.finalCostPerUnit || "-"}</td>
@@ -157,7 +160,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                 </tr>
                 {expandedRows[material.id] && (
                   <tr className="bg-gray-50">
-                    <td colSpan={hasEditAccess ? 6 : 5} className="px-4 py-3 border-b border-gray-200">
+                    <td colSpan={hasEditAccess ? 7 : 6} className="px-4 py-3 border-b border-gray-200">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="font-medium text-gray-700">Quantity:</p>
@@ -203,6 +206,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
             <tr className="bg-gray-100">
               <SortableHeader field="materialType" label="Material Type" />
               <SortableHeader field="materialName" label="Material Name" />
+              <SortableHeader field="company" label="Company" />
               <SortableHeader field="rate" label="Rate" />
               <SortableHeader field="quantity" label="Quantity" />
               <SortableHeader field="sizeL" label="Length" />
@@ -223,6 +227,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
               <tr key={material.id} className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}>
                 <td className="px-3 py-3 font-medium">{material.materialType || "-"}</td>
                 <td className="px-3 py-3">{material.materialName || "-"}</td>
+                <td className="px-3 py-3">{material.company || "-"}</td>
                 <td className="px-3 py-3">₹{material.rate || "-"}</td>
                 <td className="px-3 py-3">{material.quantity || "-"}</td>
                 <td className="px-3 py-3">{material.sizeL || "-"}</td>
@@ -284,6 +289,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                   <p className="text-sm text-gray-600">{material.materialName || "Unknown"}</p>
                 </div>
                 <div className="text-right">
+                  <p className="text-sm text-gray-600">Company: {material.company || "-"}</p>
                   <p className="text-sm text-gray-600">Rate: ₹{material.rate || "-"}</p>
                   <p className="font-medium text-red-600">Final: ₹{material.finalCostPerUnit || "-"}</p>
                 </div>

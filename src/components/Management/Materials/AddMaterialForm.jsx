@@ -1,9 +1,11 @@
 import React, { useState, useEffect } from "react";
+import { MATERIAL_FIELDS } from "../../../constants/materialConstants";
 
-const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, isSubmitting, onCancel }) => {
+const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, isSubmitting, onCancel, vendors }) => {
   const [formData, setFormData] = useState({
     materialType: "",
     materialName: "",
+    company: "",
     rate: "",
     quantity: "",
     sizeL: "",
@@ -23,6 +25,7 @@ const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, isSubmitting, o
       setFormData({
         materialType: "",
         materialName: "",
+        company: "",
         rate: "",
         quantity: "",
         sizeL: "",
@@ -75,82 +78,93 @@ const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, isSubmitting, o
     }
   };
 
-  // Group fields for better organization
-  const inputFields = [
-    { 
-      section: "Basic Information",
-      fields: [
-        { label: "Material Type", name: "materialType", placeholder: "Enter the type of the material", type: "text" },
-        { label: "Material Name", name: "materialName", placeholder: "Enter the name of the material", type: "text" },
-        { label: "Rate (INR)", name: "rate", placeholder: "Enter the rate of the material", type: "number" },
-        { label: "Quantity", name: "quantity", placeholder: "Enter the quantity", type: "number" },
-      ]
-    },
-    {
-      section: "Dimensions & Costs",
-      fields: [
-        { label: "Size (L in cm)", name: "sizeL", placeholder: "Enter the length", type: "number" },
-        { label: "Size (B in cm)", name: "sizeB", placeholder: "Enter the breadth", type: "number" },
-        { label: "Courier Cost (INR)", name: "courier", placeholder: "Enter the cost of the courier", type: "number" },
-        { label: "Mark Up", name: "markUp", placeholder: "Enter mark up value", type: "number" },
-      ]
-    },
-    {
-      section: "Calculated Values",
-      fields: [
-        { label: "Area (calculated)", name: "area", placeholder: "", type: "text", readOnly: true },
-        { label: "Landed Cost (calculated)", name: "landedCost", placeholder: "", type: "text", readOnly: true },
-        { label: "Cost/Unit (calculated)", name: "costPerUnit", placeholder: "", type: "text", readOnly: true },
-        { label: "Final Cost/Unit (calculated)", name: "finalCostPerUnit", placeholder: "", type: "text", readOnly: true },
-      ]
+  // Prepare vendor options for the company dropdown
+  const companyOptions = vendors.map(vendor => ({
+    value: vendor.name,
+    label: vendor.name
+  }));
+
+  // Create an updated copy of the field definitions with vendor options
+  const updatedBasicInfoFields = MATERIAL_FIELDS.BASIC_INFO.map(field => {
+    if (field.name === "company") {
+      return { ...field, options: companyOptions };
     }
-  ];
+    return field;
+  });
+
+  // Render a field based on its type and configuration
+  const renderField = (field) => {
+    const { name, label, type, required, readOnly, options } = field;
+    
+    switch (type) {
+      case "select":
+        return (
+          <div key={name}>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+            <select
+              name={name}
+              value={formData[name] || ""}
+              onChange={handleChange}
+              className={`w-full p-2 border border-gray-300 rounded text-sm ${
+                readOnly ? "bg-gray-100" : ""
+              }`}
+              required={required}
+              disabled={readOnly}
+            >
+              <option value="">Select {label}</option>
+              {options.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        );
+        
+      default: // text, number, etc.
+        return (
+          <div key={name}>
+            <label className="block text-xs font-medium text-gray-700 mb-1">{label}</label>
+            <input
+              type={type}
+              name={name}
+              value={formData[name] || ""}
+              onChange={handleChange}
+              placeholder={field.placeholder || `Enter ${label.toLowerCase()}`}
+              readOnly={readOnly}
+              className={`w-full p-2 border border-gray-300 rounded text-sm ${
+                readOnly ? "bg-gray-100" : ""
+              }`}
+              required={required}
+            />
+          </div>
+        );
+    }
+  };
 
   return (
     <form onSubmit={handleSubmit}>
-      {inputFields.map((section, sectionIdx) => (
-        <div key={sectionIdx} className="mb-6">
-          {section.section !== "Calculated Values" ? (
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-              {section.fields.map((field, idx) => (
-                <div key={idx}>
-                  <label className="block text-xs font-medium text-gray-700 mb-1">{field.label}</label>
-                  <input
-                    type={field.type}
-                    name={field.name}
-                    value={formData[field.name] || ""}
-                    onChange={handleChange}
-                    placeholder={field.placeholder}
-                    readOnly={field.readOnly}
-                    className={`w-full p-2 border border-gray-300 rounded text-sm ${
-                      field.readOnly ? "bg-gray-100" : ""
-                    }`}
-                    required={!field.readOnly}
-                  />
-                </div>
-              ))}
-            </div>
-          ) : (
-            <div className="bg-gray-50 p-4 rounded-lg">
-              <h3 className="text-sm font-medium text-gray-700 mb-3">{section.section}</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                {section.fields.map((field, idx) => (
-                  <div key={idx}>
-                    <label className="block text-xs font-medium text-gray-600 mb-1">{field.label}</label>
-                    <input
-                      type={field.type}
-                      name={field.name}
-                      value={formData[field.name] || ""}
-                      readOnly={true}
-                      className="w-full p-2 bg-gray-100 border border-gray-200 rounded text-sm text-gray-700"
-                    />
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      {/* First row - 5 fields */}
+      <div className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
+          {updatedBasicInfoFields.map((field) => renderField(field))}
         </div>
-      ))}
+      </div>
+
+      {/* Second row - 4 fields */}
+      <div className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
+          {MATERIAL_FIELDS.DIMENSIONS_COSTS.map((field) => renderField(field))}
+        </div>
+      </div>
+
+      {/* Calculated Values section */}
+      <div className="mb-6 bg-gray-50 p-4 rounded-lg">
+        <h3 className="text-sm font-medium text-gray-700 mb-3">Calculated Values</h3>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+          {MATERIAL_FIELDS.CALCULATED_VALUES.map((field) => renderField(field))}
+        </div>
+      </div>
 
       {/* Form buttons */}
       <div className="flex justify-end space-x-3">
