@@ -231,7 +231,8 @@ export const performCompleteCalculations = async (
   state, 
   miscChargePerCard = null,
   markupPercentage = null,
-  markupType = "MARKUP TIMELESS"
+  markupType = "MARKUP TIMELESS",
+  cachedGSTRate = null // ⭐ Add this parameter
 ) => {
   try {
     console.log("Starting complete calculations with:", {
@@ -239,7 +240,8 @@ export const performCompleteCalculations = async (
       markupType,
       markupPercentage,
       quantity: state.orderAndPaper?.quantity,
-      jobType: state.orderAndPaper?.jobType
+      jobType: state.orderAndPaper?.jobType,
+      cachedGSTRate
     });
 
     // Get base calculations first
@@ -435,12 +437,38 @@ export const performCompleteCalculations = async (
       totalCost
     });
 
-    // 4. Calculate GST based on job type
-    const jobType = state.orderAndPaper?.jobType || "Card";
-    const gstResult = await calculateGST(totalCost, jobType);
+    // 4. Calculate GST using cached rate or fetch from database
+    let gstResult;
+    if (cachedGSTRate !== null) {
+      // Use cached rate - no database call
+      const gstAmount = totalCost * (cachedGSTRate / 100);
+      const totalWithGST = totalCost + gstAmount;
+      
+      gstResult = {
+        gstRate: cachedGSTRate,
+        gstAmount: gstAmount.toFixed(2),
+        totalWithGST: totalWithGST.toFixed(2),
+        success: true
+      };
+      console.log("Using cached GST rate:", cachedGSTRate + "%");
+    } else {
+      // Fallback to database fetch
+      console.log("No cached GST rate, fetching from database...");
+      const jobType = state.orderAndPaper?.jobType || "Card";
+      gstResult = await calculateGST(totalCost, jobType);
+      
+      // If GST fetch failed, handle the error
+      if (!gstResult.success) {
+        console.error("GST calculation failed:", gstResult.error);
+        return { 
+          ...baseCalculations,
+          error: `GST calculation failed: ${gstResult.error}` 
+        };
+      }
+    }
     
     console.log("GST calculation:", {
-      jobType,
+      jobType: state.orderAndPaper?.jobType,
       gstRate: gstResult.gstRate,
       gstAmount: gstResult.gstAmount,
       totalWithGST: gstResult.totalWithGST
@@ -535,6 +563,7 @@ export const performCompleteCalculations = async (
  * @param {String} markupType - Markup type
  * @param {String} jobType - Job type for GST calculations
  * @param {Object} clientLoyaltyTier - Client's loyalty tier info (optional)
+ * @param {Number} cachedGSTRate - Cached GST rate (optional)
  * @returns {Promise<Object>} - Updated calculations with new totals
  */
 export const recalculateTotals = async (
@@ -544,9 +573,19 @@ export const recalculateTotals = async (
   quantity,
   markupType = "MARKUP TIMELESS",
   jobType = "Card",
-  clientLoyaltyTier = null
+  clientLoyaltyTier = null,
+  cachedGSTRate = null // ⭐ Add this parameter
 ) => {
   try {
+    console.log("Recalculating totals with:", {
+      miscChargePerCard,
+      markupPercentage,
+      quantity,
+      markupType,
+      jobType,
+      cachedGSTRate
+    });
+
     // Define production and post-production cost fields
     const productionFields = [
       'paperAndCuttingCostPerCard',
@@ -629,10 +668,33 @@ export const recalculateTotals = async (
     // Total cost for all cards
     const totalCost = totalCostPerCard * quantity;
     
-    // Calculate GST based on job type
-    const gstResult = await calculateGST(totalCost, jobType);
-    const gstAmount = parseFloat(gstResult.gstAmount);
-    const totalWithGST = parseFloat(gstResult.totalWithGST);
+    // Use cached GST rate instead of calling calculateGST
+    let gstAmount, totalWithGST, gstRate;
+    
+    if (cachedGSTRate !== null) {
+      // Use cached rate
+      gstRate = cachedGSTRate;
+      gstAmount = totalCost * (cachedGSTRate / 100);
+      totalWithGST = totalCost + gstAmount;
+      console.log("Using cached GST rate in recalculation:", cachedGSTRate + "%");
+    } else {
+      // Fallback to database fetch
+      console.log("No cached GST rate in recalculation, fetching from database...");
+      const gstResult = await calculateGST(totalCost, jobType);
+      
+      if (!gstResult.success) {
+        // Handle GST fetch error
+        console.error("GST fetch failed in recalculation:", gstResult.error);
+        return {
+          ...baseCalculations,
+          error: `GST calculation failed: ${gstResult.error}`
+        };
+      }
+      
+      gstRate = gstResult.gstRate;
+      gstAmount = parseFloat(gstResult.gstAmount);
+      totalWithGST = parseFloat(gstResult.totalWithGST);
+    }
     
     // Prepare updated calculations
     let updatedCalculations = {
@@ -668,14 +730,14 @@ export const recalculateTotals = async (
       markupAmount: markupCost.toFixed(2),
       
       // GST
-      gstRate: gstResult.gstRate,
-      gstAmount: gstResult.gstAmount,
+      gstRate: gstRate,
+      gstAmount: gstAmount.toFixed(2),
       
       // Totals
       subtotalPerCard: costWithMisc.toFixed(2),
       totalCostPerCard: totalCostPerCard.toFixed(2),
       totalCost: totalCost.toFixed(2),
-      totalWithGST: gstResult.totalWithGST
+      totalWithGST: totalWithGST.toFixed(2)
     };
     
     // Apply loyalty discount if applicable
@@ -716,8 +778,9 @@ export const recalculateTotals = async (
     const totalCostPerCard = costWithMisc + markupCost;
     const totalCost = totalCostPerCard * quantity;
     
-    // Calculate GST (simple fallback)
-    const gstAmount = totalCost * (DEFAULT_GST_RATE / 100);
+    // Calculate GST (use cached rate if available, otherwise fallback)
+    const gstRate = cachedGSTRate !== null ? cachedGSTRate : DEFAULT_GST_RATE;
+    const gstAmount = totalCost * (gstRate / 100);
     const totalWithGST = totalCost + gstAmount;
     
     // Apply loyalty discount if applicable
@@ -742,7 +805,7 @@ export const recalculateTotals = async (
       subtotalPerCard: costWithMisc.toFixed(2),
       totalCostPerCard: totalCostPerCard.toFixed(2),
       totalCost: totalCost.toFixed(2),
-      gstRate: DEFAULT_GST_RATE,
+      gstRate: gstRate,
       gstAmount: gstAmount.toFixed(2),
       totalWithGST: totalWithGST.toFixed(2)
     };
@@ -752,7 +815,7 @@ export const recalculateTotals = async (
       const discountPercent = clientLoyaltyTier.discount;
       const discountAmount = totalCost * (discountPercent / 100);
       const discountedTotal = totalCost - discountAmount;
-      const newGstAmount = discountedTotal * (DEFAULT_GST_RATE / 100);
+      const newGstAmount = discountedTotal * (gstRate / 100);
       const newTotalWithGST = discountedTotal + newGstAmount;
       
       updatedCalculations = {
