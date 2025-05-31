@@ -17,6 +17,7 @@ import {
   createLoyaltyTierChangeNotification,
   deleteRelatedNotifications 
 } from "../../utils/loyaltyUtils";
+import OrderSerializationService from "../../utils/OrderSerializationService"; // NEW IMPORT
 
 const EscrowDashboard = () => {
   const navigate = useNavigate();
@@ -57,7 +58,12 @@ const EscrowDashboard = () => {
   const [redirectTimer, setRedirectTimer] = useState(5);
   const [redirectTimerId, setRedirectTimerId] = useState(null);
 
-  // ADDED: Helper function to safely parse dates and provide fallbacks
+  // Initialize order serial counter on component mount
+  useEffect(() => {
+    OrderSerializationService.initializeCounter().catch(console.error);
+  }, []);
+
+  // Helper function to safely parse dates and provide fallbacks
   const getEstimateTimestamp = (estimate) => {
     // Try to use updatedAt first (most recent activity), then createdAt, then fallback
     const updatedAt = estimate.updatedAt;
@@ -81,7 +87,7 @@ const EscrowDashboard = () => {
     return new Date().getTime();
   };
 
-  // ADDED: Sort estimates by creation/update time (newest first)
+  // Sort estimates by creation/update time (newest first)
   const sortEstimatesByTimestamp = (estimates) => {
     return [...estimates].sort((a, b) => {
       const timestampA = getEstimateTimestamp(a);
@@ -153,7 +159,7 @@ const EscrowDashboard = () => {
     fetchActiveClients();
   }, []);
 
-  // Fetch all B2B estimates in escrow on mount - UPDATED to filter out already processed estimates
+  // Fetch all B2B estimates in escrow on mount - filter out already processed estimates
   useEffect(() => {
     const fetchEscrowEstimates = async () => {
       try {
@@ -182,7 +188,7 @@ const EscrowDashboard = () => {
     fetchEscrowEstimates();
   }, []);
 
-  // UPDATED: Process estimates into client groups with proper ordering
+  // Process estimates into client groups with proper ordering
   const clientGroups = React.useMemo(() => {
     // Apply search filter
     let filtered = [...escrowEstimates];
@@ -249,7 +255,7 @@ const EscrowDashboard = () => {
       return acc;
     }, {});
 
-    // ADDED: Sort estimates within each client group and version
+    // Sort estimates within each client group and version
     Object.values(groups).forEach(client => {
       // Sort all estimates for this client
       client.estimates = sortEstimatesByTimestamp(client.estimates);
@@ -365,12 +371,15 @@ const EscrowDashboard = () => {
     setIsApprovalModalOpen(true);
   };
 
-  // UPDATED: Process approval for a single estimate directly from card with timestamp
+  // UPDATED: Process approval for a single estimate with serial number generation
   const processApproveEstimate = async (estimate, notes = "") => {
     try {
       setIsProcessingApproval(true);
       
-      // ADDED: Current timestamp for all updates
+      // Generate serial number for B2B order
+      const orderSerial = await OrderSerializationService.generateOrderSerial();
+      
+      // Current timestamp for all updates
       const currentTimestamp = new Date().toISOString();
       
       // Normalize the data to ensure proper structure
@@ -382,8 +391,18 @@ const EscrowDashboard = () => {
       normalizedEstimate.approvalNotes = notes;
       normalizedEstimate.approvedAt = currentTimestamp;
       normalizedEstimate.approvedBy = currentUser.uid;
+      normalizedEstimate.orderCreatedFrom = 'b2b_approval';
+      normalizedEstimate.originalEstimateId = estimate.id;
       
-      // ADDED: Ensure proper timestamp handling
+      // Add serial number if generated successfully
+      if (orderSerial) {
+        normalizedEstimate.orderSerial = orderSerial;
+        console.log(`B2B order will be created with serial: ${orderSerial}`);
+      } else {
+        console.warn('Serial number generation failed for B2B order, order will be created without serial');
+      }
+      
+      // Ensure proper timestamp handling
       normalizedEstimate.createdAt = estimate.createdAt || currentTimestamp;
       normalizedEstimate.updatedAt = currentTimestamp;
       
@@ -457,7 +476,7 @@ const EscrowDashboard = () => {
       // Add to orders collection
       await addDoc(collection(db, "orders"), normalizedEstimate);
 
-      // UPDATED: Update the estimate in escrow with proper timestamps
+      // Update the estimate in escrow with proper timestamps
       const estimateRef = doc(db, "estimates", estimate.id);
       const updateData = { 
         isApproved: true,
@@ -466,8 +485,13 @@ const EscrowDashboard = () => {
         approvalNotes: notes,
         approvedAt: currentTimestamp,
         approvedBy: currentUser.uid,
-        updatedAt: currentTimestamp // ADDED: Update timestamp for ordering
+        updatedAt: currentTimestamp
       };
+      
+      // Add serial reference to estimate if generated
+      if (orderSerial) {
+        updateData.linkedOrderSerial = orderSerial;
+      }
       
       await updateDoc(estimateRef, updateData);
 
@@ -479,7 +503,7 @@ const EscrowDashboard = () => {
         } : est)
       );
       
-      console.log("Successfully approved estimate and moved to orders");
+      console.log("Successfully approved B2B estimate and moved to orders");
       
       // Show popup if tier changed
       if (tierChanged && loyaltyUpdate && loyaltyUpdate.tier) {
@@ -495,8 +519,11 @@ const EscrowDashboard = () => {
           newDiscount: loyaltyUpdate.tier.discount
         });
       } else {
-        // Show success message
-        alert("Estimate successfully approved and moved to orders!");
+        // Show success message with serial number if available
+        const successMessage = orderSerial 
+          ? `B2B estimate successfully approved and moved to orders! Order Serial: ${orderSerial}`
+          : "B2B estimate successfully approved and moved to orders!";
+        alert(successMessage);
       }
       
       // Close approval modal
@@ -505,7 +532,7 @@ const EscrowDashboard = () => {
       
       return true;
     } catch (error) {
-      console.error("Error approving estimate:", error);
+      console.error("Error approving B2B estimate:", error);
       alert("Failed to approve estimate. See console for details.");
       return false;
     } finally {
@@ -513,12 +540,12 @@ const EscrowDashboard = () => {
     }
   };
 
-  // UPDATED: Handle rejection of an estimate directly from card with timestamp
+  // Handle rejection of an estimate directly from card with timestamp
   const processRejectEstimate = async (estimate, notes) => {
     try {
       setIsProcessingApproval(true);
       
-      // ADDED: Current timestamp for updates
+      // Current timestamp for updates
       const currentTimestamp = new Date().toISOString();
       
       // Update the estimate in escrow
@@ -529,7 +556,7 @@ const EscrowDashboard = () => {
         rejectionNotes: notes,
         rejectedAt: currentTimestamp,
         rejectedBy: currentUser.uid,
-        updatedAt: currentTimestamp // ADDED: Update timestamp for ordering
+        updatedAt: currentTimestamp
       };
       
       await updateDoc(estimateRef, updateData);
@@ -558,7 +585,7 @@ const EscrowDashboard = () => {
     }
   };
 
-  // UPDATED: Handle approving multiple estimates with proper timestamps
+  // Handle approving multiple estimates with serial number generation
   const handleApproveMultiple = async () => {
     try {
       setIsApprovingMultiple(true);
@@ -580,28 +607,36 @@ const EscrowDashboard = () => {
         return;
       }
       
-      // Create a counter for successful approvals
+      // Create a counter for successful approvals and track serial numbers
       let successCount = 0;
+      let serialNumbers = [];
       
-      // Track final loyalty state by client
-      const finalLoyaltyState = {};
-      
-      // Process each estimate one by one, tracking final loyalty state
+      // Process each estimate one by one
       for (const estimate of estimatesToApprove) {
         try {
           // Use the same approval logic as for a single estimate
           const success = await processApproveEstimate(estimate, "Bulk approval");
           if (success) {
             successCount++;
+            // Check if serial was added to the updated estimate
+            const updatedEstimate = escrowEstimates.find(est => est.id === estimate.id);
+            if (updatedEstimate?.linkedOrderSerial) {
+              serialNumbers.push(updatedEstimate.linkedOrderSerial);
+            }
           }
         } catch (error) {
           console.error(`Error approving estimate ${estimate.id}:`, error);
         }
       }
       
-      // Show success message
-      console.log(`Successfully approved ${successCount} out of ${estimatesToApprove.length} estimates.`);
-      alert(`Successfully approved ${successCount} out of ${estimatesToApprove.length} estimates.`);
+      // Show success message with serial numbers
+      let successMessage = `Successfully approved ${successCount} out of ${estimatesToApprove.length} B2B estimates.`;
+      if (serialNumbers.length > 0) {
+        successMessage += `\n\nGenerated Order Serials:\n${serialNumbers.join(', ')}`;
+      }
+      
+      console.log(successMessage);
+      alert(successMessage);
       
       // Clear selections
       setSelectedEstimates({});
@@ -615,7 +650,7 @@ const EscrowDashboard = () => {
     }
   };
 
-  // UPDATED: Handle rejection of multiple estimates with proper timestamps
+  // Handle rejection of multiple estimates with proper timestamps
   const handleRejectMultiple = async () => {
     try {
       setIsApprovingMultiple(true);
@@ -709,7 +744,7 @@ const EscrowDashboard = () => {
           B2B Escrow Approval
         </h1>
         <p className="text-gray-600 mt-1">
-          Review and approve B2B estimates before converting them to orders
+          Review and approve B2B estimates before converting them to orders with serial numbers
         </p>
       </div>
 
@@ -772,425 +807,425 @@ const EscrowDashboard = () => {
             <div className="flex justify-between items-center mt-4">
               <div className="flex items-center">
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                </svg>
-                <p className="text-sm text-gray-500">Notification will close in {redirectTimer} seconds...</p>
-              </div>
-              <button
-                onClick={handleDismissLoyaltyNotification}
-                className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
-              >
-                Dismiss
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+               </svg>
+               <p className="text-sm text-gray-500">Notification will close in {redirectTimer} seconds...</p>
+             </div>
+             <button
+               onClick={handleDismissLoyaltyNotification}
+               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+             >
+               Dismiss
+             </button>
+           </div>
+         </div>
+       </div>
+     )}
 
-      {/* Main Content Area */}
-      {isLoading ? (
-        <div className="flex flex-col items-center justify-center h-64">
-          <div className="animate-spin h-10 w-10 border-4 border-red-500 rounded-full border-t-transparent mb-4"></div>
-          <p className="text-gray-500">Loading escrow items...</p>
-        </div>
-      ) : Object.keys(clientGroups).length === 0 ? (
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
-          <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-          <h2 className="text-lg font-medium text-gray-700 mt-4 mb-2">No Estimates in Escrow</h2>
-          <p className="text-sm text-gray-500 max-w-md mx-auto">
-            There are currently no B2B estimates in the escrow system waiting for approval.
-          </p>
-        </div>
-      ) : (
-        <div className="space-y-4">
-          {/* Client Groups */}
-          {Object.values(clientGroups).map((client) => (
-            <div key={client.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-              {/* Client Header */}
-              <div 
-                className={`px-4 py-3 ${expandedClientId === client.id ? 'bg-gray-50' : ''} cursor-pointer transition-colors hover:bg-gray-50 flex justify-between items-center`}
-                onClick={() => toggleClient(client.id)}
-              >
-                <div className="flex items-center">
-                  <h2 className="text-base font-medium text-gray-800">{client.name}</h2>
-                  <div className="flex items-center ml-3 text-xs text-gray-500">
-                    <span className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                      <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                        <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
-                      </svg>
-                      {client.totalEstimates} Estimate{client.totalEstimates !== 1 ? 's' : ''}
-                    </span>
-                    <span className="mx-2">•</span>
-                    <span className="flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M13 7H7v6h6V7z" />
-                        <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
-                      </svg>
-                      {client.versions.size} Version{client.versions.size !== 1 ? 's' : ''}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center">
-                  {expandedClientId === client.id ? (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
-                    </svg>
-                  ) : (
-                    <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
-                      <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
-                    </svg>
-                  )}
-                </div>
-              </div>
-              
-              {/* Expanded Content */}
-              {expandedClientId === client.id && (
-                <div className="border-t border-gray-200 bg-white">
-                  {/* Toggle to show all versions at once */}
-                  {client.versions.size > 1 && (
-                    <div className="flex justify-end px-4 pt-2">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          toggleShowAllVersions();
-                        }}
-                        className={`px-3 py-1 text-xs rounded-full flex items-center ${
-                          showAllVersions 
-                            ? 'bg-red-100 text-red-600 hover:bg-red-200' 
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                          {showAllVersions ? (
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-                          ) : (
-                            <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
-                          )}
-                        </svg>
-                        {showAllVersions ? 'Hide Versions' : 'Show All Versions'}
-                      </button>
-                    </div>
-                  )}
-                  
-                  {/* Version Selection Tabs - Only show if not in "Show All Versions" mode */}
-                  {!showAllVersions && (
-                    <div className="flex border-b border-gray-200 overflow-x-auto">
-                      {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
-                        <button
-                          key={versionId}
-                          onClick={() => selectVersion(client.id, versionId)}
-                          className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
-                            selectedVersions[client.id] === versionId
-                              ? 'border-b-2 border-red-500 text-red-600'
-                              : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
-                          }`}
-                        >
-                          Version {versionId} 
-                          <span className="ml-1 text-xs text-gray-500">({versionData.count})</span>
-                        </button>
-                      ))}
-                    </div>
-                  )}
+     {/* Main Content Area */}
+     {isLoading ? (
+       <div className="flex flex-col items-center justify-center h-64">
+         <div className="animate-spin h-10 w-10 border-4 border-red-500 rounded-full border-t-transparent mb-4"></div>
+         <p className="text-gray-500">Loading escrow items...</p>
+       </div>
+     ) : Object.keys(clientGroups).length === 0 ? (
+       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
+         <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+         </svg>
+         <h2 className="text-lg font-medium text-gray-700 mt-4 mb-2">No Estimates in Escrow</h2>
+         <p className="text-sm text-gray-500 max-w-md mx-auto">
+           There are currently no B2B estimates in the escrow system waiting for approval.
+         </p>
+       </div>
+     ) : (
+       <div className="space-y-4">
+         {/* Client Groups */}
+         {Object.values(clientGroups).map((client) => (
+           <div key={client.id} className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+             {/* Client Header */}
+             <div 
+               className={`px-4 py-3 ${expandedClientId === client.id ? 'bg-gray-50' : ''} cursor-pointer transition-colors hover:bg-gray-50 flex justify-between items-center`}
+               onClick={() => toggleClient(client.id)}
+             >
+               <div className="flex items-center">
+                 <h2 className="text-base font-medium text-gray-800">{client.name}</h2>
+                 <div className="flex items-center ml-3 text-xs text-gray-500">
+                   <span className="flex items-center">
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                       <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5zm3 4a1 1 0 000 2h.01a1 1 0 100-2H7zm3 0a1 1 0 000 2h3a1 1 0 100-2h-3zm-3 4a1 1 0 100 2h.01a1 1 0 100-2H7zm3 0a1 1 0 100 2h3a1 1 0 100-2h-3z" clipRule="evenodd" />
+                     </svg>
+                     {client.totalEstimates} Estimate{client.totalEstimates !== 1 ? 's' : ''}
+                   </span>
+                   <span className="mx-2">•</span>
+                   <span className="flex items-center">
+                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                       <path d="M13 7H7v6h6V7z" />
+                       <path fillRule="evenodd" d="M7 2a1 1 0 012 0v1h2V2a1 1 0 112 0v1h2a2 2 0 012 2v2h1a1 1 0 110 2h-1v2h1a1 1 0 110 2h-1v2a2 2 0 01-2 2h-2v1a1 1 0 11-2 0v-1H9v1a1 1 0 11-2 0v-1H5a2 2 0 01-2-2v-2H2a1 1 0 110-2h1V9H2a1 1 0 010-2h1V5a2 2 0 012-2h2V2zM5 5h10v10H5V5z" clipRule="evenodd" />
+                     </svg>
+                     {client.versions.size} Version{client.versions.size !== 1 ? 's' : ''}
+                   </span>
+                 </div>
+               </div>
+               <div className="flex items-center">
+                 {expandedClientId === client.id ? (
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                     <path fillRule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clipRule="evenodd" />
+                   </svg>
+                 ) : (
+                   <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-gray-500" viewBox="0 0 20 20" fill="currentColor">
+                     <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                   </svg>
+                 )}
+               </div>
+             </div>
+             
+             {/* Expanded Content */}
+             {expandedClientId === client.id && (
+               <div className="border-t border-gray-200 bg-white">
+                 {/* Toggle to show all versions at once */}
+                 {client.versions.size > 1 && (
+                   <div className="flex justify-end px-4 pt-2">
+                     <button
+                       onClick={(e) => {
+                         e.stopPropagation();
+                         toggleShowAllVersions();
+                       }}
+                       className={`px-3 py-1 text-xs rounded-full flex items-center ${
+                         showAllVersions 
+                           ? 'bg-red-100 text-red-600 hover:bg-red-200' 
+                           : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                       }`}
+                     >
+                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                         {showAllVersions ? (
+                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM7 9a1 1 0 000 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
+                         ) : (
+                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm1-11a1 1 0 10-2 0v2H7a1 1 0 100 2h2v2a1 1 0 102 0v-2h2a1 1 0 100-2h-2V7z" clipRule="evenodd" />
+                         )}
+                       </svg>
+                       {showAllVersions ? 'Hide Versions' : 'Show All Versions'}
+                     </button>
+                   </div>
+                 )}
+                 
+                 {/* Version Selection Tabs - Only show if not in "Show All Versions" mode */}
+                 {!showAllVersions && (
+                   <div className="flex border-b border-gray-200 overflow-x-auto">
+                     {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
+                       <button
+                         key={versionId}
+                         onClick={() => selectVersion(client.id, versionId)}
+                         className={`px-4 py-2 text-sm font-medium whitespace-nowrap ${
+                           selectedVersions[client.id] === versionId
+                             ? 'border-b-2 border-red-500 text-red-600'
+                             : 'text-gray-600 hover:text-gray-800 hover:bg-gray-50'
+                         }`}
+                       >
+                         Version {versionId} 
+                         <span className="ml-1 text-xs text-gray-500">({versionData.count})</span>
+                       </button>
+                     ))}
+                   </div>
+                 )}
 
-                  {/* If not showing all versions, show the selected version */}
-                  {!showAllVersions && selectedVersions[client.id] && (
-                    <div className="p-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-gray-800">
-                            Version {selectedVersions[client.id]} Estimates
-                            <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
-                          </h3>
-                          
-                          {/* Multi-select toggle */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleMultiSelect();
-                            }}
-                            className={`px-2 py-1 rounded text-xs flex items-center ${
-                              isMultiSelectActive 
-                                ? 'bg-red-500 text-white' 
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                              {isMultiSelectActive ? (
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              ) : (
-                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                              )}
-                            </svg>
-                            {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
-                          </button>
-                          
-                          {/* Select All button (visible in multi-select mode) */}
-                          {isMultiSelectActive && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                selectAllCurrentVersionEstimates(client.id, selectedVersions[client.id]);
-                              }}
-                              className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
-                            >
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                                <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
-                              </svg>
-                              Select All
-                            </button>
-                          )}
-                        </div>
-                        
-                        <div className="flex gap-2">
-                          {/* Bulk Action Buttons */}
-                          {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
-                            <div className="flex gap-2">
-                              <button
-                                onClick={handleApproveMultiple}
-                                disabled={isApprovingMultiple}
-                                className={`px-3 py-1.5 rounded text-sm ${
-                                  isApprovingMultiple
-                                  ? 'bg-green-300 text-white cursor-wait' 
-                                  : 'bg-green-600 text-white hover:bg-green-700'
-                                } flex items-center gap-1.5`}
-                              >
-                                {isApprovingMultiple ? (
-                                  <>
-                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Processing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                    </svg>
-                                    Approve {getSelectedEstimatesCount()}
-                                  </>
-                                )}
-                              </button>
-                              <button
-                                onClick={handleRejectMultiple}
-                                disabled={isApprovingMultiple}
-                                className={`px-3 py-1.5 rounded text-sm ${
-                                  isApprovingMultiple
-                                  ? 'bg-red-300 text-white cursor-wait' 
-                                  : 'bg-red-600 text-white hover:bg-red-700'
-                                } flex items-center gap-1.5`}
-                              >
-                                {isApprovingMultiple ? (
-                                  <>
-                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                    </svg>
-                                    Processing...
-                                  </>
-                                ) : (
-                                  <>
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                      <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                    </svg>
-                                    Reject {getSelectedEstimatesCount()}
-                                  </>
-                                )}
-                              </button>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                      
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                        {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
-                          <EscrowCard
-                            key={estimate.id}
-                            estimate={estimate}
-                            estimateNumber={index + 1}
-                            onViewDetails={() => handleViewEstimate(estimate)}
-                            onApprove={processApproveEstimate}
-                            onReject={processRejectEstimate}
-                            // Multi-select props
-                            isMultiSelectActive={isMultiSelectActive}
-                            isSelected={selectedEstimates[estimate.id]?.selected || false}
-                            onSelectToggle={(isSelected) => toggleEstimateSelection(
-                              estimate.id, 
-                              isSelected, 
-                              estimate.versionId || "1"
-                            )}
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
+                 {/* If not showing all versions, show the selected version */}
+                 {!showAllVersions && selectedVersions[client.id] && (
+                   <div className="p-4">
+                     <div className="flex justify-between items-center mb-4">
+                       <div className="flex items-center gap-2">
+                         <h3 className="font-medium text-gray-800">
+                           Version {selectedVersions[client.id]} Estimates
+                           <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
+                         </h3>
+                         
+                         {/* Multi-select toggle */}
+                         <button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             toggleMultiSelect();
+                           }}
+                           className={`px-2 py-1 rounded text-xs flex items-center ${
+                             isMultiSelectActive 
+                               ? 'bg-red-500 text-white' 
+                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                           }`}
+                         >
+                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                             {isMultiSelectActive ? (
+                               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                             ) : (
+                               <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                             )}
+                           </svg>
+                           {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
+                         </button>
+                         
+                         {/* Select All button (visible in multi-select mode) */}
+                         {isMultiSelectActive && (
+                           <button
+                             onClick={(e) => {
+                               e.stopPropagation();
+                               selectAllCurrentVersionEstimates(client.id, selectedVersions[client.id]);
+                             }}
+                             className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
+                           >
+                             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                               <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                               <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
+                             </svg>
+                             Select All
+                           </button>
+                         )}
+                       </div>
+                       
+                       <div className="flex gap-2">
+                         {/* Bulk Action Buttons */}
+                         {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
+                           <div className="flex gap-2">
+                             <button
+                               onClick={handleApproveMultiple}
+                               disabled={isApprovingMultiple}
+                               className={`px-3 py-1.5 rounded text-sm ${
+                                 isApprovingMultiple
+                                 ? 'bg-green-300 text-white cursor-wait' 
+                                 : 'bg-green-600 text-white hover:bg-green-700'
+                               } flex items-center gap-1.5`}
+                             >
+                               {isApprovingMultiple ? (
+                                 <>
+                                   <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                   </svg>
+                                   Processing...
+                                 </>
+                               ) : (
+                                 <>
+                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                   </svg>
+                                   Approve {getSelectedEstimatesCount()}
+                                 </>
+                               )}
+                             </button>
+                             <button
+                               onClick={handleRejectMultiple}
+                               disabled={isApprovingMultiple}
+                               className={`px-3 py-1.5 rounded text-sm ${
+                                 isApprovingMultiple
+                                 ? 'bg-red-300 text-white cursor-wait' 
+                                 : 'bg-red-600 text-white hover:bg-red-700'
+                               } flex items-center gap-1.5`}
+                             >
+                               {isApprovingMultiple ? (
+                                 <>
+                                   <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                   </svg>
+                                   Processing...
+                                 </>
+                               ) : (
+                                 <>
+                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                     <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                   </svg>
+                                   Reject {getSelectedEstimatesCount()}
+                                 </>
+                               )}
+                             </button>
+                           </div>
+                         )}
+                       </div>
+                     </div>
+                     
+                     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                       {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
+                         <EscrowCard
+                           key={estimate.id}
+                           estimate={estimate}
+                           estimateNumber={index + 1}
+                           onViewDetails={() => handleViewEstimate(estimate)}
+                           onApprove={processApproveEstimate}
+                           onReject={processRejectEstimate}
+                           // Multi-select props
+                           isMultiSelectActive={isMultiSelectActive}
+                           isSelected={selectedEstimates[estimate.id]?.selected || false}
+                           onSelectToggle={(isSelected) => toggleEstimateSelection(
+                             estimate.id, 
+                             isSelected, 
+                             estimate.versionId || "1"
+                           )}
+                         />
+                       ))}
+                     </div>
+                   </div>
+                 )}
 
-                  {/* Show all versions at once in a tabbed layout */}
-                  {showAllVersions && (
-                    <div className="p-4">
-                      <div className="flex justify-between items-center mb-4">
-                        <div className="flex items-center gap-2">
-                          <h3 className="font-medium text-gray-800">
-                            All Versions - {client.totalEstimates} Estimates
-                            <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
-                          </h3>
-                          
-                          {/* Multi-select toggle */}
-                          <button
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toggleMultiSelect();
-                            }}
-                            className={`px-2 py-1 rounded text-xs flex items-center ${
-                              isMultiSelectActive 
-                                ? 'bg-red-500 text-white' 
-                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                            }`}
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                              {isMultiSelectActive ? (
-                                <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                              ) : (
-                                <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                              )}
-                            </svg>
-                            {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
-                          </button>
-                        </div>
-                        
-                        {/* Bulk Action Buttons */}
-                        {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
-                          <div className="flex gap-2">
-                            <button
-                              onClick={handleApproveMultiple}
-                              disabled={isApprovingMultiple}
-                              className={`px-3 py-1.5 rounded text-sm ${
-                                isApprovingMultiple
-                                ? 'bg-green-300 text-white cursor-wait' 
-                                : 'bg-green-600 text-white hover:bg-green-700'
-                              } flex items-center gap-1.5`}
-                            >
-                              {isApprovingMultiple ? (
-                                <>
-                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                  </svg>
-                                  Processing...
-                                </>
-                              ) : (
-                                <>
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                                  </svg>
-                                  Approve {getSelectedEstimatesCount()}
-                                </>
-                              )}
-                            </button>
-                            <button
-                              onClick={handleRejectMultiple}
-                              disabled={isApprovingMultiple}
-                              className={`px-3 py-1.5 rounded text-sm ${
-                                isApprovingMultiple
-                                ? 'bg-red-300 text-white cursor-wait' 
-                                : 'bg-red-600 text-white hover:bg-red-700'
-                              } flex items-center gap-1.5`}
-                            >
-                              {isApprovingMultiple ? (
-                                <>
-                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                  </svg>
-                                  Processing...
-                                </>
-                              ) : (
-                                <>
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                    <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                                  </svg>
-                                  Reject {getSelectedEstimatesCount()}
-                                </>
-                              )}
-                            </button>
-                          </div>
-                        )}
-                      </div>
-                      
-                      {/* All versions shown with dividers between them */}
-                      {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
-                        <div key={versionId} className="mb-6">
-                          <div className="flex justify-between items-center mb-3">
-                            <div className="flex items-center">
-                              <h4 className="text-md font-medium text-gray-700">
-                                Version {versionId}
-                              </h4>
-                              <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">
-                                {versionData.count} Estimate{versionData.count !== 1 ? 's' : ''}
-                              </span>
-                              <span className="ml-2 text-xs text-gray-500">(ordered by latest activity)</span>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              {/* Select All for this version */}
-                              {isMultiSelectActive && (
-                                <button
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    selectAllCurrentVersionEstimates(client.id, versionId);
-                                  }}
-                                  className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
-                                >
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
-                                    <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
-                                    </svg>
-                                  Select All
-                                </button>
-                              )}
-                            </div>
-                          </div>
-                          
-                          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
-                            {versionData.estimates.map((estimate, index) => (
-                              <EscrowCard
-                                key={estimate.id}
-                                estimate={estimate}
-                                estimateNumber={index + 1}
-                                onViewDetails={() => handleViewEstimate(estimate)}
-                                onApprove={processApproveEstimate}
-                                onReject={processRejectEstimate}
-                                // Multi-select props
-                                isMultiSelectActive={isMultiSelectActive}
-                                isSelected={selectedEstimates[estimate.id]?.selected || false}
-                                onSelectToggle={(isSelected) => toggleEstimateSelection(
-                                  estimate.id, 
-                                  isSelected, 
-                                  estimate.versionId || "1"
-                                )}
-                              />
-                            ))}
-                          </div>
-                          
-                          {/* Add divider between versions */}
-                          {Array.from(client.versions.keys()).pop() !== versionId && (
-                            <div className="border-b border-gray-200 my-4"></div>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      )}
+                 {/* Show all versions at once in a tabbed layout */}
+                 {showAllVersions && (
+                   <div className="p-4">
+                     <div className="flex justify-between items-center mb-4">
+                       <div className="flex items-center gap-2">
+                         <h3 className="font-medium text-gray-800">
+                           All Versions - {client.totalEstimates} Estimates
+                           <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
+                         </h3>
+                         
+                         {/* Multi-select toggle */}
+                         <button
+                           onClick={(e) => {
+                             e.stopPropagation();
+                             toggleMultiSelect();
+                           }}
+                           className={`px-2 py-1 rounded text-xs flex items-center ${
+                             isMultiSelectActive 
+                               ? 'bg-red-500 text-white' 
+                               : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                           }`}
+                         >
+                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                             {isMultiSelectActive ? (
+                               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                             ) : (
+                               <path d="M17.293 13.293A8 8 0 716.707 2.707a8.001 8.001 0 1010.586 10.586z" />
+                             )}
+                           </svg>
+                           {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
+                         </button>
+                       </div>
+                       
+                       {/* Bulk Action Buttons */}
+                       {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
+                         <div className="flex gap-2">
+                           <button
+                             onClick={handleApproveMultiple}
+                             disabled={isApprovingMultiple}
+                             className={`px-3 py-1.5 rounded text-sm ${
+                               isApprovingMultiple
+                               ? 'bg-green-300 text-white cursor-wait' 
+                               : 'bg-green-600 text-white hover:bg-green-700'
+                             } flex items-center gap-1.5`}
+                           >
+                             {isApprovingMultiple ? (
+                               <>
+                                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                 </svg>
+                                 Processing...
+                               </>
+                             ) : (
+                               <>
+                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                   <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                 </svg>
+                                 Approve {getSelectedEstimatesCount()}
+                               </>
+                             )}
+                           </button>
+                           <button
+                             onClick={handleRejectMultiple}
+                             disabled={isApprovingMultiple}
+                             className={`px-3 py-1.5 rounded text-sm ${
+                               isApprovingMultiple
+                               ? 'bg-red-300 text-white cursor-wait' 
+                               : 'bg-red-600 text-white hover:bg-red-700'
+                             } flex items-center gap-1.5`}
+                           >
+                             {isApprovingMultiple ? (
+                               <>
+                                 <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                 </svg>
+                                 Processing...
+                               </>
+                             ) : (
+                               <>
+                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                   <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                 </svg>
+                                 Reject {getSelectedEstimatesCount()}
+                               </>
+                             )}
+                           </button>
+                         </div>
+                       )}
+                     </div>
+                     
+                     {/* All versions shown with dividers between them */}
+                     {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
+                       <div key={versionId} className="mb-6">
+                         <div className="flex justify-between items-center mb-3">
+                           <div className="flex items-center">
+                             <h4 className="text-md font-medium text-gray-700">
+                               Version {versionId}
+                             </h4>
+                             <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">
+                               {versionData.count} Estimate{versionData.count !== 1 ? 's' : ''}
+                             </span>
+                             <span className="ml-2 text-xs text-gray-500">(ordered by latest activity)</span>
+                           </div>
+                           
+                           <div className="flex items-center gap-2">
+                             {/* Select All for this version */}
+                             {isMultiSelectActive && (
+                               <button
+                                 onClick={(e) => {
+                                   e.stopPropagation();
+                                   selectAllCurrentVersionEstimates(client.id, versionId);
+                                 }}
+                                 className="px-2 py-1 rounded text-xs bg-gray-100 text-gray-700 hover:bg-gray-200 flex items-center"
+                               >
+                                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                                   <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
+                                   <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
+                                   </svg>
+                                 Select All
+                               </button>
+                             )}
+                           </div>
+                         </div>
+                         
+                         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
+                           {versionData.estimates.map((estimate, index) => (
+                             <EscrowCard
+                               key={estimate.id}
+                               estimate={estimate}
+                               estimateNumber={index + 1}
+                               onViewDetails={() => handleViewEstimate(estimate)}
+                               onApprove={processApproveEstimate}
+                               onReject={processRejectEstimate}
+                               // Multi-select props
+                               isMultiSelectActive={isMultiSelectActive}
+                               isSelected={selectedEstimates[estimate.id]?.selected || false}
+                               onSelectToggle={(isSelected) => toggleEstimateSelection(
+                                 estimate.id, 
+                                 isSelected, 
+                                 estimate.versionId || "1"
+                               )}
+                             />
+                           ))}
+                         </div>
+                         
+                         {/* Add divider between versions */}
+                         {Array.from(client.versions.keys()).pop() !== versionId && (
+                           <div className="border-b border-gray-200 my-4"></div>
+                         )}
+                       </div>
+                     ))}
+                   </div>
+                 )}
+               </div>
+             )}
+           </div>
+         ))}
+       </div>
+     )}
 
       {/* Modals */}
       {isModalOpen && selectedEstimate && (
