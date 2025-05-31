@@ -36,6 +36,8 @@ const OrdersPage = () => {
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
 
   const sortOptions = {
+    "serial-asc": "Serial Number - Low to High",
+    "serial-desc": "Serial Number - High to Low",
     "quantity-asc": "Quantity - Low to High",
     "quantity-desc": "Quantity - High to Low",
     "date-desc": "Delivery Date - Latest to Oldest",
@@ -62,7 +64,9 @@ const OrdersPage = () => {
       directCount: 0,
       totalQuantity: 0,
       b2bQuantity: 0,
-      directQuantity: 0
+      directQuantity: 0,
+      serializedCount: 0,
+      nonSerializedCount: 0
     };
     
     // Filter orders for different categories
@@ -70,6 +74,8 @@ const OrdersPage = () => {
     const completedOrders = orders.filter(order => order.stage === 'Completed');
     const b2bOrders = orders.filter(order => order.isLoyaltyEligible);
     const directOrders = orders.filter(order => !order.isLoyaltyEligible);
+    const serializedOrders = orders.filter(order => order.orderSerial);
+    const nonSerializedOrders = orders.filter(order => !order.orderSerial);
     
     // Calculate totals
     const totalQuantity = orders.reduce((sum, order) => 
@@ -88,7 +94,9 @@ const OrdersPage = () => {
       directCount: directOrders.length,
       totalQuantity,
       b2bQuantity,
-      directQuantity
+      directQuantity,
+      serializedCount: serializedOrders.length,
+      nonSerializedCount: nonSerializedOrders.length
     };
   }, [orders]);
 
@@ -197,7 +205,9 @@ const OrdersPage = () => {
               productionAssignments: data.productionAssignments || {},
               clientId: data.clientId || null,
               isLoyaltyEligible: data.isLoyaltyEligible || false,
-              loyaltyInfo: data.loyaltyInfo || null
+              loyaltyInfo: data.loyaltyInfo || null,
+              orderSerial: data.orderSerial || null, // Added serial number
+              orderCreatedFrom: data.orderCreatedFrom || null
             };
           });
           setOrders(ordersData);
@@ -214,10 +224,35 @@ const OrdersPage = () => {
     return () => unsubscribe();
   }, [isB2BClient, linkedClientId]);
 
+  // Helper function to extract serial number for sorting
+  const getSerialNumber = (orderSerial) => {
+    if (!orderSerial) return 0;
+    
+    // Extract the numeric part from FL-YYYY-NNNNN format
+    const match = orderSerial.match(/FL-(\d{4})-(\d{5})/);
+    if (match) {
+      const year = parseInt(match[1]);
+      const sequence = parseInt(match[2]);
+      // Create a sortable number: year * 100000 + sequence
+      return year * 100000 + sequence;
+    }
+    return 0;
+  };
+
   // Sort function
   const sortOrders = (ordersToSort) => {
     return [...ordersToSort].sort((a, b) => {
       switch (sortBy) {
+        case "serial-asc": {
+          const serialA = getSerialNumber(a.orderSerial);
+          const serialB = getSerialNumber(b.orderSerial);
+          return serialA - serialB;
+        }
+        case "serial-desc": {
+          const serialA = getSerialNumber(a.orderSerial);
+          const serialB = getSerialNumber(b.orderSerial);
+          return serialB - serialA;
+        }
         case "quantity-asc":
           return (a.jobDetails?.quantity || 0) - (b.jobDetails?.quantity || 0);
         case "quantity-desc":
@@ -242,14 +277,15 @@ const OrdersPage = () => {
   useEffect(() => {
     let filtered = orders;
 
-    // Apply search filter
+    // Apply search filter (now includes serial number search)
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(order =>
         (order.clientName && order.clientName.toLowerCase().includes(query)) ||
         (order.projectName && order.projectName.toLowerCase().includes(query)) ||
         (order.jobDetails?.jobType && order.jobDetails.jobType.toLowerCase().includes(query)) ||
-        (order.jobDetails?.quantity && order.jobDetails.quantity.toString().includes(query))
+        (order.jobDetails?.quantity && order.jobDetails.quantity.toString().includes(query)) ||
+        (order.orderSerial && order.orderSerial.toLowerCase().includes(query)) // Added serial search
       );
     }
 
@@ -334,6 +370,35 @@ const OrdersPage = () => {
     
     const staffId = productionAssignments.assigned;
     return staffNames[staffId] || 'Unknown';
+  };
+
+  // Format serial number for display
+  const formatSerialNumber = (orderSerial) => {
+    if (!orderSerial) return 'Not Assigned';
+    return orderSerial;
+  };
+
+  // Get order source icon and tooltip
+  const getOrderSource = (order) => {
+    if (order.orderCreatedFrom === 'b2b_approval') {
+      return {
+        icon: '🏢',
+        tooltip: 'B2B Order (from Escrow)',
+        className: 'text-purple-600'
+      };
+    } else if (order.orderCreatedFrom === 'estimate') {
+      return {
+        icon: '📋',
+        tooltip: 'Direct Order (from Estimate)',
+        className: 'text-blue-600'
+      };
+    } else {
+      return {
+        icon: '📝',
+        tooltip: 'Legacy Order',
+        className: 'text-gray-600'
+      };
+    }
   };
 
   const StatusCircle = ({ stage, currentStage, orderId }) => {
@@ -455,13 +520,13 @@ const OrdersPage = () => {
         <p className="text-gray-600 mt-1">
           {isB2BClient 
             ? "View and track the progress of your orders" 
-            : "Manage order workflow, assign production staff, and track progress"}
+            : "Manage order workflow, assign production staff, and track progress with serial numbers"}
         </p>
       </div>
 
       {/* KPI Cards - Only visible to admins and staff */}
       {(userRole === "admin" || userRole === "staff") && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
             <h3 className="text-sm font-medium text-gray-500 mb-2">Active Orders</h3>
             <p className="text-2xl font-bold text-gray-800">
@@ -509,6 +574,18 @@ const OrdersPage = () => {
                 'No direct orders'}
             </p>
           </div>
+
+          <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+            <h3 className="text-sm font-medium text-gray-500 mb-2">Serialized Orders</h3>
+            <p className="text-2xl font-bold text-indigo-600">
+              {orderMetrics.serializedCount}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              {orderMetrics.nonSerializedCount > 0 ? 
+                `${orderMetrics.nonSerializedCount} legacy orders` : 
+                'All orders serialized'}
+            </p>
+          </div>
         </div>
       )}
 
@@ -524,7 +601,7 @@ const OrdersPage = () => {
             </div>
             <input
               type="text"
-              placeholder="Search orders..."
+              placeholder="Search orders, serials..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
@@ -596,6 +673,10 @@ const OrdersPage = () => {
             <table className="w-full text-xs">
               <thead>
                 <tr className="bg-gray-50 border-b border-gray-200">
+                  {/* Order Serial Column - Most prominent */}
+                  <th className="px-2 py-2 text-left font-medium text-gray-500">
+                    Order Serial
+                  </th>
                   {!isB2BClient && (
                     <th className="px-2 py-2 text-left font-medium text-gray-500">
                       Client
@@ -643,108 +724,131 @@ const OrdersPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {filteredOrders.map((order) => (
-                  <tr 
-                    key={order.id} 
-                    className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
-                    onClick={() => setSelectedOrder(order)}
-                  >
-                    {!isB2BClient && (
+                {filteredOrders.map((order) => {
+                  const orderSource = getOrderSource(order);
+                  return (
+                    <tr 
+                      key={order.id} 
+                      className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer"
+                      onClick={() => setSelectedOrder(order)}
+                    >
+                      {/* Order Serial Cell - Most prominent */}
                       <td className="px-2 py-1.5">
-                        <div className="flex items-center">
-                          <span className="text-blue-600 hover:text-blue-800 font-medium truncate max-w-[100px]">
-                            {order.clientName}
+                        <div className="flex items-center gap-1">
+                          <span 
+                            className={`text-sm font-mono font-bold ${
+                              order.orderSerial ? 'text-indigo-600' : 'text-gray-400 italic'
+                            }`}
+                          >
+                            {formatSerialNumber(order.orderSerial)}
                           </span>
+                          {order.orderSerial && (
+                            <span 
+                              className={orderSource.className}
+                              title={orderSource.tooltip}
+                            >
+                              {orderSource.icon}
+                            </span>
+                          )}
                         </div>
                       </td>
-                    )}
-                    <td className="px-2 py-1.5">
-                      <span className="font-medium text-gray-800 truncate max-w-[100px] block">{order.projectName || 'Unnamed'}</span>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      {order.jobDetails?.jobType || 'N/A'}
-                    </td>
-                    <td className="px-2 py-1.5">
-                      {order.jobDetails?.quantity || 'N/A'}
-                    </td>
-                    <td className="px-2 py-1.5">
-                      {formatDate(order.deliveryDate)}
-                    </td>
-                    {/* Deadline cell */}
-                    <td className="px-2 py-1.5">
-                      {order.productionAssignments?.deadlineDate ? (
-                        <span className={`${
-                          new Date(order.productionAssignments.deadlineDate) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
-                          order.stage !== 'Completed' ? 'text-red-600 font-medium' : 'text-gray-600'
-                        }`}>
-                          {formatDate(order.productionAssignments.deadlineDate)}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400 italic">Not set</span>
-                      )}
-                    </td>
-                    {/* Assigned production staff cell */}
-                    <td className="px-2 py-1.5">
-                      <span className={`${order.productionAssignments?.assigned ? 'text-teal-600 font-medium' : 'text-gray-500 italic'} truncate max-w-[80px] block`}>
-                        {getAssignedStaffName(order.productionAssignments)}
-                      </span>
-                    </td>
-                    <td className="px-2 py-1.5">
-                      <span className={`px-1.5 py-0.5 text-xs rounded-full text-white inline-block
-                          ${stageColors[order.stage]?.bg || 'bg-gray-100'}`}
-                        >
-                        {order.stage || 'Not started'}
-                      </span>
-                    </td>
-                    {/* Loyalty column for admins and staff */}
-                    {(userRole === "admin" || userRole === "staff") && (
-                      <td className="px-2 py-1.5">
-                        {order.isLoyaltyEligible ? (
-                          order.loyaltyInfo ? (
-                            <div className="text-xs">
-                              <div className="text-green-600">
-                                <strong>{order.loyaltyInfo.discount}%</strong>
-                              </div>
-                            </div>
-                          ) : (
-                            <span className="text-xs text-purple-700">
-                              B2B
+                      {!isB2BClient && (
+                        <td className="px-2 py-1.5">
+                          <div className="flex items-center">
+                            <span className="text-blue-600 hover:text-blue-800 font-medium truncate max-w-[100px]">
+                              {order.clientName}
                             </span>
-                          )
+                          </div>
+                        </td>
+                      )}
+                      <td className="px-2 py-1.5">
+                        <span className="font-medium text-gray-800 truncate max-w-[100px] block">{order.projectName || 'Unnamed'}</span>
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {order.jobDetails?.jobType || 'N/A'}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {order.jobDetails?.quantity || 'N/A'}
+                      </td>
+                      <td className="px-2 py-1.5">
+                        {formatDate(order.deliveryDate)}
+                      </td>
+                      {/* Deadline cell */}
+                      <td className="px-2 py-1.5">
+                        {order.productionAssignments?.deadlineDate ? (
+                          <span className={`${
+                            new Date(order.productionAssignments.deadlineDate) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) &&
+                            order.stage !== 'Completed' ? 'text-red-600 font-medium' : 'text-gray-600'
+                          }`}>
+                            {formatDate(order.productionAssignments.deadlineDate)}
+                          </span>
                         ) : (
-                          <span className="text-xs text-blue-600"><strong>Direct</strong></span>
+                          <span className="text-gray-400 italic">Not set</span>
                         )}
                       </td>
-                    )}
-                    {/* Status indicators for each stage */}
-                    {stages.slice(1).map((stage) => (
-                      <td key={`${order.id}-${stage}`} className="px-1 py-1.5 text-center">
-                        <StatusCircle 
-                          stage={stage} 
-                          currentStage={order.stage} 
-                          orderId={order.id}
-                        />
+                      {/* Assigned production staff cell */}
+                      <td className="px-2 py-1.5">
+                        <span className={`${order.productionAssignments?.assigned ? 'text-teal-600 font-medium' : 'text-gray-500 italic'} truncate max-w-[80px] block`}>
+                          {getAssignedStaffName(order.productionAssignments)}
+                        </span>
                       </td>
-                    ))}
-                    {/* Actions column */}
-                    {canAssignProduction && (
-                      <td className="px-2 py-1.5 text-center">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation(); // Prevent row click action
-                            handleOpenAssignmentModal(order);
-                          }}
-                          className="p-0.5 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50 transition-colors"
-                          title="Assign Production Staff"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                            <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
-                          </svg>
-                        </button>
+                      <td className="px-2 py-1.5">
+                        <span className={`px-1.5 py-0.5 text-xs rounded-full text-white inline-block
+                            ${stageColors[order.stage]?.bg || 'bg-gray-100'}`}
+                          >
+                          {order.stage || 'Not started'}
+                        </span>
                       </td>
-                    )}
-                  </tr>
-                ))}
+                      {/* Loyalty column for admins and staff */}
+                      {(userRole === "admin" || userRole === "staff") && (
+                        <td className="px-2 py-1.5">
+                          {order.isLoyaltyEligible ? (
+                            order.loyaltyInfo ? (
+                              <div className="text-xs">
+                                <div className="text-green-600">
+                                  <strong>{order.loyaltyInfo.discount}%</strong>
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-purple-700">
+                                B2B
+                              </span>
+                            )
+                          ) : (
+                            <span className="text-xs text-blue-600"><strong>Direct</strong></span>
+                          )}
+                        </td>
+                      )}
+                      {/* Status indicators for each stage */}
+                      {stages.slice(1).map((stage) => (
+                        <td key={`${order.id}-${stage}`} className="px-1 py-1.5 text-center">
+                          <StatusCircle 
+                            stage={stage} 
+                            currentStage={order.stage} 
+                            orderId={order.id}
+                          />
+                        </td>
+                      ))}
+                      {/* Actions column */}
+                      {canAssignProduction && (
+                        <td className="px-2 py-1.5 text-center">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation(); // Prevent row click action
+                              handleOpenAssignmentModal(order);
+                            }}
+                            className="p-0.5 text-red-600 hover:text-red-800 rounded-full hover:bg-red-50 transition-colors"
+                            title="Assign Production Staff"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                              <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                            </svg>
+                          </button>
+                        </td>
+                      )}
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
@@ -806,6 +910,35 @@ const OrdersPage = () => {
         </div>
       )}
 
+      {/* Serial Number Statistics - Only for admin and staff */}
+      {(userRole === "admin" || userRole === "staff") && (
+        <div className="mt-6 bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+          <h3 className="text-sm font-medium text-gray-700 mb-3">Serial Number Statistics</h3>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold text-indigo-600">{orderMetrics.serializedCount}</div>
+              <div className="text-xs text-gray-500">Serialized Orders</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-gray-400">{orderMetrics.nonSerializedCount}</div>
+              <div className="text-xs text-gray-500">Legacy Orders</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-purple-600">
+                {orders.length > 0 ? Math.round((orderMetrics.serializedCount / orders.length) * 100) : 0}%
+              </div>
+              <div className="text-xs text-gray-500">Serialization Rate</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold text-green-600">
+                {new Date().getFullYear()}
+              </div>
+              <div className="text-xs text-gray-500">Current Year</div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Confirmation Dialog */}
       {canEditStages && showConfirmation && pendingStageUpdate && (
         <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[60]">
@@ -833,7 +966,7 @@ const OrdersPage = () => {
                   <span className="flex items-center">
                     <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                       <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                     </svg>
                     Updating...
                   </span>
