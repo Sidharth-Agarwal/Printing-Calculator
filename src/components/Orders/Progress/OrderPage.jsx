@@ -379,27 +379,27 @@ const OrdersPage = () => {
   };
 
   // Get order source icon and tooltip
-  const getOrderSource = (order) => {
-    if (order.orderCreatedFrom === 'b2b_approval') {
-      return {
-        icon: '🏢',
-        tooltip: 'B2B Order (from Escrow)',
-        className: 'text-purple-600'
-      };
-    } else if (order.orderCreatedFrom === 'estimate') {
-      return {
-        icon: '📋',
-        tooltip: 'Direct Order (from Estimate)',
-        className: 'text-blue-600'
-      };
-    } else {
-      return {
-        icon: '📝',
-        tooltip: 'Legacy Order',
-        className: 'text-gray-600'
-      };
-    }
-  };
+  // const getOrderSource = (order) => {
+  //   if (order.orderCreatedFrom === 'b2b_approval') {
+  //     return {
+  //       icon: '🏢',
+  //       tooltip: 'B2B Order (from Escrow)',
+  //       className: 'text-purple-600'
+  //     };
+  //   } else if (order.orderCreatedFrom === 'estimate') {
+  //     return {
+  //       icon: '📋',
+  //       tooltip: 'Direct Order (from Estimate)',
+  //       className: 'text-blue-600'
+  //     };
+  //   } else {
+  //     return {
+  //       icon: '📝',
+  //       tooltip: 'Legacy Order',
+  //       className: 'text-gray-600'
+  //     };
+  //   }
+  // };
 
   const StatusCircle = ({ stage, currentStage, orderId }) => {
     // B2B clients can only view stages - all other users can edit
@@ -725,7 +725,7 @@ const OrdersPage = () => {
               </thead>
               <tbody>
                 {filteredOrders.map((order) => {
-                  const orderSource = getOrderSource(order);
+                  // const orderSource = getOrderSource(order);
                   return (
                     <tr 
                       key={order.id} 
@@ -736,20 +736,20 @@ const OrdersPage = () => {
                       <td className="px-2 py-1.5">
                         <div className="flex items-center gap-1">
                           <span 
-                            className={`text-sm font-mono font-bold ${
+                            className={`text-xs font-mono ${
                               order.orderSerial ? 'text-indigo-600' : 'text-gray-400 italic'
                             }`}
                           >
                             {formatSerialNumber(order.orderSerial)}
                           </span>
-                          {order.orderSerial && (
+                          {/* {order.orderSerial && (
                             <span 
                               className={orderSource.className}
                               title={orderSource.tooltip}
                             >
                               {orderSource.icon}
                             </span>
-                          )}
+                          )} */}
                         </div>
                       </td>
                       {!isB2BClient && (
