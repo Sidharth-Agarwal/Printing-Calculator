@@ -61,19 +61,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
-  // Helper function to get the default DST material
-  const getDefaultDstMaterial = () => {
-    if (dstMaterials.length === 0) return "";
-    
-    // Look for "DST PP PLATE" first
-    const preferredMaterial = dstMaterials.find(material => 
-      material.materialName === "DST PP PLATE"
-    );
-    
-    // If "DST PP PLATE" is found, use it; otherwise use the first material
-    return preferredMaterial ? preferredMaterial.materialName : dstMaterials[0]?.materialName || "";
-  };
-
   // Update dimensions when die size changes (for Auto mode)
   useEffect(() => {
     if (lpDetails.isLPUsed) {
@@ -110,7 +97,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
   useEffect(() => {
     if (lpDetails.isLPUsed && mrTypes.length > 0 && dstMaterials.length > 0 && lpDetails.colorDetails.length > 0) {
       const defaultMRType = mrTypes[0];
-      const defaultDstMaterial = getDefaultDstMaterial();
+      const defaultDstMaterial = dstMaterials[0]?.materialName || "";
       
       // Check if any color has empty/missing values that need updates
       const needsUpdate = lpDetails.colorDetails.some(color => 
@@ -243,8 +230,8 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     // Get the default plate type from the fetched list, or fallback to "Polymer Plate"
     const defaultPlateType = plateTypes.length > 0 ? plateTypes[0].materialName : "Polymer Plate";
     
-    // Get the default DST material (preferring "DST PP PLATE")
-    const defaultDstMaterial = getDefaultDstMaterial();
+    // Get the default DST material
+    const defaultDstMaterial = dstMaterials.length > 0 ? dstMaterials[0]?.materialName : "";
 
     const details = Array.from({ length: noOfColors }, (_, index) => {
       const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
@@ -262,7 +249,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         plateType: lpDetails.colorDetails[index]?.plateType || defaultPlateType, // Use first plate type from API
         mrType: lpDetails.colorDetails[index]?.mrType || defaultMRType.type, // Use first MR type from API
         mrTypeConcatenated: lpDetails.colorDetails[index]?.mrTypeConcatenated || defaultMRType.concatenated, // Store concatenated version
-        dstMaterial: lpDetails.colorDetails[index]?.dstMaterial || defaultDstMaterial // Add DST material to each color (preferring "DST PP PLATE")
+        dstMaterial: lpDetails.colorDetails[index]?.dstMaterial || defaultDstMaterial // Add DST material to each color
       }
     });
     
@@ -339,7 +326,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             min="1"
             max="10"
             onChange={handleChange}
-            onWheel={(e) => e.target.blur()}
             className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
           />
           {errors.noOfColors && (
