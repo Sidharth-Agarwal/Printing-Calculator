@@ -12,14 +12,9 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
   });
   const [error, setError] = useState("");
 
-  // Populate form when editing
   useEffect(() => {
     if (selectedTier) {
-      // Ensure benefits is an array
-      const benefits = Array.isArray(selectedTier.benefits)
-        ? selectedTier.benefits
-        : [""];
-      
+      const benefits = Array.isArray(selectedTier.benefits) ? selectedTier.benefits : [""];
       setFormData({
         ...selectedTier,
         benefits: benefits,
@@ -35,32 +30,31 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
         benefits: [""],
       });
     }
-    setError(""); // Clear any errors when form changes
+    setError("");
   }, [selectedTier]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: name === "orderThreshold" || name === "discount" 
-        ? parseInt(value, 10) || "" 
-        : value,
+      [name]:
+        name === "orderThreshold" || name === "discount"
+          ? value === "" ? "" : parseInt(value, 10)
+          : value,
     }));
-    
-    // Clear error when user types
+
     if (error) setError("");
   };
 
   const handleBenefitChange = (index, value) => {
     const updatedBenefits = [...formData.benefits];
     updatedBenefits[index] = value;
-    
+
     setFormData((prev) => ({
       ...prev,
       benefits: updatedBenefits,
     }));
-    
-    // Clear error when user types
+
     if (error) setError("");
   };
 
@@ -73,10 +67,10 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
 
   const removeBenefitField = (index) => {
     if (formData.benefits.length <= 1) return;
-    
+
     const updatedBenefits = [...formData.benefits];
     updatedBenefits.splice(index, 1);
-    
+
     setFormData((prev) => ({
       ...prev,
       benefits: updatedBenefits,
@@ -86,14 +80,19 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
   const handleSubmit = (e) => {
     e.preventDefault();
 
-    // Basic validation
-    if (!formData.id || !formData.name || !formData.orderThreshold || !formData.discount) {
+    if (
+      !formData.id ||
+      !formData.name ||
+      !formData.orderThreshold ||
+      formData.discount === "" ||
+      formData.discount === null ||
+      formData.discount === undefined
+    ) {
       setError("Please fill in all required fields");
       return;
     }
 
-    // Filter out empty benefits
-    const filteredBenefits = formData.benefits.filter(benefit => benefit.trim() !== "");
+    const filteredBenefits = formData.benefits.filter((benefit) => benefit.trim() !== "");
     const dataToSubmit = {
       ...formData,
       benefits: filteredBenefits.length > 0 ? filteredBenefits : ["No additional benefits"],
@@ -113,7 +112,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
           {error}
         </div>
       )}
-      
+
       <div className="mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 text-sm">
           <div>
@@ -129,11 +128,9 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               className="w-full p-2 border border-gray-300 rounded text-sm"
               required
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Unique identifier for this tier
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Unique identifier for this tier</p>
           </div>
-          
+
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Tier Name <span className="text-red-500">*</span>
@@ -147,11 +144,9 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               className="w-full p-2 border border-gray-300 rounded text-sm"
               required
             />
-            <p className="mt-1 text-xs text-gray-500">
-              Display name shown to clients
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Display name shown to clients</p>
           </div>
-          
+
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Order Threshold <span className="text-red-500">*</span>
@@ -170,7 +165,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               Minimum number of orders to reach this tier
             </p>
           </div>
-          
+
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
               Discount Percentage <span className="text-red-500">*</span>
@@ -178,9 +173,9 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
             <input
               type="number"
               name="discount"
-              value={formData.discount || ""}
+              value={formData.discount === 0 ? 0 : formData.discount || ""}
               onChange={handleChange}
-              placeholder="E.g., 5, 10, 15, 20"
+              placeholder="E.g., 0, 5, 10, 20"
               className="w-full p-2 border border-gray-300 rounded text-sm"
               required
               min="0"
@@ -190,11 +185,9 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               Percentage discount applied to orders
             </p>
           </div>
-          
+
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Color
-            </label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Color</label>
             <div className="flex items-center mt-1">
               <input
                 type="color"
@@ -212,15 +205,11 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
                 className="ml-2 flex-1 p-2 border border-gray-300 rounded text-sm"
               />
             </div>
-            <p className="mt-1 text-xs text-gray-500">
-              Color for badges and visual elements
-            </p>
+            <p className="mt-1 text-xs text-gray-500">Color for badges and visual elements</p>
           </div>
-          
+
           <div>
-            <label className="block text-xs font-medium text-gray-700 mb-1">
-              Description
-            </label>
+            <label className="block text-xs font-medium text-gray-700 mb-1">Description</label>
             <input
               type="text"
               name="description"
@@ -231,12 +220,10 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
             />
           </div>
         </div>
-        
+
         <div className="mt-6">
-          <label className="block text-xs font-medium text-gray-700 mb-2">
-            Benefits
-          </label>
-          
+          <label className="block text-xs font-medium text-gray-700 mb-2">Benefits</label>
+
           {formData.benefits.map((benefit, index) => (
             <div key={index} className="flex items-center mb-2">
               <input
@@ -256,7 +243,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               </button>
             </div>
           ))}
-          
+
           <button
             type="button"
             onClick={addBenefitField}
@@ -267,7 +254,6 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
         </div>
       </div>
 
-      {/* Form buttons */}
       <div className="flex justify-end space-x-3">
         <button
           type="button"
@@ -284,14 +270,32 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
         >
           {isSubmitting ? (
             <span className="flex items-center">
-              <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <svg
+                className="animate-spin -ml-1 mr-2 h-4 w-4 text-white"
+                xmlns="http://www.w3.org/2000/svg"
+                fill="none"
+                viewBox="0 0 24 24"
+              >
+                <circle
+                  className="opacity-25"
+                  cx="12"
+                  cy="12"
+                  r="10"
+                  stroke="currentColor"
+                  strokeWidth="4"
+                ></circle>
+                <path
+                  className="opacity-75"
+                  fill="currentColor"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                ></path>
               </svg>
               Processing...
             </span>
+          ) : selectedTier ? (
+            "Update Tier"
           ) : (
-            selectedTier ? 'Update Tier' : 'Add Tier'
+            "Add Tier"
           )}
         </button>
       </div>
