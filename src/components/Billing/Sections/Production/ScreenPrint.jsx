@@ -122,6 +122,7 @@ const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
                 min="1"
                 max="10"
                 onChange={handleChange}
+                onWheel={(e) => e.target.blur()}
                 className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
               />
               {errors.noOfColors && (

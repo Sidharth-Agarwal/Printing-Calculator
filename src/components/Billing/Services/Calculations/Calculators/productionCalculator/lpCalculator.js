@@ -1,5 +1,6 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
+import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
 
 /**
  * Calculates letter press (LP) costs based on form state
@@ -41,10 +42,11 @@ export const calculateLPCosts = async (state) => {
       };
     }
 
-    // 1. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 1. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
     
     // Initialize cost variables
     let totalPlateCost = 0;
@@ -67,18 +69,18 @@ export const calculateLPCosts = async (state) => {
         if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
           const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
           const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-          plateArea = (productLengthCm + margin) * (productBreadthCm + margin);
+          plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
         } else if (orderAndPaper.dieSize) {
           // Fall back to die dimensions if product size is not available
           const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
           const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-          plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+          plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
         }
       } else {
         // Otherwise use the provided plate dimensions
         const providedLength = parseFloat(colorDetail.plateDimensions.length)
         const providedBreadth = parseFloat(colorDetail.plateDimensions.breadth)
-        plateArea = (providedLength + margin) * (providedBreadth + margin);
+        plateArea = (providedLength + lengthMargin) * (providedBreadth + breadthMargin);
       }
       
       // 2. Fetch plate material details
@@ -193,7 +195,8 @@ export const calculateLPCosts = async (state) => {
       totalDstMaterialCost: totalDstMaterialCost.toFixed(2), // Include DST material cost
       totalColorsCost: totalColorsCost.toFixed(2),
       colorsCount: lpDetails.colorDetails.length,
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating LP costs:", error);

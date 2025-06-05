@@ -1,5 +1,6 @@
-import { fetchStandardRate, fetchMarginByJobType } from "../../../../../../utils/dbFetchUtils";
+import { fetchStandardRate } from "../../../../../../utils/dbFetchUtils";
 import { fetchMaterialDetails } from "../../../../../../utils/fetchDataUtils";
+import { getMarginsByJobType } from "../../../../../../utils/marginUtils";
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
 
@@ -72,10 +73,11 @@ export const calculateFoldAndPasteCosts = async (state) => {
     const fragsPerDie = dieDetails.frags ? parseInt(dieDetails.frags) || 1 : 1;
     console.log("Frags per die:", fragsPerDie);
 
-    // 2. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2;
-    console.log("MARGIN : ",margin)
+    // 2. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
 
     // 3. Calculate plate area for DST material
     let plateArea = 0;
@@ -84,12 +86,12 @@ export const calculateFoldAndPasteCosts = async (state) => {
     if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
       const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
       const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-      plateArea = (productLengthCm + margin) * (productBreadthCm + margin);
+      plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
     } else if (orderAndPaper.dieSize && orderAndPaper.dieSize.length && orderAndPaper.dieSize.breadth) {
       // Fall back to die dimensions if product size is not available
       const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
       const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-      plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+      plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
     } else {
       return {
         error: "Missing dimensions for DST material area calculation",
@@ -146,7 +148,8 @@ export const calculateFoldAndPasteCosts = async (state) => {
       dstMaterial: foldAndPaste.dstMaterial,
       dstType: foldAndPaste.dstType,
       materialCostPerUnit: materialCostPerUnit.toFixed(2),
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating fold and paste costs:", error);

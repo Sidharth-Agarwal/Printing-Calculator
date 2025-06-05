@@ -89,15 +89,14 @@ const EstimatesPage = () => {
     return new Date().getTime();
   };
 
-  // Sort estimates by creation/update time (newest first)
+  // Sort estimates by creation/update time (oldest first)
   const sortEstimatesByTimestamp = (estimates) => {
     return [...estimates].sort((a, b) => {
       const timestampA = getEstimateTimestamp(a);
       const timestampB = getEstimateTimestamp(b);
-      return timestampB - timestampA;
+      return timestampA - timestampB;
     });
   };
-
   // Fetch B2B client data if applicable
   useEffect(() => {
     const fetchB2BClientData = async () => {
@@ -1148,7 +1147,7 @@ const EstimatesPage = () => {
                        <div className="flex items-center gap-2">
                          <h3 className="font-medium text-gray-800">
                            Version {selectedVersions[client.id]} Estimates 
-                           <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
+                           <span className="text-xs text-gray-500 ml-1">(ordered by earliest activity)</span>
                          </h3>
                          
                          {/* Multi-select toggle */}
@@ -1163,13 +1162,6 @@ const EstimatesPage = () => {
                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                            }`}
                          >
-                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                             {isMultiSelectActive ? (
-                               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                             ) : (
-                               <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                             )}
-                           </svg>
                            {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
                          </button>
                          
@@ -1270,7 +1262,7 @@ const EstimatesPage = () => {
                        <div className="flex items-center gap-2">
                          <h3 className="font-medium text-gray-800">
                            All Versions - {client.totalEstimates} Estimates
-                           <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
+                           <span className="text-xs text-gray-500 ml-1">(ordered by earliest activity)</span>
                          </h3>
                          
                          {/* Multi-select toggle */}
@@ -1285,13 +1277,6 @@ const EstimatesPage = () => {
                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                            }`}
                          >
-                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                             {isMultiSelectActive ? (
-                               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                             ) : (
-                               <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                             )}
-                           </svg>
                            {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
                          </button>
                        </div>

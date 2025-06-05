@@ -1,5 +1,6 @@
 import { fetchPaperDetails } from '../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchMarginByJobType } from '../../../../../utils/dbFetchUtils';
+import { fetchStandardRate } from '../../../../../utils/dbFetchUtils';
+import { getMarginsByJobType } from '../../../../../utils/marginUtils';
 import { db } from '../../../../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -91,10 +92,11 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     const gilCutRate = await fetchStandardRate('GIL CUT', 'PER SHEET');
     const gilCutCostPerSheet = gilCutRate ? parseFloat(gilCutRate.finalRate) : 0.25; // Default if not found
 
-    // 3. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType || "CARD");
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 3. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType || "CARD");
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
 
     // 4. Get dimensions based on job type
     let dieSize = {};
@@ -102,14 +104,14 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     if (isNotebookJob) {
       // For notebooks, use the calculated dimensions from notebook details
       dieSize = {
-        length: (parseFloat(notebookDetails.calculatedLength) * 2.54) + margin,
-        breadth: (parseFloat(notebookDetails.calculatedBreadth) * 2.54) + margin,
+        length: (parseFloat(notebookDetails.calculatedLength) * 2.54) + lengthMargin,
+        breadth: (parseFloat(notebookDetails.calculatedBreadth) * 2.54) + breadthMargin,
       };
     } else {
       // For regular jobs, use the die dimensions
       dieSize = {
-        length: (parseFloat(orderAndPaper.dieSize.length) * 2.54) + margin,
-        breadth: (parseFloat(orderAndPaper.dieSize.breadth) * 2.54) + margin,
+        length: (parseFloat(orderAndPaper.dieSize.length) * 2.54) + lengthMargin,
+        breadth: (parseFloat(orderAndPaper.dieSize.breadth) * 2.54) + breadthMargin,
       };
     }
 
@@ -163,7 +165,8 @@ export const calculatePaperAndCuttingCosts = async (state) => {
       paperRate: parseFloat(paperDetails.finalRate).toFixed(2),
       gilCutRate: gilCutCostPerSheet.toFixed(2),
       fragsPerDie,
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating paper and cutting costs:", error);
