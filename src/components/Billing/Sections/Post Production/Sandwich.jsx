@@ -7,7 +7,6 @@ import SearchablePaperDropdown from "../Fixed/SearchablePaperDropdown";
 
 const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
-  
   const { 
     isSandwichComponentUsed = false,
     paperInfo = {
@@ -927,6 +926,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                 max="10"
                 value={lpDetailsSandwich.noOfColors}
                 onChange={handleLPSandwichChange}
+                onWheel={(e) => e.target.blur()}
                 className="border rounded-md p-2 w-full text-sm"
               />
               {errors.lpNoOfColors && <p className="text-red-500 text-sm">{errors.lpNoOfColors}</p>}
@@ -1281,7 +1281,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         {embDetailsSandwich.isEMBUsed && (
           <div className="pl-6 border-l-2 border-gray-200 mb-4">
             {/* All fields in a single line */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
               {/* Plate Size Type */}
               <div>
                 <label className="block text-xs mb-1">Plate Size:</label>

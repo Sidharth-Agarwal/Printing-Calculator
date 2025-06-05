@@ -855,6 +855,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 placeholder="Enter Length"
                 value={searchDimensions.length}
                 onChange={handleSearchChange}
+                onWheel={(e) => e.target.blur()}
                 className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
                 data-testid="die-length-input"
               />
@@ -868,6 +869,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 placeholder="Enter Breadth"
                 value={searchDimensions.breadth}
                 onChange={handleSearchChange}
+                onWheel={(e) => e.target.blur()}
                 className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
                 data-testid="die-breadth-input"
               />

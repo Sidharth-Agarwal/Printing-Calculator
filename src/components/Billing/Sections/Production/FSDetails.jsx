@@ -314,7 +314,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                     <h4 className="text-sm font-medium text-gray-700">Foil {index + 1}</h4>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                     {/* Block Size Type */}
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
