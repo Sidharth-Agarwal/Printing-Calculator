@@ -1,5 +1,6 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
+import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
 
 /**
  * Calculates embossing costs based on form state
@@ -39,10 +40,11 @@ export const calculateEMBCosts = async (state) => {
       };
     }
 
-    // 1. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 1. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
     
     // Calculate plate area 
     let plateArea = 0;
@@ -52,18 +54,18 @@ export const calculateEMBCosts = async (state) => {
       if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
         const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
         const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-        plateArea = (productLengthCm + margin) * (productBreadthCm + margin);
+        plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
       } else if (orderAndPaper.dieSize) {
         // Fall back to die dimensions if product size is not available
         const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
         const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-        plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+        plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
       }
     } else {
       // Otherwise use the provided plate dimensions
       const providedLength = parseFloat(embDetails.plateDimensions.length);
       const providedBreadth = parseFloat(embDetails.plateDimensions.breadth);
-      plateArea = (providedLength + margin) * (providedBreadth + margin);
+      plateArea = (providedLength + lengthMargin) * (providedBreadth + breadthMargin);
     }
 
     // 2. Fetch male plate material details
@@ -183,7 +185,8 @@ export const calculateEMBCosts = async (state) => {
       positiveFilmCost: positiveFilmCost.toFixed(2),
       mrCost: mrCost.toFixed(2),
       mkgCost: mkgCost.toFixed(2),
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating embossing costs:", error);

@@ -1,5 +1,6 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
+import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
 
@@ -76,10 +77,11 @@ export const calculateFSCosts = async (state) => {
       }
     }
 
-    // 1. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 1. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
     
     // 1a. Fetch freight cost for blocks from standard rates
     const freightDetails = await fetchStandardRate("FREIGHT", "BLOCK");
@@ -104,18 +106,18 @@ export const calculateFSCosts = async (state) => {
         if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
           const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
           const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-          blockArea = (productLengthCm + margin) * (productBreadthCm + margin);
+          blockArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
         } else if (orderAndPaper.dieSize) {
           // Fall back to die dimensions if product size is not available
           const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
           const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-          blockArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+          blockArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
         }
       } else {
         // Otherwise use the provided block dimensions
         const providedLength = parseFloat(foilDetail.blockDimension.length)
         const providedBreadth = parseFloat(foilDetail.blockDimension.breadth)
-        blockArea = (providedLength + margin) * (providedBreadth + margin);
+        blockArea = (providedLength + lengthMargin) * (providedBreadth + breadthMargin);
       }
       
       // 2. Fetch block material details
@@ -200,7 +202,8 @@ export const calculateFSCosts = async (state) => {
       totalFreightCost: totalFreightCost.toFixed(2),
       fragsPerDie: fragsPerDie,
       foilsCount: fsDetails.foilDetails.length,
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating FS costs:", error);
