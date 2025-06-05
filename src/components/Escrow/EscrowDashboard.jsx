@@ -17,7 +17,7 @@ import {
   createLoyaltyTierChangeNotification,
   deleteRelatedNotifications 
 } from "../../utils/loyaltyUtils";
-import OrderSerializationService from "../../utils/OrderSerializationService"; // NEW IMPORT
+import OrderSerializationService from "../../utils/OrderSerializationService";
 
 const EscrowDashboard = () => {
   const navigate = useNavigate();
@@ -87,12 +87,14 @@ const EscrowDashboard = () => {
     return new Date().getTime();
   };
 
-  // Sort estimates by creation/update time (oldest first)
+  // UPDATED: Sort estimates by creation/update time (oldest first)
   const sortEstimatesByTimestamp = (estimates) => {
     return [...estimates].sort((a, b) => {
       const timestampA = getEstimateTimestamp(a);
       const timestampB = getEstimateTimestamp(b);
-      return timestampA - timestampB; // Changed from timestampB - timestampA
+      
+      // CHANGED: Sort in ascending order (oldest first)
+      return timestampA - timestampB;
     });
   };
 
@@ -157,7 +159,7 @@ const EscrowDashboard = () => {
     fetchActiveClients();
   }, []);
 
-  // Fetch all B2B estimates in escrow on mount - filter out already processed estimates
+  // UPDATED: Fetch all B2B estimates in escrow on mount - filter out already processed estimates
   useEffect(() => {
     const fetchEscrowEstimates = async () => {
       try {
@@ -175,7 +177,10 @@ const EscrowDashboard = () => {
           ...doc.data(),
         }));
         
-        setEscrowEstimates(data);
+        // ADDED: Filter out estimates that have been moved to orders
+        const filteredData = data.filter(estimate => !estimate.movedToOrders);
+        
+        setEscrowEstimates(filteredData);
       } catch (error) {
         console.error("Error fetching escrow estimates:", error);
       } finally {
@@ -188,8 +193,9 @@ const EscrowDashboard = () => {
 
   // Process estimates into client groups with proper ordering
   const clientGroups = React.useMemo(() => {
-    // Apply search filter
-    let filtered = [...escrowEstimates];
+    // UPDATED: Apply search filter and ensure moved estimates are excluded
+    let filtered = [...escrowEstimates].filter(estimate => !estimate.movedToOrders);
+    
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(estimate => 
@@ -268,13 +274,13 @@ const EscrowDashboard = () => {
     return groups;
   }, [escrowEstimates, searchQuery, filterStatus, activeClientsMap]);
 
-  // Get a count of selected valid estimates (not approved or rejected)
+  // UPDATED: Get a count of selected valid estimates (not approved, rejected, or moved)
   const getSelectedEstimatesCount = () => {
     let count = 0;
     Object.keys(selectedEstimates).forEach(estimateId => {
       if (selectedEstimates[estimateId]?.selected) {
         const estimate = escrowEstimates.find(est => est.id === estimateId);
-        if (estimate && !estimate.isApproved && !estimate.isRejected) {
+        if (estimate && !estimate.isApproved && !estimate.isRejected && !estimate.movedToOrders) {
           count++;
         }
       }
@@ -313,8 +319,8 @@ const EscrowDashboard = () => {
     // Update selected estimates
     const newSelections = { ...selectedEstimates };
     versionData.estimates.forEach(estimate => {
-      // Only include estimates that can be processed
-      if (!estimate.isApproved && !estimate.isRejected) {
+      // UPDATED: Only include estimates that can be processed (not moved to orders)
+      if (!estimate.isApproved && !estimate.isRejected && !estimate.movedToOrders) {
         newSelections[estimate.id] = { 
           selected: true, 
           versionId: estimate.versionId || "1" 
@@ -493,12 +499,9 @@ const EscrowDashboard = () => {
       
       await updateDoc(estimateRef, updateData);
 
-      // Update local state
+      // UPDATED: Remove the estimate from local state since it's now moved to orders
       setEscrowEstimates(prev => 
-        prev.map(est => est.id === estimate.id ? { 
-          ...est, 
-          ...updateData
-        } : est)
+        prev.filter(est => est.id !== estimate.id)
       );
       
       console.log("Successfully approved B2B estimate and moved to orders");
@@ -593,7 +596,8 @@ const EscrowDashboard = () => {
       Object.keys(selectedEstimates).forEach(estimateId => {
         if (selectedEstimates[estimateId]?.selected) {
           const estimate = escrowEstimates.find(est => est.id === estimateId);
-          if (estimate && !estimate.isApproved && !estimate.isRejected) {
+          // UPDATED: Check for movedToOrders as well
+          if (estimate && !estimate.isApproved && !estimate.isRejected && !estimate.movedToOrders) {
             estimatesToApprove.push(estimate);
           }
         }
@@ -658,7 +662,8 @@ const EscrowDashboard = () => {
       Object.keys(selectedEstimates).forEach(estimateId => {
         if (selectedEstimates[estimateId]?.selected) {
           const estimate = escrowEstimates.find(est => est.id === estimateId);
-          if (estimate && !estimate.isApproved && !estimate.isRejected) {
+          // UPDATED: Check for movedToOrders as well
+          if (estimate && !estimate.isApproved && !estimate.isRejected && !estimate.movedToOrders) {
             estimatesToReject.push(estimate);
           }
         }
@@ -788,7 +793,7 @@ const EscrowDashboard = () => {
               <div className="flex-shrink-0 mr-3">
                 <svg className="h-8 w-8 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                  </svg>
+                </svg>
               </div>
               <div>
                 <h3 className="text-lg font-bold text-gray-900">Loyalty Tier Upgraded!</h3>
@@ -806,7 +811,7 @@ const EscrowDashboard = () => {
               <div className="flex items-center">
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                </svg>
                <p className="text-sm text-gray-500">Notification will close in {redirectTimer} seconds...</p>
              </div>
@@ -951,13 +956,6 @@ const EscrowDashboard = () => {
                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                            }`}
                          >
-                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                             {isMultiSelectActive ? (
-                               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                             ) : (
-                               <path d="M17.293 13.293A8 8 0 016.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                             )}
-                           </svg>
                            {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
                          </button>
                          
@@ -1085,13 +1083,6 @@ const EscrowDashboard = () => {
                                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                            }`}
                          >
-                           <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                             {isMultiSelectActive ? (
-                               <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                             ) : (
-                               <path d="M17.293 13.293A8 8 0 716.707 2.707a8.001 8.001 0 1010.586 10.586z" />
-                             )}
-                           </svg>
                            {isMultiSelectActive ? 'Cancel' : 'Multi-Select'}
                          </button>
                        </div>
@@ -1166,7 +1157,7 @@ const EscrowDashboard = () => {
                              <span className="ml-2 px-2 py-0.5 bg-gray-100 rounded-full text-xs text-gray-600">
                                {versionData.count} Estimate{versionData.count !== 1 ? 's' : ''}
                              </span>
-                             <span className="ml-2 text-xs text-gray-500">(ordered by latest activity)</span>
+                             <span className="ml-2 text-xs text-gray-500">(ordered by earliest activity)</span>
                            </div>
                            
                            <div className="flex items-center gap-2">
