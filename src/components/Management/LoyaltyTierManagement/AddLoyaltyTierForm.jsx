@@ -130,7 +130,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               required
             />
             <p className="mt-1 text-xs text-gray-500">
-              Unique identifier for this tier (snake_case)
+              Unique identifier for this tier
             </p>
           </div>
           

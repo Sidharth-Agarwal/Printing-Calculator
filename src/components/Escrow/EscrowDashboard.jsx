@@ -87,14 +87,12 @@ const EscrowDashboard = () => {
     return new Date().getTime();
   };
 
-  // Sort estimates by creation/update time (newest first)
+  // Sort estimates by creation/update time (oldest first)
   const sortEstimatesByTimestamp = (estimates) => {
     return [...estimates].sort((a, b) => {
       const timestampA = getEstimateTimestamp(a);
       const timestampB = getEstimateTimestamp(b);
-      
-      // Sort in descending order (newest first)
-      return timestampB - timestampA;
+      return timestampA - timestampB; // Changed from timestampB - timestampA
     });
   };
 
@@ -938,7 +936,7 @@ const EscrowDashboard = () => {
                        <div className="flex items-center gap-2">
                          <h3 className="font-medium text-gray-800">
                            Version {selectedVersions[client.id]} Estimates
-                           <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
+                           <span className="text-xs text-gray-500 ml-1">(ordered by earliest activity)</span>
                          </h3>
                          
                          {/* Multi-select toggle */}
@@ -1072,7 +1070,7 @@ const EscrowDashboard = () => {
                        <div className="flex items-center gap-2">
                          <h3 className="font-medium text-gray-800">
                            All Versions - {client.totalEstimates} Estimates
-                           <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
+                           <span className="text-xs text-gray-500 ml-1">(ordered by earliest activity)</span>
                          </h3>
                          
                          {/* Multi-select toggle */}

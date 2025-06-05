@@ -89,15 +89,14 @@ const EstimatesPage = () => {
     return new Date().getTime();
   };
 
-  // Sort estimates by creation/update time (newest first)
+  // Sort estimates by creation/update time (oldest first)
   const sortEstimatesByTimestamp = (estimates) => {
     return [...estimates].sort((a, b) => {
       const timestampA = getEstimateTimestamp(a);
       const timestampB = getEstimateTimestamp(b);
-      return timestampB - timestampA;
+      return timestampA - timestampB;
     });
   };
-
   // Fetch B2B client data if applicable
   useEffect(() => {
     const fetchB2BClientData = async () => {
@@ -1148,7 +1147,7 @@ const EstimatesPage = () => {
                        <div className="flex items-center gap-2">
                          <h3 className="font-medium text-gray-800">
                            Version {selectedVersions[client.id]} Estimates 
-                           <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
+                           <span className="text-xs text-gray-500 ml-1">(ordered by earliest activity)</span>
                          </h3>
                          
                          {/* Multi-select toggle */}
@@ -1270,7 +1269,7 @@ const EstimatesPage = () => {
                        <div className="flex items-center gap-2">
                          <h3 className="font-medium text-gray-800">
                            All Versions - {client.totalEstimates} Estimates
-                           <span className="text-xs text-gray-500 ml-1">(ordered by latest activity)</span>
+                           <span className="text-xs text-gray-500 ml-1">(ordered by earliest activity)</span>
                          </h3>
                          
                          {/* Multi-select toggle */}
