@@ -139,16 +139,16 @@ export const calculateLPCosts = async (state) => {
       totalPlateCost += plateCost;
       
       // 4. Fetch DST material details and calculate cost
-      if (colorDetail.dstMaterial) {
-        const dstMaterialDetails = await fetchMaterialDetails(colorDetail.dstMaterial);
-        if (dstMaterialDetails) {
-          // Calculate DST material cost based on plate area
-          const dstMaterialCost = plateArea * parseFloat(dstMaterialDetails.finalCostPerUnit || 0);
-          totalDstMaterialCost += dstMaterialCost;
-        } else {
-          console.warn(`Material details not found for DST material: ${colorDetail.dstMaterial}`);
-        }
-      }
+      // if (colorDetail.dstMaterial) {
+      //   const dstMaterialDetails = await fetchMaterialDetails(colorDetail.dstMaterial);
+      //   if (dstMaterialDetails) {
+      //     // Calculate DST material cost based on plate area
+      //     const dstMaterialCost = plateArea * parseFloat(dstMaterialDetails.finalCostPerUnit || 0);
+      //     totalDstMaterialCost += dstMaterialCost;
+      //   } else {
+      //     console.warn(`Material details not found for DST material: ${colorDetail.dstMaterial}`);
+      //   }
+      // }
       
       // 5. Fetch positive film material details
       const positiveFilmDetails = await fetchMaterialDetails("Positive Film");

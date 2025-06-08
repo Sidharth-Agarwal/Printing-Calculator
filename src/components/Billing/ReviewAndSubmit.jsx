@@ -349,10 +349,10 @@ const ReviewAndSubmit = ({
               <CostItem label="LP Impression Cost" value={localCalculations.lpImpressionCostPerCard} isSubItem />
             )}
             {/* Add DST Material Cost */}
-            {localCalculations.lpDstMaterialCostPerCard && 
+            {/* {localCalculations.lpDstMaterialCostPerCard && 
              parseFloat(localCalculations.lpDstMaterialCostPerCard) > 0 && (
               <CostItem label="LP DST Material Cost" value={localCalculations.lpDstMaterialCostPerCard} isSubItem />
-            )}
+            )} */}
           </div>
         )}
           
