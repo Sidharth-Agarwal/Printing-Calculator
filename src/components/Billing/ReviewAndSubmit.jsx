@@ -326,7 +326,7 @@ const ReviewAndSubmit = ({
           {/* Notebook Section */}
           {hasNotebook && localCalculations.notebookCostPerCard && renderNotebookSection()}
           
-          {/* LP Section */}
+          {/* LP Section - UPDATED with Impression Cost */}
           {hasLP && localCalculations.lpCostPerCard && (
           <div className="space-y-1 border-b pb-2 mb-2">
             <CostItem label="Letter Press (LP)" value={localCalculations.lpCostPerCard} isTotal />
@@ -344,6 +344,9 @@ const ReviewAndSubmit = ({
             )}
             {localCalculations.lpInkCostPerCard && (
               <CostItem label="LP Ink Cost" value={localCalculations.lpInkCostPerCard} isSubItem />
+            )}
+            {localCalculations.lpImpressionCostPerCard && (
+              <CostItem label="LP Impression Cost" value={localCalculations.lpImpressionCostPerCard} isSubItem />
             )}
             {/* Add DST Material Cost */}
             {localCalculations.lpDstMaterialCostPerCard && 

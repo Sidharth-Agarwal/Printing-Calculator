@@ -1,6 +1,31 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
 import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
 import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../../../../firebaseConfig';
+
+/**
+ * Fetch die details from Firestore database
+ * @param {string} dieCode - Die code to look up
+ * @returns {Promise<Object|null>} - The die details or null if not found
+ */
+const fetchDieDetails = async (dieCode) => {
+  try {
+    const diesCollection = collection(db, "dies");
+    const q = query(diesCollection, where("dieCode", "==", dieCode));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    console.warn(`Die not found for code: ${dieCode}`);
+    return null;
+  } catch (error) {
+    console.error("Error fetching die details:", error);
+    return null;
+  }
+};
 
 /**
  * Calculates letter press (LP) costs based on form state
@@ -11,6 +36,7 @@ export const calculateLPCosts = async (state) => {
   try {
     const { lpDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
 
     // Check if LP is used
@@ -42,6 +68,19 @@ export const calculateLPCosts = async (state) => {
         lpDstMaterialCostPerCard: "0.00", // Add DST material cost field
         lpTotalColorsCostPerCard: "0.00"
       };
+    }
+
+    // NEW STEP: Fetch die details to get frags
+    let dieDetails = null;
+    let fragsPerDie = 1; // Default to 1 if not found
+    
+    if (dieCode) {
+      dieDetails = await fetchDieDetails(dieCode);
+      console.log("Die details:", dieDetails);
+      if (dieDetails && dieDetails.frags) {
+        fragsPerDie = parseInt(dieDetails.frags) || 1;
+        console.log("LP Frags per die:", fragsPerDie);
+      }
     }
 
     // 1. Get margin values based on job type
@@ -128,10 +167,12 @@ export const calculateLPCosts = async (state) => {
       const inkCostPerUnit = inkDetails ? parseFloat(inkDetails.finalRate || 0) : 1; // Default to 1 if not found
       totalInkCost += inkCostPerUnit * totalCards; // Total ink cost for all cards
       
-      // 6.2 Fetch impression cost from standard rates (NEW)
+      // 6.2 Fetch impression cost from standard rates
       const impressionDetails = await fetchStandardRate("IMPRESSION", "LP");
       const impressionCostPerUnit = impressionDetails ? parseFloat(impressionDetails.finalRate || 0) : 1; // Default to 1 if not found
-      totalImpressionCost += impressionCostPerUnit * totalCards; // Total impression cost for all cards
+      const impressionCostPerCard = impressionCostPerUnit / fragsPerDie;
+      totalImpressionCost += impressionCostPerCard; // Total impression cost for all cards
+      console.log("LP total impresion cost per unit : ", impressionCostPerUnit)
       
       // 6.3 Fetch MR cost from standard rates
       const mrType = colorDetail.mrType || "SIMPLE"; // Default to SIMPLE if not specified
@@ -170,7 +211,7 @@ export const calculateLPCosts = async (state) => {
     const lpPlateCostPerCard = totalPlateCost / totalCards;
     const lpPositiveFilmCostPerCard = totalPositiveFilmCost / totalCards;
     const lpInkCostPerCard = totalInkCost / totalCards;
-    const lpImpressionCostPerCard = totalImpressionCost / totalCards; // Add impression cost per card
+    const lpImpressionCostPerCard = totalImpressionCost; // Add impression cost per card
     const lpMRCostPerCard = totalMRCost / totalCards;
     const lpMkgCostPerCard = totalMkgCost / totalCards;
     const lpDstMaterialCostPerCard = totalDstMaterialCost / totalCards;
@@ -207,6 +248,7 @@ export const calculateLPCosts = async (state) => {
       totalDstMaterialCost: totalDstMaterialCost.toFixed(2), // Include DST material cost
       totalColorsCost: totalColorsCost.toFixed(2),
       colorsCount: lpDetails.colorDetails.length,
+      fragsPerDie: fragsPerDie, // Include frags per die for debugging
       lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
       breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };

@@ -1,6 +1,31 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
 import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
 import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../../../../firebaseConfig';
+
+/**
+ * Fetch die details from Firestore database
+ * @param {string} dieCode - Die code to look up
+ * @returns {Promise<Object|null>} - The die details or null if not found
+ */
+const fetchDieDetails = async (dieCode) => {
+  try {
+    const diesCollection = collection(db, "dies");
+    const q = query(diesCollection, where("dieCode", "==", dieCode));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    console.warn(`Die not found for code: ${dieCode}`);
+    return null;
+  } catch (error) {
+    console.error("Error fetching die details:", error);
+    return null;
+  }
+};
 
 /**
  * Calculates embossing costs based on form state
@@ -11,6 +36,7 @@ export const calculateEMBCosts = async (state) => {
   try {
     const { embDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
 
     // Check if embossing is used
@@ -38,6 +64,19 @@ export const calculateEMBCosts = async (state) => {
         embImpressionCostPerCard: "0.00",
         embDstMaterialCostPerCard: "0.00" // Add DST material cost field
       };
+    }
+
+    // NEW STEP: Fetch die details to get frags
+    let dieDetails = null;
+    let fragsPerDie = 1; // Default to 1 if not found
+    
+    if (dieCode) {
+      dieDetails = await fetchDieDetails(dieCode);
+      console.log("Die details:", dieDetails);
+      if (dieDetails && dieDetails.frags) {
+        fragsPerDie = parseInt(dieDetails.frags) || 1;
+        console.log("EMB Frags per die:", fragsPerDie);
+      }
     }
 
     // 1. Get margin values based on job type
@@ -157,7 +196,8 @@ export const calculateEMBCosts = async (state) => {
     const embMRCostPerCard = mrCost / totalCards;
     const embPositiveFilmCostPerCard = positiveFilmCost / totalCards;
     const embMkgPlateCostPerCard = mkgCost / totalCards;
-    const embImpressionCostPerCard = impressionCostPerUnit; // Already per unit
+    const embImpressionCostPerCard = impressionCostPerUnit / fragsPerDie; // Already per unit
+    console.log("emb impression cost per card : ", embImpressionCostPerCard)
     const embDstMaterialCostPerCard = dstMaterialCost / totalCards; // Calculate DST material cost per card
     
     // 13. Calculate total embossing cost per card including DST material cost
@@ -185,6 +225,7 @@ export const calculateEMBCosts = async (state) => {
       positiveFilmCost: positiveFilmCost.toFixed(2),
       mrCost: mrCost.toFixed(2),
       mkgCost: mkgCost.toFixed(2),
+      fragsPerDie: fragsPerDie, // Include frags per die for debugging
       lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
       breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };

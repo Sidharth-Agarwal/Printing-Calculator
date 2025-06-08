@@ -69,7 +69,15 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
   useEffect(() => {
     if (isEMBUsed && mrTypes.length > 0 && dstMaterials.length > 0) {
       const defaultMRType = mrTypes[0];
-      const defaultDstMaterial = dstMaterials[0]?.materialName || "";
+      
+      // UPDATED: Look for "DST PP PLATE" first, fallback to first material
+      const preferredDstMaterial = dstMaterials.find(material => 
+        material.materialName === "DST PP PLATE"
+      );
+      const defaultDstMaterial = preferredDstMaterial ? 
+        preferredDstMaterial.materialName : 
+        (dstMaterials[0]?.materialName || "");
+      
       const updates = {};
       
       // Set embMR if it's empty
@@ -82,9 +90,16 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
         updates.embMRConcatenated = defaultMRType.concatenated || `EMB MR ${defaultMRType.type}`;
       }
       
-      // Set dstMaterial if it's empty
+      // Set dstMaterial if it's empty (prioritize DST PP PLATE)
       if (!dstMaterial) {
         updates.dstMaterial = defaultDstMaterial;
+        
+        // Log for debugging
+        if (preferredDstMaterial) {
+          console.log("EMB: Selected preferred DST material:", defaultDstMaterial);
+        } else {
+          console.log("EMB: DST PP PLATE not found, using fallback:", defaultDstMaterial);
+        }
       }
       
       // Only dispatch if we have updates
@@ -350,11 +365,20 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               <option value="">
                 {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
               </option>
-              {dstMaterials.map((material) => (
-                <option key={material.id} value={material.materialName}>
-                  {material.materialName}
-                </option>
-              ))}
+              {/* UPDATED: Sort DST materials to show DST PP PLATE first if available */}
+              {dstMaterials
+                .sort((a, b) => {
+                  // Prioritize "DST PP PLATE" at the top
+                  if (a.materialName === "DST PP PLATE") return -1;
+                  if (b.materialName === "DST PP PLATE") return 1;
+                  return a.materialName.localeCompare(b.materialName);
+                })
+                .map((material) => (
+                  <option key={material.id} value={material.materialName}>
+                    {material.materialName}
+                    {material.materialName === "DST PP PLATE"}
+                  </option>
+                ))}
             </select>
             {errors.dstMaterial && (
               <p className="text-red-500 text-xs mt-1">{errors.dstMaterial}</p>
