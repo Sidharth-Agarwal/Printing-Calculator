@@ -146,11 +146,11 @@ export const calculatePaperAndCuttingCosts = async (state) => {
 
     // 9. Calculate costs
     const paperCost = totalSheetsRequired * parseFloat(paperDetails.finalRate);
-    const gilCutCost = gilCutCostPerSheet * totalSheetsRequired;
+    const gilCutCost = gilCutCostPerSheet / fragsPerDie;
     
     // 10. Calculate per card costs
     const paperCostPerCard = paperCost / totalCards;
-    const gilCutCostPerCard = gilCutCost / totalCards;
+    const gilCutCostPerCard = gilCutCost;
     const paperAndCuttingCostPerCard = paperCostPerCard + gilCutCostPerCard;
 
     // 11. Return the final calculations
