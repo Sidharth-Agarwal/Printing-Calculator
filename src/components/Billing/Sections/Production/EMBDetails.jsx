@@ -271,7 +271,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             <>
               <div>
                 <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
-                  Length (in):
+                  Length (inches):
                 </label>
                 <input
                   type="number"
@@ -289,7 +289,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               </div>
               <div>
                 <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
-                  Breadth (in):
+                  Breadth (inches):
                 </label>
                 <input
                   type="number"

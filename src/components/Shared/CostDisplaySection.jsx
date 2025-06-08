@@ -63,7 +63,7 @@ const CostDisplaySection = ({
       items: [
         // { key: 'embPlateCostPerCard', label: 'EMB Plate Cost' },
         { key: 'embMRCostPerCard', label: 'EMB MR Cost' },
-        { key: 'embPositiveFilmCostPerCard', label: 'EMB Positive Film' },
+        // { key: 'embPositiveFilmCostPerCard', label: 'EMB Positive Film' },
         { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate (MKG)' },
         { key: 'embImpressionCostPerCard', label: 'EMB Impression' },
         { key: 'embDstMaterialCostPerCard', label: 'EMB DST Material Cost' }
