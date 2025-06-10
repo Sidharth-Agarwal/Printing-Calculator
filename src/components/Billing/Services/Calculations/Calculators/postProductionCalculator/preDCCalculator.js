@@ -70,9 +70,9 @@ export const calculatePreDieCuttingCosts = async (state) => {
 
     // 1. Fetch MR cost from standard rates using the concatenated value
     const mrType = preDieCutting.predcMR;
-    const mrConcatenated = preDieCutting.predcMRConcatenated || `PREDC MR ${mrType.toUpperCase()}`;
+    const mrConcatenated = preDieCutting.predcMRConcatenated || `PDC MR ${mrType.toUpperCase()}`;
     
-    const mrDetails = await fetchStandardRate("PREDC MR", mrType);
+    const mrDetails = await fetchStandardRate("PDC MR", mrType);
     
     // MR cost is the finalRate from the database, or fallback to defaults
     let mrRate = 0;
@@ -87,7 +87,7 @@ export const calculatePreDieCuttingCosts = async (state) => {
     }
     
     // 2. Fetch impression cost from standard rates
-    const impressionDetails = await fetchStandardRate("IMPRESSION", "PREDC");
+    const impressionDetails = await fetchStandardRate("IMPRESSION", "PDC");
     const impressionCostPerUnit = impressionDetails ? 
       parseFloat(impressionDetails.finalRate || 0) : 
       0.25; // Default to 0.25 if not found

@@ -196,9 +196,8 @@ export const calculateEMBCosts = async (state) => {
     const embMRCostPerCard = mrCost / totalCards;
     const embPositiveFilmCostPerCard = positiveFilmCost / totalCards;
     const embMkgPlateCostPerCard = mkgCost / totalCards;
-    const embImpressionCostPerCard = impressionCostPerUnit / fragsPerDie; // Already per unit
-    console.log("emb impression cost per card : ", embImpressionCostPerCard)
-    const embDstMaterialCostPerCard = dstMaterialCost / totalCards; // Calculate DST material cost per card
+    const embImpressionCostPerCard = impressionCostPerUnit / fragsPerDie;
+    const embDstMaterialCostPerCard = dstMaterialCost / totalCards;
     
     // 13. Calculate total embossing cost per card including DST material cost
     const embCostPerCard = 

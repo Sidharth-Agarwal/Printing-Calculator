@@ -394,6 +394,9 @@ const ReviewAndSubmit = ({
               {localCalculations.embMkgPlateCostPerCard && (
                 <CostItem label="EMB Making Plate" value={localCalculations.embMkgPlateCostPerCard} isSubItem />
               )}
+              {localCalculations.embMkgPlateCostPerCard && (
+                <CostItem label="EMB Positive Film" value={localCalculations.embPositiveFilmCostPerCard} isSubItem />
+              )}
               {localCalculations.embImpressionCostPerCard && (
                 <CostItem label="EMB Impression" value={localCalculations.embImpressionCostPerCard} isSubItem />
               )}
