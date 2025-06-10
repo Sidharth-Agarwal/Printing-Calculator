@@ -252,11 +252,11 @@ const EstimateCard = ({
           </span>
 
           {/* ADDED: Recently updated indicator */}
-          {isRecentlyUpdated() && (
+          {/* {isRecentlyUpdated() && (
             <span className="px-1.5 py-0.5 text-xs rounded-full bg-blue-100 text-blue-700 font-medium">
               NEW
             </span>
-          )}
+          )} */}
         </div>
         
         {/* Quick Actions */}

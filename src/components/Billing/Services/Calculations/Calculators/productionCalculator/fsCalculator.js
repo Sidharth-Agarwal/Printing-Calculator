@@ -73,7 +73,7 @@ export const calculateFSCosts = async (state) => {
       console.log("Die details:", dieDetails);
       if (dieDetails && dieDetails.frags) {
         fragsPerDie = parseInt(dieDetails.frags) || 1;
-        console.log("Frags per die:", fragsPerDie);
+        console.log("FS Frags per die:", fragsPerDie);
       }
     }
 
@@ -151,7 +151,9 @@ export const calculateFSCosts = async (state) => {
       // 5. Fetch impression cost from standard rates
       const impressionDetails = await fetchStandardRate("IMPRESSION", "FS");
       const impressionCostPerUnit = impressionDetails ? parseFloat(impressionDetails.finalRate || 0) : 1; // Default to 1 if not found
-      totalImpressionCost += impressionCostPerUnit * totalCards; // Total impression cost for all cards
+      console.log("FS Impression : ", impressionCostPerUnit);
+      totalImpressionCost += impressionCostPerUnit / fragsPerDie; // Total impression cost for all cards
+      console.log("FS impression cost : ", totalImpressionCost)
       
       // 6. Fetch MR cost from standard rates
       const mrType = foilDetail.mrType || "SIMPLE"; // Default to SIMPLE if not specified
@@ -174,7 +176,7 @@ export const calculateFSCosts = async (state) => {
     const fsBlockCostPerCard = totalBlockCost / totalCards;
     // Modified: Account for frags when calculating foil cost per card
     const fsFoilCostPerCard = totalFoilCost / fragsPerDie;
-    const fsImpressionCostPerCard = totalImpressionCost / totalCards;
+    const fsImpressionCostPerCard = totalImpressionCost;
     const fsMRCostPerCard = totalMRCost / totalCards;
     const fsFreightCostPerCard = totalFreightCost / totalCards;
     
@@ -200,7 +202,7 @@ export const calculateFSCosts = async (state) => {
       totalImpressionCost: totalImpressionCost.toFixed(2),
       totalMRCost: totalMRCost.toFixed(2),
       totalFreightCost: totalFreightCost.toFixed(2),
-      fragsPerDie: fragsPerDie,
+      fragsPerDie: fragsPerDie, // Include frags per die for debugging
       foilsCount: fsDetails.foilDetails.length,
       lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
       breadthMargin: breadthMargin.toFixed(2) // Updated for debugging

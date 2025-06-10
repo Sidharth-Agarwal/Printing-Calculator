@@ -389,7 +389,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Length (in):
+                        Length (inches):
                       </label>
                       <input
                         type="number"
@@ -419,7 +419,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Breadth (in):
+                        Breadth (inches):
                       </label>
                       <input
                         type="number"
