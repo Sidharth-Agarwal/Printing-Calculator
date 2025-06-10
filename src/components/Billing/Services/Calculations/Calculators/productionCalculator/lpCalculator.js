@@ -171,11 +171,10 @@ export const calculateLPCosts = async (state) => {
       const impressionDetails = await fetchStandardRate("IMPRESSION", "LP");
       const impressionCostPerUnit = impressionDetails ? parseFloat(impressionDetails.finalRate || 0) : 1; // Default to 1 if not found
       const impressionCostPerCard = impressionCostPerUnit / fragsPerDie;
-      totalImpressionCost += impressionCostPerCard; // Total impression cost for all cards
-      console.log("LP total impresion cost per unit : ", impressionCostPerUnit)
+      totalImpressionCost += impressionCostPerCard;
       
       // 6.3 Fetch MR cost from standard rates
-      const mrType = colorDetail.mrType || "SIMPLE"; // Default to SIMPLE if not specified
+      const mrType = colorDetail.mrType || "SIMPLE";
       const mrDetails = await fetchStandardRate("LP MR", mrType);
       
       let mrCost = 0;
