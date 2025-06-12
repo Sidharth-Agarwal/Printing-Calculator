@@ -197,20 +197,6 @@ const Header = () => {
       ]
     },
     { 
-      key: 'crm', 
-      label: 'CRM', 
-      icon: '👥',
-      path: '/crm', 
-      visible: isMenuItemVisible('crm'), 
-      isDropdown: true,
-      priority: 5,
-      dropdownItems: [
-        { label: 'Lead Registration', path: '/crm/lead-registration', icon: '✏️' },
-        { label: 'Lead Pipeline', path: '/crm/lead-management', icon: '🔄' },
-        { label: 'Qualification Badges', path: '/crm/badges', icon: '🏆' }
-      ]
-    },
-    { 
       key: 'analytics', 
       label: 'Analytics', 
       icon: '📈',
