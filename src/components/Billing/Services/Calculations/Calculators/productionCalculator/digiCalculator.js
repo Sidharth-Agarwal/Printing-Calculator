@@ -100,6 +100,8 @@ export const calculateDigiDetailsCosts = async (state) => {
     
     // 3. Calculate maximum babies per sheet for die
     const maxBabiesPerSheetDie = calculateMaxBabiesPerSheet(dieWithMargin, digiDimensionsCm);
+    console.log(maxBabiesPerSheetPaper)
+    console.log(maxBabiesPerSheetDie)
     
     // Calculate total fragments per sheet
     const totalFragsPerSheet = maxBabiesPerSheetPaper * maxBabiesPerSheetDie;
@@ -121,7 +123,7 @@ export const calculateDigiDetailsCosts = async (state) => {
       0.25; // Default if not found
     
     // Calculate Digital Print cost per card (from standard rates)
-    const digiPrintCostPerCard = digitalPrintRateValue / totalFragsPerSheet;
+    const digiPrintCostPerCard = digitalPrintRateValue / maxBabiesPerSheetDie;
     
     // Calculate Digital Paper cost components
     const paperCostPerCard = (parseFloat(paperDetails.finalRate) * totalSheets) / totalCards;
