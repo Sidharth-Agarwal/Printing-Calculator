@@ -8,8 +8,8 @@ export const getMarginsByJobType = (jobType) => {
   
   if (normalizedJobType === "envelope") {
     return {
-      lengthMargin: 1.7,
-      breadthMargin: 1.2
+      lengthMargin: 1.5,
+      breadthMargin: 1.5
     };
   } else {
     // For all other job types (Card, Biz Card, Seal, Magnet, Packaging, Notebook, Liner, Custom, etc.)
