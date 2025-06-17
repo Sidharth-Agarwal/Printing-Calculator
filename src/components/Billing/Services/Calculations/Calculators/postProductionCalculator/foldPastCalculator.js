@@ -134,14 +134,15 @@ export const calculateFoldAndPasteCosts = async (state) => {
     
     // 8. Calculate total fold and paste cost per card
     // Now using the formula: (totalMaterialCost + operationCostPerCard) * fragsPerDie
-    const totalMaterialCostPerCard = totalMaterialCost;
-    const totalFoldAndPasteBaseCost = totalMaterialCostPerCard + operationCostPerCard;
-    const totalFoldAndPasteCostPerCard = (totalFoldAndPasteBaseCost / fragsPerDie);
+    const totalMaterialCostPerCard = totalMaterialCost / fragsPerDie;
+    operationCost = operationCostPerCard / fragsPerDie
+    // const totalFoldAndPasteBaseCost = totalMaterialCostPerCard + operationCost;
+    const totalFoldAndPasteCostPerCard = (totalMaterialCostPerCard + operationCost);
     
     return {
       foldAndPasteCostPerCard: totalFoldAndPasteCostPerCard.toFixed(2),
       dstMaterialCostPerCard: totalMaterialCostPerCard.toFixed(2),
-      foldAndPasteOperationCostPerCard: operationCostPerCard.toFixed(2),
+      foldAndPasteOperationCostPerCard: operationCost.toFixed(2),
       // Additional info for debugging
       fragsPerDie: fragsPerDie,
       plateArea: plateArea.toFixed(2),
