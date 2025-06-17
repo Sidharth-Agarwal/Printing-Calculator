@@ -115,6 +115,8 @@ export const calculatePaperAndCuttingCosts = async (state) => {
       };
     }
 
+    console.log("Die size using : ", dieSize);
+
     // 5. Get paper dimensions (already in cm)
     const paperSize = {
       length: parseFloat(paperDetails.length),
@@ -123,6 +125,7 @@ export const calculatePaperAndCuttingCosts = async (state) => {
 
     // 6. Calculate maximum cards per sheet
     const maxCardsPerSheet = calculateMaxCardsPerSheet(dieSize, paperSize);
+    console.log("Children per sheet : ", maxCardsPerSheet);
     
     // 7. Determine frags per die
     let fragsPerDie = 1; // Default to 1
@@ -147,9 +150,12 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     // 9. Calculate costs
     const paperCost = totalSheetsRequired * parseFloat(paperDetails.finalRate);
     const gilCutCost = gilCutCostPerSheet / fragsPerDie;
+
+    const paperCostPerCard1 = parseFloat(paperDetails.finalRate) / totalFragsPerSheet;
     
     // 10. Calculate per card costs
-    const paperCostPerCard = paperCost / totalCards;
+    // const paperCostPerCard = paperCost / totalCards;
+    const paperCostPerCard = parseFloat(paperDetails.finalRate) / totalFragsPerSheet;
     const gilCutCostPerCard = gilCutCost;
     const paperAndCuttingCostPerCard = paperCostPerCard + gilCutCostPerCard;
 
