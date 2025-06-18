@@ -13,7 +13,10 @@ export const calculateFSCosts = async (state) => {
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
+    console.log("JOB TYPE being used : ", jobType)
     const fragsPerDie = orderAndPaper.frags || 1;
+    const normalizedJobType = (jobType || "").toLowerCase();
+    console.log("JOB TYPE being used : ", normalizedJobType)
 
     // Check if FS is used
     if (!fsDetails.isFSUsed || !fsDetails.foilDetails?.length) {
@@ -66,15 +69,34 @@ export const calculateFSCosts = async (state) => {
       
       if (foilDetail.blockSizeType === "Auto") {
         // First check if product size is available
-        if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+        if (normalizedJobType === "envelope") {
           const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
           const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-          blockArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
-        } else if (orderAndPaper.dieSize) {
-          // Fall back to die dimensions if product size is not available
+          console.log("Product length : ", productLengthCm)
+          console.log("Product length : ", productBreadthCm)
+          plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+        }
+        else if (normalizedJobType === "packaging") {
           const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
           const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-          blockArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+          console.log("Die length : ", dieLengthCm)
+          console.log("Die length : ", dieBreadthCm)
+          plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+        }
+        else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+          if(fragsPerDie >= 2) {
+            const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+            const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+            console.log("Die length : ", dieLengthCm)
+            console.log("Die length : ", dieBreadthCm)
+            plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+          } else {
+            const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+            const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+            console.log("Product length : ", productLengthCm)
+            console.log("Product length : ", productBreadthCm)
+            plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+          }
         }
       } else {
         // Otherwise use the provided block dimensions
