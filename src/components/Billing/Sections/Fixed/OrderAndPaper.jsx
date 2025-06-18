@@ -179,7 +179,8 @@ const OrderAndPaper = ({
       dieCode: dieData.dieCode || "",
       dieSize: dieData.dieSize || { length: "", breadth: "" },
       productSize: dieData.productSize || { length: "", breadth: "" },
-      type: dieData.type || "" // Add this line to log the type
+      frags: dieData.frags || "",      // ADD THIS TO LOG
+      type: dieData.type || ""         // ADD THIS TO LOG
     });
   };
 

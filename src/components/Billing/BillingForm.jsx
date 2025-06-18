@@ -57,6 +57,8 @@ const initialFormState = {
    productSize: { length: "", breadth: "" },
    image: "",
    hsnCode: "",
+   frags: "",
+   type: "" 
  },
  lpDetails: {
    isLPUsed: false,
@@ -272,7 +274,9 @@ const mapStateToFirebaseStructure = (state, calculations) => {
    jobType: orderAndPaper?.jobType,
    quantity: orderAndPaper?.quantity,
    paperName: orderAndPaper?.paperName,
-   dieCode: orderAndPaper?.dieCode
+   dieCode: orderAndPaper?.dieCode,
+   frags: orderAndPaper?.frags,
+   type: orderAndPaper?.type
  });
 
  // Create the sanitized Firebase data structure
@@ -307,6 +311,8 @@ const mapStateToFirebaseStructure = (state, calculations) => {
      dieSize: orderAndPaper.dieSize,
      productSize: orderAndPaper.productSize,
      image: orderAndPaper.image,
+     frags: orderAndPaper.frags,
+     type: orderAndPaper.type
    }),
    
    // Processing options (only included when selected)
@@ -491,18 +497,22 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
  useEffect(() => {
    // Log critical fields when they change
    console.log("BillingForm - Current critical field values:", {
-     projectName: state.orderAndPaper.projectName,
-     jobType: state.orderAndPaper.jobType,
-     quantity: state.orderAndPaper.quantity,
-     paperName: state.orderAndPaper.paperName,
-     dieCode: state.orderAndPaper.dieCode
+    projectName: state.orderAndPaper.projectName,
+    jobType: state.orderAndPaper.jobType,
+    quantity: state.orderAndPaper.quantity,
+    paperName: state.orderAndPaper.paperName,
+    dieCode: state.orderAndPaper.dieCode,
+    frags: state.orderAndPaper.frags,
+    type: state.orderAndPaper.type
    });
  }, [
    state.orderAndPaper.projectName,
    state.orderAndPaper.jobType,
    state.orderAndPaper.quantity,
    state.orderAndPaper.paperName,
-   state.orderAndPaper.dieCode
+   state.orderAndPaper.dieCode,
+   state.orderAndPaper.frags,
+   state.orderAndPaper.type
  ]);
 
  // Direct initialization of default services
