@@ -38,6 +38,10 @@ export const calculateFoldAndPasteCosts = async (state) => {
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
+    console.log("JOB TYPE being used : ", jobType)
+    const fragsPerDie = orderAndPaper.frags || 1;
+    const normalizedJobType = (jobType || "").toLowerCase();
+    console.log("JOB TYPE being used : ", normalizedJobType)
 
     // Check if fold and paste is used
     if (!foldAndPaste || !foldAndPaste.isFoldAndPasteUsed) {
@@ -68,10 +72,6 @@ export const calculateFoldAndPasteCosts = async (state) => {
         foldAndPasteOperationCostPerCard: "0.00"
       };
     }
-    
-    // Get the frags value or default to 1 if not found
-    const fragsPerDie = dieDetails.frags ? parseInt(dieDetails.frags) || 1 : 1;
-    console.log("Frags per die:", fragsPerDie);
 
     // 2. Get margin values based on job type
     const margins = getMarginsByJobType(jobType);
@@ -83,15 +83,34 @@ export const calculateFoldAndPasteCosts = async (state) => {
     let plateArea = 0;
     
     // First check if product size is available
-    if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+    if (normalizedJobType === "envelope") {
       const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
       const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+      console.log("Product length : ", productLengthCm)
+      console.log("Product length : ", productBreadthCm)
       plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
-    } else if (orderAndPaper.dieSize && orderAndPaper.dieSize.length && orderAndPaper.dieSize.breadth) {
-      // Fall back to die dimensions if product size is not available
+    }
+    else if (normalizedJobType === "packaging") {
       const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
       const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+      console.log("Die length : ", dieLengthCm)
+      console.log("Die length : ", dieBreadthCm)
       plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+    }
+    else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+      if(fragsPerDie >= 2) {
+        const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+        const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+        console.log("Die length : ", dieLengthCm)
+        console.log("Die length : ", dieBreadthCm)
+        plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+      } else {
+        const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+        const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+        console.log("Product length : ", productLengthCm)
+        console.log("Product length : ", productBreadthCm)
+        plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+      }
     } else {
       return {
         error: "Missing dimensions for DST material area calculation",
@@ -135,7 +154,7 @@ export const calculateFoldAndPasteCosts = async (state) => {
     // 8. Calculate total fold and paste cost per card
     // Now using the formula: (totalMaterialCost + operationCostPerCard) * fragsPerDie
     const totalMaterialCostPerCard = totalMaterialCost / fragsPerDie;
-    operationCost = operationCostPerCard / fragsPerDie
+    const operationCost = operationCostPerCard / fragsPerDie
     // const totalFoldAndPasteBaseCost = totalMaterialCostPerCard + operationCost;
     const totalFoldAndPasteCostPerCard = (totalMaterialCostPerCard + operationCost);
     
