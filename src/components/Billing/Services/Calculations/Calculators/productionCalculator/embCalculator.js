@@ -1,31 +1,6 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
 import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
 import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../../../../firebaseConfig';
-
-/**
- * Fetch die details from Firestore database
- * @param {string} dieCode - Die code to look up
- * @returns {Promise<Object|null>} - The die details or null if not found
- */
-const fetchDieDetails = async (dieCode) => {
-  try {
-    const diesCollection = collection(db, "dies");
-    const q = query(diesCollection, where("dieCode", "==", dieCode));
-    const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
-    }
-    
-    console.warn(`Die not found for code: ${dieCode}`);
-    return null;
-  } catch (error) {
-    console.error("Error fetching die details:", error);
-    return null;
-  }
-};
 
 /**
  * Calculates embossing costs based on form state
@@ -38,6 +13,7 @@ export const calculateEMBCosts = async (state) => {
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
+    const fragsPerDie = orderAndPaper.frags || 1;
 
     // Check if embossing is used
     if (!embDetails.isEMBUsed) {
@@ -64,19 +40,6 @@ export const calculateEMBCosts = async (state) => {
         embImpressionCostPerCard: "0.00",
         embDstMaterialCostPerCard: "0.00" // Add DST material cost field
       };
-    }
-
-    // NEW STEP: Fetch die details to get frags
-    let dieDetails = null;
-    let fragsPerDie = 1; // Default to 1 if not found
-    
-    if (dieCode) {
-      dieDetails = await fetchDieDetails(dieCode);
-      console.log("Die details:", dieDetails);
-      if (dieDetails && dieDetails.frags) {
-        fragsPerDie = parseInt(dieDetails.frags) || 1;
-        console.log("EMB Frags per die:", fragsPerDie);
-      }
     }
 
     // 1. Get margin values based on job type

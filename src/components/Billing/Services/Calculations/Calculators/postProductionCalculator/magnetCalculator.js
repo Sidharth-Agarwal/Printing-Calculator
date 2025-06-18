@@ -37,6 +37,7 @@ export const calculateMagnetCosts = async (state) => {
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
+    const fragsPerDie = orderAndPaper.frags || 1;
 
     // Check if magnet is used
     if (!magnet || !magnet.isMagnetUsed) {
@@ -61,10 +62,6 @@ export const calculateMagnetCosts = async (state) => {
         magnetCostPerCard: "0.00"
       };
     }
-    
-    // Get the frags value or default to 1 if not found
-    const fragsPerDie = dieDetails.frags ? parseInt(dieDetails.frags) || 1 : 1;
-    console.log("Frags per die:", fragsPerDie);
 
     // 2. Get margin values based on job type
     const margins = getMarginsByJobType(jobType);
