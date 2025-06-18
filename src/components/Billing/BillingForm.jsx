@@ -2874,7 +2874,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
            {/* Magnet Section */}
            {isServiceVisible("MAGNET") && (
              <FormSection 
-               title="MAGNET" 
+               title="Magnet" 
                id="magnet"
                activeSection={activeSection}
                setActiveSection={setActiveSection}
