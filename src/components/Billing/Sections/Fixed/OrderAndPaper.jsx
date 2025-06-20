@@ -377,7 +377,7 @@ const OrderAndPaper = ({
             {/* Paper Selection - Using Searchable Dropdown */}
             <div className="col-span-2">
               <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
-                Paper Name <span className="text-red-500">*</span>
+                Paper Name / Cover Name<span className="text-red-500">*</span>
               </label>
               <SearchablePaperDropdown 
                 papers={papers}
