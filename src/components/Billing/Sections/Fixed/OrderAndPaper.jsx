@@ -384,11 +384,12 @@ const OrderAndPaper = ({
                 selectedPaper={orderAndPaper.paperName || (papers.length > 0 ? papers[0].paperName : "")}
                 onChange={handleChange}
                 compact={compact}
+                isDieSelected={!!(orderAndPaper.dieCode)}
               />
             </div>
           </div>
 
-          {/* Die Selection Section - Inline but without dropdown */}
+          {/* Die Selection Section - Inline */}
           <div className="mt-4">
             <label className="block text-xs font-medium text-gray-600 mb-1">
               Die Selection <span className="text-red-500">*</span>

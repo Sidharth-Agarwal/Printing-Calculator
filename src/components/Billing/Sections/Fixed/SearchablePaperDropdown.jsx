@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 
-const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = false }) => {
+const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = false, isDieSelected = false }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const dropdownRef = useRef(null);
@@ -83,7 +83,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
   }, [isOpen]);
 
   return (
-    <div className="relative" ref={dropdownRef}>
+    <div className="relative w-full" ref={dropdownRef}>
       {/* Selected paper display (closed state) */}
       <div
         onClick={() => setIsOpen(!isOpen)}
@@ -99,17 +99,25 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
           )}
         </div>
         <span className="ml-2 text-gray-500">
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg 
+            xmlns="http://www.w3.org/2000/svg" 
+            className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
+            fill="none" 
+            viewBox="0 0 24 24" 
+            stroke="currentColor"
+          >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
         </span>
       </div>
 
-      {/* Dropdown (open state) */}
+      {/* Dropdown (open state) - Conditional positioning based on die selection */}
       {isOpen && (
-        <div className="absolute z-10 mt-1 w-full bg-white border border-gray-300 rounded-md shadow-sm max-h-60 overflow-y-auto">
+        <div className={`w-full bg-white border border-gray-300 rounded-md shadow-lg max-h-60 overflow-y-auto ${
+          isDieSelected ? 'mt-1' : 'absolute z-10 mt-1'
+        }`}>
           {/* Search input */}
-          <div className="sticky top-0 bg-white p-2 border-b border-gray-200">
+          <div className="p-2 border-b border-gray-200">
             <div className="relative">
               <input
                 ref={inputRef}
