@@ -268,13 +268,13 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
             {/* Number of Pages */}
             <div>
               <label htmlFor="numberOfPages" className="block text-xs font-medium text-gray-600 mb-1">
-                Number of Pages:
+                Number of Formas:
               </label>
               <input
                 type="number"
                 id="numberOfPages"
                 name="numberOfPages"
-                placeholder="Enter number of pages"
+                placeholder="Enter number of formas"
                 value={notebookDetails.numberOfPages || ""}
                 onChange={handleChange}
                 className={`w-full px-3 py-2 border ${errors.numberOfPages ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}

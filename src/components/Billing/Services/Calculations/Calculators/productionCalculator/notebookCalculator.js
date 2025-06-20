@@ -42,7 +42,7 @@ export const calculateNotebookCosts = async (state) => {
     
     // 2. Calculate possible number of forma (round up to ceiling)
     const numberOfPages = parseInt(notebookDetails.numberOfPages, 10);
-    const possibleNumberOfForma = Math.ceil(numberOfPages / 4);
+    const possibleNumberOfForma = parseInt(notebookDetails.numberOfPages, 10);
     
     // 3. Calculate total pages (possible forma * 4)
     const totalPages = possibleNumberOfForma * 4;
