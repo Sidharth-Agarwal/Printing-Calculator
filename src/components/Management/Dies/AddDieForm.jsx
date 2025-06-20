@@ -14,8 +14,8 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
         ...editingDie,
         dieSizeL_CM: editingDie.dieSizeL_CM || calculateCM(editingDie.dieSizeL),
         dieSizeB_CM: editingDie.dieSizeB_CM || calculateCM(editingDie.dieSizeB),
-        plateSizeL: editingDie.plateSizeL || editingDie.productSizeL || "",
-        plateSizeB: editingDie.plateSizeB || editingDie.productSizeB || "",
+        plateSizeL: editingDie.plateSizeL || editingDie.dieSizeL || "",
+        plateSizeB: editingDie.plateSizeB || editingDie.dieSizeB || "",
         clsdPrntSizeL_CM: editingDie.clsdPrntSizeL_CM || calculateCM(editingDie.productSizeL),
         clsdPrntSizeB_CM: editingDie.clsdPrntSizeB_CM || calculateCM(editingDie.productSizeB),
         isTemporary: editingDie.isTemporary || false, // Default for isTemporary if missing
@@ -34,8 +34,8 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
     const dieSizeB_CM = calculateCM(formData.dieSizeB);
     
     // PLATE Size is the same as Product Size
-    const plateSizeL = formData.productSizeL;
-    const plateSizeB = formData.productSizeB;
+    const plateSizeL = formData.dieSizeL;
+    const plateSizeB = formData.dieSizeB;
     
     // Calculate CLSD PRNT Size in CM
     const clsdPrntSizeL_CM = calculateCM(formData.productSizeL);
