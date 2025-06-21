@@ -72,7 +72,7 @@ export const calculateNotebookCosts = async (state) => {
     const costOf1Forma = paperRate / totalFragsPerSheet;
     
     // 9. Calculate cost of pages per notebook (cost of 1 forma * possible forma)
-    const costOfPagesPerNotebook = costOf1Forma * possibleNumberOfForma;
+    const costOfPagesPerNotebook = (costOf1Forma * possibleNumberOfForma) / 2;
     
     // 10. Fetch binding cost from standard rates
     const bindingType = notebookDetails.bindingTypeConcatenated || `BINDING ${notebookDetails.bindingType}`;
