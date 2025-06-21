@@ -32,33 +32,37 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
     paper.paperName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Updated to pass the entire paper object instead of just the name
+  // Updated to send just the paper name to match parent component expectations
   const handleSelect = (paper) => {
-    // Log the selection for debugging
-    console.log("Paper selected:", {
-      paperName: paper.paperName,
-      gsm: paper.gsm,
-      company: paper.company
-    });
+    console.log("handleSelect called with paper:", paper);
+    console.log("onChange function:", onChange);
     
-    // Create a proper synthetic event to pass to onChange
-    const syntheticEvent = { 
-      target: { 
-        name: "paperDetails", 
-        value: {
-          paperName: paper.paperName,
-          paperGsm: paper.gsm,
-          paperCompany: paper.company
+    try {
+      // Create a proper synthetic event to pass to onChange
+      const syntheticEvent = { 
+        target: { 
+          name: "paperName",
+          value: paper.paperName
         } 
-      } 
-    };
-    
-    // Call the parent component's onChange handler with our synthetic event
-    onChange(syntheticEvent);
-    
-    // Close the dropdown and reset search
-    setIsOpen(false);
-    setSearchTerm("");
+      };
+      
+      console.log("Calling onChange with event:", syntheticEvent);
+      
+      // Call the parent component's onChange handler
+      if (onChange && typeof onChange === 'function') {
+        onChange(syntheticEvent);
+        console.log("onChange called successfully");
+      } else {
+        console.error("onChange is not a function:", onChange);
+      }
+      
+      // Close the dropdown and reset search
+      setIsOpen(false);
+      setSearchTerm("");
+      
+    } catch (error) {
+      console.error("Error in handleSelect:", error);
+    }
   };
 
   // Close dropdown when clicking outside
@@ -143,7 +147,12 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                   className={`p-2 hover:bg-gray-50 cursor-pointer transition-colors ${
                     selectedPaper === paper.paperName ? "bg-red-50" : ""
                   }`}
-                  onClick={() => handleSelect(paper)}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    console.log("Paper option clicked:", paper.paperName);
+                    handleSelect(paper);
+                  }}
                   data-testid={`paper-option-${paper.paperName}`}
                 >
                   <div className="flex flex-col">

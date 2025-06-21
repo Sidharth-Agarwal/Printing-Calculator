@@ -74,7 +74,9 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
   }, [notebookDetails.orientation, notebookDetails.length, notebookDetails.breadth, dispatch, notebookDetails.isNotebookUsed]);
 
   const handleChange = (e) => {
+    console.log("handleChange called with event:", e);
     const { name, value } = e.target;
+    console.log("Field name:", name, "Value:", value);
     
     // Special handling for bindingType to also set the concatenated version
     if (name === "bindingType") {
@@ -99,7 +101,8 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
         });
       }
     } else {
-      // Handle all other fields normally
+      // Handle all other fields normally (including paperName)
+      console.log("Dispatching update for field:", name, "with value:", value);
       dispatch({
         type: "UPDATE_NOTEBOOK_DETAILS",
         payload: { [name]: value }
