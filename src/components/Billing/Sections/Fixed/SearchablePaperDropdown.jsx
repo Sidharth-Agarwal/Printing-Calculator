@@ -32,26 +32,29 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
     paper.paperName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Updated to send just the paper name to match parent component expectations
   const handleSelect = (paper) => {
     console.log("handleSelect called with paper:", paper);
     console.log("onChange function:", onChange);
     
     try {
-      // Create a proper synthetic event to pass to onChange
+      // Create a synthetic event with complete paper data
       const syntheticEvent = { 
         target: { 
-          name: "paperName",
-          value: paper.paperName
+          name: "paperSelection", // Changed to indicate complete paper data
+          value: {
+            paperName: paper.paperName,
+            paperGsm: paper.gsm,
+            paperCompany: paper.company
+          }
         } 
       };
       
-      console.log("Calling onChange with event:", syntheticEvent);
+      console.log("Calling onChange with complete paper data:", syntheticEvent);
       
       // Call the parent component's onChange handler
       if (onChange && typeof onChange === 'function') {
         onChange(syntheticEvent);
-        console.log("onChange called successfully");
+        console.log("onChange called successfully with complete data");
       } else {
         console.error("onChange is not a function:", onChange);
       }
@@ -150,7 +153,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log("Paper option clicked:", paper.paperName);
+                    console.log("Paper option clicked:", paper.paperName, "GSM:", paper.gsm, "Company:", paper.company);
                     handleSelect(paper);
                   }}
                   data-testid={`paper-option-${paper.paperName}`}

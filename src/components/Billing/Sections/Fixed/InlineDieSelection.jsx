@@ -115,6 +115,46 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     }
   }, []);
 
+  // Helper function to get base set of dies based on job type
+  const getBaseSetForJobType = (jobType) => {
+    if (jobType === "Custom") {
+      return dies;
+    } else if (jobType === "Card") {
+      // For Card job type, include both Card and Biz Card dies
+      return dies.filter(die => die.jobType === "Card" || die.jobType === "Biz Card");
+    } else {
+      // For other job types, filter by exact match
+      return dies.filter(die => die.jobType === jobType);
+    }
+  };
+
+  // Filter dies by job type
+  const filterDiesByJobType = (dieArray, jobType) => {
+    if (!jobType) return setFilteredDies([]);
+    
+    // If "Custom" is selected, show all dies
+    if (jobType === "Custom") {
+      setFilteredDies(dieArray);
+      return;
+    }
+    
+    // Special case: If "Card" is selected, show both "Card" and "Biz Card" dies
+    if (jobType === "Card") {
+      const filtered = dieArray.filter(die => 
+        die.jobType === "Card" || die.jobType === "Biz Card"
+      );
+      setFilteredDies(filtered);
+      return;
+    }
+    
+    // For other job types, filter as usual
+    const filtered = dieArray.filter(die => 
+      die.jobType === jobType
+    );
+    
+    setFilteredDies(filtered);
+  };
+
   // Fetch dies from Firestore
   useEffect(() => {
     const fetchDies = async () => {
@@ -139,24 +179,6 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     fetchDies();
   }, [selectedJobType]);
 
-  // Filter dies by job type
-  const filterDiesByJobType = (dieArray, jobType) => {
-    if (!jobType) return setFilteredDies([]);
-    
-    // If "Custom" is selected, show all dies
-    if (jobType === "Custom") {
-      setFilteredDies(dieArray);
-      return;
-    }
-    
-    // For other job types, filter as usual
-    const filtered = dieArray.filter(die => 
-      die.jobType === jobType
-    );
-    
-    setFilteredDies(filtered);
-  };
-
   const handleSearchChange = (e) => {
     const { name, value } = e.target;
     setSearchDimensions((prev) => {
@@ -166,6 +188,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     });
   };
 
+  // Updated handleTextSearch function
   const handleTextSearch = (e) => {
     setSearchTerm(e.target.value);
     const term = e.target.value.toLowerCase().trim();
@@ -176,30 +199,20 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       return;
     }
     
-    // Filter based on text search
-    let matches;
+    // Get the base set of dies based on job type
+    const baseSet = getBaseSetForJobType(selectedJobType);
     
-    // If Custom is selected, search across all dies
-    if (selectedJobType === "Custom") {
-      matches = dies.filter(die => 
-        (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-        (die.type && die.type.toLowerCase().includes(term)) ||
-        (die.jobType && die.jobType.toLowerCase().includes(term))
-      );
-    } else {
-      // Otherwise filter within the selected job type
-      matches = dies.filter(die => 
-        die.jobType === selectedJobType && (
-          (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-          (die.type && die.type.toLowerCase().includes(term))
-        )
-      );
-    }
+    // Filter based on text search within the base set
+    const matches = baseSet.filter(die => 
+      (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
+      (die.type && die.type.toLowerCase().includes(term)) ||
+      (selectedJobType === "Custom" && die.jobType && die.jobType.toLowerCase().includes(term))
+    );
     
     setFilteredDies(matches);
   };
 
-  // Modified to search in both die size AND product size
+  // Modified performSearch function
   const performSearch = (dimensions) => {
     const { length, breadth } = dimensions;
     
@@ -209,15 +222,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       return;
     }
 
-    let baseSet;
-    
-    // If Custom is selected, use all dies as the base set
-    if (selectedJobType === "Custom") {
-      baseSet = dies;
-    } else {
-      // Otherwise filter by selected job type
-      baseSet = dies.filter(die => die.jobType === selectedJobType);
-    }
+    // Get the base set of dies based on job type
+    const baseSet = getBaseSetForJobType(selectedJobType);
     
     let matches = [];
 
@@ -411,7 +417,9 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       setDies(prev => [...prev, dieWithId]);
       
       // Update filtered dies if the new die matches the current job type
-      if (dieWithId.jobType === selectedJobType || selectedJobType === "Custom") {
+      if (dieWithId.jobType === selectedJobType || 
+          (selectedJobType === "Card" && (dieWithId.jobType === "Card" || dieWithId.jobType === "Biz Card")) ||
+          selectedJobType === "Custom") {
         setFilteredDies(prev => [...prev, dieWithId]);
       }
       
@@ -915,6 +923,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
               <div className="p-3 bg-white border-b text-sm text-gray-600 text-center">
                 {selectedJobType === "Custom" 
                   ? "No dies found matching your search criteria."
+                  : selectedJobType === "Card"
+                  ? "No Card or Biz Card dies found matching your search criteria."
                   : `No dies found for ${selectedJobType} matching your search criteria.`
                 }
               </div>
