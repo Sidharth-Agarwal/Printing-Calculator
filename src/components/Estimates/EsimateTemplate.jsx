@@ -75,12 +75,45 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
     });
   };
 
+  // ADDED: Get unique processes used across all estimates
+  const getUsedProcesses = () => {
+    if (!estimates || estimates.length === 0) return [];
+    
+    const processMap = {
+      'LP': 'Letter Press',
+      'FS': 'Foil Stamping', 
+      'EMB': 'Embossing',
+      'Digi': 'Digital Printing',
+      'Notebook': 'Notebook Binding',
+      'Screen': 'Screen Printing'
+    };
+    
+    const usedProcesses = new Set();
+    
+    estimates.forEach(estimate => {
+      if (estimate?.lpDetails?.isLPUsed) usedProcesses.add('LP');
+      if (estimate?.fsDetails?.isFSUsed) usedProcesses.add('FS');
+      if (estimate?.embDetails?.isEMBUsed) usedProcesses.add('EMB');
+      if (estimate?.digiDetails?.isDigiUsed) usedProcesses.add('Digi');
+      if (estimate?.notebookDetails?.isNotebookUsed) usedProcesses.add('Notebook');
+      if (estimate?.screenPrint?.isScreenPrintUsed) usedProcesses.add('Screen');
+    });
+    
+    return Array.from(usedProcesses).map(abbr => ({
+      abbreviation: abbr,
+      fullForm: processMap[abbr] || abbr
+    }));
+  };
+
   // Get the current date for the document
   const currentDate = formatDate(new Date());
   
   // ADDED: Get last updated information
   const lastUpdatedInfo = getLastUpdatedDate();
   const recentlyUpdated = hasRecentUpdates();
+  
+  // ADDED: Get processes used in this estimate
+  const usedProcesses = getUsedProcesses();
 
   // Calculate total quantities and amounts
   const totals = React.useMemo(() => {
@@ -142,22 +175,12 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
       
       // Get processing features - UNCOMMENTED AND UPDATED THIS SECTION
       const features = [];
-      if (estimate?.lpDetails?.isLPUsed) features.push("Letterpress");
-      if (estimate?.fsDetails?.isFSUsed) features.push("Foil Stamping");
-      if (estimate?.embDetails?.isEMBUsed) features.push("Embossing");
-      if (estimate?.digiDetails?.isDigiUsed) features.push("Digital Print");
+      if (estimate?.lpDetails?.isLPUsed) features.push("LP");
+      if (estimate?.fsDetails?.isFSUsed) features.push("FS");
+      if (estimate?.embDetails?.isEMBUsed) features.push("EMB");
+      if (estimate?.digiDetails?.isDigiUsed) features.push("Digi");
       if (estimate?.notebookDetails?.isNotebookUsed) features.push("Notebook");
-      if (estimate?.screenPrint?.isScreenPrintUsed) features.push("Screen Print");
-      if (estimate?.preDieCutting?.isPreDieCuttingUsed) features.push("Pre Die Cutting");
-      if (estimate?.dieCutting?.isDieCuttingUsed) features.push("Die Cutting");
-      if (estimate?.postDC?.isPostDCUsed) features.push("Post Die Cutting");
-      if (estimate?.foldAndPaste?.isFoldAndPasteUsed) features.push("Fold & Paste");
-      if (estimate?.dstPaste?.isDstPasteUsed) features.push("DST Paste");
-      if (estimate?.magnet?.isMagnetUsed) features.push("Magnet");
-      if (estimate?.qc?.isQCUsed) features.push("Quality Check");
-      if (estimate?.packing?.isPackingUsed) features.push("Packing");
-      if (estimate?.sandwich?.isSandwichComponentUsed) features.push("Sandwich/Duplex");
-      if (estimate?.misc?.isMiscUsed) features.push("Misc");
+      if (estimate?.screenPrint?.isScreenPrintUsed) features.push("Screen");
       
       // Get quantities and costs
       const quantity = parseInt(jobDetails.quantity) || 0;
@@ -226,12 +249,6 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
           <div>
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-xl font-bold text-gray-900">ESTIMATE</h1>
-              {/* ADDED: Recently updated indicator */}
-              {recentlyUpdated && (
-                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
-                  RECENTLY UPDATED
-                </span>
-              )}
             </div>
             <div className="text-sm text-gray-500 mb-2">Version: {version}</div>
             
@@ -253,6 +270,23 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
               <div className="text-sm">
                 <div className="text-gray-600">Estimate Date: {currentDate}</div>
                 <div className="text-gray-600">Tentative Delivery Date: {formatDate(estimates[0]?.deliveryDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000))}</div>
+                
+                {/* ADDED: Process Legend Section */}
+                {usedProcesses.length > 0 && (
+                  <div className="mt-3 mb-2">
+                    <div className="text-sm font-medium text-gray-700 mb-1">Processes:</div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      {usedProcesses.map((process, index) => (
+                        <div key={index} className="flex items-center">
+                          <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-xs mr-2 min-w-[3rem] text-center">
+                            {process.abbreviation}
+                          </span>
+                          <span>{process.fullForm}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 
                 {/* ADDED: Last updated information */}
                 {/* {lastUpdatedInfo.date && (
@@ -454,11 +488,6 @@ const EstimateTemplate = ({ estimates, clientInfo, version, onRenderComplete }) 
               <div className="font-medium mb-1 text-xs">Note</div>
               <div className="text-xs text-gray-600">
                 This is just an estimate, not a tax invoice. Prices may vary based on final specifications and quantity.
-                {recentlyUpdated && (
-                  <div className="mt-1 text-blue-600">
-                    This estimate includes recent updates - please review all details carefully.
-                  </div>
-                )}
               </div>
             </div>
             <div className="text-right">
