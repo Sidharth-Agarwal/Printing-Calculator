@@ -1,6 +1,7 @@
 import { calculateLPCosts } from '../productionCalculator/lpCalculator';
 import { calculateFSCosts } from '../productionCalculator/fsCalculator';
 import { calculateEMBCosts } from '../productionCalculator/embCalculator';
+import { calculatePaperAndCuttingCosts } from '../paperCalculator'; // Import paper calculator
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
 
@@ -44,6 +45,7 @@ export const calculateSandwichCosts = async (state) => {
         fsCostPerCardSandwich: "0.00",
         embCostPerCardSandwich: "0.00",
         sandwichPaperCostPerCard: "0.00",
+        sandwichGilCutCostPerCard: "0.00",
         sandwichCostPerCard: "0.00"
       };
     }
@@ -56,33 +58,57 @@ export const calculateSandwichCosts = async (state) => {
         fsCostPerCardSandwich: "0.00",
         embCostPerCardSandwich: "0.00",
         sandwichPaperCostPerCard: "0.00",
+        sandwichGilCutCostPerCard: "0.00",
         sandwichCostPerCard: "0.00"
       };
     }
 
-    // Calculate paper cost for the sandwich
+    // Calculate paper cost for the sandwich using paper calculator
     let sandwichPaperCostPerCard = 0;
+    let sandwichGilCutCostPerCard = 0;
     const sandwichPaperName = sandwich.paperInfo?.paperName;
     
     if (sandwichPaperName) {
-      const paperDetails = await fetchPaperDetails(sandwichPaperName);
+      // Create a temporary state for paper calculation with sandwich paper
+      const sandwichPaperState = {
+        ...state,
+        orderAndPaper: {
+          ...state.orderAndPaper,
+          paperName: sandwichPaperName // Use sandwich paper instead of main paper
+        }
+      };
+
+      // Use the paper calculator to get accurate paper and cutting costs
+      const paperResults = await calculatePaperAndCuttingCosts(sandwichPaperState);
       
-      if (paperDetails) {
-        const paperCostPerSquareFoot = parseFloat(paperDetails.costPerUnit || 0);
+      if (!paperResults.error) {
+        sandwichPaperCostPerCard = parseFloat(paperResults.paperCostPerCard || 0);
+        sandwichGilCutCostPerCard = parseFloat(paperResults.gilCutCostPerCard || 0);
         
-        // Calculate paper area in square feet
-        const productLengthInches = parseFloat(orderAndPaper.productSize?.length || orderAndPaper.dieSize?.length || 0);
-        const productBreadthInches = parseFloat(orderAndPaper.productSize?.breadth || orderAndPaper.dieSize?.breadth || 0);
-        
-        // Convert to square feet (divide by 144 since 1 sq ft = 144 sq inches)
-        const productAreaSquareFeet = (productLengthInches * productBreadthInches) / 144;
-        
-        // Calculate the paper cost per card
-        sandwichPaperCostPerCard = productAreaSquareFeet * paperCostPerSquareFoot;
-        
-        console.log(`Sandwich Paper Cost Calculation: Area=${productAreaSquareFeet} sq ft, Cost per sq ft=${paperCostPerSquareFoot}, Cost per card=${sandwichPaperCostPerCard}`);
+        console.log(`Sandwich Paper Cost (via calculator): Paper=${sandwichPaperCostPerCard}, GIL Cut=${sandwichGilCutCostPerCard}`);
       } else {
-        console.warn(`Paper details not found for sandwich paper: ${sandwichPaperName}`);
+        console.warn(`Paper calculator error for sandwich paper: ${paperResults.error}`);
+        
+        // Fallback to manual calculation if paper calculator fails
+        const paperDetails = await fetchPaperDetails(sandwichPaperName);
+        
+        if (paperDetails) {
+          const paperCostPerSquareFoot = parseFloat(paperDetails.costPerUnit || 0);
+          
+          // Calculate paper area in square feet
+          const productLengthInches = parseFloat(orderAndPaper.productSize?.length || orderAndPaper.dieSize?.length || 0);
+          const productBreadthInches = parseFloat(orderAndPaper.productSize?.breadth || orderAndPaper.dieSize?.breadth || 0);
+          
+          // Convert to square feet (divide by 144 since 1 sq ft = 144 sq inches)
+          const productAreaSquareFeet = (productLengthInches * productBreadthInches) / 144;
+          
+          // Calculate the paper cost per card
+          sandwichPaperCostPerCard = productAreaSquareFeet * paperCostPerSquareFoot;
+          
+          console.log(`Sandwich Paper Cost (fallback): Area=${productAreaSquareFeet} sq ft, Cost per sq ft=${paperCostPerSquareFoot}, Cost per card=${sandwichPaperCostPerCard}`);
+        } else {
+          console.warn(`Paper details not found for sandwich paper: ${sandwichPaperName}`);
+        }
       }
     }
 
@@ -155,11 +181,12 @@ export const calculateSandwichCosts = async (state) => {
       }
     }
 
-    // Calculate total sandwich cost per card (including paper cost)
+    // Calculate total sandwich cost per card (including paper and GIL cut costs)
     const sandwichCostPerCard = parseFloat(lpCostPerCardSandwich) + 
                                 parseFloat(fsCostPerCardSandwich) + 
                                 parseFloat(embCostPerCardSandwich) +
-                                sandwichPaperCostPerCard;
+                                sandwichPaperCostPerCard +
+                                sandwichGilCutCostPerCard;
 
     // Detailed calculation results
     const results = {
@@ -167,6 +194,7 @@ export const calculateSandwichCosts = async (state) => {
       fsCostPerCardSandwich: fsCostPerCardSandwich,
       embCostPerCardSandwich: embCostPerCardSandwich,
       sandwichPaperCostPerCard: sandwichPaperCostPerCard.toFixed(2),
+      sandwichGilCutCostPerCard: sandwichGilCutCostPerCard.toFixed(2),
       sandwichCostPerCard: sandwichCostPerCard.toFixed(2)
     };
 
@@ -181,6 +209,7 @@ export const calculateSandwichCosts = async (state) => {
       fsCostPerCardSandwich: "0.00",
       embCostPerCardSandwich: "0.00",
       sandwichPaperCostPerCard: "0.00",
+      sandwichGilCutCostPerCard: "0.00",
       sandwichCostPerCard: "0.00"
     };
   }

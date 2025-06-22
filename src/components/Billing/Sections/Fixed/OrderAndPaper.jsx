@@ -21,6 +21,7 @@ const OrderAndPaper = ({
   const firstInputRef = useRef(null);
   const quantityInputRef = useRef(null);
   const [formChanges, setFormChanges] = useState({});
+  const [initialPaperSelectionDone, setInitialPaperSelectionDone] = useState(false);
 
   // Focus on the first input field when the component loads
   useEffect(() => {
@@ -35,11 +36,14 @@ const OrderAndPaper = ({
       jobType: orderAndPaper.jobType,
       quantity: orderAndPaper.quantity,
       paperName: orderAndPaper.paperName,
+      paperGsm: orderAndPaper.paperGsm,
+      paperCompany: orderAndPaper.paperCompany,
       dieCode: orderAndPaper.dieCode
     });
   }, [orderAndPaper]);
 
-  // Fetch papers from Firestore and set WILD-450 paper if available, or the first paper if not
+  // FIXED: Fetch papers from Firestore and set WILD-450 paper if available, or the first paper if not
+  // Only auto-select once to prevent overriding user selections
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
       const paperData = snapshot.docs.map((doc) => ({
@@ -48,16 +52,25 @@ const OrderAndPaper = ({
       }));
       setPapers(paperData);
       
-      // If papers are loaded and no paper name is selected yet
-      if (paperData.length > 0 && !orderAndPaper.paperName) {
+      // FIXED: Only auto-select if no paper is selected AND this is the first load
+      // Check for complete paper data, not just paperName
+      if (paperData.length > 0 && 
+          !orderAndPaper.paperName && 
+          !orderAndPaper.paperGsm && 
+          !orderAndPaper.paperCompany &&
+          !initialPaperSelectionDone) {
+        
         // Look for the paper named "WILD-450"
         const wildPaper = paperData.find(paper => paper.paperName === "WILD-450");
         
         // If WILD-450 exists, select it; otherwise default to the first paper
         const selectedPaper = wildPaper || paperData[0];
         
-        // Log the auto-selection for debugging purposes
-        console.log("Auto-selecting paper:", selectedPaper.paperName);
+        console.log("Auto-selecting paper (first time only):", {
+          name: selectedPaper.paperName,
+          gsm: selectedPaper.gsm,
+          company: selectedPaper.company
+        });
         
         dispatch({
           type: "UPDATE_ORDER_AND_PAPER",
@@ -67,11 +80,14 @@ const OrderAndPaper = ({
             paperCompany: selectedPaper.company
           },
         });
+        
+        // Mark that initial selection is done
+        setInitialPaperSelectionDone(true);
       }
     });
 
     return () => unsubscribe();
-  }, [dispatch, orderAndPaper.paperName]);
+  }, [dispatch, orderAndPaper.paperName, orderAndPaper.paperGsm, orderAndPaper.paperCompany, initialPaperSelectionDone]);
 
   // Set today's date for both date fields if they're not already set
   useEffect(() => {
@@ -87,7 +103,7 @@ const OrderAndPaper = ({
     
     if (!orderAndPaper.deliveryDate) {
       const today = new Date();
-      // Set delivery date to 7 days from today by default
+      // Set delivery date to 15 days from today by default
       const deliveryDate = new Date();
       deliveryDate.setDate(today.getDate() + 15);
       dispatch({
@@ -99,6 +115,7 @@ const OrderAndPaper = ({
     }
   }, [dispatch, orderAndPaper.date, orderAndPaper.deliveryDate]);
 
+  // FIXED: Updated handleChange to properly handle complete paper selection
   const handleChange = (e) => {
     const { name, value } = e.target;
     
@@ -108,10 +125,9 @@ const OrderAndPaper = ({
       [name]: value
     }));
     
-    // Handle paper details specifically
-    if (name === "paperDetails") {
-      // Log paper selection for debugging
-      console.log("Paper selection changed:", value);
+    // FIXED: Handle complete paper selection data from SearchablePaperDropdown
+    if (name === "paperSelection") {
+      console.log("Complete paper selection changed:", value);
       
       dispatch({
         type: "UPDATE_ORDER_AND_PAPER",
@@ -121,12 +137,63 @@ const OrderAndPaper = ({
           paperCompany: value.paperCompany
         },
       });
+      
+      // Mark that user has made a manual selection
+      setInitialPaperSelectionDone(true);
+      return;
+    }
+    
+    // Handle legacy paperName only updates (fallback for any direct paperName changes)
+    if (name === "paperName") {
+      console.log("Paper name only changed:", value);
+      
+      // Find the complete paper data
+      const selectedPaperObj = papers.find(paper => paper.paperName === value);
+      
+      if (selectedPaperObj) {
+        console.log("Found complete paper data for:", value, selectedPaperObj);
+        dispatch({
+          type: "UPDATE_ORDER_AND_PAPER",
+          payload: {
+            paperName: selectedPaperObj.paperName,
+            paperGsm: selectedPaperObj.gsm,
+            paperCompany: selectedPaperObj.company
+          },
+        });
+      } else {
+        // Fallback if paper not found - this shouldn't happen with the dropdown
+        console.warn("Paper not found in papers list:", value);
+        dispatch({
+          type: "UPDATE_ORDER_AND_PAPER",
+          payload: { paperName: value },
+        });
+      }
+      
+      // Mark that user has made a manual selection
+      setInitialPaperSelectionDone(true);
+      return;
+    }
+    
+    // Handle paper details specifically (legacy support)
+    if (name === "paperDetails") {
+      console.log("Paper details selection changed:", value);
+      
+      dispatch({
+        type: "UPDATE_ORDER_AND_PAPER",
+        payload: {
+          paperName: value.paperName,
+          paperGsm: value.paperGsm,
+          paperCompany: value.paperCompany
+        },
+      });
+      
+      // Mark that user has made a manual selection
+      setInitialPaperSelectionDone(true);
       return;
     }
     
     // If this is a job type change and we have a custom handler
     if (name === "jobType") {
-      // Log job type change for debugging
       console.log("Job type changed to:", value);
       
       if (onJobTypeChange) {
@@ -169,7 +236,7 @@ const OrderAndPaper = ({
         productSize: dieData.productSize || { length: "", breadth: "" },
         image: dieData.image || "",
         frags: dieData.frags || "",
-        type: dieData.type || "" // Add this line to include the type
+        type: dieData.type || ""
       }
     });
     
@@ -179,8 +246,8 @@ const OrderAndPaper = ({
       dieCode: dieData.dieCode || "",
       dieSize: dieData.dieSize || { length: "", breadth: "" },
       productSize: dieData.productSize || { length: "", breadth: "" },
-      frags: dieData.frags || "",      // ADD THIS TO LOG
-      type: dieData.type || ""         // ADD THIS TO LOG
+      frags: dieData.frags || "",
+      type: dieData.type || ""
     });
   };
 
@@ -381,11 +448,17 @@ const OrderAndPaper = ({
               </label>
               <SearchablePaperDropdown 
                 papers={papers}
-                selectedPaper={orderAndPaper.paperName || (papers.length > 0 ? papers[0].paperName : "")}
+                selectedPaper={orderAndPaper.paperName || ""}
                 onChange={handleChange}
                 compact={compact}
                 isDieSelected={!!(orderAndPaper.dieCode)}
               />
+              {/* Display current paper details for debugging */}
+              {process.env.NODE_ENV === 'development' && orderAndPaper.paperName && (
+                <div className="text-xs text-gray-500 mt-1">
+                  Current: {orderAndPaper.paperName} | {orderAndPaper.paperCompany} | {orderAndPaper.paperGsm}gsm
+                </div>
+              )}
             </div>
           </div>
 
@@ -401,7 +474,7 @@ const OrderAndPaper = ({
                 productSize: orderAndPaper.productSize || { length: "", breadth: "" },
                 image: orderAndPaper.image || "",
                 frags: orderAndPaper.frags || "",
-                type: orderAndPaper.type || "" // Add this line to include the type
+                type: orderAndPaper.type || ""
               }}
               onDieSelect={handleDieSelect}
               compact={compact}

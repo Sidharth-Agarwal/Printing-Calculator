@@ -18,6 +18,7 @@ export const calculateNotebookCosts = async (state) => {
         notebookCostPerCard: "0.00",
         notebookPagesCostPerCard: "0.00",
         notebookBindingCostPerCard: "0.00",
+        notebookGilCutCostPerCard: "0.00", // Added GIL CUT
         totalFormaPossible: 0,
         totalPages: 0,
         totalFormaRequired: 0,
@@ -32,7 +33,8 @@ export const calculateNotebookCosts = async (state) => {
         error: "Missing required information for notebook calculations",
         notebookCostPerCard: "0.00",
         notebookPagesCostPerCard: "0.00",
-        notebookBindingCostPerCard: "0.00"
+        notebookBindingCostPerCard: "0.00",
+        notebookGilCutCostPerCard: "0.00" // Added GIL CUT
       };
     }
 
@@ -63,18 +65,29 @@ export const calculateNotebookCosts = async (state) => {
         error: `Paper details not found for: ${notebookDetails.paperName}`,
         notebookCostPerCard: "0.00",
         notebookPagesCostPerCard: "0.00",
-        notebookBindingCostPerCard: "0.00"
+        notebookBindingCostPerCard: "0.00",
+        notebookGilCutCostPerCard: "0.00" // Added GIL CUT
       };
     }
     
-    // 8. Calculate cost of 1 forma (paper price / totalFragsPerSheet)
+    // 8. Fetch GIL CUT rate from standard rates (same as paper calculator)
+    const gilCutRate = await fetchStandardRate('GIL CUT', 'PER SHEET');
+    const gilCutCostPerSheet = gilCutRate ? parseFloat(gilCutRate.finalRate) : 0.25; // Default if not found
+    
+    // 9. Calculate GIL CUT cost per card for notebooks
+    // For notebooks, fragsPerDie is hardcoded to 1 (as per paper calculator logic)
+    const fragsPerDie = orderAndPaper.frags || 1;
+    const gilCutCost = gilCutCostPerSheet / fragsPerDie;
+    const notebookGilCutCostPerCard = gilCutCost;
+    
+    // 10. Calculate cost of 1 forma (paper price / totalFragsPerSheet)
     const paperRate = parseFloat(paperDetails.finalRate);
     const costOf1Forma = paperRate / totalFragsPerSheet;
     
-    // 9. Calculate cost of pages per notebook (cost of 1 forma * possible forma)
+    // 11. Calculate cost of pages per notebook (cost of 1 forma * possible forma)
     const costOfPagesPerNotebook = (costOf1Forma * possibleNumberOfForma) / 2;
     
-    // 10. Fetch binding cost from standard rates
+    // 12. Fetch binding cost from standard rates
     const bindingType = notebookDetails.bindingTypeConcatenated || `BINDING ${notebookDetails.bindingType}`;
     const bindingDetails = await fetchStandardRate("BINDING", notebookDetails.bindingType);
     
@@ -87,14 +100,15 @@ export const calculateNotebookCosts = async (state) => {
       bindingCost = 10; 
     }
     
-    // 11. Calculate total notebook cost per card (pages cost + binding cost)
-    const notebookCostPerCard = costOfPagesPerNotebook + bindingCost;
+    // 13. Calculate total notebook cost per card (pages cost + binding cost + GIL CUT cost)
+    const notebookCostPerCard = costOfPagesPerNotebook + bindingCost + notebookGilCutCostPerCard;
     
-    // 12. Return the final calculations
+    // 14. Return the final calculations
     return {
       notebookCostPerCard: notebookCostPerCard.toFixed(2),
       notebookPagesCostPerCard: costOfPagesPerNotebook.toFixed(2),
       notebookBindingCostPerCard: bindingCost.toFixed(2),
+      notebookGilCutCostPerCard: notebookGilCutCostPerCard.toFixed(2), // Added GIL CUT
       // Additional info for debugging or display
       possibleNumberOfForma,
       totalPages,
@@ -103,7 +117,9 @@ export const calculateNotebookCosts = async (state) => {
       costOf1Forma: costOf1Forma.toFixed(2),
       paperRate: paperRate.toFixed(2),
       bindingCost: bindingCost.toFixed(2),
-      bindingType
+      bindingType,
+      gilCutRate: gilCutCostPerSheet.toFixed(2), // Added for debugging
+      fragsPerDie // Added for debugging
     };
   } catch (error) {
     console.error("Error calculating notebook costs:", error);
@@ -111,7 +127,8 @@ export const calculateNotebookCosts = async (state) => {
       error: "Error calculating notebook costs",
       notebookCostPerCard: "0.00",
       notebookPagesCostPerCard: "0.00",
-      notebookBindingCostPerCard: "0.00"
+      notebookBindingCostPerCard: "0.00",
+      notebookGilCutCostPerCard: "0.00" // Added GIL CUT
     };
   }
 };
