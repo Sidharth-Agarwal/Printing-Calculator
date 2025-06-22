@@ -106,6 +106,26 @@ const CostDisplaySection = ({
       ],
       totalKey: 'digiCostPerCard',
       totalLabel: 'Digital Printing'
+    },
+    { 
+      key: 'NOTEBOOK', 
+      label: 'Notebook', 
+      serviceKey: 'notebookDetails', 
+      toggleField: 'isNotebookUsed',
+      bgColor: 'bg-blue-50',
+      items: [
+        { key: 'notebookPagesCostPerCard', label: 'Notebook Pages Cost' },
+        { key: 'notebookBindingCostPerCard', label: 'Notebook Binding Cost' },
+        { key: 'notebookGilCutCostPerCard', label: 'Notebook GIL Cut Cost' }
+      ],
+      metaItems: [
+        { key: 'possibleNumberOfForma', label: 'Forma per notebook:' },
+        { key: 'totalPages', label: 'Total pages:' },
+        { key: 'totalFormaRequired', label: 'Total forma required:' },
+        { key: 'totalSheets', label: 'Total sheets:' }
+      ],
+      totalKey: 'notebookCostPerCard',
+      totalLabel: 'Notebook'
     }
   ];
 

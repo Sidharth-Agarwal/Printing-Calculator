@@ -126,20 +126,8 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     // 6. Calculate maximum cards per sheet
     const maxCardsPerSheet = calculateMaxCardsPerSheet(dieSize, paperSize);
     console.log("Children per sheet : ", maxCardsPerSheet);
-    
-    // 7. Determine frags per die
-    let fragsPerDie = 1; // Default to 1
-    
-    if (isNotebookJob) {
-      // For notebooks, hardcode fragsPerDie to 1
-      fragsPerDie = 1;
-    } else if (dieCode) {
-      // For other job types, fetch die details to get frags
-      const dieDetails = await fetchDieDetails(dieCode);
-      if (dieDetails && dieDetails.frags) {
-        fragsPerDie = parseInt(dieDetails.frags) || 1;
-      }
-    }
+
+    const fragsPerDie = orderAndPaper.frags || 1;
 
     // Calculate total frags per sheet
     const totalFragsPerSheet = maxCardsPerSheet * fragsPerDie;

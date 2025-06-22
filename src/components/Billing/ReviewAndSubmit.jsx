@@ -275,6 +275,9 @@ const ReviewAndSubmit = ({
         {localCalculations.notebookBindingCostPerCard && (
           <CostItem label="Notebook Binding Cost" value={localCalculations.notebookBindingCostPerCard} isSubItem />
         )}
+        {localCalculations.notebookGilCutCostPerCard && (
+          <CostItem label="Notebook GIL Cut Cost" value={localCalculations.notebookGilCutCostPerCard} isSubItem />
+        )}
         {/* Additional notebook information */}
         {localCalculations.possibleNumberOfForma && (
           <div className="pl-6 text-sm text-gray-600">
