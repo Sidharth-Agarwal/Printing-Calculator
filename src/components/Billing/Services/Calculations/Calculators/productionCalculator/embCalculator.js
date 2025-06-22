@@ -93,27 +93,28 @@ export const calculateEMBCosts = async (state) => {
     }
 
     // 2. Fetch male plate material details
-    const malePlateMaterialDetails = await fetchMaterialDetails(embDetails.plateTypeMale);
-    if (!malePlateMaterialDetails) {
-      console.warn(`Material details not found for male plate type: ${embDetails.plateTypeMale}`);
-      return { error: `Material details not found for male plate type: ${embDetails.plateTypeMale}` };
-    }
+    // const malePlateMaterialDetails = await fetchMaterialDetails(embDetails.plateTypeMale);
+    // if (!malePlateMaterialDetails) {
+    //   console.warn(`Material details not found for male plate type: ${embDetails.plateTypeMale}`);
+    //   return { error: `Material details not found for male plate type: ${embDetails.plateTypeMale}` };
+    // }
 
-    // 3. Calculate male plate cost
-    const malePlateCost = plateArea * parseFloat(malePlateMaterialDetails.finalCostPerUnit || 0);
+    // // 3. Calculate male plate cost
+    // const malePlateCost = plateArea * parseFloat(malePlateMaterialDetails.finalCostPerUnit || 0);
     
-    // 4. Fetch female plate material details
-    const femalePlateMaterialDetails = await fetchMaterialDetails(embDetails.plateTypeFemale);
-    if (!femalePlateMaterialDetails) {
-      console.warn(`Material details not found for female plate type: ${embDetails.plateTypeFemale}`);
-      return { error: `Material details not found for female plate type: ${embDetails.plateTypeFemale}` };
-    }
+    // // 4. Fetch female plate material details
+    // const femalePlateMaterialDetails = await fetchMaterialDetails(embDetails.plateTypeFemale);
+    // if (!femalePlateMaterialDetails) {
+    //   console.warn(`Material details not found for female plate type: ${embDetails.plateTypeFemale}`);
+    //   return { error: `Material details not found for female plate type: ${embDetails.plateTypeFemale}` };
+    // }
     
-    // 5. Calculate female plate cost
-    const femalePlateCost = plateArea * parseFloat(femalePlateMaterialDetails.finalCostPerUnit || 0);
+    // // 5. Calculate female plate cost
+    // const femalePlateCost = plateArea * parseFloat(femalePlateMaterialDetails.finalCostPerUnit || 0);
     
-    // 6. Calculate total plate cost
-    const totalPlateCost = malePlateCost + femalePlateCost;
+    // // 6. Calculate total plate cost
+    // const totalPlateCost = malePlateCost + femalePlateCost;
+    const totalPlateCost = 0;
 
     // 7. Fetch DST material details and calculate cost
     let dstMaterialCost = 0;
@@ -202,9 +203,6 @@ export const calculateEMBCosts = async (state) => {
       embDstMaterialCostPerCard: embDstMaterialCostPerCard.toFixed(2), // Include DST material cost
       // Additional data for debugging
       plateArea: plateArea.toFixed(2),
-      malePlateCost: malePlateCost.toFixed(2),
-      femalePlateCost: femalePlateCost.toFixed(2),
-      totalPlateCost: totalPlateCost.toFixed(2),
       dstMaterialCost: dstMaterialCost.toFixed(2), // Include total DST material cost
       positiveFilmCost: positiveFilmCost.toFixed(2),
       mrCost: mrCost.toFixed(2),

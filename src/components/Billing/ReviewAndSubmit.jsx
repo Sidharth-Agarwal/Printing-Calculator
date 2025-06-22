@@ -624,11 +624,9 @@ const ReviewAndSubmit = ({
               {localCalculations.sandwichPaperCostPerCard && (
                 <CostItem label="Sandwich Paper Cost" value={localCalculations.sandwichPaperCostPerCard} isSubItem />
               )}
-              {/* Display the paper name if available */}
-              {state.sandwich?.paperInfo?.paperName && (
-                <div className="pl-6 text-sm text-gray-600">
-                  Paper: {state.sandwich.paperInfo.paperName}
-                </div>
+              {/* Add GIL Cut cost for sandwich */}
+              {localCalculations.sandwichGilCutCostPerCard && (
+                <CostItem label="Sandwich GIL Cut Cost" value={localCalculations.sandwichGilCutCostPerCard} isSubItem />
               )}
               {/* Sandwich-specific LP */}
               {localCalculations.lpCostPerCardSandwich && (
