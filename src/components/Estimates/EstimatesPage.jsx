@@ -12,17 +12,7 @@ import jsPDF from 'jspdf';
 import { createRoot } from "react-dom/client";
 import { useAuth } from "../Login/AuthContext";
 import { normalizeDataForOrders } from "../../utils/normalizeDataForOrders";
-import { 
-  updateClientOrderCountAndTier, 
-  getClientCurrentTier, 
-  applyLoyaltyDiscount,
-  isClientEligibleForLoyalty 
-} from "../../utils/LoyaltyService";
-import { 
-  createLoyaltyTierChangeNotification,
-  deleteRelatedNotifications 
-} from "../../utils/loyaltyUtils";
-import OrderSerializationService from "../../utils/OrderSerializationService"; // NEW IMPORT
+import OrderSerializationService from "../../utils/OrderSerializationService";
 
 const EstimatesPage = () => {
   const navigate = useNavigate();
@@ -717,81 +707,127 @@ const EstimatesPage = () => {
     setPdfError(null);
     
     try {
-      const tempDiv = document.createElement('div');
-      tempDiv.style.position = 'absolute';
-      tempDiv.style.left = '-9999px';
-      tempDiv.style.width = '800px';
-      document.body.appendChild(tempDiv);
-      
-      const root = createRoot(tempDiv);
-      await new Promise(resolve => {
-        root.render(
-          <EstimateTemplate
-            estimates={previewData.estimates}
-            clientInfo={previewData.clientInfo}
-            version={previewData.version}
-            onRenderComplete={resolve}
-          />
-        );
-      });
-      
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      
-      const canvas = await html2canvas(tempDiv, {
-        scale: 2,
-        logging: false,
-        useCORS: true,
-        allowTaint: true
-      });
-      
-      const aspectRatio = canvas.width / canvas.height;
-      const orientation = aspectRatio > 1 ? 'landscape' : 'portrait';
-      
+      // Calculate pagination
+      const ESTIMATES_PER_PAGE = 5;
+      const totalPages = Math.ceil(previewData.estimates.length / ESTIMATES_PER_PAGE);
       const pdf = new jsPDF({
-        orientation: orientation,
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4'
       });
       
-      const pdfWidth = orientation === 'landscape' ? 297 : 210;
-      const pdfHeight = orientation === 'landscape' ? 210 : 297;
+      console.log(`Generating PDF with ${totalPages} pages for ${previewData.estimates.length} estimates`);
       
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
-      
-      if (imgHeight > pdfHeight) {
-        const scale = pdfHeight / imgHeight;
-        const adjustedWidth = pdfWidth * scale;
-        const adjustedHeight = pdfHeight;
+      // Process each page separately
+      for (let pageIndex = 0; pageIndex < totalPages; pageIndex++) {
+        const pageNumber = pageIndex + 1;
+        const startIndex = pageIndex * ESTIMATES_PER_PAGE;
+        const endIndex = Math.min(startIndex + ESTIMATES_PER_PAGE, previewData.estimates.length);
+        const pageEstimates = previewData.estimates.slice(startIndex, endIndex);
         
-        pdf.addImage(
-          canvas.toDataURL('image/jpeg', 1.0),
-          'JPEG',
-          (pdfWidth - adjustedWidth) / 2,
-          0,
-          adjustedWidth,
-          adjustedHeight
-        );
-      } else {
-        pdf.addImage(
-          canvas.toDataURL('image/jpeg', 1.0),
-          'JPEG',
-          0,
-          (pdfHeight - imgHeight) / 2,
-          imgWidth,
-          imgHeight
-        );
+        console.log(`Processing page ${pageNumber}: estimates ${startIndex + 1}-${endIndex}`);
+        
+        // Create a temporary div for this page
+        const tempDiv = document.createElement('div');
+        tempDiv.style.position = 'absolute';
+        tempDiv.style.left = '-9999px';
+        tempDiv.style.width = '800px';
+        tempDiv.style.background = 'white';
+        document.body.appendChild(tempDiv);
+        
+        try {
+          // Render only this page's estimates
+          const root = createRoot(tempDiv);
+          await new Promise(resolve => {
+            root.render(
+              <EstimateTemplate
+                estimates={pageEstimates}
+                clientInfo={previewData.clientInfo}
+                version={previewData.version}
+                onRenderComplete={resolve}
+                // Pass page info for proper headers/footers
+                currentPage={pageNumber}
+                totalPages={totalPages}
+                allEstimates={previewData.estimates} // For grand totals on last page
+              />
+            );
+          });
+          
+          // Wait for rendering to complete
+          await new Promise(resolve => setTimeout(resolve, 1500));
+          
+          // Capture this page
+          const canvas = await html2canvas(tempDiv, {
+            scale: 2,
+            logging: false,
+            useCORS: true,
+            allowTaint: true,
+            width: 800,
+            height: 1000, // A4 aspect ratio
+            backgroundColor: '#ffffff'
+          });
+          
+          // Add page to PDF
+          if (pageIndex > 0) {
+            pdf.addPage();
+          }
+          
+          const pdfWidth = 210; // A4 width in mm
+          const pdfHeight = 297; // A4 height in mm
+          
+          const imgWidth = pdfWidth;
+          const imgHeight = (canvas.height * imgWidth) / canvas.width;
+          
+          if (imgHeight > pdfHeight) {
+            // Scale down if content is too tall
+            const scale = pdfHeight / imgHeight;
+            const adjustedWidth = pdfWidth * scale;
+            const adjustedHeight = pdfHeight;
+            
+            pdf.addImage(
+              canvas.toDataURL('image/jpeg', 0.95),
+              'JPEG',
+              (pdfWidth - adjustedWidth) / 2,
+              0,
+              adjustedWidth,
+              adjustedHeight
+            );
+          } else {
+            // Center vertically if content is shorter
+            pdf.addImage(
+              canvas.toDataURL('image/jpeg', 0.95),
+              'JPEG',
+              0,
+              (pdfHeight - imgHeight) / 2,
+              imgWidth,
+              imgHeight
+            );
+          }
+          
+          console.log(`Page ${pageNumber} added to PDF`);
+          
+        } finally {
+          // Clean up
+          if (tempDiv && tempDiv.parentNode) {
+            try {
+              root.unmount();
+            } catch (e) {
+              console.warn('Error unmounting root:', e);
+            }
+            tempDiv.parentNode.removeChild(tempDiv);
+          }
+        }
       }
-    
-      pdf.save(`Customer_Estimate_${previewData.clientInfo.name}_V${previewData.version}.pdf`);
       
-      if (tempDiv && tempDiv.parentNode) {
-        root.unmount();
-        tempDiv.parentNode.removeChild(tempDiv);
-      }
+      // Save the multi-page PDF
+      const fileName = `Customer_Estimate_${previewData.clientInfo.name}_V${previewData.version}_${totalPages}pages.pdf`;
+      pdf.save(fileName);
+      
+      console.log(`PDF generated successfully: ${fileName}`);
+      
     } catch (error) {
-      console.error('Error generating customer estimate:', error);
-      setPdfError(error.message || 'Failed to generate estimate');
+      console.error('Error generating paginated PDF:', error);
+      setPdfError(error.message || 'Failed to generate paginated estimate');
     } finally {
       setIsGeneratingPDF(false);
     }
@@ -1415,6 +1451,7 @@ const EstimatesPage = () => {
          onDownload={handleGenerateJobTicket}
          isGeneratingPDF={isGeneratingPDF}
          error={pdfError}
+         estimates={previewData?.estimates || []} // ✅ ADD THIS LINE
        >
          {previewData && previewData.estimates.length > 0 && (
            <EstimateTemplate
