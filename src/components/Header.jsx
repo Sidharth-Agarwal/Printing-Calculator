@@ -205,6 +205,7 @@ const Header = () => {
       isDropdown: true,
       priority: 5,
       dropdownItems: [
+        { label: 'Public Lead Form', path: '/request-kit', icon: '🌐' },
         { label: 'Lead Registration', path: '/crm/lead-registration', icon: '✏️' },
         { label: 'Lead Pipeline', path: '/crm/lead-management', icon: '🔄' },
         { label: 'Qualification Badges', path: '/crm/badges', icon: '🏆' }

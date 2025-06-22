@@ -32,6 +32,7 @@ import { CRMProvider } from "./context/CRMContext";
 import LeadRegistrationPage from "./components/CRM/LeadRegistration/LeadRegistrationPage";
 import LeadManagementPage from "./components/CRM/LeadManagement/LeadManagementPage";
 import BadgeManagementPage from "./components/CRM/BadgeManagement/BadgeManagementPage";
+import PublicLeadForm from "./components/CRM/LeadRegistration/PublicLeadForm";
 
 import "./styles/tailwind.css";
 
@@ -44,7 +45,7 @@ function App() {
           {/* Increased padding-top to match the new header height */}
           <main className="container mx-auto p-6 pt-20 flex-grow">
             <Routes>
-              {/* Public routes - these don't require authentication */}
+              <Route path="/request-kit" element={<PublicLeadForm />} />
               <Route path="/" element={<Login />} />
               <Route path="/setup-admin" element={<AdminUser />} />
               <Route path="/unauthorized" element={<Unauthorized />} />
