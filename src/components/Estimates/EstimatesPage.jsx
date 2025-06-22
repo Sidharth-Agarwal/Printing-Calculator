@@ -833,7 +833,6 @@ const EstimatesPage = () => {
     }
   };
 
-  // Handle duplicate estimate with proper timestamps
   const handleDuplicateEstimate = async (estimate) => {
     try {
       const duplicatedEstimate = {
@@ -860,7 +859,23 @@ const EstimatesPage = () => {
       duplicatedEstimate.rejectedBy = null;
       
       duplicatedEstimate.projectName = `${estimate.projectName || "Unnamed Project"} - Copy`;
-  
+
+      // CRITICAL FIX: Preserve calculations including markup information when duplicating
+      if (estimate.calculations) {
+        duplicatedEstimate.calculations = {
+          ...estimate.calculations,
+          // Ensure markup information is preserved
+          markupType: estimate.calculations.markupType,
+          markupPercentage: estimate.calculations.markupPercentage,
+          markupAmount: estimate.calculations.markupAmount
+        };
+        
+        console.log("Duplicating estimate with preserved markup:", {
+          markupType: duplicatedEstimate.calculations.markupType,
+          markupPercentage: duplicatedEstimate.calculations.markupPercentage
+        });
+      }
+
       const docRef = await addDoc(collection(db, "estimates"), duplicatedEstimate);
       
       const newEstimate = {
