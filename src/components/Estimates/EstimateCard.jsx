@@ -29,8 +29,10 @@ const EstimateCard = ({
   // Determine if this estimate can be selected (not moved, canceled, or in escrow)
   const isSelectable = !isMovedToOrders && !isCanceled && !isInEscrow;
   
-  // Check if this client is eligible for loyalty benefits (B2B client)
-  const isLoyaltyEligible = estimate.clientInfo?.clientType === "B2B";
+  // UPDATED: Check client type for both B2B and Direct
+  const clientType = estimate.clientInfo?.clientType;
+  const isLoyaltyEligible = clientType === "B2B";
+  const isDirectClient = !clientType || clientType === "Direct" || clientType === "direct";
 
   // ADDED: Format last activity date
   const formatLastActivity = () => {
@@ -293,13 +295,20 @@ const EstimateCard = ({
         {estimate?.projectName || "No Project Name"}
       </p>
       
-      {/* UPDATED: Info line with last activity */}
+      {/* UPDATED: Info line with last activity and client type tags */}
       <div className="flex justify-between text-xs text-gray-500 mb-1.5">
         <div className="flex items-center gap-2">
           <span>HSN: {estimate?.jobDetails?.hsnCode || "N/A"}</span>
+          
+          {/* UPDATED: Show both B2B and Direct client type tags */}
           {isLoyaltyEligible && (
-            <span className="px-1 py-0.5 bg-purple-50 text-purple-700 rounded text-xs">
+            <span className="px-1 py-0.5 bg-purple-50 text-purple-700 rounded text-xs font-medium">
               B2B
+            </span>
+          )}
+          {isDirectClient && (
+            <span className="px-1 py-0.5 bg-blue-50 text-blue-700 rounded text-xs font-medium">
+              Direct
             </span>
           )}
         </div>

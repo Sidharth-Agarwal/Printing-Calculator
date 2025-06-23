@@ -34,6 +34,7 @@ export const calculateDigiDetailsCosts = async (state) => {
     const { digiDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const jobType = orderAndPaper.jobType || "CARD";
+    const fragsPerDie = orderAndPaper.frags || 1;
 
     // Check if digital printing is used
     if (!digiDetails.isDigiUsed) {
