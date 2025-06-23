@@ -291,9 +291,6 @@ const Header = () => {
               alt="Famous Logo" 
               className="h-8 w-8 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12" 
             />
-            <div className="hidden sm:block">
-              <div className="text-base font-bold">Famous</div>
-            </div>
           </Link>
           
           {/* Desktop Navigation */}

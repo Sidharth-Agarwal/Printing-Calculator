@@ -74,14 +74,14 @@ export const calculateFSCosts = async (state) => {
           const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
           console.log("Product length : ", productLengthCm)
           console.log("Product length : ", productBreadthCm)
-          plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+          blockArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
         }
         else if (normalizedJobType === "packaging") {
           const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
           const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
           console.log("Die length : ", dieLengthCm)
           console.log("Die length : ", dieBreadthCm)
-          plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+          blockArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
         }
         else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
           if(fragsPerDie >= 2) {
@@ -89,13 +89,13 @@ export const calculateFSCosts = async (state) => {
             const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
             console.log("Die length : ", dieLengthCm)
             console.log("Die length : ", dieBreadthCm)
-            plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+            blockArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
           } else {
             const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
             const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
             console.log("Product length : ", productLengthCm)
             console.log("Product length : ", productBreadthCm)
-            plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+            blockArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
           }
         }
       } else {
@@ -108,6 +108,7 @@ export const calculateFSCosts = async (state) => {
       // 2. Fetch block material details
       const blockType = foilDetail.blockType || "Magnesium Block 3MM";
       const blockMaterialDetails = await fetchMaterialDetails(blockType);
+      console.log("block details: ", blockMaterialDetails)
       
       if (!blockMaterialDetails) {
         console.warn(`Material details not found for block type: ${blockType}`);
@@ -118,6 +119,7 @@ export const calculateFSCosts = async (state) => {
       const blockBaseCost = blockArea * parseFloat(blockMaterialDetails.landedCost || 0);
       totalBlockCost += blockBaseCost;
       totalFreightCost += freightCost;
+      console.log("Block Cost : ", blockBaseCost)
       
       // 4. Fetch foil material details
       const foilType = foilDetail.foilType || "Gold MTS 220";
@@ -131,6 +133,8 @@ export const calculateFSCosts = async (state) => {
       // Calculate foil cost
       const foilCostPerUnit = parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
       const foilCost = blockArea * foilCostPerUnit;
+      console.log("Foil Cost Parse : ", parseFloat(foilMaterialDetails.finalCostPerUnit || 0))
+      console.log("Foil Cost : ", foilCost)
       totalFoilCost += foilCost;
       
       // 5. Fetch impression cost from standard rates
