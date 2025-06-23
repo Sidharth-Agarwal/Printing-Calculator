@@ -128,13 +128,13 @@ export const calculateDigiDetailsCosts = async (state) => {
     
     // Calculate Digital Paper cost components
     const paperCostPerCard = (parseFloat(paperDetails.finalRate) * totalSheets) / totalCards;
-    const gilCutCostPerCard = (gilCutCostPerSheet * totalSheets) / totalCards;
+    const gilCutCostPerCard = gilCutCostPerSheet / fragsPerDie;
     
     // Total Digital Paper cost per card
-    const digiPaperCostPerCard = paperCostPerCard + gilCutCostPerCard;
+    const digiPaperCostPerCard = (paperCostPerCard) / fragsPerDie;
     
     // Total Digital Printing cost per card
-    const digiCostPerCard = digiPrintCostPerCard + digiPaperCostPerCard;
+    const digiCostPerCard = digiPrintCostPerCard + digiPaperCostPerCard + gilCutCostPerCard;
     
     return {
       digiCostPerCard: digiCostPerCard.toFixed(2),
