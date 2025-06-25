@@ -56,11 +56,35 @@ const calculateMaxCardsPerSheet = (dieSize, paperSize) => {
  */
 export const calculatePaperAndCuttingCosts = async (state) => {
   try {
-    const { orderAndPaper, notebookDetails } = state;
+    const { orderAndPaper, notebookDetails, digiDetails } = state;
     const paperName = orderAndPaper.paperName;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType;
+    
+    // ⭐ NEW: Check if digital printing is being used
+    const isDigitalPrintingUsed = digiDetails?.isDigiUsed || false;
+    
+    // ⭐ NEW: If digital printing is used, skip paper calculations
+    // as they are handled in the digital calculator
+    if (isDigitalPrintingUsed) {
+      console.log("Digital printing is enabled - skipping paper calculations (handled in digital calculator)");
+      return { 
+        paperCostPerCard: "0.00",
+        gilCutCostPerCard: "0.00",
+        paperAndCuttingCostPerCard: "0.00",
+        // Additional info for debugging
+        maxCardsPerSheet: 0,
+        totalSheetsRequired: 0,
+        totalFragsPerSheet: 0,
+        paperRate: "0.00",
+        gilCutRate: "0.00",
+        fragsPerDie: orderAndPaper.frags || 1,
+        lengthMargin: "0.00",
+        breadthMargin: "0.00",
+        note: "Paper costs calculated in digital printing calculator"
+      };
+    }
     
     // Check if we're dealing with a notebook job type
     const isNotebookJob = jobType === "Notebook" && notebookDetails?.isNotebookUsed;
