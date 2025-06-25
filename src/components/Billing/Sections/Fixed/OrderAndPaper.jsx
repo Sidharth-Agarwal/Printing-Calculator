@@ -453,12 +453,6 @@ const OrderAndPaper = ({
                 compact={compact}
                 isDieSelected={!!(orderAndPaper.dieCode)}
               />
-              {/* Display current paper details for debugging */}
-              {process.env.NODE_ENV === 'development' && orderAndPaper.paperName && (
-                <div className="text-xs text-gray-500 mt-1">
-                  Current: {orderAndPaper.paperName} | {orderAndPaper.paperCompany} | {orderAndPaper.paperGsm}gsm
-                </div>
-              )}
             </div>
           </div>
 
