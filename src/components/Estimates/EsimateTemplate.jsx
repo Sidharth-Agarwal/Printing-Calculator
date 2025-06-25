@@ -167,7 +167,7 @@ const SinglePageContent = ({
                 <td className="py-0.5 px-1 border border-gray-300">
                   <div className="font-medium text-xs leading-tight">{item.name}</div>
                   {item.processSummary && (
-                    <div className="text-xs text-blue-600 font-medium leading-tight">{item.processSummary}</div>
+                    <div className="text-xs font-medium leading-tight">{item.processSummary}</div>
                   )}
                 </td>
                 <td className="py-0.5 px-1 border border-gray-300 text-center">{item.jobType}</td>
@@ -402,7 +402,7 @@ const PageContent = ({
                 <td className="py-1 px-2 border border-gray-300">
                   <div className="font-medium">{item.name}</div>
                   {item.processSummary && (
-                    <div className="text-xs text-blue-600 font-medium">{item.processSummary}</div>
+                    <div className="text-xs font-medium">{item.processSummary}</div>
                   )}
                 </td>
                 <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
