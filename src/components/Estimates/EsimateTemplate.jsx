@@ -10,6 +10,53 @@ const formatCurrency = (amount) => {
   }).format(amount || 0);
 };
 
+// Helper function to get process summary for an estimate
+const getProcessSummary = (estimate) => {
+  const processes = [];
+  
+  // LP Details - Number of colors
+  if (estimate?.lpDetails?.isLPUsed) {
+    const numColors = estimate.lpDetails.noOfColors || 0;
+    if (numColors > 0) {
+      processes.push(`${numColors}LP`);
+    }
+  }
+  
+  // FS Details - Number of foils
+  if (estimate?.fsDetails?.isFSUsed) {
+    const foilDetails = Array.isArray(estimate.fsDetails.foilDetails) 
+      ? estimate.fsDetails.foilDetails 
+      : Object.values(estimate.fsDetails.foilDetails || {});
+    
+    if (foilDetails.length > 0) {
+      processes.push(`${foilDetails.length}FS`);
+    }
+  }
+  
+  // EMB Details
+  if (estimate?.embDetails?.isEMBUsed) {
+    processes.push('EMB');
+  }
+  
+  // Digital Details
+  if (estimate?.digiDetails?.isDigiUsed) {
+    processes.push('Digi');
+  }
+  
+  // Screen Print Details
+  if (estimate?.screenPrint?.isScreenPrintUsed) {
+    const numColors = estimate.screenPrint.noOfColors || 1;
+    processes.push(`${numColors}Screen`);
+  }
+  
+  // Notebook Details
+  if (estimate?.notebookDetails?.isNotebookUsed) {
+    processes.push('Notebook');
+  }
+  
+  return processes.join(', ');
+};
+
 // Single Page Content Component for PDF generation
 const SinglePageContent = ({ 
   pageNumber, totalPages, estimates, allLineItems, totals, hsnSummary, 
@@ -20,151 +67,143 @@ const SinglePageContent = ({
   const isLastPage = pageNumber === totalPages;
 
   return (
-    <div className="p-4" style={{ minHeight: '100vh' }}>
+    <div className="p-2" style={{ minHeight: '100vh', fontSize: '11px' }}>
       {/* Header */}
-      <div className="flex justify-between mb-4">
-        <div>
+      <div className="flex justify-between mb-2">
+        <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl font-bold text-gray-900">ESTIMATE</h1>
+            <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
             {totalPages > 1 && (
-              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+              <span className="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
                 Page {pageNumber} of {totalPages}
               </span>
             )}
           </div>
-          <div className="text-sm text-gray-500 mb-2">Version: {version}</div>
+          <div className="text-xs text-gray-500 mb-1">Version: {version}</div>
           
-          {/* Client Info - Show on every page */}
-          <div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-1">Client:</h2>
-            <div className="font-medium">{clientInfo?.name || "Unknown Client"}</div>
-            <div className="text-gray-600 text-sm">{clientInfo?.address?.city || ""}</div>
-            {clientInfo?.address?.city && clientInfo?.address?.state && (
-              <div className="text-gray-600 text-sm">
-                {clientInfo.address.city}, {clientInfo.address.state}
-              </div>
-            )}
-            <div className="text-gray-600 text-sm">Client Code: {clientInfo?.clientCode || "N/A"}</div>
-          </div>
-          
-          {/* Date Information - Show on every page */}
-          <div className="mt-2 mb-2">
-            <div className="text-sm">
-              <div className="text-gray-600">Estimate Date: {currentDate}</div>
-              <div className="text-gray-600">Tentative Delivery Date: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-              
-              {/* Process Legend - Show on every page */}
-              {usedProcesses.length > 0 && (
-                <div className="mt-3 mb-2">
-                  <div className="text-sm font-medium text-gray-700 mb-1">Processes:</div>
-                  <div className="text-xs text-gray-600 space-y-1">
-                    {usedProcesses.map((process, index) => (
-                      <div key={index} className="flex items-center">
-                        <span className="font-mono bg-gray-100 px-2 py-0.5 rounded text-xs mr-2 min-w-[3rem] text-center">
-                          {process.abbreviation}
-                        </span>
-                        <span>{process.fullForm}</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+          {/* Client Info - Compact */}
+          <div className="mb-1">
+            <div className="text-xs font-semibold text-gray-700">Client: {clientInfo?.name || "Unknown Client"}</div>
+            <div className="text-xs text-gray-600">
+              {clientInfo?.address?.city && clientInfo?.address?.state && (
+                <span>{clientInfo.address.city}, {clientInfo.address.state} | </span>
               )}
+              Client Code: {clientInfo?.clientCode || "N/A"}
             </div>
           </div>
+          
+          {/* Date Information - Compact */}
+          <div className="text-xs text-gray-600 mb-1">
+            <div>Estimate: {currentDate} | Delivery: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+          </div>
+          
+          {/* Process Legend - Compact */}
+          {usedProcesses.length > 0 && (
+            <div className="mb-1">
+              <div className="text-xs font-medium text-gray-700">Processes: 
+                <span className="font-normal ml-1">
+                  {usedProcesses.map((process, index) => (
+                    <span key={index} className="mr-2">
+                      {process.abbreviation} - {process.fullForm}
+                    </span>
+                  ))}
+                </span>
+              </div>
+            </div>
+          )}
         </div>
         
-        {/* Company Info */}
-        <div className="text-right">
+        {/* Company Info - Compact */}
+        <div className="text-right ml-4">
           <img 
             src={logo} 
             alt="Famous Letterpress" 
-            className="w-16 h-16 object-contain mb-2 ml-auto"
+            className="w-12 h-12 object-contain mb-1 ml-auto"
             onLoad={() => setLogoLoaded(true)}
             onError={() => {
               console.error("Logo failed to load");
               setLogoLoaded(true);
             }}
           />
-          <div className="font-bold text-lg text-gray-900">FAMOUS</div>
-          <div className="text-gray-600 text-sm">91 Tetris Building, Subjail Tinali</div>
-          <div className="text-gray-600 text-sm">Dimapur-797112, Nagaland, India</div>
-          <div className="text-gray-600 text-sm">GSTIN: 13ALFPA2458Q2ZO</div>
-          <div className="text-gray-600 text-sm">Phone: +919233152718</div>
-          <div className="text-gray-600 text-sm">Email: info@famousletterpress.com</div>
+          <div className="font-bold text-sm text-gray-900">FAMOUS</div>
+          <div className="text-xs text-gray-600">91 Tetris Building, Subjail Tinali</div>
+          <div className="text-xs text-gray-600">Dimapur-797112, Nagaland, India</div>
+          <div className="text-xs text-gray-600">GSTIN: 13ALFPA2458Q2ZO</div>
+          <div className="text-xs text-gray-600">+919233152718 | info@famousletterpress.com</div>
           
-          <div className="my-2">
-            <div className="text-sm">
+          <div className="mt-1">
+            <div className="text-xs">
               <div className="font-medium">Bank Details</div>
-              <div className="text-gray-600">A/C No: 912020005432066</div>
-              <div className="text-gray-600">IFSC Code: UTIB0000378</div>
+              <div className="text-gray-600">A/C: 912020005432066</div>
+              <div className="text-gray-600">IFSC: UTIB0000378</div>
               <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
             </div>
           </div>
         </div>
       </div>
       
-      {/* Line Items Table */}
-      <div className="mb-4 overflow-x-auto">
-        <table className="w-full border-collapse text-xs">
+      {/* Line Items Table - More Compact */}
+      <div className="mb-2 overflow-x-auto">
+        <table className="w-full border-collapse" style={{ fontSize: '10px' }}>
           <thead>
             <tr className="bg-gray-100 text-gray-700">
-              <th className="py-1 px-2 border border-gray-300 text-center">S.No</th>
-              <th className="py-1 px-2 border border-gray-300 text-left">Item</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">Job Type</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">Paper</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">Size</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">Qty</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">Unit Cost</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">Total</th>
-              <th className="py-1 px-2 border border-gray-300 text-center">GST %</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">GST Amt</th>
-              <th className="py-1 px-2 border border-gray-300 text-right">Final Total</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">S.No</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-left">Item</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">Job Type</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">Paper</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">Size</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">Qty</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">Unit Cost</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">Total</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center">GST %</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">GST Amt</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right">Final Total</th>
             </tr>
           </thead>
           <tbody>
             {allLineItems.map((item) => (
               <tr key={item.id} className="text-gray-700">
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.serialNumber}</td>
-                <td className="py-1 px-2 border border-gray-300">
-                  <div className="font-medium">{item.name}</div>
-                  {item.description && (
-                    <div className="text-xs text-gray-500">{item.description}</div>
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.serialNumber}</td>
+                <td className="py-0.5 px-1 border border-gray-300">
+                  <div className="font-medium text-xs leading-tight">{item.name}</div>
+                  {item.processSummary && (
+                    <div className="text-xs text-blue-600 font-medium leading-tight">{item.processSummary}</div>
                   )}
                 </td>
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.paperInfo}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center whitespace-nowrap">{item.productDimensions}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.quantity}</td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.total.toFixed(2)}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center">{item.gstRate}%</td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
-                <td className="py-1 px-2 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.jobType}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center text-xs">{item.paperInfo}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center whitespace-nowrap text-xs">{item.productDimensions}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.quantity}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.total.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.gstRate}%</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
         </table>
       </div>
       
-      {/* Summary - Only show on last page */}
+      {/* Summary - Only show on last page - More Compact */}
       {isLastPage && (
-        <div className="flex justify-end mb-3">
-          <div className="w-64">
-            <div className="flex justify-between py-1 text-sm border-t border-gray-200">
-              <div className="text-gray-700">{totalPages > 1 ? 'Grand Total:' : 'Subtotal:'}</div>
+        <div className="flex justify-end mb-2">
+          <div className="w-48">
+            <div className="flex justify-between py-0.5 text-xs border-t border-gray-200">
+              <div className="text-gray-700">Subtotal:</div>
               <div className="text-gray-900 font-medium font-mono">
                 {formatCurrency(totals.amount)}
               </div>
             </div>
             
-            <div className="flex justify-between py-1 text-sm">
+            <div className="flex justify-between py-0.5 text-xs">
               <div className="text-gray-700">GST Amount:</div>
               <div className="text-gray-900 font-mono">
                 {formatCurrency(totals.gstAmount)}
               </div>
             </div>
             
-            <div className="flex justify-between py-1 font-bold border-t border-gray-300">
+            <div className="flex justify-between py-0.5 font-bold border-t border-gray-300 text-sm">
               <div>Total:</div>
               <div className="font-mono">
                 {formatCurrency(totals.total)}
@@ -174,22 +213,22 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* HSN Summary - Only on last page */}
+      {/* HSN Summary - Only on last page - More Compact */}
       {isLastPage && (
-        <div className="mb-3">
-          <div className="font-medium text-sm mb-1">HSN Summary:</div>
+        <div className="mb-2">
+          <div className="font-medium text-xs mb-1">HSN Summary:</div>
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50">
-                <th className="py-1 px-4 border border-gray-300 text-left">HSN Code</th>
-                <th className="py-1 px-4 border border-gray-300 text-left">Job Types</th>
+                <th className="py-0.5 px-2 border border-gray-300 text-left">HSN Code</th>
+                <th className="py-0.5 px-2 border border-gray-300 text-left">Job Types</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
                 <tr key={idx}>
-                  <td className="py-1 px-4 border border-gray-300 font-mono">{hsnCode}</td>
-                  <td className="py-1 px-4 border border-gray-300">{data.jobTypes.join(', ')}</td>
+                  <td className="py-0.5 px-2 border border-gray-300 font-mono">{hsnCode}</td>
+                  <td className="py-0.5 px-2 border border-gray-300">{data.jobTypes.join(', ')}</td>
                 </tr>
               ))}
             </tbody>
@@ -197,11 +236,11 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* Terms and Conditions - Only on last page */}
+      {/* Terms and Conditions - Only on last page - More Compact */}
       {isLastPage && (
-        <div className="mb-3">
+        <div className="mb-2">
           <div className="font-medium text-gray-700 mb-1 text-xs">Terms and Conditions:</div>
-          <div className="text-gray-600 text-xs">
+          <div className="text-gray-600 text-xs leading-tight space-y-0.5">
             <div>1. This estimate is valid for 7 days from the date of issue.</div>
             <div>2. 100% advance payment is required to confirm the order.</div>
             <div>3. Final artwork approval is required before production.</div>
@@ -211,24 +250,24 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* Footer - Show on every page */}
-      <div className="mt-4 pt-2 border-t border-gray-200">
+      {/* Footer - Show on every page - More Compact */}
+      <div className="mt-2 pt-1 border-t border-gray-200">
         <div className="grid grid-cols-2">
           <div>
             <div className="font-medium mb-1 text-xs">Note</div>
-            <div className="text-xs text-gray-600">
+            <div className="text-xs text-gray-600 leading-tight">
               This is just an estimate, not a tax invoice. Prices may vary based on final specifications and quantity.
             </div>
           </div>
           <div className="text-right">
-            <div className="font-medium mb-6">for FAMOUS</div>
+            <div className="font-medium mb-3 text-xs">for FAMOUS</div>
             <div className="text-xs">Authorised Signatory</div>
           </div>
         </div>
       </div>
       
-      {/* Print Info */}
-      <div className="mt-3 text-center text-xs text-gray-500">
+      {/* Print Info - More Compact */}
+      <div className="mt-1 text-center text-xs text-gray-500">
         <p>This is a computer generated estimate and does not require a signature.</p>
       </div>
     </div>
@@ -257,11 +296,11 @@ const PageContent = ({
 
   return (
     <>
-      {/* Header */}
-      <div className="flex justify-between mb-4">
-        <div>
+      {/* Header - Compact for Preview */}
+      <div className="flex justify-between mb-3">
+        <div className="flex-1">
           <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-xl font-bold text-gray-900">ESTIMATE</h1>
+            <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
             {totalPages > 1 && (
               <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
                 Page {pageNumber} of {totalPages}
@@ -309,7 +348,7 @@ const PageContent = ({
         </div>
         
         {/* Company Info */}
-        <div className="text-right">
+        <div className="text-right ml-4">
           <img 
             src={logo} 
             alt="Famous Letterpress" 
@@ -362,8 +401,8 @@ const PageContent = ({
                 <td className="py-1 px-2 border border-gray-300 text-center">{item.serialNumber}</td>
                 <td className="py-1 px-2 border border-gray-300">
                   <div className="font-medium">{item.name}</div>
-                  {item.description && (
-                    <div className="text-xs text-gray-500">{item.description}</div>
+                  {item.processSummary && (
+                    <div className="text-xs text-blue-600 font-medium">{item.processSummary}</div>
                   )}
                 </td>
                 <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
@@ -580,7 +619,7 @@ const EstimateTemplate = ({
     };
   }, [estimates, allEstimates, isPDFMode]);
 
-  // Prepare line items with global serial numbers
+  // Prepare line items with global serial numbers and process details
   const allLineItems = React.useMemo(() => {
     if (!estimates || estimates.length === 0) return [];
 
@@ -595,6 +634,10 @@ const EstimateTemplate = ({
       const paperInfo = paperName + (paperGsm ? ` ${paperGsm}gsm` : '') + (paperCompany ? ` (${paperCompany})` : '');
       const hsnCode = jobDetails.hsnCode || "N/A";
       
+      // Get process summary for this estimate
+      const processSummary = getProcessSummary(estimate);
+      
+      // Legacy features for backward compatibility
       const features = [];
       if (estimate?.lpDetails?.isLPUsed) features.push("LP");
       if (estimate?.fsDetails?.isFSUsed) features.push("FS");
@@ -619,7 +662,8 @@ const EstimateTemplate = ({
       return {
         id: estimate.id || `est-${index}`,
         name: estimate.projectName || "Unnamed Project",
-        description: features.join(", "),
+        description: features.join(", "), // Keep for backward compatibility
+        processSummary: processSummary, // New simple process summary
         jobType: jobDetails.jobType || "Card",
         paperInfo: paperInfo,
         dieCode: dieDetails.dieCode || "",
@@ -687,7 +731,7 @@ const EstimateTemplate = ({
   }
 
   return (
-    <div className="bg-white" style={{ maxWidth: '750px', margin: '0 auto', fontSize: '85%' }}>
+    <div className="bg-white" style={{ maxWidth: '750px', margin: '0 auto', fontSize: '80%' }}>
       {!isReady && (
         <div className="flex justify-center items-center h-32">
           <div className="animate-pulse text-center">
@@ -739,11 +783,12 @@ const EstimateTemplate = ({
             return (
               <div 
                 key={pageNumber} 
-                className={`p-4 print:p-0 print-page ${pageNumber > 1 ? 'print:break-before-page' : ''}`}
+                className={`p-2 print:p-0 print-page ${pageNumber > 1 ? 'print:break-before-page' : ''}`}
                 style={{ 
                   minHeight: pageNumber > 1 ? '100vh' : 'auto',
                   pageBreakBefore: pageNumber > 1 ? 'always' : 'auto',
-                  pageBreakAfter: 'auto'
+                  pageBreakAfter: 'auto',
+                  fontSize: '80%'
                 }}
               >
                 <PageContent 
