@@ -49,6 +49,8 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     isSandwichComponentUsed = false,
     paperInfo = {
       paperName: "",
+      paperGsm: "",
+      paperCompany: ""
     },
     lpDetailsSandwich = { 
       isLPUsed: false, 
@@ -66,7 +68,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
       plateDimensions: { length: "", breadth: "", lengthInInches: "", breadthInInches: "" },
       embMR: "",
       embMRConcatenated: "",
-      dstMaterial: "" // Add DST material field
+      dstMaterial: ""
     }
   } = state.sandwich || {};
   
@@ -101,7 +103,9 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           type: "UPDATE_SANDWICH",
           payload: {
             paperInfo: {
-              paperName: paperData[0].paperName
+              paperName: paperData[0].paperName,
+              paperGsm: paperData[0].gsm,
+              paperCompany: paperData[0].company
             }
           }
         });
@@ -493,8 +497,63 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   };
 
-  // Handle paper selection from SearchablePaperDropdown
+  // FIXED: Handle paper selection from SearchablePaperDropdown
   const handlePaperChange = (e) => {
+    console.log("Sandwich paper change event:", e);
+    
+    // Handle complete paper selection data from SearchablePaperDropdown
+    if (e.target.name === "paperSelection") {
+      console.log("Complete paper selection changed in Sandwich:", e.target.value);
+      
+      dispatch({
+        type: "UPDATE_SANDWICH",
+        payload: {
+          paperInfo: {
+            paperName: e.target.value.paperName,
+            paperGsm: e.target.value.paperGsm,
+            paperCompany: e.target.value.paperCompany
+          }
+        }
+      });
+      return;
+    }
+    
+    // Handle legacy paperName only updates (fallback)
+    if (e.target.name === "paperName") {
+      console.log("Paper name only changed in Sandwich:", e.target.value);
+      
+      // Find the complete paper data
+      const selectedPaperObj = papers.find(paper => paper.paperName === e.target.value);
+      
+      if (selectedPaperObj) {
+        console.log("Found complete paper data for Sandwich:", e.target.value, selectedPaperObj);
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            paperInfo: {
+              paperName: selectedPaperObj.paperName,
+              paperGsm: selectedPaperObj.gsm,
+              paperCompany: selectedPaperObj.company
+            }
+          }
+        });
+      } else {
+        // Fallback if paper not found
+        console.warn("Paper not found in papers list for Sandwich:", e.target.value);
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            paperInfo: {
+              ...paperInfo,
+              paperName: e.target.value
+            }
+          }
+        });
+      }
+      return;
+    }
+    
+    // Default case - direct paper name update
     dispatch({
       type: "UPDATE_SANDWICH",
       payload: {
@@ -963,15 +1022,17 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Paper Selection Section */}
+      {/* Paper Selection Section - FIXED */}
       <div className="border-b pb-4 mb-4">
         <h3 className="text-md font-semibold mb-3">Sandwich Paper Selection</h3>
         <div>
           <label className="block mb-1 text-sm">Paper Name:</label>
           <SearchablePaperDropdown 
             papers={papers}
-            selectedPaper={paperInfo.paperName || (papers.length > 0 ? papers[0].paperName : "")}
+            selectedPaper={paperInfo.paperName || ""}
             onChange={handlePaperChange}
+            compact={false}
+            isDieSelected={true} // Set to true since this is in a form context
           />
           {errors.paperName && <p className="text-red-500 text-xs mt-1">{errors.paperName}</p>}
         </div>

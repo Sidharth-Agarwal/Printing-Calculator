@@ -820,7 +820,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       )}
 
       {showSelectionUI ? (
-        // Die Selection UI - Keep original structure with search and length/breadth inputs
+        // Die Selection UI - Updated layout with 50% search bar and 25% each for length/breadth
         <>
           <div className="flex justify-between items-center mb-3">
             <div className="text-xs text-gray-600">
@@ -835,25 +835,27 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
             </button>
           </div>
           
-          {/* Search input */}
-          <div className="mb-3 relative">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search by code, type or job type"
-              value={searchTerm}
-              onChange={handleTextSearch}
-              className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
-              data-testid="die-search-input"
-            />
-          </div>
-  
-          <div className="text-xs text-center text-gray-500 mb-2">- OR -</div>
-          
-          {/* Length & Breadth inputs - side by side */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          {/* Updated search layout: 50% search bar, 25% length, 25% breadth */}
+          <div className="grid grid-cols-4 gap-3 mb-3">
+            {/* Search input - takes 2 columns (50%) */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Search by Code, Type or Job Type</label>
+              <div className="relative">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by code, type or job type"
+                  value={searchTerm}
+                  onChange={handleTextSearch}
+                  className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                  data-testid="die-search-input"
+                />
+              </div>
+            </div>
+            
+            {/* Length input - takes 1 column (25%) */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Length (inches) - Die or Product</label>
               <input
@@ -868,6 +870,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 data-testid="die-length-input"
               />
             </div>
+            
+            {/* Breadth input - takes 1 column (25%) */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Breadth (inches) - Die or Product</label>
               <input

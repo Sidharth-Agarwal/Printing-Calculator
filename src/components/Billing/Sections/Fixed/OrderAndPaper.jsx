@@ -313,9 +313,9 @@ const OrderAndPaper = ({
           <h1 className="text-lg font-bold text-gray-700 mb-4">PROJECT & PAPER DETAILS</h1>
         )}
         <form onSubmit={handleSubmit} className={compact ? "space-y-4" : "space-y-6"}>
-          {/* Form Fields Grid - More compact grid for the updated design */}
+          {/* Form Fields Grid - Updated layout to put paper dropdown next to paper provided */}
           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
-            {/* Project Name */}
+            {/* Project Name - spans 2 columns */}
             <div className="col-span-2">
               <label htmlFor="projectName" className="block text-xs font-medium text-gray-600 mb-1">
                 Project Name <span className="text-red-500">*</span>
@@ -441,8 +441,8 @@ const OrderAndPaper = ({
               </select>
             </div>
 
-            {/* Paper Selection - Using Searchable Dropdown */}
-            <div className="col-span-2">
+            {/* Paper Selection - Now next to Paper Provided */}
+            <div>
               <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
                 Paper Name / Cover Name<span className="text-red-500">*</span>
               </label>

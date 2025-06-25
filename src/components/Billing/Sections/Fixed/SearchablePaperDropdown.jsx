@@ -20,11 +20,14 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
       });
       
       // Log current selection for debugging
-      console.log("Current paper selection:", {
+      console.log("SearchablePaperDropdown - Current paper selection:", {
         paperName: selectedPaperObj.paperName,
         gsm: selectedPaperObj.gsm,
         company: selectedPaperObj.company
       });
+    } else {
+      // Clear selected details if no paper is selected
+      setSelectedDetails({});
     }
   }, [selectedPaper, selectedPaperObj]);
 
@@ -33,8 +36,8 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
   );
 
   const handleSelect = (paper) => {
-    console.log("handleSelect called with paper:", paper);
-    console.log("onChange function:", onChange);
+    console.log("SearchablePaperDropdown - handleSelect called with paper:", paper);
+    console.log("SearchablePaperDropdown - onChange function:", onChange);
     
     try {
       // Create a synthetic event with complete paper data
@@ -49,14 +52,14 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
         } 
       };
       
-      console.log("Calling onChange with complete paper data:", syntheticEvent);
+      console.log("SearchablePaperDropdown - Calling onChange with complete paper data:", syntheticEvent);
       
       // Call the parent component's onChange handler
       if (onChange && typeof onChange === 'function') {
         onChange(syntheticEvent);
-        console.log("onChange called successfully with complete data");
+        console.log("SearchablePaperDropdown - onChange called successfully with complete data");
       } else {
-        console.error("onChange is not a function:", onChange);
+        console.error("SearchablePaperDropdown - onChange is not a function:", onChange);
       }
       
       // Close the dropdown and reset search
@@ -64,7 +67,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
       setSearchTerm("");
       
     } catch (error) {
-      console.error("Error in handleSelect:", error);
+      console.error("SearchablePaperDropdown - Error in handleSelect:", error);
     }
   };
 
@@ -73,6 +76,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
         setIsOpen(false);
+        setSearchTerm(""); // Clear search when closing
       }
     };
 
@@ -89,23 +93,31 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
     }
   }, [isOpen]);
 
+  // Clear search term when dropdown closes
+  useEffect(() => {
+    if (!isOpen) {
+      setSearchTerm("");
+    }
+  }, [isOpen]);
+
   return (
     <div className="relative w-full" ref={dropdownRef}>
-      {/* Selected paper display (closed state) */}
+      {/* Selected paper display (closed state) - Updated for consistent height */}
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="border border-gray-300 rounded-md p-2 w-full text-sm flex justify-between items-center cursor-pointer bg-white hover:border-gray-400 transition-colors"
+        className="border border-gray-300 rounded-md px-2 py-1.5 w-full text-sm flex justify-between items-center cursor-pointer bg-white hover:border-gray-400 transition-colors h-[38px]"
         data-testid="paper-dropdown-selector"
       >
-        <div className="flex flex-col overflow-hidden">
-          <span className="truncate font-medium">{selectedPaper || "Select Paper"}</span>
-          {selectedPaperObj && (
-            <span className="text-xs text-gray-500 truncate">
-              {selectedPaperObj.company} | {selectedPaperObj.gsm}gsm
+        <div className="flex-1 overflow-hidden">
+          {selectedPaperObj ? (
+            <span className="truncate font-medium block leading-tight">
+              {selectedPaper} ({selectedPaperObj.company} | {selectedPaperObj.gsm}gsm)
             </span>
+          ) : (
+            <span className="text-gray-500 block leading-tight">Select Paper</span>
           )}
         </div>
-        <span className="ml-2 text-gray-500">
+        <span className="ml-2 text-gray-500 flex-shrink-0">
           <svg 
             xmlns="http://www.w3.org/2000/svg" 
             className={`h-4 w-4 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} 
@@ -153,7 +165,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                   onClick={(e) => {
                     e.preventDefault();
                     e.stopPropagation();
-                    console.log("Paper option clicked:", paper.paperName, "GSM:", paper.gsm, "Company:", paper.company);
+                    console.log("SearchablePaperDropdown - Paper option clicked:", paper.paperName, "GSM:", paper.gsm, "Company:", paper.company);
                     handleSelect(paper);
                   }}
                   data-testid={`paper-option-${paper.paperName}`}
@@ -169,7 +181,9 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                 </div>
               ))
             ) : (
-              <div className="p-3 text-sm text-gray-500 text-center">No papers found</div>
+              <div className="p-3 text-sm text-gray-500 text-center">
+                {searchTerm ? `No papers found matching "${searchTerm}"` : "No papers found"}
+              </div>
             )}
           </div>
         </div>
