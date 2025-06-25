@@ -77,9 +77,10 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {/* Digital Die Selection */}
-          <div>
+        {/* Single line layout: 1/3 each column */}
+        <div className="grid grid-cols-3 gap-4 items-end">
+          {/* Digital Die Selection - 1/3 width */}
+          <div className="col-span-1">
             <label htmlFor="digiDie" className="block text-xs font-medium text-gray-600 mb-1">
               Digital Printing Die:
             </label>
@@ -90,38 +91,36 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
               onChange={handleChange}
               className={`w-full px-3 py-2 border ${errors.digiDie ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
             >
-              {/* <option value="">Select Die Size</option> */}
               {Object.keys(DIGI_DIE_OPTIONS).map((option) => (
                 <option key={option} value={option}>
                   {option}
                 </option>
               ))}
             </select>
-            {errors.digiDie && (
-              <p className="text-red-500 text-xs mt-1">{errors.digiDie}</p>
-            )}
           </div>
-        </div>
 
-        {/* Dimensions Display */}
-        {digiDie && (
-          <div className="mt-4">
-            <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Dimensions</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
+          {/* Dimensions Display */}
+          {digiDie && (
+            <>
+              <div className="col-span-1">
                 <div className="text-xs text-gray-600 mb-1">Length:</div>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm w-full">
                   {digiDimensions.length || "N/A"} inches
                 </div>
               </div>
-              <div>
+              <div className="col-span-1">
                 <div className="text-xs text-gray-600 mb-1">Breadth:</div>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm">
+                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm w-full">
                   {digiDimensions.breadth || "N/A"} inches
                 </div>
               </div>
-            </div>
-          </div>
+            </>
+          )}
+        </div>
+
+        {/* Error display */}
+        {errors.digiDie && (
+          <p className="text-red-500 text-xs">{errors.digiDie}</p>
         )}
       </div>
     </form>
