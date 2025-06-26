@@ -556,14 +556,14 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
               
               {/* Display error message if there is one */}
               {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-xs">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-1 text-xs">
                   {error}
                 </div>
               )}
 
               <form onSubmit={handleAddDie} className="text-sm">
                 {/* Primary fields - 4 in a row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-1">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Job Type:</label>
                     <select
@@ -822,7 +822,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       {showSelectionUI ? (
         // Die Selection UI - Updated layout with 50% search bar and 25% each for length/breadth
         <>
-          <div className="flex justify-between items-center mb-3">
+          <div className="flex justify-between items-center mb-1">
             <div className="text-xs text-gray-600">
               Showing dies for {selectedJobType}: {filteredDies.length} found
             </div>
@@ -836,7 +836,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
           </div>
           
           {/* Updated search layout: 50% search bar, 25% length, 25% breadth */}
-          <div className="grid grid-cols-4 gap-3 mb-3">
+          <div className="grid grid-cols-4 gap-3 mb-1">
             {/* Search input - takes 2 columns (50%) */}
             <div className="col-span-2">
               <label className="block text-xs font-medium text-gray-600 mb-1">Search by Code, Type or Job Type</label>
