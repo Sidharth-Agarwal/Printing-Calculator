@@ -273,7 +273,6 @@ const DisplayLeadsTable = ({
       return <LeadSourceDisplay sourceId={value} />;
     }
     
-    // Inline editable qualification badge
     if (field.field === 'badgeId') {
       return (
         <InlineQualificationDropdown
@@ -285,7 +284,6 @@ const DisplayLeadsTable = ({
       );
     }
     
-    // Inline editable status
     if (field.field === 'status') {
       return (
         <InlineStatusDropdown
@@ -368,7 +366,6 @@ const DisplayLeadsTable = ({
                   key={field.field} 
                   className="px-3 py-3"
                   onClick={(e) => {
-                    // Don't trigger row click for inline editable fields
                     if (field.field !== 'badgeId' && field.field !== 'status') {
                       onView(lead);
                     }
@@ -381,7 +378,6 @@ const DisplayLeadsTable = ({
               <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                 <div className="flex space-x-1">
                   {isLeadAddedToClients(lead) ? (
-                    // Only show "Added to Clients" status for leads that have been moved
                     <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -389,7 +385,6 @@ const DisplayLeadsTable = ({
                       Added to Clients
                     </div>
                   ) : (
-                    // Show action buttons for all other leads
                     <>
                       <CRMActionButton
                         type="info"
@@ -419,7 +414,6 @@ const DisplayLeadsTable = ({
                         Edit
                       </CRMActionButton>
                       
-                      {/* Show appropriate action for converted leads */}
                       {lead.status === "converted" && onConvert && (
                         <CRMActionButton
                           type="success"
@@ -458,7 +452,6 @@ const DisplayLeadsTable = ({
         </tbody>
       </table>
       
-      {/* Empty State */}
       {sortedLeads.length === 0 && (
         <div className="py-8 text-center text-gray-500">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">

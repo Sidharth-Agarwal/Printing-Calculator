@@ -2,7 +2,16 @@ import React, { useState } from "react";
 import { TABLE_DISPLAY_FIELDS, DETAILED_DISPLAY_FIELDS } from "../../constants/entityFields";
 import ClientDetailsModal from "./ClientDetailsModal";
 
-const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, onActivateClient, onToggleStatus, isAdmin }) => {
+const DisplayClientTable = ({ 
+  clients, 
+  onDelete, 
+  onEdit, 
+  onManageCredentials, 
+  onActivateClient, 
+  onToggleStatus, 
+  onAddDiscussion, // NEW: Add discussion handler
+  isAdmin 
+}) => {
   // State for search term, filter, sorting, and view type
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClientType, setFilterClientType] = useState("");
@@ -12,6 +21,14 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
   const [viewType, setViewType] = useState('compact');
   const [expandedRows, setExpandedRows] = useState({});
   const [selectedClient, setSelectedClient] = useState(null);
+
+  // Helper function to truncate discussion summary
+  const truncateDiscussion = (summary, maxLength = 25) => {
+    if (!summary || summary.length <= maxLength) {
+      return summary || "";
+    }
+    return summary.substring(0, maxLength).trim() + "...";
+  };
   
   // Handle sort
   const handleSort = (field) => {
@@ -209,6 +226,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                 <SortableHeader key={field.field} field={field.field} label={field.label} />
               ))}
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Loyalty Status</th>
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Last Contact</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
             </tr>
@@ -248,6 +266,25 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                   <td className="px-3 py-3">
                     {renderLoyaltyStatus(client)}
                   </td>
+                  {/* Last Contact Column with shortened preview */}
+                  <td className="px-3 py-3">
+                    <div className="text-xs">
+                      {client.lastDiscussionDate ? (
+                        <>
+                          <div className="font-medium text-gray-700">
+                            {formatDate(client.lastDiscussionDate)}
+                          </div>
+                          {client.lastDiscussionSummary && (
+                            <div className="text-gray-500 italic">
+                              {truncateDiscussion(client.lastDiscussionSummary, 25)}
+                            </div>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-gray-400">No contact yet</span>
+                      )}
+                    </div>
+                  </td>
                   <td className="px-3 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                       client.isActive
@@ -259,6 +296,20 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                   </td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                     <div className="flex space-x-1">
+                      {/* Talk Button */}
+                      {onAddDiscussion && (
+                        <button
+                          onClick={() => onAddDiscussion(client)}
+                          className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors flex items-center"
+                          title="Add Discussion"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          </svg>
+                          Talk
+                        </button>
+                      )}
+                      
                       <button
                         onClick={() => onEdit(client)}
                         className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
@@ -305,7 +356,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                               className="px-2 py-1 text-xs bg-purple-100 text-purple-800 rounded hover:bg-purple-200 transition-colors flex items-center"
                             >
                               <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"></path>
                               </svg>
                               Credentials
                             </button>
@@ -340,7 +391,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                 </tr>
                 {expandedRows[client.id] && (
                   <tr className="bg-gray-50" onClick={() => handleViewClient(client)}>
-                    <td colSpan={8} className="px-4 py-3 border-b border-gray-200">
+                    <td colSpan={9} className="px-4 py-3 border-b border-gray-200">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="font-medium text-gray-700">Email:</p>
@@ -390,6 +441,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Loyalty Status</th>
               <SortableHeader field="totalOrders" label="Orders" />
               <SortableHeader field="totalSpend" label="Total Spend" />
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Last Contact</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
             </tr>
@@ -434,6 +486,25 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                 </td>
                 <td className="px-3 py-3">{client.totalOrders || 0}</td>
                 <td className="px-3 py-3 font-medium">{formatCurrency(client.totalSpend || 0)}</td>
+                {/* Last Contact Column with shortened preview */}
+                <td className="px-3 py-3">
+                  <div className="text-xs">
+                    {client.lastDiscussionDate ? (
+                      <>
+                        <div className="font-medium text-gray-700">
+                          {formatDate(client.lastDiscussionDate)}
+                        </div>
+                        {client.lastDiscussionSummary && (
+                          <div className="text-gray-500 italic">
+                            {truncateDiscussion(client.lastDiscussionSummary, 20)}
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <span className="text-gray-400">No contact yet</span>
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                     client.isActive
@@ -445,6 +516,17 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
                   <div className="flex space-x-1">
+                    {/* Talk Button */}
+                    {onAddDiscussion && (
+                      <button
+                        onClick={() => onAddDiscussion(client)}
+                        className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors flex items-center"
+                        title="Add Discussion"
+                      >
+                        Talk
+                      </button>
+                    )}
+                    
                     <button
                       onClick={() => onEdit(client)}
                       className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
@@ -528,6 +610,21 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                   </div>
                 </div>
                 
+                {/* Show last discussion in mobile view with shortened preview */}
+                {client.lastDiscussionDate && (
+                  <div className="mt-2">
+                    <span className="text-gray-500 text-sm">Last Contact:</span>
+                    <div className="mt-1 text-sm font-medium text-gray-700">
+                      {formatDate(client.lastDiscussionDate)}
+                    </div>
+                    {client.lastDiscussionSummary && (
+                      <div className="mt-1 text-xs text-gray-500 italic">
+                        {truncateDiscussion(client.lastDiscussionSummary, 40)}
+                      </div>
+                    )}
+                  </div>
+                )}
+                
                 {/* Show loyalty status in mobile view too */}
                 {client.clientType?.toUpperCase() === "B2B" && (
                   <div className="mt-2">
@@ -560,6 +657,19 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                 </button>
                 
                 <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                  {/* Talk Button for Mobile */}
+                  {onAddDiscussion && (
+                    <button
+                      onClick={() => onAddDiscussion(client)}
+                      className="px-2 py-1 text-xs bg-green-100 text-green-800 rounded hover:bg-green-200 transition-colors flex items-center"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                      </svg>
+                      Talk
+                    </button>
+                  )}
+                  
                   <button
                     onClick={() => onEdit(client)}
                     className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
@@ -635,7 +745,7 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
                           className="px-3 py-1 text-xs bg-purple-100 text-purple-800 rounded hover:bg-purple-200 transition-colors flex items-center"
                         >
                           <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path>
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"></path>
                           </svg>
                           Manage Account Credentials
                         </button>
@@ -801,6 +911,10 @@ const DisplayClientTable = ({ clients, onDelete, onEdit, onManageCredentials, on
             handleToggleStatus(new Event('click'), selectedClient);
             handleCloseModal();
           }}
+          onAddDiscussion={onAddDiscussion ? () => {
+            handleCloseModal();
+            onAddDiscussion(selectedClient);
+          } : undefined}
           isAdmin={isAdmin}
         />
       )}
