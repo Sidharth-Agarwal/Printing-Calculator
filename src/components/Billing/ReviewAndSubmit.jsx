@@ -679,7 +679,7 @@ const ReviewAndSubmit = ({
               )}
               {/* Add GIL Cut cost for sandwich */}
               {localCalculations.sandwichGilCutCostPerCard && (
-                <CostItem label="Sandwich GIL Cut Cost" value={localCalculations.sandwichGilCutCostPerCard} isSubItem />
+                <CostItem label="Sandwich Gil Cut Cost" value={localCalculations.sandwichGilCutCostPerCard} isSubItem />
               )}
               {/* Sandwich-specific LP */}
               {localCalculations.lpCostPerCardSandwich && (
