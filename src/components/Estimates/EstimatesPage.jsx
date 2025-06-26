@@ -735,7 +735,7 @@ const EstimatesPage = () => {
     
     try {
       // Calculate pagination
-      const ESTIMATES_PER_PAGE = 5;
+      const ESTIMATES_PER_PAGE = 8;
       const totalPages = Math.ceil(previewData.estimates.length / ESTIMATES_PER_PAGE);
       const pdf = new jsPDF({
         orientation: 'portrait',
