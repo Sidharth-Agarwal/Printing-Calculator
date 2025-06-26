@@ -23,7 +23,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
   
   // Toggle expanded state for a row
   const toggleRowExpand = (e, id) => {
-    e.stopPropagation(); // Stop event from triggering row click
+    e.stopPropagation();
     setExpandedRows(prev => ({
       ...prev,
       [id]: !prev[id]
@@ -32,7 +32,6 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
 
   // Sort vendors
   const sortedVendors = [...vendors].sort((a, b) => {
-    // Handle nested fields (e.g., paymentTerms.creditDays)
     const getNestedValue = (obj, path) => {
       const keys = path.split('.');
       let value = obj;
@@ -60,17 +59,14 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
 
   // Filter sorted vendors based on search term and active status
   const filteredVendors = sortedVendors.filter((vendor) => {
-    // Handle search
     const matchesSearch =
       searchTerm === "" ||
       vendor.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.vendorCode?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      vendor.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       vendor.gstin?.toLowerCase().includes(searchTerm.toLowerCase());
     
-    // Handle active status filter
     let matchesActiveStatus = true;
     if (filterActiveStatus !== "") {
       const isActive = vendor.isActive === true;
@@ -127,7 +123,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
 
   // Toggle vendor active status
   const handleToggleStatus = (e, vendor) => {
-    e.stopPropagation(); // Stop event from triggering row click
+    e.stopPropagation();
     onToggleStatus(vendor.id, !vendor.isActive);
   };
 
@@ -145,7 +141,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               <SortableHeader field="gstin" label="GSTIN" />
               <SortableHeader field="paymentTerms.creditDays" label="Credit Days" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -171,50 +167,53 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                     </span>
                   </td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex space-x-1">
+                    <div className="flex items-center space-x-1">
+                      {/* Edit Button */}
                       <button
                         onClick={() => onEdit(vendor)}
-                        className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
+                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                        title="Edit Vendor"
                       >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                         </svg>
-                        Edit
                       </button>
+                      
+                      {/* Delete Button */}
                       <button
                         onClick={(e) => onDelete(vendor.id)}
-                        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
+                        className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                        title="Delete Vendor"
                       >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                         </svg>
-                        Delete
                       </button>
                       
                       {/* Toggle Status Button */}
                       <button
                         onClick={(e) => handleToggleStatus(e, vendor)}
-                        className={`px-2 py-1 text-xs ${
+                        className={`p-1.5 rounded transition-colors ${
                           vendor.isActive 
-                            ? "bg-yellow-100 text-yellow-800" 
-                            : "bg-green-100 text-green-800"
-                        } rounded hover:bg-opacity-80 transition-colors flex items-center`}
+                            ? "text-yellow-600 hover:bg-yellow-100" 
+                            : "text-green-600 hover:bg-green-100"
+                        }`}
+                        title={vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
                       >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                         </svg>
-                        {vendor.isActive ? "Deactivate" : "Activate"}
                       </button>
                       
-                      {/* Show More Button */}
+                      {/* More/Expand Button */}
                       <button
                         onClick={(e) => toggleRowExpand(e, vendor.id)}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-800 rounded hover:bg-gray-200 transition-colors flex items-center"
+                        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+                        title={expandedRows[vendor.id] ? "Show Less" : "Show More"}
                       >
-                        <svg className={`w-3 h-3 mr-1 transition-transform ${expandedRows[vendor.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg className={`w-4 h-4 transition-transform ${expandedRows[vendor.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
                         </svg>
-                        {expandedRows[vendor.id] ? 'Less' : 'More'}
                       </button>
                     </div>
                   </td>
@@ -273,7 +272,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               <SortableHeader field="accountDetails.bankName" label="Bank" />
               <SortableHeader field="paymentTerms.creditDays" label="Credit Days" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -303,30 +302,42 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                   </span>
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex space-x-1">
+                  <div className="flex items-center space-x-1">
+                    {/* Edit Button */}
                     <button
                       onClick={() => onEdit(vendor)}
-                      className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors"
+                      className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                      title="Edit Vendor"
                     >
-                      Edit
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                      </svg>
                     </button>
+                    
+                    {/* Delete Button */}
                     <button
                       onClick={() => onDelete(vendor.id)}
-                      className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors"
+                      className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                      title="Delete Vendor"
                     >
-                      Delete
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                      </svg>
                     </button>
                     
                     {/* Toggle Status Button */}
                     <button
                       onClick={(e) => handleToggleStatus(e, vendor)}
-                      className={`px-2 py-1 text-xs ${
+                      className={`p-1.5 rounded transition-colors ${
                         vendor.isActive 
-                          ? "bg-yellow-100 text-yellow-800" 
-                          : "bg-green-100 text-green-800"
-                      } rounded hover:bg-opacity-80 transition-colors`}
+                          ? "text-yellow-600 hover:bg-yellow-100" 
+                          : "text-green-600 hover:bg-green-100"
+                      }`}
+                      title={vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
                     >
-                      {vendor.isActive ? "Deactivate" : "Activate"}
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                      </svg>
                     </button>
                   </div>
                 </td>
@@ -343,7 +354,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
     );
   };
 
-  // Mobile card view
+  // Mobile card view (keeping text labels for better UX on mobile)
   const renderMobileCardView = () => {
     return (
       <div className="space-y-4">
@@ -353,7 +364,6 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
             className="border border-gray-200 shadow-sm overflow-hidden bg-white cursor-pointer"
             onClick={() => handleViewVendor(vendor)}
           >
-            {/* Main vendor information always visible */}
             <div className="p-4">
               <div className="flex justify-between items-start">
                 <div>
@@ -389,14 +399,14 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                 >
                   {expandedRows[vendor.id] ? (
                     <>
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M5 15l7-7 7 7"></path>
                       </svg>
                       Hide Details
                     </>
                   ) : (
                     <>
-                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                      <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
                       </svg>
                       Show Details
@@ -409,7 +419,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                     onClick={() => onEdit(vendor)}
                     className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
                   >
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
                     </svg>
                     Edit
@@ -418,7 +428,6 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               </div>
             </div>
             
-            {/* Expandable detailed information */}
             {expandedRows[vendor.id] && (
               <div className="border-t border-gray-200 p-4 bg-gray-50">
                 <div className="grid grid-cols-2 gap-4 text-sm">
@@ -450,7 +459,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                         : "bg-green-100 text-green-800"
                     } rounded hover:bg-opacity-80 transition-colors flex items-center`}
                   >
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
                     </svg>
                     {vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
@@ -460,7 +469,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                     onClick={() => onDelete(vendor.id)}
                     className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
                   >
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
                     </svg>
                     Delete Vendor
@@ -519,7 +528,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 12h16M4 18h16"></path>
               </svg>
               Compact
@@ -532,7 +541,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
-              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+              <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 6h16M4 10h16M4 14h16M4 18h16"></path>
               </svg>
               Detailed

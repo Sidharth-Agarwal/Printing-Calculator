@@ -34,7 +34,6 @@ const InlineQualificationDropdown = ({
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating badge:", error);
-      // Could add toast notification here
     } finally {
       setIsUpdating(false);
     }
@@ -110,7 +109,6 @@ const InlineStatusDropdown = ({
       setIsEditing(false);
     } catch (error) {
       console.error("Error updating status:", error);
-      // Could add toast notification here
     } finally {
       setIsUpdating(false);
     }
@@ -169,7 +167,7 @@ const DisplayLeadsTable = ({
   onConvert,
   loading = false,
   fields = LEAD_TABLE_FIELDS,
-  onLeadUpdate // New prop to handle lead updates
+  onLeadUpdate
 }) => {
   // State for sorting
   const [sortField, setSortField] = useState("createdAt");
@@ -273,7 +271,6 @@ const DisplayLeadsTable = ({
       return <LeadSourceDisplay sourceId={value} />;
     }
     
-    // Inline editable qualification badge
     if (field.field === 'badgeId') {
       return (
         <InlineQualificationDropdown
@@ -285,7 +282,6 @@ const DisplayLeadsTable = ({
       );
     }
     
-    // Inline editable status
     if (field.field === 'status') {
       return (
         <InlineStatusDropdown
@@ -354,7 +350,7 @@ const DisplayLeadsTable = ({
                 </th>
               )
             ))}
-            <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+            <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -368,7 +364,6 @@ const DisplayLeadsTable = ({
                   key={field.field} 
                   className="px-3 py-3"
                   onClick={(e) => {
-                    // Don't trigger row click for inline editable fields
                     if (field.field !== 'badgeId' && field.field !== 'status') {
                       onView(lead);
                     }
@@ -379,9 +374,8 @@ const DisplayLeadsTable = ({
                 </td>
               ))}
               <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                <div className="flex space-x-1">
+                <div className="flex items-center space-x-1">
                   {isLeadAddedToClients(lead) ? (
-                    // Only show "Added to Clients" status for leads that have been moved
                     <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
                       <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
@@ -389,66 +383,52 @@ const DisplayLeadsTable = ({
                       Added to Clients
                     </div>
                   ) : (
-                    // Show action buttons for all other leads
                     <>
-                      <CRMActionButton
-                        type="info"
-                        size="xs"
+                      {/* Talk Button */}
+                      <button
                         onClick={() => onAddDiscussion(lead)}
-                        aria-label="Add discussion"
-                        icon={
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
-                          </svg>
-                        }
+                        className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"
+                        title="Add Discussion"
                       >
-                        Talk
-                      </CRMActionButton>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
                       
-                      <CRMActionButton
-                        type="secondary"
-                        size="xs"
+                      {/* Edit Button */}
+                      <button
                         onClick={() => onEdit(lead)}
-                        aria-label="Edit lead"
-                        icon={
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                          </svg>
-                        }
+                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                        title="Edit Lead"
                       >
-                        Edit
-                      </CRMActionButton>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
                       
-                      {/* Show appropriate action for converted leads */}
+                      {/* Convert to Client Button */}
                       {lead.status === "converted" && onConvert && (
-                        <CRMActionButton
-                          type="success"
-                          size="xs"
+                        <button
                           onClick={() => onConvert(lead)}
-                          aria-label="Move to clients"
-                          icon={
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                            </svg>
-                          }
+                          className="p-1.5 text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                          title="Move to Clients"
                         >
-                          Move to Clients
-                        </CRMActionButton>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          </svg>
+                        </button>
                       )}
                       
-                      <CRMActionButton
-                        type="danger"
-                        size="xs"
+                      {/* Delete Button */}
+                      <button
                         onClick={() => confirmDelete(lead)}
-                        aria-label="Delete lead"
-                        icon={
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-          </svg>
-                        }
+                        className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                        title="Delete Lead"
                       >
-                        Delete
-                      </CRMActionButton>
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
                     </>
                   )}
                 </div>
@@ -458,7 +438,6 @@ const DisplayLeadsTable = ({
         </tbody>
       </table>
       
-      {/* Empty State */}
       {sortedLeads.length === 0 && (
         <div className="py-8 text-center text-gray-500">
           <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mx-auto text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">

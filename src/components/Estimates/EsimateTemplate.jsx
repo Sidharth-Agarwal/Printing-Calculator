@@ -68,79 +68,91 @@ const SinglePageContent = ({
 
   return (
     <div className="p-2" style={{ minHeight: '100vh', fontSize: '11px' }}>
-      {/* Header */}
-      <div className="flex justify-between mb-2">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
-            {totalPages > 1 && (
-              <span className="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
-                Page {pageNumber} of {totalPages}
-              </span>
-            )}
-          </div>
-          <div className="text-xs text-gray-500 mb-1">Version: {version}</div>
-          
-          {/* Client Info - Compact */}
-          <div className="mb-1">
-            <div className="text-xs font-semibold text-gray-700">Client: {clientInfo?.name || "Unknown Client"}</div>
-            <div className="text-xs text-gray-600">
-              {clientInfo?.address?.city && clientInfo?.address?.state && (
-                <span>{clientInfo.address.city}, {clientInfo.address.state} | </span>
-              )}
-              Client Code: {clientInfo?.clientCode || "N/A"}
-            </div>
-          </div>
-          
-          {/* Date Information - Compact */}
-          <div className="text-xs text-gray-600 mb-1">
-            <div>Estimate: {currentDate} | Delivery: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
-          </div>
-          
-          {/* Process Legend - Compact */}
-          {usedProcesses.length > 0 && (
-            <div className="mb-1">
-              <div className="text-xs font-medium text-gray-700">Processes: 
-                <span className="font-normal ml-1">
-                  {usedProcesses.map((process, index) => (
-                    <span key={index} className="mr-2">
-                      {process.abbreviation} - {process.fullForm}
-                    </span>
-                  ))}
+      {/* Header - Only on First Page */}
+      {isFirstPage && (
+        <div className="flex justify-between mb-2">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
+              {totalPages > 1 && (
+                <span className="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
+                  Page {pageNumber} of {totalPages}
                 </span>
+              )}
+            </div>
+            <div className="text-xs text-gray-500 mb-1">Version: {version}</div>
+            
+            {/* Client Info - Compact */}
+            <div className="mb-1">
+              <div className="text-xs font-semibold text-gray-700">Client: {clientInfo?.name || "Unknown Client"}</div>
+              <div className="text-xs text-gray-600">
+                {clientInfo?.address?.city && clientInfo?.address?.state && (
+                  <span>{clientInfo.address.city}, {clientInfo.address.state} | </span>
+                )}
+                Client Code: {clientInfo?.clientCode || "N/A"}
               </div>
             </div>
-          )}
-        </div>
-        
-        {/* Company Info - Compact */}
-        <div className="text-right ml-4">
-          <img 
-            src={logo} 
-            alt="Famous Letterpress" 
-            className="w-12 h-12 object-contain mb-1 ml-auto"
-            onLoad={() => setLogoLoaded(true)}
-            onError={() => {
-              console.error("Logo failed to load");
-              setLogoLoaded(true);
-            }}
-          />
-          <div className="font-bold text-sm text-gray-900">FAMOUS</div>
-          <div className="text-xs text-gray-600">91 Tetris Building, Subjail Tinali</div>
-          <div className="text-xs text-gray-600">Dimapur-797112, Nagaland, India</div>
-          <div className="text-xs text-gray-600">GSTIN: 13ALFPA2458Q2ZO</div>
-          <div className="text-xs text-gray-600">+919233152718 | info@famousletterpress.com</div>
+            
+            {/* Date Information - Compact */}
+            <div className="text-xs text-gray-600 mb-1">
+              <div>Estimate: {currentDate} | Delivery: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+            </div>
+            
+            {/* Process Legend - Compact */}
+            {usedProcesses.length > 0 && (
+              <div className="mb-1">
+                <div className="text-xs font-medium text-gray-700">Processes: 
+                  <span className="font-normal ml-1">
+                    {usedProcesses.map((process, index) => (
+                      <span key={index} className="mr-2">
+                        {process.abbreviation} - {process.fullForm}
+                      </span>
+                    ))}
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
           
-          <div className="mt-1">
-            <div className="text-xs">
-              <div className="font-medium">Bank Details</div>
-              <div className="text-gray-600">A/C: 912020005432066</div>
-              <div className="text-gray-600">IFSC: UTIB0000378</div>
-              <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
+          {/* Company Info - Compact */}
+          <div className="text-right ml-4">
+            <img 
+              src={logo} 
+              alt="Famous Letterpress" 
+              className="w-12 h-12 object-contain mb-1 ml-auto"
+              onLoad={() => setLogoLoaded(true)}
+              onError={() => {
+                console.error("Logo failed to load");
+                setLogoLoaded(true);
+              }}
+            />
+            <div className="font-bold text-sm text-gray-900">FAMOUS</div>
+            <div className="text-xs text-gray-600">91 Tetris Building, Subjail Tinali</div>
+            <div className="text-xs text-gray-600">Dimapur-797112, Nagaland, India</div>
+            <div className="text-xs text-gray-600">GSTIN: 13ALFPA2458Q2ZO</div>
+            <div className="text-xs text-gray-600">+919233152718 | info@famousletterpress.com</div>
+            
+            <div className="mt-1">
+              <div className="text-xs">
+                <div className="font-medium">Bank Details</div>
+                <div className="text-gray-600">A/C: 912020005432066</div>
+                <div className="text-gray-600">IFSC: UTIB0000378</div>
+                <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Page Number for non-first pages */}
+      {!isFirstPage && (
+        <div className="flex justify-between items-center mb-2">
+          <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
+          <span className="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
+            Page {pageNumber} of {totalPages}
+          </span>
+        </div>
+      )}
       
       {/* Line Items Table - More Compact */}
       <div className="mb-2 overflow-x-auto">
@@ -213,28 +225,26 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* HSN Summary - Only on last page - More Compact */}
-      {isLastPage && (
-        <div className="mb-2">
-          <div className="font-medium text-xs mb-1">HSN Summary:</div>
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="py-0.5 px-2 border border-gray-300 text-left">HSN Code</th>
-                <th className="py-0.5 px-2 border border-gray-300 text-left">Job Types</th>
+      {/* HSN Summary - Show on all pages - More Compact */}
+      <div className="mb-2">
+        <div className="font-medium text-xs mb-1">HSN Summary:</div>
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="py-0.5 px-2 border border-gray-300 text-left">HSN Code</th>
+              <th className="py-0.5 px-2 border border-gray-300 text-left">Job Types</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
+              <tr key={idx}>
+                <td className="py-0.5 px-2 border border-gray-300 font-mono">{hsnCode}</td>
+                <td className="py-0.5 px-2 border border-gray-300">{data.jobTypes.join(', ')}</td>
               </tr>
-            </thead>
-            <tbody>
-              {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
-                <tr key={idx}>
-                  <td className="py-0.5 px-2 border border-gray-300 font-mono">{hsnCode}</td>
-                  <td className="py-0.5 px-2 border border-gray-300">{data.jobTypes.join(', ')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
       
       {/* Terms and Conditions - Only on last page - More Compact */}
       {isLastPage && (
@@ -259,10 +269,13 @@ const SinglePageContent = ({
               This is just an estimate, not a tax invoice. Prices may vary based on final specifications and quantity.
             </div>
           </div>
-          <div className="text-right">
-            <div className="font-medium mb-3 text-xs">for FAMOUS</div>
-            <div className="text-xs">Authorised Signatory</div>
-          </div>
+          {/* Authorised Signatory - Only on last page */}
+          {isLastPage && (
+            <div className="text-right">
+              <div className="font-medium mb-3 text-xs">for FAMOUS</div>
+              <div className="text-xs">Authorised Signatory</div>
+            </div>
+          )}
         </div>
       </div>
       
@@ -296,86 +309,98 @@ const PageContent = ({
 
   return (
     <>
-      {/* Header - Compact for Preview */}
-      <div className="flex justify-between mb-3">
-        <div className="flex-1">
-          <div className="flex items-center gap-2 mb-1">
-            <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
-            {totalPages > 1 && (
-              <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
-                Page {pageNumber} of {totalPages}
-              </span>
-            )}
-          </div>
-          <div className="text-sm text-gray-500 mb-2">Version: {version}</div>
-          
-          {/* Client Info - Show on every page */}
-          <div>
-            <h2 className="text-sm font-semibold text-gray-700 mb-1">Client:</h2>
-            <div className="font-medium">{clientInfo?.name || "Unknown Client"}</div>
-            <div className="text-gray-600 text-sm">{clientInfo?.address?.city || ""}</div>
-            {clientInfo?.address?.city && clientInfo?.address?.state && (
-              <div className="text-gray-600 text-sm">
-                {clientInfo.address.city}, {clientInfo.address.state}
-              </div>
-            )}
-            <div className="text-gray-600 text-sm">Client Code: {clientInfo?.clientCode || "N/A"}</div>
-          </div>
-          
-          {/* Date Information - Show on every page */}
-          <div className="mt-2 mb-2">
-            <div className="text-sm">
-              <div className="text-gray-600">Estimate Date: {currentDate}</div>
-              <div className="text-gray-600">Tentative Delivery Date: {formatDate(estimates[0]?.deliveryDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000))}</div>
-              
-              {/* Process Legend - Show on every page */}
-              {usedProcesses.length > 0 && (
-                <div className="mt-3 mb-2">
-                  <div className="text-sm font-medium text-gray-700 mb-1">Processes:</div>
-                  <div className="text-xs text-gray-600 space-y-1">
-                    {usedProcesses.map((process, index) => (
-                      <div key={index} className="flex items-center">
-                        <span>
-                          {process.abbreviation} - {process.fullForm}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
+      {/* Header - Only on First Page */}
+      {isFirstPage && (
+        <div className="flex justify-between mb-3">
+          <div className="flex-1">
+            <div className="flex items-center gap-2 mb-1">
+              <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
+              {totalPages > 1 && (
+                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                  Page {pageNumber} of {totalPages}
+                </span>
               )}
             </div>
+            <div className="text-sm text-gray-500 mb-2">Version: {version}</div>
+            
+            {/* Client Info - Show on first page only */}
+            <div>
+              <h2 className="text-sm font-semibold text-gray-700 mb-1">Client:</h2>
+              <div className="font-medium">{clientInfo?.name || "Unknown Client"}</div>
+              <div className="text-gray-600 text-sm">{clientInfo?.address?.city || ""}</div>
+              {clientInfo?.address?.city && clientInfo?.address?.state && (
+                <div className="text-gray-600 text-sm">
+                  {clientInfo.address.city}, {clientInfo.address.state}
+                </div>
+              )}
+              <div className="text-gray-600 text-sm">Client Code: {clientInfo?.clientCode || "N/A"}</div>
+            </div>
+            
+            {/* Date Information - Show on first page only */}
+            <div className="mt-2 mb-2">
+              <div className="text-sm">
+                <div className="text-gray-600">Estimate Date: {currentDate}</div>
+                <div className="text-gray-600">Tentative Delivery Date: {formatDate(estimates[0]?.deliveryDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000))}</div>
+                
+                {/* Process Legend - Show on first page only */}
+                {usedProcesses.length > 0 && (
+                  <div className="mt-3 mb-2">
+                    <div className="text-sm font-medium text-gray-700 mb-1">Processes:</div>
+                    <div className="text-xs text-gray-600 space-y-1">
+                      {usedProcesses.map((process, index) => (
+                        <div key={index} className="flex items-center">
+                          <span>
+                            {process.abbreviation} - {process.fullForm}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
-        </div>
-        
-        {/* Company Info */}
-        <div className="text-right ml-4">
-          <img 
-            src={logo} 
-            alt="Famous Letterpress" 
-            className="w-16 h-16 object-contain mb-2 ml-auto"
-            onLoad={() => setLogoLoaded(true)}
-            onError={() => {
-              console.error("Logo failed to load");
-              setLogoLoaded(true);
-            }}
-          />
-          <div className="font-bold text-lg text-gray-900">FAMOUS</div>
-          <div className="text-gray-600 text-sm">91 Tetris Building, Subjail Tinali</div>
-          <div className="text-gray-600 text-sm">Dimapur-797112, Nagaland, India</div>
-          <div className="text-gray-600 text-sm">GSTIN: 13ALFPA2458Q2ZO</div>
-          <div className="text-gray-600 text-sm">Phone: +919233152718</div>
-          <div className="text-gray-600 text-sm">Email: info@famousletterpress.com</div>
           
-          <div className="my-2">
-            <div className="text-sm">
-              <div className="font-medium">Bank Details</div>
-              <div className="text-gray-600">A/C No: 912020005432066</div>
-              <div className="text-gray-600">IFSC Code: UTIB0000378</div>
-              <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
+          {/* Company Info - Show on first page only */}
+          <div className="text-right ml-4">
+            <img 
+              src={logo} 
+              alt="Famous Letterpress" 
+              className="w-16 h-16 object-contain mb-2 ml-auto"
+              onLoad={() => setLogoLoaded(true)}
+              onError={() => {
+                console.error("Logo failed to load");
+                setLogoLoaded(true);
+              }}
+            />
+            <div className="font-bold text-lg text-gray-900">FAMOUS</div>
+            <div className="text-gray-600 text-sm">91 Tetris Building, Subjail Tinali</div>
+            <div className="text-gray-600 text-sm">Dimapur-797112, Nagaland, India</div>
+            <div className="text-gray-600 text-sm">GSTIN: 13ALFPA2458Q2ZO</div>
+            <div className="text-gray-600 text-sm">Phone: +919233152718</div>
+            <div className="text-gray-600 text-sm">Email: info@famousletterpress.com</div>
+            
+            <div className="my-2">
+              <div className="text-sm">
+                <div className="font-medium">Bank Details</div>
+                <div className="text-gray-600">A/C No: 912020005432066</div>
+                <div className="text-gray-600">IFSC Code: UTIB0000378</div>
+                <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Page Number for non-first pages */}
+      {!isFirstPage && (
+        <div className="flex justify-between items-center mb-3">
+          <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
+          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+            Page {pageNumber} of {totalPages}
+          </span>
+        </div>
+      )}
       
       {/* Line Items Table */}
       <div className="mb-4 overflow-x-auto">
@@ -448,28 +473,26 @@ const PageContent = ({
         </div>
       )}
       
-      {/* HSN Summary - Only on last page */}
-      {isLastPage && (
-        <div className="mb-3">
-          <div className="font-medium text-sm mb-1">HSN Summary:</div>
-          <table className="w-full border-collapse text-xs">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="py-1 px-4 border border-gray-300 text-left">HSN Code</th>
-                <th className="py-1 px-4 border border-gray-300 text-left">Job Types</th>
+      {/* HSN Summary - Show on all pages */}
+      <div className="mb-3">
+        <div className="font-medium text-sm mb-1">HSN Summary:</div>
+        <table className="w-full border-collapse text-xs">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="py-1 px-4 border border-gray-300 text-left">HSN Code</th>
+              <th className="py-1 px-4 border border-gray-300 text-left">Job Types</th>
+            </tr>
+          </thead>
+          <tbody>
+            {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
+              <tr key={idx}>
+                <td className="py-1 px-4 border border-gray-300 font-mono">{hsnCode}</td>
+                <td className="py-1 px-4 border border-gray-300">{data.jobTypes.join(', ')}</td>
               </tr>
-            </thead>
-            <tbody>
-              {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
-                <tr key={idx}>
-                  <td className="py-1 px-4 border border-gray-300 font-mono">{hsnCode}</td>
-                  <td className="py-1 px-4 border border-gray-300">{data.jobTypes.join(', ')}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            ))}
+          </tbody>
+        </table>
+      </div>
       
       {/* Terms and Conditions - Only on last page */}
       {isLastPage && (
@@ -494,14 +517,17 @@ const PageContent = ({
               This is just an estimate, not a tax invoice. Prices may vary based on final specifications and quantity.
             </div>
           </div>
-          <div className="text-right">
-            <div className="font-medium mb-6">for FAMOUS</div>
-            <div className="text-xs">Authorised Signatory</div>
-          </div>
+          {/* Authorised Signatory - Only on last page */}
+          {isLastPage && (
+            <div className="text-right">
+              <div className="font-medium mb-6">for FAMOUS</div>
+              <div className="text-xs">Authorised Signatory</div>
+            </div>
+          )}
         </div>
       </div>
       
-      {/* Print Info */}
+      {/* Print Info - Show on every page */}
       <div className="mt-3 text-center text-xs text-gray-500">
         <p>This is a computer generated estimate and does not require a signature.</p>
       </div>
@@ -523,7 +549,7 @@ const EstimateTemplate = ({
   const [logoLoaded, setLogoLoaded] = useState(false);
 
   // Pagination constants
-  const ESTIMATES_PER_PAGE = 5;
+  const ESTIMATES_PER_PAGE = 8;
   
   // If currentPage is provided, we're in PDF generation mode (single page)
   // Otherwise, we're in normal preview mode (multi-page)
