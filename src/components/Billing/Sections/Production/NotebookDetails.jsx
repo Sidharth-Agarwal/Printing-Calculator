@@ -198,8 +198,8 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
       <div className="space-y-4">
         {/* First Row: Configuration Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Paper Name */}
-          <div>
+          {/* Paper Name - FIXED: Added proper positioning for dropdown */}
+          <div className="relative">
             <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
               Paper Name:
             </label>
@@ -207,6 +207,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               papers={papers}
               selectedPaper={notebookDetails.paperName || (papers.length > 0 ? papers[0].paperName : "")}
               onChange={handleChange}
+              isDieSelected={true} // Set to true to use absolute positioning for dropdown
             />
             {errors.paperName && (
               <p className="text-red-500 text-xs mt-1">{errors.paperName}</p>
