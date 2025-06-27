@@ -302,9 +302,7 @@ export const getLeadsWithRecentActivity = async (days = 30) => {
       }
       
       const lastActivity = lead.lastDiscussionDate || lead.updatedAt;
-      const activityDate = lastActivity?.toDate ? lastActivity.toDate() : 
-                          (lastActivity?.seconds ? new Date(lastActivity.seconds * 1000) : 
-                          new Date(lastActivity));
+      const activityDate = lastActivity?.toDate ? lastActivity.toDate() : (lastActivity?.seconds ? new Date(lastActivity.seconds * 1000) : new Date(lastActivity));
       
       return activityDate >= cutoffDate;
     });
