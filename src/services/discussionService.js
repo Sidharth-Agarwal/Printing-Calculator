@@ -10,7 +10,8 @@ import {
   getDocs, 
   orderBy, 
   serverTimestamp,
-  Timestamp 
+  Timestamp,
+  limit 
 } from "firebase/firestore";
 import { db } from "../firebaseConfig";
 import { updateLeadDiscussion } from "./leadService";
@@ -176,18 +177,145 @@ export const updateDiscussion = async (discussionId, discussionData) => {
 };
 
 /**
- * Delete a discussion
+ * Delete a discussion and update the related lead/client's last contact info
  * @param {string} discussionId - ID of the discussion to delete
  * @returns {Promise<void>}
  */
 export const deleteDiscussion = async (discussionId) => {
   try {
+    // First, get the discussion to know which lead/client it belongs to
     const discussionRef = doc(db, COLLECTION_NAME, discussionId);
+    const discussionSnap = await getDoc(discussionRef);
+    
+    if (!discussionSnap.exists()) {
+      throw new Error(`Discussion with ID ${discussionId} not found`);
+    }
+    
+    const discussionData = discussionSnap.data();
+    const leadId = discussionData.leadId;
+    const clientId = discussionData.clientId;
+    
+    console.log(`Deleting discussion ${discussionId} for ${leadId ? 'lead' : 'client'}: ${leadId || clientId}`);
+    
+    // Delete the discussion document
     await deleteDoc(discussionRef);
+    console.log(`Discussion ${discussionId} deleted successfully`);
+    
+    // Update the related lead or client's last contact information
+    if (leadId) {
+      await updateLeadLastContact(leadId);
+    } else if (clientId) {
+      await updateClientLastContact(clientId);
+    }
+    
   } catch (error) {
     console.error(`Error deleting discussion ${discussionId}:`, error);
     throw error;
   }
+};
+
+/**
+ * Update lead's last contact information after discussion deletion
+ * @param {string} leadId - ID of the lead
+ * @returns {Promise<void>}
+ */
+const updateLeadLastContact = async (leadId) => {
+  try {
+    // Find the most recent remaining discussion for this lead
+    const discussionsQuery = query(
+      collection(db, COLLECTION_NAME),
+      where("leadId", "==", leadId),
+      orderBy("date", "desc"),
+      limit(1)
+    );
+    
+    const querySnapshot = await getDocs(discussionsQuery);
+    const leadRef = doc(db, "leads", leadId);
+    
+    if (querySnapshot.empty) {
+      // No discussions left - clear the last contact fields
+      await updateDoc(leadRef, {
+        lastDiscussionDate: null,
+        lastDiscussionSummary: null,
+        updatedAt: serverTimestamp()
+      });
+      console.log(`Lead ${leadId} last contact cleared - no discussions remaining`);
+    } else {
+      // Update with the new most recent discussion
+      const mostRecentDiscussion = querySnapshot.docs[0].data();
+      await updateDoc(leadRef, {
+        lastDiscussionDate: mostRecentDiscussion.date,
+        lastDiscussionSummary: mostRecentDiscussion.summary,
+        updatedAt: serverTimestamp()
+      });
+      console.log(`Lead ${leadId} last contact updated to most recent discussion`);
+    }
+  } catch (error) {
+    console.error(`Error updating lead last contact ${leadId}:`, error);
+    // Don't throw here - the discussion deletion was successful
+  }
+};
+
+/**
+ * Update client's last contact information after discussion deletion
+ * @param {string} clientId - ID of the client
+ * @returns {Promise<void>}
+ */
+const updateClientLastContact = async (clientId) => {
+  try {
+    // Find the most recent remaining discussion for this client
+    const discussionsQuery = query(
+      collection(db, COLLECTION_NAME),
+      where("clientId", "==", clientId),
+      orderBy("date", "desc"),
+      limit(1)
+    );
+    
+    const querySnapshot = await getDocs(discussionsQuery);
+    const clientRef = doc(db, "clients", clientId);
+    
+    if (querySnapshot.empty) {
+      // No discussions left - clear the last contact fields
+      await updateDoc(clientRef, {
+        lastDiscussionDate: null,
+        lastDiscussionSummary: null,
+        updatedAt: serverTimestamp()
+      });
+      console.log(`Client ${clientId} last contact cleared - no discussions remaining`);
+    } else {
+      // Update with the new most recent discussion
+      const mostRecentDiscussion = querySnapshot.docs[0].data();
+      await updateDoc(clientRef, {
+        lastDiscussionDate: mostRecentDiscussion.date,
+        lastDiscussionSummary: mostRecentDiscussion.summary,
+        updatedAt: serverTimestamp()
+      });
+      console.log(`Client ${clientId} last contact updated to most recent discussion`);
+    }
+  } catch (error) {
+    console.error(`Error updating client last contact ${clientId}:`, error);
+    // Don't throw here - the discussion deletion was successful
+  }
+};
+
+/**
+ * Helper function to recalculate last contact for a lead
+ * This can be called manually if needed to fix inconsistencies
+ * @param {string} leadId - ID of the lead
+ * @returns {Promise<void>}
+ */
+export const recalculateLeadLastContact = async (leadId) => {
+  await updateLeadLastContact(leadId);
+};
+
+/**
+ * Helper function to recalculate last contact for a client
+ * This can be called manually if needed to fix inconsistencies
+ * @param {string} clientId - ID of the client
+ * @returns {Promise<void>}
+ */
+export const recalculateClientLastContact = async (clientId) => {
+  await updateClientLastContact(clientId);
 };
 
 /**

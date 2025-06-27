@@ -9,7 +9,7 @@ import { useCRM } from "../../../context/CRMContext";
 import DisplayLeadsTable from "../LeadRegistration/DisplayLeadsTable";
 import { LEAD_PIPELINE_FIELDS } from "../../../constants/leadFields";
 import { 
-  createLead,  // Added this import for creating new leads
+  createLead,  
   updateLead, 
   deleteLead, 
   getLeadById, 
@@ -43,7 +43,7 @@ const LeadManagementPage = () => {
   const [filterBadge, setFilterBadge] = useState("");
   const [filterStatus, setFilterStatus] = useState("");
   
-  // NEW: Toggle state for showing leads moved to clients
+  // Toggle state for showing leads moved to clients
   const [showMovedToClients, setShowMovedToClients] = useState(false);
   
   // Notification state
@@ -71,8 +71,8 @@ const LeadManagementPage = () => {
     return lead.status === "converted" && lead.movedToClients;
   };
   
-  // NEW: Handle lead updates from inline editing
-  const handleLeadUpdate = () => {
+  // ENHANCED: Handle lead updates from inline editing and discussion changes
+  const handleLeadUpdate = async () => {
     // Refresh the leads list after inline updates
     if (refreshLeads) {
       refreshLeads();
@@ -80,11 +80,13 @@ const LeadManagementPage = () => {
     
     // If a lead is currently being viewed, refresh that lead's data
     if (viewingLead) {
-      getLeadById(viewingLead.id).then(updatedLead => {
+      try {
+        const updatedLead = await getLeadById(viewingLead.id);
         setViewingLead(updatedLead);
-      }).catch(error => {
+        console.log("Viewing lead refreshed after update");
+      } catch (error) {
         console.error("Error refreshing viewed lead:", error);
-      });
+      }
     }
     
     // Show a subtle notification for inline updates
@@ -132,6 +134,11 @@ const LeadManagementPage = () => {
       if (convertingLead && convertingLead.id === leadId) {
         setConvertingLead(null);
       }
+      
+      // Refresh leads list
+      if (refreshLeads) {
+        refreshLeads();
+      }
     } catch (error) {
       console.error("Error deleting lead:", error);
       showNotification(`Error: ${error.message}`, "error");
@@ -157,11 +164,11 @@ const LeadManagementPage = () => {
         // Create new lead
         const newLead = await createLead(formData);
         showNotification(`Lead "${formData.name}" created successfully`);
-        
-        // Refresh the lead list if needed
-        if (refreshLeads) {
-          refreshLeads();
-        }
+      }
+      
+      // Refresh the lead list
+      if (refreshLeads) {
+        refreshLeads();
       }
       
       // Close form modal
@@ -187,6 +194,11 @@ const LeadManagementPage = () => {
         setViewingLead(updatedLead);
       }
       
+      // Refresh leads list to update last contact info
+      if (refreshLeads) {
+        refreshLeads();
+      }
+      
       // Close discussion modal
       setDiscussionLead(null);
     } catch (error) {
@@ -196,7 +208,7 @@ const LeadManagementPage = () => {
   };
   
   // Handle lead conversion
-  const handleSubmitConversion = async (leadId, success) => {
+  const handleSubmitConversion = async (leadId, success, newClient = null) => {
     if (success) {
       showNotification("Lead converted to client successfully");
       
@@ -205,15 +217,20 @@ const LeadManagementPage = () => {
         const updatedLead = await getLeadById(leadId);
         setViewingLead(updatedLead);
       }
+      
+      // Refresh leads list
+      if (refreshLeads) {
+        refreshLeads();
+      }
     }
     
     // Close conversion modal
     setConvertingLead(null);
   };
   
-  // Handle Add New Lead click - UPDATED to open modal instead of redirect
+  // Handle Add New Lead click
   const handleAddNew = () => {
-    setSelectedLead(null); // Ensure we're not in edit mode
+    setSelectedLead(null);
     setIsFormModalOpen(true);
   };
   
@@ -231,7 +248,7 @@ const LeadManagementPage = () => {
     const matchesBadge = filterBadge === "" || lead.badgeId === filterBadge;
     const matchesStatus = filterStatus === "" || lead.status === filterStatus;
     
-    // NEW: Filter based on showMovedToClients toggle
+    // Filter based on showMovedToClients toggle
     const matchesMovedToClients = showMovedToClients || !isLeadAddedToClients(lead);
     
     return matchesSearch && matchesSource && matchesBadge && matchesStatus && matchesMovedToClients;
@@ -243,7 +260,7 @@ const LeadManagementPage = () => {
     setFilterSource('');
     setFilterBadge('');
     setFilterStatus('');
-    setShowMovedToClients(false); // Reset the toggle as well
+    setShowMovedToClients(false);
   };
   
   // If user doesn't have permission, show unauthorized message
@@ -339,7 +356,7 @@ const LeadManagementPage = () => {
           <span className="text-2xl font-bold text-purple-600 mt-1">{conversionRate}%</span>
         </div>
         
-        {/* NEW: Added to Clients Count */}
+        {/* Added to Clients Count */}
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Added to Clients</span>
           <span className="text-2xl font-bold text-blue-600 mt-1">{movedToClientsCount}</span>
@@ -457,7 +474,7 @@ const LeadManagementPage = () => {
               ))}
             </select>
             
-            {/* NEW: Show Moved to Clients Toggle */}
+            {/* Show Moved to Clients Toggle */}
             <label className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white cursor-pointer hover:bg-gray-50">
               <input
                 type="checkbox"
@@ -506,7 +523,8 @@ const LeadManagementPage = () => {
           onConvert={handleConvert}
           onDelete={handleDelete}
           loading={isLoadingLeads}
-          showMovedToClients={showMovedToClients} // Pass the toggle state
+          showMovedToClients={showMovedToClients}
+          onLeadUpdate={handleLeadUpdate} // Pass the update callback
         />
       ) : (
         <DisplayLeadsTable
@@ -515,15 +533,15 @@ const LeadManagementPage = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onAddDiscussion={handleAddDiscussion}
-          onConvert={handleConvert} // Make sure this prop is passed
+          onConvert={handleConvert}
           loading={isLoadingLeads}
-          fields={LEAD_PIPELINE_FIELDS} // Use the pipeline fields for list view
-          showMovedToClients={showMovedToClients} // Pass the toggle state
-          onLeadUpdate={handleLeadUpdate} // NEW: Add this prop for inline editing
+          fields={LEAD_PIPELINE_FIELDS}
+          showMovedToClients={showMovedToClients}
+          onLeadUpdate={handleLeadUpdate} // Pass the update callback
         />
       )}
       
-      {/* Lead Details Modal */}
+      {/* Lead Details Modal - ENHANCED with lead update callback */}
       {viewingLead && (
         <LeadDetailsModal
           lead={viewingLead}
@@ -531,6 +549,7 @@ const LeadManagementPage = () => {
           onEdit={handleEdit}
           onAddDiscussion={handleAddDiscussion}
           onConvert={handleConvert}
+          onLeadUpdate={handleLeadUpdate} // Pass the update callback to refresh lead data
         />
       )}
       

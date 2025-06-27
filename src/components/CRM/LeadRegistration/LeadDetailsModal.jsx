@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, query, where, orderBy, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import LeadStatusBadge from "../../Shared/LeadStatusBadge";
 import { LeadSourceDisplay } from "../../Shared/LeadSourceSelector";
@@ -17,17 +17,20 @@ import { getNextStatus } from "../../../constants/leadStatuses";
  * @param {function} props.onEdit - Edit handler
  * @param {function} props.onAddDiscussion - Add discussion handler
  * @param {function} props.onConvert - Convert to client handler
+ * @param {function} props.onLeadUpdate - Lead update callback to refresh lead data
  */
 const LeadDetailsModal = ({ 
   lead, 
   onClose, 
   onEdit, 
   onAddDiscussion,
-  onConvert
+  onConvert,
+  onLeadUpdate
 }) => {
   const [discussions, setDiscussions] = useState([]);
   const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(true);
   const [isUpdatingStatus, setIsUpdatingStatus] = useState(false);
+  const [currentLead, setCurrentLead] = useState(lead); // Track current lead data
   const [notification, setNotification] = useState({
     show: false,
     message: "",
@@ -35,8 +38,8 @@ const LeadDetailsModal = ({
   });
   
   // Helper function to check if lead is added to clients
-  const isLeadAddedToClients = (lead) => {
-    return lead.status === "converted" && lead.movedToClients;
+  const isLeadAddedToClients = (leadData) => {
+    return leadData.status === "converted" && leadData.movedToClients;
   };
   
   // Show notification
@@ -49,20 +52,25 @@ const LeadDetailsModal = ({
     }, 3000);
   };
   
+  // Update current lead when prop changes
+  useEffect(() => {
+    setCurrentLead(lead);
+  }, [lead]);
+  
   // Fetch discussions when lead changes - using real-time updates
   useEffect(() => {
-    if (!lead || !lead.id) {
+    if (!currentLead || !currentLead.id) {
       console.log("No lead provided or lead missing ID");
       return;
     }
     
-    console.log("Fetching discussions for lead:", lead.id);
+    console.log("Fetching discussions for lead:", currentLead.id);
     setIsLoadingDiscussions(true);
     
     // Create query with real-time updates
     const discussionsQuery = query(
       collection(db, "discussions"),
-      where("leadId", "==", lead.id),
+      where("leadId", "==", currentLead.id),
       orderBy("date", "desc")
     );
     
@@ -83,18 +91,18 @@ const LeadDetailsModal = ({
     
     // Cleanup subscription on unmount
     return () => unsubscribe();
-  }, [lead]);
+  }, [currentLead]);
 
-  // Handle discussion updates (refresh when edited/deleted)
+  // Handle discussion updates (refresh when edited/deleted) - ENHANCED VERSION
   const refreshDiscussions = async () => {
-    if (!lead || !lead.id) return;
+    if (!currentLead || !currentLead.id) return;
     
     setIsLoadingDiscussions(true);
     try {
       // Fetch discussions again
       const discussionsQuery = query(
         collection(db, "discussions"),
-        where("leadId", "==", lead.id),
+        where("leadId", "==", currentLead.id),
         orderBy("date", "desc")
       );
       
@@ -105,6 +113,32 @@ const LeadDetailsModal = ({
       }));
       
       setDiscussions(discussionsData);
+      
+      // IMPORTANT: Also refresh the lead data to get updated lastDiscussionDate
+      try {
+        const leadRef = doc(db, "leads", currentLead.id);
+        const leadSnap = await getDoc(leadRef);
+        
+        if (leadSnap.exists()) {
+          const updatedLead = {
+            id: leadSnap.id,
+            ...leadSnap.data()
+          };
+          
+          // Update the current lead state
+          setCurrentLead(updatedLead);
+          
+          // Call the parent update callback if provided
+          if (onLeadUpdate) {
+            onLeadUpdate();
+          }
+          
+          console.log("Lead data refreshed after discussion update");
+        }
+      } catch (leadError) {
+        console.error("Error refreshing lead data:", leadError);
+      }
+      
     } catch (error) {
       console.error("Error refreshing discussions:", error);
       showNotification("Error updating discussions", "error");
@@ -115,18 +149,23 @@ const LeadDetailsModal = ({
   
   // Handle status advancement
   const handleAdvanceStatus = async () => {
-    if (!lead) return;
+    if (!currentLead) return;
     
-    const nextStatus = getNextStatus(lead.status);
+    const nextStatus = getNextStatus(currentLead.status);
     
     // If we're already at the last status, do nothing
-    if (nextStatus.id === lead.status) return;
+    if (nextStatus.id === currentLead.status) return;
     
     setIsUpdatingStatus(true);
     
     try {
-      await updateLeadStatus(lead.id, nextStatus.id);
+      await updateLeadStatus(currentLead.id, nextStatus.id);
       showNotification(`Lead status updated to ${nextStatus.label}`, "success");
+      
+      // Refresh lead data
+      if (onLeadUpdate) {
+        onLeadUpdate();
+      }
     } catch (error) {
       console.error("Error updating status:", error);
       showNotification("Error updating lead status", "error");
@@ -135,7 +174,7 @@ const LeadDetailsModal = ({
     }
   };
   
-  if (!lead) return null;
+  if (!currentLead) return null;
   
   // Format date
   const formatDate = (timestamp) => {
@@ -153,13 +192,13 @@ const LeadDetailsModal = ({
   };
   
   // Check if lead can be converted (is in qualified or negotiation status)
-  const canConvert = lead.status === "qualified" || lead.status === "negotiation";
+  const canConvert = currentLead.status === "qualified" || currentLead.status === "negotiation";
   
   // Check if lead is already converted
-  const isConverted = lead.status === "converted";
+  const isConverted = currentLead.status === "converted";
   
   // Check if converted lead has been moved to clients
-  const isAddedToClients = isLeadAddedToClients(lead);
+  const isAddedToClients = isLeadAddedToClients(currentLead);
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -168,7 +207,7 @@ const LeadDetailsModal = ({
         <div className="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
           <div className="flex items-center">
             <h3 className="text-lg font-semibold mr-2">Lead Details</h3>
-            <LeadStatusBadge status={lead.status} />
+            <LeadStatusBadge status={currentLead.status} />
           </div>
           <button
             onClick={onClose}
@@ -198,33 +237,33 @@ const LeadDetailsModal = ({
             <div className="mb-6">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
                 <div>
-                  <h2 className="text-xl font-bold">{lead.name}</h2>
-                  {lead.company && (
-                    <p className="text-gray-600">{lead.company}</p>
+                  <h2 className="text-xl font-bold">{currentLead.name}</h2>
+                  {currentLead.company && (
+                    <p className="text-gray-600">{currentLead.company}</p>
                   )}
                 </div>
                 <div className="mt-2 sm:mt-0 flex space-x-2">
-                  <QualificationBadge badgeId={lead.badgeId} />
-                  <LeadSourceDisplay sourceId={lead.source} />
+                  <QualificationBadge badgeId={currentLead.badgeId} />
+                  <LeadSourceDisplay sourceId={currentLead.source} />
                 </div>
               </div>
               
               <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Phone</h4>
-                  <p>{lead.phone || "N/A"}</p>
+                  <p>{currentLead.phone || "N/A"}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Email</h4>
-                  <p>{lead.email || "N/A"}</p>
+                  <p>{currentLead.email || "N/A"}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Created</h4>
-                  <p>{formatDate(lead.createdAt)}</p>
+                  <p>{formatDate(currentLead.createdAt)}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Last Contact</h4>
-                  <p>{lead.lastDiscussionDate ? formatDate(lead.lastDiscussionDate) : "No contact yet"}</p>
+                  <p>{currentLead.lastDiscussionDate ? formatDate(currentLead.lastDiscussionDate) : "No contact yet"}</p>
                 </div>
               </div>
             </div>
@@ -262,7 +301,7 @@ const LeadDetailsModal = ({
                       <CRMActionButton
                         type="primary"
                         size="sm"
-                        onClick={() => onConvert(lead)}
+                        onClick={() => onConvert(currentLead)}
                         icon={
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
@@ -281,10 +320,10 @@ const LeadDetailsModal = ({
                     <CRMActionButton
                       type="success"
                       size="sm"
-                      onClick={() => onConvert(lead)}
+                      onClick={() => onConvert(currentLead)}
                       icon={
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3..42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                         </svg>
                       }
                     >
@@ -301,44 +340,44 @@ const LeadDetailsModal = ({
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Job Type</h4>
-                  <p>{lead.jobType ? lead.jobType.charAt(0).toUpperCase() + lead.jobType.slice(1) : "Not specified"}</p>
+                  <p>{currentLead.jobType ? currentLead.jobType.charAt(0).toUpperCase() + currentLead.jobType.slice(1) : "Not specified"}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Budget Range</h4>
-                  <p>{lead.budget ? lead.budget.charAt(0).toUpperCase() + lead.budget.slice(1) : "Not specified"}</p>
+                  <p>{currentLead.budget ? currentLead.budget.charAt(0).toUpperCase() + currentLead.budget.slice(1) : "Not specified"}</p>
                 </div>
                 <div>
                   <h4 className="text-sm font-medium text-gray-500">Urgency</h4>
-                  <p>{lead.urgency ? lead.urgency.charAt(0).toUpperCase() + lead.urgency.slice(1) : "Not specified"}</p>
+                  <p>{currentLead.urgency ? currentLead.urgency.charAt(0).toUpperCase() + currentLead.urgency.slice(1) : "Not specified"}</p>
                 </div>
               </div>
             </div>
             
             {/* Address */}
-            {lead.address && (lead.address.city || lead.address.line1) && (
+            {currentLead.address && (currentLead.address.city || currentLead.address.line1) && (
               <div className="mb-6">
                 <h3 className="text-md font-medium mb-2">Address</h3>
                 <div className="bg-gray-50 p-3 rounded-md">
-                  {lead.address.line1 && <p>{lead.address.line1}</p>}
-                  {lead.address.line2 && <p>{lead.address.line2}</p>}
+                  {currentLead.address.line1 && <p>{currentLead.address.line1}</p>}
+                  {currentLead.address.line2 && <p>{currentLead.address.line2}</p>}
                   <p>
                     {[
-                      lead.address.city,
-                      lead.address.state,
-                      lead.address.postalCode
+                      currentLead.address.city,
+                      currentLead.address.state,
+                      currentLead.address.postalCode
                     ].filter(Boolean).join(", ")}
                   </p>
-                  <p>{lead.address.country}</p>
+                  <p>{currentLead.address.country}</p>
                 </div>
               </div>
             )}
             
             {/* Notes */}
-            {lead.notes && (
+            {currentLead.notes && (
               <div className="mb-6">
                 <h3 className="text-md font-medium mb-2">Notes</h3>
                 <div className="bg-gray-50 p-3 rounded-md">
-                  <p className="whitespace-pre-line">{lead.notes}</p>
+                  <p className="whitespace-pre-line">{currentLead.notes}</p>
                 </div>
               </div>
             )}
@@ -352,7 +391,7 @@ const LeadDetailsModal = ({
                 <CRMActionButton
                   type="primary"
                   size="sm"
-                  onClick={() => onAddDiscussion(lead)}
+                  onClick={() => onAddDiscussion(currentLead)}
                   icon={
                     <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
@@ -368,7 +407,7 @@ const LeadDetailsModal = ({
               discussions={discussions}
               loading={isLoadingDiscussions}
               formatDate={formatDate}
-              lead={lead}
+              lead={currentLead}
               onUpdate={refreshDiscussions}
               readOnly={isAddedToClients} // Pass read-only state to discussion history
             />
