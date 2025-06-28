@@ -302,7 +302,7 @@ const LeadManagementPage = () => {
     <div className="p-4 max-w-screen-xl mx-auto">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">Lead Pipeline</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Qualified Leads</h1>
         <p className="text-gray-600 mt-1">
           Manage your leads through the sales pipeline
         </p>
