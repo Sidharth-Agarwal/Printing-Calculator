@@ -936,30 +936,47 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
           </div>
         </>
       ) : (
-        // Selected Die Display - SINGLE LINE LAYOUT
+        // Selected Die Display
         <div className="flex justify-between items-center bg-white">
-          <div className="flex items-center space-x-2 overflow-hidden flex-grow">
-            <div className="text-sm font-medium flex items-center space-x-2">
-              <span className="text-gray-700">Die Code:</span>
-              <span className="text-red-600" data-testid="selected-die-code">{selectedDie.dieCode || "SS-4"}</span>
-            </div>
+          <div className="flex items-center space-x-3 overflow-hidden flex-grow">
+            {/* Die Image */}
+            {selectedDie.image && (
+              <div className="flex-shrink-0">
+                <img
+                  src={selectedDie.image}
+                  alt={`Die ${selectedDie.dieCode}`}
+                  className="w-12 h-12 object-contain border rounded-md bg-gray-50"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
             
-            <div className="border-l border-gray-300 pl-2 text-xs flex-grow overflow-hidden">
-              <span className="inline-block text-gray-700">
-                <span className="font-medium">Die Size:</span> {selectedDie.dieSize?.length || "7"}" × {selectedDie.dieSize?.breadth || "3"}" 
-              </span>
-              <span className="inline-block mx-1 text-gray-400">|</span>
-              <span className="inline-block text-gray-700">
-                <span className="font-medium">Product Size:</span> {selectedDie.productSize?.length || "7"}" × {selectedDie.productSize?.breadth || "3"}"
-              </span>
-              <span className="inline-block mx-1 text-gray-400">|</span>
-              <span className="inline-block text-gray-700">
-                <span className="font-medium">Type:</span> {(selectedDie.type) || "H/circle"}
-              </span>
-              <span className="inline-block mx-1 text-gray-400">|</span>
-              <span className="inline-block text-gray-700">
-                <span className="font-medium">Frags:</span> {selectedDie.frags || "1"}
-              </span>
+            {/* Die Information */}
+            <div className="flex items-center space-x-2 overflow-hidden flex-grow">
+              <div className="text-sm font-medium flex items-center space-x-2">
+                <span className="text-gray-700">Die Code:</span>
+                <span className="text-red-600" data-testid="selected-die-code">{selectedDie.dieCode || "SS-4"}</span>
+              </div>
+              
+              <div className="border-l border-gray-300 pl-2 text-xs flex-grow overflow-hidden">
+                <span className="inline-block text-gray-700">
+                  <span className="font-medium">Die Size:</span> {selectedDie.dieSize?.length || "7"}" × {selectedDie.dieSize?.breadth || "3"}" 
+                </span>
+                <span className="inline-block mx-1 text-gray-400">|</span>
+                <span className="inline-block text-gray-700">
+                  <span className="font-medium">Product Size:</span> {selectedDie.productSize?.length || "7"}" × {selectedDie.productSize?.breadth || "3"}"
+                </span>
+                <span className="inline-block mx-1 text-gray-400">|</span>
+                <span className="inline-block text-gray-700">
+                  <span className="font-medium">Type:</span> {(selectedDie.type) || "H/circle"}
+                </span>
+                <span className="inline-block mx-1 text-gray-400">|</span>
+                <span className="inline-block text-gray-700">
+                  <span className="font-medium">Frags:</span> {selectedDie.frags || "1"}
+                </span>
+              </div>
             </div>
           </div>
           
