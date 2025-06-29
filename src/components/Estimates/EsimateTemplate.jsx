@@ -256,6 +256,7 @@ const SinglePageContent = ({
             <div>3. Final artwork approval is required before production.</div>
             <div>4. Delivery time will be confirmed upon order confirmation.</div>
             <div>5. Prices are subject to change based on final specifications.</div>
+            <div>6. An additional extra charge will be added in case of custom dies.</div>
           </div>
         </div>
       )}
@@ -504,6 +505,7 @@ const PageContent = ({
             <div>3. Final artwork approval is required before production.</div>
             <div>4. Delivery time will be confirmed upon order confirmation.</div>
             <div>5. Prices are subject to change based on final specifications.</div>
+            <div>6. An additional extra charge will be added in case of custom dies.</div>
           </div>
         </div>
       )}
