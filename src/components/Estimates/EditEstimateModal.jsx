@@ -226,6 +226,8 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         productSize: estimate.dieDetails?.productSize || { length: "", breadth: "" },
         image: estimate.dieDetails?.image || "",
         hsnCode: estimate.jobDetails?.hsnCode || "", // Include HSN code
+        frags: estimate.dieDetails?.frags || "",        // ← Already exists
+        type: estimate.dieDetails?.type || ""           // ← ADD THIS LINE
       },
       lpDetails: {
         isLPUsed: estimate.lpDetails?.isLPUsed || false,
