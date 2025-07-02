@@ -33,7 +33,8 @@ const CostDisplaySection = ({
         { key: 'lpMRCostPerCard', label: 'LP MR Cost' },
         { key: 'lpMkgCostPerCard', label: 'LP Making Cost' },
         { key: 'lpInkCostPerCard', label: 'LP Ink Cost' },
-        { key: 'lpDstMaterialCostPerCard', label: 'LP DST Material Cost' }
+        { key: 'lpImpressionCostPerCard', label: 'LP Impression Cost' },
+        // { key: 'lpDstMaterialCostPerCard', label: 'LP DST Material Cost' }
       ],
       totalKey: 'lpCostPerCard',
       totalLabel: 'Letter Press (LP)'
@@ -49,7 +50,7 @@ const CostDisplaySection = ({
         { key: 'fsFoilCostPerCard', label: 'FS Foil Cost' },
         { key: 'fsMRCostPerCard', label: 'FS MR Cost' },
         { key: 'fsImpressionCostPerCard', label: 'FS Impression Cost' },
-        { key: 'fsFreightCostPerCard', label: 'FS Freight Cost' }
+        // { key: 'fsFreightCostPerCard', label: 'FS Freight Cost' }
       ],
       totalKey: 'fsCostPerCard',
       totalLabel: 'Foil Stamping (FS)'
@@ -63,9 +64,9 @@ const CostDisplaySection = ({
       items: [
         // { key: 'embPlateCostPerCard', label: 'EMB Plate Cost' },
         { key: 'embMRCostPerCard', label: 'EMB MR Cost' },
+        { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate' },
         { key: 'embPositiveFilmCostPerCard', label: 'EMB Positive Film' },
-        { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate (MKG)' },
-        { key: 'embImpressionCostPerCard', label: 'EMB Impression' },
+        { key: 'embImpressionCostPerCard', label: 'EMB Impression Cost' },
         { key: 'embDstMaterialCostPerCard', label: 'EMB DST Material Cost' }
       ],
       totalKey: 'embCostPerCard',
@@ -105,6 +106,26 @@ const CostDisplaySection = ({
       ],
       totalKey: 'digiCostPerCard',
       totalLabel: 'Digital Printing'
+    },
+    { 
+      key: 'NOTEBOOK', 
+      label: 'Notebook', 
+      serviceKey: 'notebookDetails', 
+      toggleField: 'isNotebookUsed',
+      bgColor: 'bg-blue-50',
+      items: [
+        { key: 'notebookPagesCostPerCard', label: 'Notebook Pages Cost' },
+        { key: 'notebookBindingCostPerCard', label: 'Notebook Binding Cost' },
+        { key: 'notebookGilCutCostPerCard', label: 'Notebook GIL Cut Cost' }
+      ],
+      metaItems: [
+        { key: 'possibleNumberOfForma', label: 'Forma per notebook:' },
+        { key: 'totalPages', label: 'Total pages:' },
+        { key: 'totalFormaRequired', label: 'Total forma required:' },
+        { key: 'totalSheets', label: 'Total sheets:' }
+      ],
+      totalKey: 'notebookCostPerCard',
+      totalLabel: 'Notebook'
     }
   ];
 

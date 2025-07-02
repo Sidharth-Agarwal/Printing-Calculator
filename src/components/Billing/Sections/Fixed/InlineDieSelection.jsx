@@ -115,6 +115,46 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     }
   }, []);
 
+  // Helper function to get base set of dies based on job type
+  const getBaseSetForJobType = (jobType) => {
+    if (jobType === "Custom") {
+      return dies;
+    } else if (jobType === "Card") {
+      // For Card job type, include both Card and Biz Card dies
+      return dies.filter(die => die.jobType === "Card" || die.jobType === "Biz Card");
+    } else {
+      // For other job types, filter by exact match
+      return dies.filter(die => die.jobType === jobType);
+    }
+  };
+
+  // Filter dies by job type
+  const filterDiesByJobType = (dieArray, jobType) => {
+    if (!jobType) return setFilteredDies([]);
+    
+    // If "Custom" is selected, show all dies
+    if (jobType === "Custom") {
+      setFilteredDies(dieArray);
+      return;
+    }
+    
+    // Special case: If "Card" is selected, show both "Card" and "Biz Card" dies
+    if (jobType === "Card") {
+      const filtered = dieArray.filter(die => 
+        die.jobType === "Card" || die.jobType === "Biz Card"
+      );
+      setFilteredDies(filtered);
+      return;
+    }
+    
+    // For other job types, filter as usual
+    const filtered = dieArray.filter(die => 
+      die.jobType === jobType
+    );
+    
+    setFilteredDies(filtered);
+  };
+
   // Fetch dies from Firestore
   useEffect(() => {
     const fetchDies = async () => {
@@ -139,24 +179,6 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     fetchDies();
   }, [selectedJobType]);
 
-  // Filter dies by job type
-  const filterDiesByJobType = (dieArray, jobType) => {
-    if (!jobType) return setFilteredDies([]);
-    
-    // If "Custom" is selected, show all dies
-    if (jobType === "Custom") {
-      setFilteredDies(dieArray);
-      return;
-    }
-    
-    // For other job types, filter as usual
-    const filtered = dieArray.filter(die => 
-      die.jobType === jobType
-    );
-    
-    setFilteredDies(filtered);
-  };
-
   const handleSearchChange = (e) => {
     const { name, value } = e.target;
     setSearchDimensions((prev) => {
@@ -166,6 +188,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     });
   };
 
+  // Updated handleTextSearch function
   const handleTextSearch = (e) => {
     setSearchTerm(e.target.value);
     const term = e.target.value.toLowerCase().trim();
@@ -176,30 +199,20 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       return;
     }
     
-    // Filter based on text search
-    let matches;
+    // Get the base set of dies based on job type
+    const baseSet = getBaseSetForJobType(selectedJobType);
     
-    // If Custom is selected, search across all dies
-    if (selectedJobType === "Custom") {
-      matches = dies.filter(die => 
-        (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-        (die.type && die.type.toLowerCase().includes(term)) ||
-        (die.jobType && die.jobType.toLowerCase().includes(term))
-      );
-    } else {
-      // Otherwise filter within the selected job type
-      matches = dies.filter(die => 
-        die.jobType === selectedJobType && (
-          (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-          (die.type && die.type.toLowerCase().includes(term))
-        )
-      );
-    }
+    // Filter based on text search within the base set
+    const matches = baseSet.filter(die => 
+      (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
+      (die.type && die.type.toLowerCase().includes(term)) ||
+      (selectedJobType === "Custom" && die.jobType && die.jobType.toLowerCase().includes(term))
+    );
     
     setFilteredDies(matches);
   };
 
-  // Modified to search in both die size AND product size
+  // Modified performSearch function
   const performSearch = (dimensions) => {
     const { length, breadth } = dimensions;
     
@@ -209,15 +222,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       return;
     }
 
-    let baseSet;
-    
-    // If Custom is selected, use all dies as the base set
-    if (selectedJobType === "Custom") {
-      baseSet = dies;
-    } else {
-      // Otherwise filter by selected job type
-      baseSet = dies.filter(die => die.jobType === selectedJobType);
-    }
+    // Get the base set of dies based on job type
+    const baseSet = getBaseSetForJobType(selectedJobType);
     
     let matches = [];
 
@@ -411,7 +417,9 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       setDies(prev => [...prev, dieWithId]);
       
       // Update filtered dies if the new die matches the current job type
-      if (dieWithId.jobType === selectedJobType || selectedJobType === "Custom") {
+      if (dieWithId.jobType === selectedJobType || 
+          (selectedJobType === "Card" && (dieWithId.jobType === "Card" || dieWithId.jobType === "Biz Card")) ||
+          selectedJobType === "Custom") {
         setFilteredDies(prev => [...prev, dieWithId]);
       }
       
@@ -548,14 +556,14 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
               
               {/* Display error message if there is one */}
               {error && (
-                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-3 text-xs">
+                <div className="bg-red-100 border border-red-400 text-red-700 px-3 py-2 rounded mb-1 text-xs">
                   {error}
                 </div>
               )}
 
               <form onSubmit={handleAddDie} className="text-sm">
                 {/* Primary fields - 4 in a row */}
-                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-3">
+                <div className="grid grid-cols-1 md:grid-cols-4 gap-3 mb-1">
                   <div>
                     <label className="block text-xs font-medium text-gray-700 mb-1">Job Type:</label>
                     <select
@@ -812,9 +820,9 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       )}
 
       {showSelectionUI ? (
-        // Die Selection UI - Keep original structure with search and length/breadth inputs
+        // Die Selection UI - Updated layout with 50% search bar and 25% each for length/breadth
         <>
-          <div className="flex justify-between items-center mb-3">
+          <div className="flex justify-between items-center mb-1">
             <div className="text-xs text-gray-600">
               Showing dies for {selectedJobType}: {filteredDies.length} found
             </div>
@@ -827,25 +835,27 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
             </button>
           </div>
           
-          {/* Search input */}
-          <div className="mb-3 relative">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-            </svg>
-            <input
-              type="text"
-              placeholder="Search by code, type or job type"
-              value={searchTerm}
-              onChange={handleTextSearch}
-              className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
-              data-testid="die-search-input"
-            />
-          </div>
-  
-          <div className="text-xs text-center text-gray-500 mb-2">- OR -</div>
-          
-          {/* Length & Breadth inputs - side by side */}
-          <div className="grid grid-cols-2 gap-3 mb-3">
+          {/* Updated search layout: 50% search bar, 25% length, 25% breadth */}
+          <div className="grid grid-cols-4 gap-3 mb-1">
+            {/* Search input - takes 2 columns (50%) */}
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-gray-600 mb-1">Search by Code, Type or Job Type</label>
+              <div className="relative">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+                <input
+                  type="text"
+                  placeholder="Search by code, type or job type"
+                  value={searchTerm}
+                  onChange={handleTextSearch}
+                  className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                  data-testid="die-search-input"
+                />
+              </div>
+            </div>
+            
+            {/* Length input - takes 1 column (25%) */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Length (inches) - Die or Product</label>
               <input
@@ -855,10 +865,13 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 placeholder="Enter Length"
                 value={searchDimensions.length}
                 onChange={handleSearchChange}
+                onWheel={(e) => e.target.blur()}
                 className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
                 data-testid="die-length-input"
               />
             </div>
+            
+            {/* Breadth input - takes 1 column (25%) */}
             <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Breadth (inches) - Die or Product</label>
               <input
@@ -868,6 +881,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 placeholder="Enter Breadth"
                 value={searchDimensions.breadth}
                 onChange={handleSearchChange}
+                onWheel={(e) => e.target.blur()}
                 className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
                 data-testid="die-breadth-input"
               />
@@ -913,6 +927,8 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
               <div className="p-3 bg-white border-b text-sm text-gray-600 text-center">
                 {selectedJobType === "Custom" 
                   ? "No dies found matching your search criteria."
+                  : selectedJobType === "Card"
+                  ? "No Card or Biz Card dies found matching your search criteria."
                   : `No dies found for ${selectedJobType} matching your search criteria.`
                 }
               </div>
@@ -920,30 +936,47 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
           </div>
         </>
       ) : (
-        // Selected Die Display - SINGLE LINE LAYOUT
+        // Selected Die Display
         <div className="flex justify-between items-center bg-white">
-          <div className="flex items-center space-x-2 overflow-hidden flex-grow">
-            <div className="text-sm font-medium flex items-center space-x-2">
-              <span className="text-gray-700">Die Code:</span>
-              <span className="text-red-600" data-testid="selected-die-code">{selectedDie.dieCode || "SS-4"}</span>
-            </div>
+          <div className="flex items-center space-x-3 overflow-hidden flex-grow">
+            {/* Die Image */}
+            {selectedDie.image && (
+              <div className="flex-shrink-0">
+                <img
+                  src={selectedDie.image}
+                  alt={`Die ${selectedDie.dieCode}`}
+                  className="w-12 h-12 object-contain border rounded-md bg-gray-50"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                  }}
+                />
+              </div>
+            )}
             
-            <div className="border-l border-gray-300 pl-2 text-xs flex-grow overflow-hidden">
-              <span className="inline-block text-gray-700">
-                <span className="font-medium">Die Size:</span> {selectedDie.dieSize?.length || "7"}" × {selectedDie.dieSize?.breadth || "3"}" 
-              </span>
-              <span className="inline-block mx-1 text-gray-400">|</span>
-              <span className="inline-block text-gray-700">
-                <span className="font-medium">Product Size:</span> {selectedDie.productSize?.length || "7"}" × {selectedDie.productSize?.breadth || "3"}"
-              </span>
-              <span className="inline-block mx-1 text-gray-400">|</span>
-              <span className="inline-block text-gray-700">
-                <span className="font-medium">Type:</span> {(selectedDie.type) || "H/circle"}
-              </span>
-              <span className="inline-block mx-1 text-gray-400">|</span>
-              <span className="inline-block text-gray-700">
-                <span className="font-medium">Frags:</span> {selectedDie.frags || "1"}
-              </span>
+            {/* Die Information */}
+            <div className="flex items-center space-x-2 overflow-hidden flex-grow">
+              <div className="text-sm font-medium flex items-center space-x-2">
+                <span className="text-gray-700">Die Code:</span>
+                <span className="text-red-600" data-testid="selected-die-code">{selectedDie.dieCode || "SS-4"}</span>
+              </div>
+              
+              <div className="border-l border-gray-300 pl-2 text-xs flex-grow overflow-hidden">
+                <span className="inline-block text-gray-700">
+                  <span className="font-medium">Die Size:</span> {selectedDie.dieSize?.length || "7"}" × {selectedDie.dieSize?.breadth || "3"}" 
+                </span>
+                <span className="inline-block mx-1 text-gray-400">|</span>
+                <span className="inline-block text-gray-700">
+                  <span className="font-medium">Product Size:</span> {selectedDie.productSize?.length || "7"}" × {selectedDie.productSize?.breadth || "3"}"
+                </span>
+                <span className="inline-block mx-1 text-gray-400">|</span>
+                <span className="inline-block text-gray-700">
+                  <span className="font-medium">Type:</span> {(selectedDie.type) || "H/circle"}
+                </span>
+                <span className="inline-block mx-1 text-gray-400">|</span>
+                <span className="inline-block text-gray-700">
+                  <span className="font-medium">Frags:</span> {selectedDie.frags || "1"}
+                </span>
+              </div>
             </div>
           </div>
           

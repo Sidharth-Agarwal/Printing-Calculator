@@ -190,7 +190,10 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       jobType: estimate.jobDetails?.jobType,
       quantity: estimate.jobDetails?.quantity,
       paperName: estimate.jobDetails?.paperName,
-      dieCode: estimate.dieDetails?.dieCode
+      dieCode: estimate.dieDetails?.dieCode,
+      // ADD: Log markup information
+      markupType: estimate.calculations?.markupType,
+      markupPercentage: estimate.calculations?.markupPercentage
     });
     
     // Ensure arrays are properly set up
@@ -223,6 +226,8 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         productSize: estimate.dieDetails?.productSize || { length: "", breadth: "" },
         image: estimate.dieDetails?.image || "",
         hsnCode: estimate.jobDetails?.hsnCode || "", // Include HSN code
+        frags: estimate.dieDetails?.frags || "",        // ← Already exists
+        type: estimate.dieDetails?.type || ""           // ← ADD THIS LINE
       },
       lpDetails: {
         isLPUsed: estimate.lpDetails?.isLPUsed || false,
@@ -319,7 +324,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           isFSUsed: estimate.sandwich?.fsDetailsSandwich?.isFSUsed || false,
           fsType: estimate.sandwich?.fsDetailsSandwich?.fsType || "",
           foilDetails: Array.isArray(estimate.sandwich?.fsDetailsSandwich?.foilDetails) ?
-                       estimate.sandwich.fsDetailsSandwich.foilDetails : [],
+                      estimate.sandwich.fsDetailsSandwich.foilDetails : [],
         },
         embDetailsSandwich: {
           isEMBUsed: estimate.sandwich?.embDetailsSandwich?.isEMBUsed || false,
@@ -330,7 +335,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           embMR: estimate.sandwich?.embDetailsSandwich?.embMR || "",
         },
       },
-      // Preserve the original calculations to use with updated markup
+      // CRITICAL FIX: Preserve the original calculations INCLUDING markup information
       calculations: estimate.calculations || {},
     };
   };

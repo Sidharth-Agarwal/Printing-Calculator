@@ -1,5 +1,6 @@
-import { fetchStandardRate, fetchMarginByJobType } from "../../../../../../utils/dbFetchUtils";
+import { fetchStandardRate } from "../../../../../../utils/dbFetchUtils";
 import { fetchMaterialDetails } from "../../../../../../utils/fetchDataUtils";
+import { getMarginsByJobType } from "../../../../../../utils/marginUtils";
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
 
@@ -37,6 +38,10 @@ export const calculateFoldAndPasteCosts = async (state) => {
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
+    console.log("JOB TYPE being used : ", jobType)
+    const fragsPerDie = orderAndPaper.frags || 1;
+    const normalizedJobType = (jobType || "").toLowerCase();
+    console.log("JOB TYPE being used : ", normalizedJobType)
 
     // Check if fold and paste is used
     if (!foldAndPaste || !foldAndPaste.isFoldAndPasteUsed) {
@@ -67,29 +72,45 @@ export const calculateFoldAndPasteCosts = async (state) => {
         foldAndPasteOperationCostPerCard: "0.00"
       };
     }
-    
-    // Get the frags value or default to 1 if not found
-    const fragsPerDie = dieDetails.frags ? parseInt(dieDetails.frags) || 1 : 1;
-    console.log("Frags per die:", fragsPerDie);
 
-    // 2. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2;
-    console.log("MARGIN : ",margin)
+    // 2. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
 
     // 3. Calculate plate area for DST material
     let plateArea = 0;
     
     // First check if product size is available
-    if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+    if (normalizedJobType === "envelope") {
       const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
       const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-      plateArea = (productLengthCm + margin) * (productBreadthCm + margin);
-    } else if (orderAndPaper.dieSize && orderAndPaper.dieSize.length && orderAndPaper.dieSize.breadth) {
-      // Fall back to die dimensions if product size is not available
+      console.log("Product length : ", productLengthCm)
+      console.log("Product length : ", productBreadthCm)
+      plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+    }
+    else if (normalizedJobType === "packaging") {
       const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
       const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-      plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+      console.log("Die length : ", dieLengthCm)
+      console.log("Die length : ", dieBreadthCm)
+      plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+    }
+    else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+      if(fragsPerDie >= 2) {
+        const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+        const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+        console.log("Die length : ", dieLengthCm)
+        console.log("Die length : ", dieBreadthCm)
+        plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+      } else {
+        const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+        const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+        console.log("Product length : ", productLengthCm)
+        console.log("Product length : ", productBreadthCm)
+        plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+      }
     } else {
       return {
         error: "Missing dimensions for DST material area calculation",
@@ -132,21 +153,23 @@ export const calculateFoldAndPasteCosts = async (state) => {
     
     // 8. Calculate total fold and paste cost per card
     // Now using the formula: (totalMaterialCost + operationCostPerCard) * fragsPerDie
-    const totalMaterialCostPerCard = totalMaterialCost;
-    const totalFoldAndPasteBaseCost = totalMaterialCostPerCard + operationCostPerCard;
-    const totalFoldAndPasteCostPerCard = (totalFoldAndPasteBaseCost / fragsPerDie);
+    const totalMaterialCostPerCard = totalMaterialCost / fragsPerDie;
+    const operationCost = operationCostPerCard / fragsPerDie
+    // const totalFoldAndPasteBaseCost = totalMaterialCostPerCard + operationCost;
+    const totalFoldAndPasteCostPerCard = (totalMaterialCostPerCard + operationCost);
     
     return {
       foldAndPasteCostPerCard: totalFoldAndPasteCostPerCard.toFixed(2),
       dstMaterialCostPerCard: totalMaterialCostPerCard.toFixed(2),
-      foldAndPasteOperationCostPerCard: operationCostPerCard.toFixed(2),
+      foldAndPasteOperationCostPerCard: operationCost.toFixed(2),
       // Additional info for debugging
       fragsPerDie: fragsPerDie,
       plateArea: plateArea.toFixed(2),
       dstMaterial: foldAndPaste.dstMaterial,
       dstType: foldAndPaste.dstType,
       materialCostPerUnit: materialCostPerUnit.toFixed(2),
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating fold and paste costs:", error);

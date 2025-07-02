@@ -13,6 +13,7 @@ import CRMActionButton from '../Shared/CRMActionButton';
  * @param {function} props.formatDate - Function to format dates
  * @param {Object} props.lead - Lead object
  * @param {function} props.onUpdate - Optional callback when a discussion is updated
+ * @param {boolean} props.readOnly - Whether the component is read-only (e.g., for converted leads)
  */
 const DiscussionHistory = ({ 
   discussions = [], 
@@ -31,13 +32,15 @@ const DiscussionHistory = ({
     });
   },
   lead = null,
-  onUpdate = null
+  onUpdate = null,
+  readOnly = false
 }) => {
   console.log("DiscussionHistory received:", { 
     discussions, 
     loading, 
     discussionsLength: discussions?.length,
-    leadId: lead?.id
+    leadId: lead?.id,
+    readOnly
   });
 
   const [editingDiscussion, setEditingDiscussion] = useState(null);
@@ -67,6 +70,8 @@ const DiscussionHistory = ({
 
   // Handle edit button click
   const handleEditClick = (discussion) => {
+    if (readOnly) return;
+    
     setEditingDiscussion(discussion);
     setEditFormData({
       summary: discussion.summary || '',
@@ -77,6 +82,8 @@ const DiscussionHistory = ({
 
   // Handle delete button click
   const handleDeleteClick = (discussion) => {
+    if (readOnly) return;
+    
     setDiscussionToDelete(discussion);
     setIsDeleteModalOpen(true);
   };
@@ -119,9 +126,10 @@ const DiscussionHistory = ({
     }
   };
 
-  // Handle delete confirmation
+  // Handle delete confirmation - UPDATED to properly trigger lead refresh
   const handleConfirmDelete = async () => {
     try {
+      // Use the enhanced deleteDiscussion function that updates lead's last contact
       await deleteDiscussion(discussionToDelete.id);
       
       showNotification('Discussion deleted successfully');
@@ -130,7 +138,7 @@ const DiscussionHistory = ({
       setIsDeleteModalOpen(false);
       setDiscussionToDelete(null);
       
-      // Call update callback if provided
+      // IMPORTANT: Call update callback to refresh both discussions AND lead data
       if (onUpdate) {
         onUpdate();
       }
@@ -159,7 +167,10 @@ const DiscussionHistory = ({
         </div>
         <p className="text-gray-500">No discussion history found.</p>
         <p className="text-sm text-gray-400 mt-1">
-          Add your first discussion to start tracking your communication with this lead.
+          {readOnly 
+            ? "There are no recorded discussions for this contact." 
+            : "Add your first discussion to start tracking your communication with this lead."
+          }
         </p>
       </div>
     );
@@ -192,6 +203,7 @@ const DiscussionHistory = ({
           formatDate={formatDate}
           onEdit={() => handleEditClick(discussion)}
           onDelete={() => handleDeleteClick(discussion)}
+          readOnly={readOnly}
         />
       ))}
 
@@ -295,8 +307,9 @@ const DiscussionHistory = ({
  * @param {function} props.formatDate - Function to format dates
  * @param {function} props.onEdit - Edit handler
  * @param {function} props.onDelete - Delete handler
+ * @param {boolean} props.readOnly - Whether the component is read-only
  */
-const DiscussionItem = ({ discussion, formatDate, onEdit, onDelete }) => {
+const DiscussionItem = ({ discussion, formatDate, onEdit, onDelete, readOnly = false }) => {
   const [userData, setUserData] = useState(null);
   const [loading, setLoading] = useState(true);
 
@@ -416,27 +429,29 @@ const DiscussionItem = ({ discussion, formatDate, onEdit, onDelete }) => {
             {formatDate(discussion.date)}
           </span>
           
-          {/* Action buttons */}
-          <div className="flex space-x-1">
-            <button 
-              onClick={onEdit}
-              className="p-1 text-blue-600 hover:bg-blue-50 rounded"
-              title="Edit discussion"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-              </svg>
-            </button>
-            <button 
-              onClick={onDelete}
-              className="p-1 text-red-600 hover:bg-red-50 rounded"
-              title="Delete discussion"
-            >
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
+          {/* Action buttons - Only show if not read-only */}
+          {!readOnly && (
+            <div className="flex space-x-1">
+              <button 
+                onClick={onEdit}
+                className="p-1 text-blue-600 hover:bg-blue-50 rounded"
+                title="Edit discussion"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+              </button>
+              <button 
+                onClick={onDelete}
+                className="p-1 text-red-600 hover:bg-red-50 rounded"
+                title="Delete discussion"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
+            </div>
+          )}
         </div>
       </div>
       

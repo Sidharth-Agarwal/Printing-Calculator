@@ -1,5 +1,6 @@
 import { fetchPaperDetails } from '../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchMarginByJobType } from '../../../../../utils/dbFetchUtils';
+import { fetchStandardRate } from '../../../../../utils/dbFetchUtils';
+import { getMarginsByJobType } from '../../../../../utils/marginUtils';
 import { db } from '../../../../../firebaseConfig';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 
@@ -55,11 +56,35 @@ const calculateMaxCardsPerSheet = (dieSize, paperSize) => {
  */
 export const calculatePaperAndCuttingCosts = async (state) => {
   try {
-    const { orderAndPaper, notebookDetails } = state;
+    const { orderAndPaper, notebookDetails, digiDetails } = state;
     const paperName = orderAndPaper.paperName;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType;
+    
+    // ⭐ NEW: Check if digital printing is being used
+    const isDigitalPrintingUsed = digiDetails?.isDigiUsed || false;
+    
+    // ⭐ NEW: If digital printing is used, skip paper calculations
+    // as they are handled in the digital calculator
+    if (isDigitalPrintingUsed) {
+      console.log("Digital printing is enabled - skipping paper calculations (handled in digital calculator)");
+      return { 
+        paperCostPerCard: "0.00",
+        gilCutCostPerCard: "0.00",
+        paperAndCuttingCostPerCard: "0.00",
+        // Additional info for debugging
+        maxCardsPerSheet: 0,
+        totalSheetsRequired: 0,
+        totalFragsPerSheet: 0,
+        paperRate: "0.00",
+        gilCutRate: "0.00",
+        fragsPerDie: orderAndPaper.frags || 1,
+        lengthMargin: "0.00",
+        breadthMargin: "0.00",
+        note: "Paper costs calculated in digital printing calculator"
+      };
+    }
     
     // Check if we're dealing with a notebook job type
     const isNotebookJob = jobType === "Notebook" && notebookDetails?.isNotebookUsed;
@@ -91,10 +116,11 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     const gilCutRate = await fetchStandardRate('GIL CUT', 'PER SHEET');
     const gilCutCostPerSheet = gilCutRate ? parseFloat(gilCutRate.finalRate) : 0.25; // Default if not found
 
-    // 3. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType || "CARD");
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 3. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType || "CARD");
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
 
     // 4. Get dimensions based on job type
     let dieSize = {};
@@ -102,16 +128,18 @@ export const calculatePaperAndCuttingCosts = async (state) => {
     if (isNotebookJob) {
       // For notebooks, use the calculated dimensions from notebook details
       dieSize = {
-        length: (parseFloat(notebookDetails.calculatedLength) * 2.54) + margin,
-        breadth: (parseFloat(notebookDetails.calculatedBreadth) * 2.54) + margin,
+        length: (parseFloat(notebookDetails.calculatedLength) * 2.54) + lengthMargin,
+        breadth: (parseFloat(notebookDetails.calculatedBreadth) * 2.54) + breadthMargin,
       };
     } else {
       // For regular jobs, use the die dimensions
       dieSize = {
-        length: (parseFloat(orderAndPaper.dieSize.length) * 2.54) + margin,
-        breadth: (parseFloat(orderAndPaper.dieSize.breadth) * 2.54) + margin,
+        length: (parseFloat(orderAndPaper.dieSize.length) * 2.54) + lengthMargin,
+        breadth: (parseFloat(orderAndPaper.dieSize.breadth) * 2.54) + breadthMargin,
       };
     }
+
+    console.log("Die size using : ", dieSize);
 
     // 5. Get paper dimensions (already in cm)
     const paperSize = {
@@ -121,20 +149,9 @@ export const calculatePaperAndCuttingCosts = async (state) => {
 
     // 6. Calculate maximum cards per sheet
     const maxCardsPerSheet = calculateMaxCardsPerSheet(dieSize, paperSize);
-    
-    // 7. Determine frags per die
-    let fragsPerDie = 1; // Default to 1
-    
-    if (isNotebookJob) {
-      // For notebooks, hardcode fragsPerDie to 1
-      fragsPerDie = 1;
-    } else if (dieCode) {
-      // For other job types, fetch die details to get frags
-      const dieDetails = await fetchDieDetails(dieCode);
-      if (dieDetails && dieDetails.frags) {
-        fragsPerDie = parseInt(dieDetails.frags) || 1;
-      }
-    }
+    console.log("Children per sheet : ", maxCardsPerSheet);
+
+    const fragsPerDie = orderAndPaper.frags || 1;
 
     // Calculate total frags per sheet
     const totalFragsPerSheet = maxCardsPerSheet * fragsPerDie;
@@ -144,11 +161,14 @@ export const calculatePaperAndCuttingCosts = async (state) => {
 
     // 9. Calculate costs
     const paperCost = totalSheetsRequired * parseFloat(paperDetails.finalRate);
-    const gilCutCost = gilCutCostPerSheet * totalSheetsRequired;
+    const gilCutCost = gilCutCostPerSheet / fragsPerDie;
+
+    const paperCostPerCard1 = parseFloat(paperDetails.finalRate) / totalFragsPerSheet;
     
     // 10. Calculate per card costs
-    const paperCostPerCard = paperCost / totalCards;
-    const gilCutCostPerCard = gilCutCost / totalCards;
+    // const paperCostPerCard = paperCost / totalCards;
+    const paperCostPerCard = parseFloat(paperDetails.finalRate) / totalFragsPerSheet;
+    const gilCutCostPerCard = gilCutCost;
     const paperAndCuttingCostPerCard = paperCostPerCard + gilCutCostPerCard;
 
     // 11. Return the final calculations
@@ -163,7 +183,8 @@ export const calculatePaperAndCuttingCosts = async (state) => {
       paperRate: parseFloat(paperDetails.finalRate).toFixed(2),
       gilCutRate: gilCutCostPerSheet.toFixed(2),
       fragsPerDie,
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating paper and cutting costs:", error);

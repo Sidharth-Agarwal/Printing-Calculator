@@ -39,13 +39,8 @@ const ReviewAndSubmit = ({
   const { userRole } = useAuth(); 
   const isB2BClient = userRole === "b2b";
 
-  // Fetch markup rates directly from Firestore overheads collection
+  // FIXED: Fetch markup rates with proper priority handling
   useEffect(() => {
-    // Skip if we already have markup rates and have applied B2B markup (for B2B clients)
-    if (markupRates.length > 0 && isB2BClient && hasAppliedB2BMarkup) {
-      return;
-    }
-
     const fetchMarkupRates = async () => {
       setIsLoadingMarkups(true);
       try {
@@ -70,51 +65,38 @@ const ReviewAndSubmit = ({
         if (fetchedMarkups.length > 0) {
           setMarkupRates(fetchedMarkups);
           
-          // If B2B client and we haven't applied markup yet, select MARKUP B2B MERCH automatically
+          // PRIORITY 1: If we already have calculations with markup info, use that (for edit mode)
+          if (calculations?.markupType && calculations?.markupPercentage && !markupInitializedRef.current) {
+            console.log("Initializing markup from existing calculations:", calculations.markupType);
+            setSelectedMarkupType(calculations.markupType);
+            setMarkupPercentage(parseFloat(calculations.markupPercentage));
+            markupInitializedRef.current = true;
+            return; // Exit early, don't override with defaults
+          }
+          
+          // PRIORITY 2: If B2B client and we haven't applied markup yet, select MARKUP B2B MERCH automatically
           if (isB2BClient && !hasAppliedB2BMarkup) {
             const b2bMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP B2B MERCH");
             if (b2bMarkup) {
               setSelectedMarkupType(b2bMarkup.name);
               setMarkupPercentage(b2bMarkup.percentage);
-              
-              // Set flag to prevent reapplying
               setHasAppliedB2BMarkup(true);
               
-              // Notify parent component of markup change
-              if (onMarkupChange) {
-                onMarkupChange(b2bMarkup.name, b2bMarkup.percentage);
+              // Only notify parent if we don't already have calculations with this markup
+              if (!calculations?.markupType || calculations.markupType !== b2bMarkup.name) {
+                if (onMarkupChange) {
+                  onMarkupChange(b2bMarkup.name, b2bMarkup.percentage);
+                }
               }
-            } else {
-              // Fallback to default if B2B MERCH not found
-              const defaultMarkup = fetchedMarkups[0];
-              setSelectedMarkupType(defaultMarkup.name);
-              setMarkupPercentage(defaultMarkup.percentage);
-              console.warn("MARKUP B2B MERCH not found, using default markup");
             }
-          } else if (!isB2BClient && !markupInitializedRef.current) {
-            // For admin/staff users, check if calculations already have a markup type
-            if (calculations?.markupType) {
-              // Find the matching markup in our fetched rates
-              const matchingMarkup = fetchedMarkups.find(rate => rate.name === calculations.markupType);
-              if (matchingMarkup) {
-                setSelectedMarkupType(matchingMarkup.name);
-                setMarkupPercentage(parseFloat(calculations.markupPercentage) || matchingMarkup.percentage);
-              } else {
-                // Use MARKUP TIMELESS or first available as fallback
-                const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
-                setSelectedMarkupType(timelessMarkup.name);
-                setMarkupPercentage(timelessMarkup.percentage);
-              }
-            } else {
-              // No markup in calculations yet, use MARKUP TIMELESS or first available
-              const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
-              setSelectedMarkupType(timelessMarkup.name);
-              setMarkupPercentage(timelessMarkup.percentage);
-            }
+          } 
+          // PRIORITY 3: For admin/staff users, only set default if not initialized
+          else if (!isB2BClient && !markupInitializedRef.current) {
+            const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
+            setSelectedMarkupType(timelessMarkup.name);
+            setMarkupPercentage(timelessMarkup.percentage);
             markupInitializedRef.current = true;
           }
-          
-          console.log("Fetched markup rates, selected type:", selectedMarkupType);
         }
       } catch (error) {
         console.error("Error fetching markup rates from Firestore:", error);
@@ -124,9 +106,9 @@ const ReviewAndSubmit = ({
     };
     
     fetchMarkupRates();
-  }, [isB2BClient, hasAppliedB2BMarkup, markupRates.length, onMarkupChange, calculations]);
+  }, [isB2BClient, hasAppliedB2BMarkup, onMarkupChange]); // Removed calculations and markupRates.length from dependencies
 
-  // Initialize and update calculations
+  // FIXED: Handle calculations updates with edit mode preservation
   useEffect(() => {
     // Skip if calculations haven't changed (prevent loop)
     if (calculationsRef.current === calculations) {
@@ -137,23 +119,30 @@ const ReviewAndSubmit = ({
     calculationsRef.current = calculations;
     
     if (calculations && !calculations.error) {
+      // For edit mode, preserve any local changes we made
+      if (isEditMode && localCalculations && 
+          localCalculations.markupType && 
+          localCalculations.markupPercentage &&
+          (localCalculations.markupType !== calculations.markupType || 
+           localCalculations.markupPercentage !== calculations.markupPercentage)) {
+        
+        console.log("Preserving local markup changes in edit mode");
+        // Don't override local calculations if we have local markup changes
+        return;
+      }
+      
       // Update local calculations with the provided ones
       setLocalCalculations(calculations);
       
-      // For non-B2B users, always update the markup type from calculations
-      if (!isB2BClient && calculations.markupType) {
-        console.log("Updating markup type from calculations:", calculations.markupType);
+      // ONLY update markup state if we have markup info in calculations AND haven't initialized yet
+      if (calculations.markupType && calculations.markupPercentage && !markupInitializedRef.current) {
+        console.log("Setting markup from calculations (late initialization):", calculations.markupType);
         setSelectedMarkupType(calculations.markupType);
-        
-        if (calculations.markupPercentage) {
-          const percentage = parseFloat(calculations.markupPercentage);
-          if (!isNaN(percentage)) {
-            setMarkupPercentage(percentage);
-          }
-        }
+        setMarkupPercentage(parseFloat(calculations.markupPercentage));
+        markupInitializedRef.current = true;
       }
     }
-  }, [calculations, isB2BClient]);
+  }, [calculations, isEditMode, localCalculations]);
 
   // Toggle section expansion
   const toggleSection = (section) => {
@@ -163,28 +152,97 @@ const ReviewAndSubmit = ({
     }));
   };
 
-  // Markup selection handler
+  // FIXED: Markup selection handler with direct calculation for edit mode
   const handleMarkupSelection = (e) => {
+    console.log("=== MARKUP SELECTION DEBUG ===");
+    console.log("isB2BClient:", isB2BClient);
+    console.log("isEditMode:", isEditMode);
+    console.log("selectedValue:", e.target.value);
+    console.log("localCalculations:", localCalculations);
+    console.log("state.orderAndPaper.quantity:", state.orderAndPaper?.quantity);
+    
     // If user is B2B client, don't allow changing markup
-    if (isB2BClient) return;
+    if (isB2BClient) {
+      console.log("B2B client - blocking markup change");
+      return;
+    }
     
     const selectedValue = e.target.value;
     
     // Find the selected markup in our rates
     const selectedRate = markupRates.find(rate => rate.name === selectedValue);
+    console.log("selectedRate:", selectedRate);
     
     if (selectedRate) {
-      console.log("Markup selection changed to:", selectedValue);
+      console.log("Found rate - updating markup to:", selectedRate.percentage + "%");
       
       // Update local state
       setSelectedMarkupType(selectedValue);
       setMarkupPercentage(selectedRate.percentage);
       
-      // Call the callback to update calculations in parent component
+      // Check if we're in edit mode with valid calculations
+      const hasValidCalculations = localCalculations && !localCalculations.error;
+      console.log("hasValidCalculations:", hasValidCalculations);
+      
+      if (isEditMode && hasValidCalculations) {
+        console.log("=== EDIT MODE CALCULATION ===");
+        
+        // Get values for calculation
+        const currentSubtotal = parseFloat(localCalculations.subtotalPerCard || localCalculations.costWithMisc || 0);
+        const newMarkupPercentage = selectedRate.percentage;
+        const quantity = parseInt(state.orderAndPaper?.quantity || 1);
+        const currentGstRate = parseFloat(localCalculations.gstRate || 18);
+        
+        console.log("Calculation inputs:", {
+          currentSubtotal,
+          newMarkupPercentage,
+          quantity,
+          currentGstRate
+        });
+        
+        // Calculate new values
+        const newMarkupAmount = currentSubtotal * (newMarkupPercentage / 100);
+        const newTotalCostPerCard = currentSubtotal + newMarkupAmount;
+        const newTotalCost = newTotalCostPerCard * quantity;
+        const newGstAmount = newTotalCost * (currentGstRate / 100);
+        const newTotalWithGST = newTotalCost + newGstAmount;
+        
+        console.log("Calculated values:", {
+          newMarkupAmount: newMarkupAmount.toFixed(2),
+          newTotalCostPerCard: newTotalCostPerCard.toFixed(2),
+          newTotalCost: newTotalCost.toFixed(2),
+          newGstAmount: newGstAmount.toFixed(2),
+          newTotalWithGST: newTotalWithGST.toFixed(2)
+        });
+        
+        // Update local calculations
+        const updatedLocalCalculations = {
+          ...localCalculations,
+          markupType: selectedValue,
+          markupPercentage: newMarkupPercentage,
+          markupAmount: newMarkupAmount.toFixed(2),
+          totalCostPerCard: newTotalCostPerCard.toFixed(2),
+          totalCost: newTotalCost.toFixed(2),
+          gstAmount: newGstAmount.toFixed(2),
+          totalWithGST: newTotalWithGST.toFixed(2)
+        };
+        
+        console.log("Setting updated local calculations:", updatedLocalCalculations);
+        setLocalCalculations(updatedLocalCalculations);
+        
+        console.log("=== END EDIT MODE CALCULATION ===");
+      }
+      
+      // Call parent callback
       if (onMarkupChange) {
+        console.log("Calling parent onMarkupChange");
         onMarkupChange(selectedValue, selectedRate.percentage);
       }
+    } else {
+      console.log("No rate found for selected value");
     }
+    
+    console.log("=== END MARKUP SELECTION DEBUG ===");
   };
 
   // Section header component
@@ -275,6 +333,9 @@ const ReviewAndSubmit = ({
         {localCalculations.notebookBindingCostPerCard && (
           <CostItem label="Notebook Binding Cost" value={localCalculations.notebookBindingCostPerCard} isSubItem />
         )}
+        {localCalculations.notebookGilCutCostPerCard && (
+          <CostItem label="Notebook GIL Cut Cost" value={localCalculations.notebookGilCutCostPerCard} isSubItem />
+        )}
         {/* Additional notebook information */}
         {localCalculations.possibleNumberOfForma && (
           <div className="pl-6 text-sm text-gray-600">
@@ -326,7 +387,7 @@ const ReviewAndSubmit = ({
           {/* Notebook Section */}
           {hasNotebook && localCalculations.notebookCostPerCard && renderNotebookSection()}
           
-          {/* LP Section */}
+          {/* LP Section - UPDATED with Impression Cost */}
           {hasLP && localCalculations.lpCostPerCard && (
           <div className="space-y-1 border-b pb-2 mb-2">
             <CostItem label="Letter Press (LP)" value={localCalculations.lpCostPerCard} isTotal />
@@ -345,10 +406,8 @@ const ReviewAndSubmit = ({
             {localCalculations.lpInkCostPerCard && (
               <CostItem label="LP Ink Cost" value={localCalculations.lpInkCostPerCard} isSubItem />
             )}
-            {/* Add DST Material Cost */}
-            {localCalculations.lpDstMaterialCostPerCard && 
-             parseFloat(localCalculations.lpDstMaterialCostPerCard) > 0 && (
-              <CostItem label="LP DST Material Cost" value={localCalculations.lpDstMaterialCostPerCard} isSubItem />
+            {localCalculations.lpImpressionCostPerCard && (
+              <CostItem label="LP Impression Cost" value={localCalculations.lpImpressionCostPerCard} isSubItem />
             )}
           </div>
         )}
@@ -385,11 +444,11 @@ const ReviewAndSubmit = ({
               {localCalculations.embMRCostPerCard && (
                 <CostItem label="EMB MR Cost" value={localCalculations.embMRCostPerCard} isSubItem />
               )}
-              {localCalculations.embPositiveFilmCostPerCard && (
-                <CostItem label="EMB Positive Film" value={localCalculations.embPositiveFilmCostPerCard} isSubItem />
-              )}
               {localCalculations.embMkgPlateCostPerCard && (
                 <CostItem label="EMB Making Plate" value={localCalculations.embMkgPlateCostPerCard} isSubItem />
+              )}
+              {localCalculations.embPositiveFilmCostPerCard && (
+                <CostItem label="EMB Positive Film" value={localCalculations.embPositiveFilmCostPerCard} isSubItem />
               )}
               {localCalculations.embImpressionCostPerCard && (
                 <CostItem label="EMB Impression" value={localCalculations.embImpressionCostPerCard} isSubItem />
@@ -618,11 +677,9 @@ const ReviewAndSubmit = ({
               {localCalculations.sandwichPaperCostPerCard && (
                 <CostItem label="Sandwich Paper Cost" value={localCalculations.sandwichPaperCostPerCard} isSubItem />
               )}
-              {/* Display the paper name if available */}
-              {state.sandwich?.paperInfo?.paperName && (
-                <div className="pl-6 text-sm text-gray-600">
-                  Paper: {state.sandwich.paperInfo.paperName}
-                </div>
+              {/* Add GIL Cut cost for sandwich */}
+              {localCalculations.sandwichGilCutCostPerCard && (
+                <CostItem label="Sandwich Gil Cut Cost" value={localCalculations.sandwichGilCutCostPerCard} isSubItem />
               )}
               {/* Sandwich-specific LP */}
               {localCalculations.lpCostPerCardSandwich && (
@@ -755,11 +812,6 @@ const ReviewAndSubmit = ({
                   </span>
                 </div>
               </div>
-              
-              {/* Hidden markup info - display read-only for transparency */}
-              {/* <div className="mt-4 pt-3 border-t border-blue-200 text-sm text-gray-600">
-                <p>Using B2B Merchant pricing ({markupPercentage}% markup)</p>
-              </div> */}
             </div>
           ) : (
             <>

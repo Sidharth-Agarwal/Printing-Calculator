@@ -1,17 +1,56 @@
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot } from "firebase/firestore";
+import { collection, onSnapshot, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import useMRTypes from "../../../../hooks/useMRTypes";
 import useMaterialTypes from "../../../../hooks/useMaterialTypes";
 import SearchablePaperDropdown from "../Fixed/SearchablePaperDropdown";
 
+// Custom hook to fetch DST Materials from Firestore
+const useDSTMaterials = () => {
+  const [dstMaterials, setDSTMaterials] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchDSTMaterials = async () => {
+      try {
+        // Query to fetch DST materials from materials collection
+        const materialsCollection = collection(db, "materials");
+        const dstMaterialsQuery = query(
+          materialsCollection, 
+          where("materialType", "==", "DST Type")
+        );
+        
+        const querySnapshot = await getDocs(dstMaterialsQuery);
+        
+        const materials = querySnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        }));
+        
+        setDSTMaterials(materials);
+        setLoading(false);
+      } catch (err) {
+        console.error("Error fetching DST materials:", err);
+        setError(err);
+        setLoading(false);
+      }
+    };
+
+    fetchDSTMaterials();
+  }, []);
+
+  return { dstMaterials, loading, error };
+};
+
 const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const dieSize = state.orderAndPaper?.dieSize || { length: "", breadth: "" };
-  
   const { 
     isSandwichComponentUsed = false,
     paperInfo = {
       paperName: "",
+      paperGsm: "",
+      paperCompany: ""
     },
     lpDetailsSandwich = { 
       isLPUsed: false, 
@@ -28,7 +67,8 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
       plateSizeType: "", 
       plateDimensions: { length: "", breadth: "", lengthInInches: "", breadthInInches: "" },
       embMR: "",
-      embMRConcatenated: ""
+      embMRConcatenated: "",
+      dstMaterial: ""
     }
   } = state.sandwich || {};
   
@@ -44,6 +84,9 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   const { materials: blockTypes, loading: blockTypesLoading } = useMaterialTypes("Block Type");
   
   const { mrTypes: embMRTypes, loading: embMRTypesLoading } = useMRTypes("EMB MR");
+  
+  // Add DST materials hook
+  const { dstMaterials, loading: dstMaterialsLoading, error: dstMaterialsError } = useDSTMaterials();
 
   // Fetch papers from Firestore
   useEffect(() => {
@@ -60,7 +103,9 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           type: "UPDATE_SANDWICH",
           payload: {
             paperInfo: {
-              paperName: paperData[0].paperName
+              paperName: paperData[0].paperName,
+              paperGsm: paperData[0].gsm,
+              paperCompany: paperData[0].company
             }
           }
         });
@@ -209,10 +254,19 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   }, [fsDetailsSandwich.isFSUsed, blockTypes, fsDetailsSandwich.foilDetails, dispatch]);
 
-  // Set default MR Types for EMB when component mounts or when EMB is first enabled
+  // Set default MR Types and DST Material for EMB when component mounts or when EMB is first enabled
   useEffect(() => {
-    if (embDetailsSandwich.isEMBUsed && embMRTypes.length > 0) {
+    if (embDetailsSandwich.isEMBUsed && embMRTypes.length > 0 && dstMaterials.length > 0) {
       const defaultMRType = embMRTypes[0];
+      
+      // Look for "DST PP PLATE" first, fallback to first material
+      const preferredDstMaterial = dstMaterials.find(material => 
+        material.materialName === "DST PP PLATE"
+      );
+      const defaultDstMaterial = preferredDstMaterial ? 
+        preferredDstMaterial.materialName : 
+        (dstMaterials[0]?.materialName || "");
+      
       const updatePayload = {};
 
       if (!embDetailsSandwich.embMR) {
@@ -221,6 +275,18 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
 
       if (!embDetailsSandwich.embMRConcatenated) {
         updatePayload.embMRConcatenated = defaultMRType.concatenated || `EMB MR ${defaultMRType.type}`;
+      }
+
+      // Set dstMaterial if it's empty (prioritize DST PP PLATE)
+      if (!embDetailsSandwich.dstMaterial) {
+        updatePayload.dstMaterial = defaultDstMaterial;
+        
+        // Log for debugging
+        if (preferredDstMaterial) {
+          console.log("Sandwich EMB: Selected preferred DST material:", defaultDstMaterial);
+        } else {
+          console.log("Sandwich EMB: DST PP PLATE not found, using fallback:", defaultDstMaterial);
+        }
       }
 
       if (Object.keys(updatePayload).length > 0) {
@@ -235,7 +301,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         });
       }
     }
-  }, [embDetailsSandwich.isEMBUsed, embMRTypes, embDetailsSandwich, dispatch]);
+  }, [embDetailsSandwich.isEMBUsed, embMRTypes, dstMaterials, embDetailsSandwich, dispatch]);
 
   // Update dimensions when die size changes (for Auto mode)
   useEffect(() => {
@@ -399,7 +465,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
       });
     }
 
-    // Validate EMB if used - removing plate type validation
+    // Validate EMB if used - Updated to include DST material validation
     if (embDetailsSandwich.isEMBUsed) {
       if (!embDetailsSandwich.plateSizeType) {
         newErrors.embPlateSizeType = "Plate size type is required.";
@@ -415,6 +481,9 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
       if (!embDetailsSandwich.embMR) {
         newErrors.embMR = "EMB MR type is required.";
       }
+      if (!embDetailsSandwich.dstMaterial) {
+        newErrors.embDstMaterial = "DST Material is required.";
+      }
     }
 
     setErrors(newErrors);
@@ -428,8 +497,63 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   };
 
-  // Handle paper selection from SearchablePaperDropdown
+  // FIXED: Handle paper selection from SearchablePaperDropdown
   const handlePaperChange = (e) => {
+    console.log("Sandwich paper change event:", e);
+    
+    // Handle complete paper selection data from SearchablePaperDropdown
+    if (e.target.name === "paperSelection") {
+      console.log("Complete paper selection changed in Sandwich:", e.target.value);
+      
+      dispatch({
+        type: "UPDATE_SANDWICH",
+        payload: {
+          paperInfo: {
+            paperName: e.target.value.paperName,
+            paperGsm: e.target.value.paperGsm,
+            paperCompany: e.target.value.paperCompany
+          }
+        }
+      });
+      return;
+    }
+    
+    // Handle legacy paperName only updates (fallback)
+    if (e.target.name === "paperName") {
+      console.log("Paper name only changed in Sandwich:", e.target.value);
+      
+      // Find the complete paper data
+      const selectedPaperObj = papers.find(paper => paper.paperName === e.target.value);
+      
+      if (selectedPaperObj) {
+        console.log("Found complete paper data for Sandwich:", e.target.value, selectedPaperObj);
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            paperInfo: {
+              paperName: selectedPaperObj.paperName,
+              paperGsm: selectedPaperObj.gsm,
+              paperCompany: selectedPaperObj.company
+            }
+          }
+        });
+      } else {
+        // Fallback if paper not found
+        console.warn("Paper not found in papers list for Sandwich:", e.target.value);
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            paperInfo: {
+              ...paperInfo,
+              paperName: e.target.value
+            }
+          }
+        });
+      }
+      return;
+    }
+    
+    // Default case - direct paper name update
     dispatch({
       type: "UPDATE_SANDWICH",
       payload: {
@@ -681,7 +805,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     });
   };
 
-  // Handle EMB Sandwich change
+  // Handle EMB Sandwich change - Updated to handle DST material
   const handleEMBSandwichChange = (e) => {
     const { name, value } = e.target;
     
@@ -735,6 +859,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         }
       });
     } else {
+      // Handle other fields including DST material
       dispatch({
         type: "UPDATE_SANDWICH",
         payload: {
@@ -850,12 +975,20 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     });
   };
 
-  // Toggle EMB Usage in Sandwich
+  // Toggle EMB Usage in Sandwich - Updated to include DST material
   const toggleEMBUsageInSandwich = () => {
     const isCurrentlyUsed = embDetailsSandwich.isEMBUsed;
     
     const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
     const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+    
+    // Get default DST material
+    const preferredDstMaterial = dstMaterials.find(material => 
+      material.materialName === "DST PP PLATE"
+    );
+    const defaultDstMaterial = preferredDstMaterial ? 
+      preferredDstMaterial.materialName : 
+      (dstMaterials[0]?.materialName || "");
     
     dispatch({
       type: "UPDATE_SANDWICH",
@@ -874,7 +1007,8 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             embMR: embMRTypes.length > 0 ? embMRTypes[0].type : "SIMPLE",
             embMRConcatenated: embMRTypes.length > 0 ? 
               embMRTypes[0].concatenated || `EMB MR ${embMRTypes[0].type}` : 
-              "EMB MR SIMPLE"
+              "EMB MR SIMPLE",
+            dstMaterial: defaultDstMaterial // Add default DST material
           })
         }
       }
@@ -888,15 +1022,17 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Paper Selection Section */}
+      {/* Paper Selection Section - FIXED */}
       <div className="border-b pb-4 mb-4">
         <h3 className="text-md font-semibold mb-3">Sandwich Paper Selection</h3>
         <div>
           <label className="block mb-1 text-sm">Paper Name:</label>
           <SearchablePaperDropdown 
             papers={papers}
-            selectedPaper={paperInfo.paperName || (papers.length > 0 ? papers[0].paperName : "")}
+            selectedPaper={paperInfo.paperName || ""}
             onChange={handlePaperChange}
+            compact={false}
+            isDieSelected={true} // Set to true since this is in a form context
           />
           {errors.paperName && <p className="text-red-500 text-xs mt-1">{errors.paperName}</p>}
         </div>
@@ -927,6 +1063,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                 max="10"
                 value={lpDetailsSandwich.noOfColors}
                 onChange={handleLPSandwichChange}
+                onWheel={(e) => e.target.blur()}
                 className="border rounded-md p-2 w-full text-sm"
               />
               {errors.lpNoOfColors && <p className="text-red-500 text-sm">{errors.lpNoOfColors}</p>}
@@ -1264,7 +1401,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         )}
       </div>
 
-      {/* EMB Section in Sandwich - UPDATED */}
+      {/* EMB Section in Sandwich - UPDATED WITH DST MATERIAL */}
       <div className="border-t pt-4">
         <div className="flex items-center space-x-3 cursor-pointer mb-4">
           <label
@@ -1281,7 +1418,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         {embDetailsSandwich.isEMBUsed && (
           <div className="pl-6 border-l-2 border-gray-200 mb-4">
             {/* All fields in a single line */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               {/* Plate Size Type */}
               <div>
                 <label className="block text-xs mb-1">Plate Size:</label>
@@ -1355,6 +1492,7 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                   onChange={handleEMBSandwichChange}
                   className={`border rounded-md p-2 w-full text-xs ${errors.embMR ? "border-red-500" : ""}`}
                 >
+                  <option value="">Select MR Type</option>
                   {embMRTypesLoading ? (
                     <option value="" disabled>Loading MR Types...</option>
                   ) : (
@@ -1367,12 +1505,49 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                 </select>
                 {errors.embMR && <p className="text-red-500 text-xs">{errors.embMR}</p>}
               </div>
+
+              {/* DST Material - NEW FIELD */}
+              <div>
+                <label className="block text-xs mb-1">DST Material:</label>
+                <select
+                  name="dstMaterial"
+                  value={embDetailsSandwich.dstMaterial}
+                  onChange={handleEMBSandwichChange}
+                  className={`border rounded-md p-2 w-full text-xs ${
+                    errors.embDstMaterial ? "border-red-500" : ""
+                  }`}
+                  disabled={dstMaterialsLoading}
+                >
+                  <option value="">
+                    {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
+                  </option>
+                  {/* Sort DST materials to show DST PP PLATE first if available */}
+                  {dstMaterials
+                    .sort((a, b) => {
+                      // Prioritize "DST PP PLATE" at the top
+                      if (a.materialName === "DST PP PLATE") return -1;
+                      if (b.materialName === "DST PP PLATE") return 1;
+                      return a.materialName.localeCompare(b.materialName);
+                    })
+                    .map((material) => (
+                      <option key={material.id} value={material.materialName}>
+                        {material.materialName}
+                      </option>
+                    ))}
+                </select>
+                {errors.embDstMaterial && (
+                  <p className="text-red-500 text-xs">{errors.embDstMaterial}</p>
+                )}
+                {dstMaterialsError && (
+                  <p className="text-red-500 text-xs">Failed to load DST materials</p>
+                )}
+              </div>
             </div>
 
             {/* Plate Cost Message */}
             <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-md mt-3">
               <div className="flex items-center">
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
                   <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
                 </svg>
                 <p className="text-yellow-700 text-xs">

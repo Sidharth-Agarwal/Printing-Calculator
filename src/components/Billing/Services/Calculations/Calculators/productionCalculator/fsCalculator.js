@@ -1,30 +1,6 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
-import { collection, query, where, getDocs } from 'firebase/firestore';
-import { db } from '../../../../../../firebaseConfig';
-
-/**
- * Fetch die details from Firestore database
- * @param {string} dieCode - Die code to look up
- * @returns {Promise<Object|null>} - The die details or null if not found
- */
-const fetchDieDetails = async (dieCode) => {
-  try {
-    const diesCollection = collection(db, "dies");
-    const q = query(diesCollection, where("dieCode", "==", dieCode));
-    const querySnapshot = await getDocs(q);
-    
-    if (!querySnapshot.empty) {
-      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
-    }
-    
-    console.warn(`Die not found for code: ${dieCode}`);
-    return null;
-  } catch (error) {
-    console.error("Error fetching die details:", error);
-    return null;
-  }
-};
+import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
+import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
 
 /**
  * Calculates foil stamping (FS) costs based on form state
@@ -37,6 +13,10 @@ export const calculateFSCosts = async (state) => {
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
+    console.log("JOB TYPE being used : ", jobType)
+    const fragsPerDie = orderAndPaper.frags || 1;
+    const normalizedJobType = (jobType || "").toLowerCase();
+    console.log("JOB TYPE being used : ", normalizedJobType)
 
     // Check if FS is used
     if (!fsDetails.isFSUsed || !fsDetails.foilDetails?.length) {
@@ -63,23 +43,11 @@ export const calculateFSCosts = async (state) => {
       };
     }
 
-    // NEW STEP: Fetch die details to get frags
-    let dieDetails = null;
-    let fragsPerDie = 1; // Default to 1 if not found
-    
-    if (dieCode) {
-      dieDetails = await fetchDieDetails(dieCode);
-      console.log("Die details:", dieDetails);
-      if (dieDetails && dieDetails.frags) {
-        fragsPerDie = parseInt(dieDetails.frags) || 1;
-        console.log("Frags per die:", fragsPerDie);
-      }
-    }
-
-    // 1. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 1. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
     
     // 1a. Fetch freight cost for blocks from standard rates
     const freightDetails = await fetchStandardRate("FREIGHT", "BLOCK");
@@ -101,26 +69,46 @@ export const calculateFSCosts = async (state) => {
       
       if (foilDetail.blockSizeType === "Auto") {
         // First check if product size is available
-        if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+        if (normalizedJobType === "envelope") {
           const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
           const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-          blockArea = (productLengthCm + margin) * (productBreadthCm + margin);
-        } else if (orderAndPaper.dieSize) {
-          // Fall back to die dimensions if product size is not available
+          console.log("Product length : ", productLengthCm)
+          console.log("Product length : ", productBreadthCm)
+          blockArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+        }
+        else if (normalizedJobType === "packaging") {
           const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
           const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-          blockArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+          console.log("Die length : ", dieLengthCm)
+          console.log("Die length : ", dieBreadthCm)
+          blockArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+        }
+        else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+          if(fragsPerDie >= 2) {
+            const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+            const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+            console.log("Die length : ", dieLengthCm)
+            console.log("Die length : ", dieBreadthCm)
+            blockArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+          } else {
+            const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+            const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+            console.log("Product length : ", productLengthCm)
+            console.log("Product length : ", productBreadthCm)
+            blockArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+          }
         }
       } else {
         // Otherwise use the provided block dimensions
         const providedLength = parseFloat(foilDetail.blockDimension.length)
         const providedBreadth = parseFloat(foilDetail.blockDimension.breadth)
-        blockArea = (providedLength + margin) * (providedBreadth + margin);
+        blockArea = (providedLength + lengthMargin) * (providedBreadth + breadthMargin);
       }
       
       // 2. Fetch block material details
       const blockType = foilDetail.blockType || "Magnesium Block 3MM";
       const blockMaterialDetails = await fetchMaterialDetails(blockType);
+      console.log("block details: ", blockMaterialDetails)
       
       if (!blockMaterialDetails) {
         console.warn(`Material details not found for block type: ${blockType}`);
@@ -131,6 +119,7 @@ export const calculateFSCosts = async (state) => {
       const blockBaseCost = blockArea * parseFloat(blockMaterialDetails.landedCost || 0);
       totalBlockCost += blockBaseCost;
       totalFreightCost += freightCost;
+      console.log("Block Cost : ", blockBaseCost)
       
       // 4. Fetch foil material details
       const foilType = foilDetail.foilType || "Gold MTS 220";
@@ -144,12 +133,16 @@ export const calculateFSCosts = async (state) => {
       // Calculate foil cost
       const foilCostPerUnit = parseFloat(foilMaterialDetails.finalCostPerUnit || 0);
       const foilCost = blockArea * foilCostPerUnit;
+      console.log("Foil Cost Parse : ", parseFloat(foilMaterialDetails.finalCostPerUnit || 0))
+      console.log("Foil Cost : ", foilCost)
       totalFoilCost += foilCost;
       
       // 5. Fetch impression cost from standard rates
       const impressionDetails = await fetchStandardRate("IMPRESSION", "FS");
       const impressionCostPerUnit = impressionDetails ? parseFloat(impressionDetails.finalRate || 0) : 1; // Default to 1 if not found
-      totalImpressionCost += impressionCostPerUnit * totalCards; // Total impression cost for all cards
+      console.log("FS Impression : ", impressionCostPerUnit);
+      totalImpressionCost += impressionCostPerUnit / fragsPerDie; // Total impression cost for all cards
+      console.log("FS impression cost : ", totalImpressionCost)
       
       // 6. Fetch MR cost from standard rates
       const mrType = foilDetail.mrType || "SIMPLE"; // Default to SIMPLE if not specified
@@ -172,7 +165,7 @@ export const calculateFSCosts = async (state) => {
     const fsBlockCostPerCard = totalBlockCost / totalCards;
     // Modified: Account for frags when calculating foil cost per card
     const fsFoilCostPerCard = totalFoilCost / fragsPerDie;
-    const fsImpressionCostPerCard = totalImpressionCost / totalCards;
+    const fsImpressionCostPerCard = totalImpressionCost;
     const fsMRCostPerCard = totalMRCost / totalCards;
     const fsFreightCostPerCard = totalFreightCost / totalCards;
     
@@ -198,9 +191,10 @@ export const calculateFSCosts = async (state) => {
       totalImpressionCost: totalImpressionCost.toFixed(2),
       totalMRCost: totalMRCost.toFixed(2),
       totalFreightCost: totalFreightCost.toFixed(2),
-      fragsPerDie: fragsPerDie,
+      fragsPerDie: fragsPerDie, // Include frags per die for debugging
       foilsCount: fsDetails.foilDetails.length,
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating FS costs:", error);

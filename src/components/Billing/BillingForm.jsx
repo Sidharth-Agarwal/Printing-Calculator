@@ -57,6 +57,8 @@ const initialFormState = {
    productSize: { length: "", breadth: "" },
    image: "",
    hsnCode: "",
+   frags: "",
+   type: "" 
  },
  lpDetails: {
    isLPUsed: false,
@@ -272,7 +274,9 @@ const mapStateToFirebaseStructure = (state, calculations) => {
    jobType: orderAndPaper?.jobType,
    quantity: orderAndPaper?.quantity,
    paperName: orderAndPaper?.paperName,
-   dieCode: orderAndPaper?.dieCode
+   dieCode: orderAndPaper?.dieCode,
+   frags: orderAndPaper?.frags,
+   type: orderAndPaper?.type
  });
 
  // Create the sanitized Firebase data structure
@@ -307,6 +311,8 @@ const mapStateToFirebaseStructure = (state, calculations) => {
      dieSize: orderAndPaper.dieSize,
      productSize: orderAndPaper.productSize,
      image: orderAndPaper.image,
+     frags: orderAndPaper.frags,
+     type: orderAndPaper.type
    }),
    
    // Processing options (only included when selected)
@@ -491,18 +497,22 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
  useEffect(() => {
    // Log critical fields when they change
    console.log("BillingForm - Current critical field values:", {
-     projectName: state.orderAndPaper.projectName,
-     jobType: state.orderAndPaper.jobType,
-     quantity: state.orderAndPaper.quantity,
-     paperName: state.orderAndPaper.paperName,
-     dieCode: state.orderAndPaper.dieCode
+    projectName: state.orderAndPaper.projectName,
+    jobType: state.orderAndPaper.jobType,
+    quantity: state.orderAndPaper.quantity,
+    paperName: state.orderAndPaper.paperName,
+    dieCode: state.orderAndPaper.dieCode,
+    frags: state.orderAndPaper.frags,
+    type: state.orderAndPaper.type
    });
  }, [
    state.orderAndPaper.projectName,
    state.orderAndPaper.jobType,
    state.orderAndPaper.quantity,
    state.orderAndPaper.paperName,
-   state.orderAndPaper.dieCode
+   state.orderAndPaper.dieCode,
+   state.orderAndPaper.frags,
+   state.orderAndPaper.type
  ]);
 
  // Direct initialization of default services
@@ -776,59 +786,65 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
  }, [directInitializationDone, isEditMode, state.orderAndPaper.jobType, papers]);
 
  // Initialize form with data if in edit mode
- useEffect(() => {
-   if (initialState && isEditMode) {
-     // Initialize form state with the provided data
-     dispatch({ type: "INITIALIZE_FORM", payload: initialState });
-     
-     // Log critical fields for debugging
-     console.log("BillingForm - Initializing with data:", {
-       projectName: initialState.orderAndPaper?.projectName,
-       jobType: initialState.orderAndPaper?.jobType,
-       quantity: initialState.orderAndPaper?.quantity,
-       paperName: initialState.orderAndPaper?.paperName,
-       dieCode: initialState.orderAndPaper?.dieCode
-     });
-     
-     // If client info exists in initialState, set the client for display
-     if (initialState.client?.clientId) {
-       console.log("Setting client from initialState:", initialState.client);
-       
-       // Create a client object from client info
-       const clientData = {
-         id: initialState.client.clientId,
-         clientId: initialState.client.clientId,
-         name: initialState.client.clientInfo?.name || "Unknown Client",
-         clientCode: initialState.client.clientInfo?.clientCode || "",
-         clientType: initialState.client.clientInfo?.clientType || "Direct",
-         contactPerson: initialState.client.clientInfo?.contactPerson || "",
-         email: initialState.client.clientInfo?.email || "",
-         phone: initialState.client.clientInfo?.phone || "",
-         ...initialState.client.clientInfo // Include any other client properties
-       };
-       
-       // Set the selected client for display
-       setSelectedClient(clientData);
-     }
-     
-     // Set selected version if it exists in initialState
-     if (initialState.versionId) {
-       setSelectedVersion(initialState.versionId);
-     }
-     
-     // Set markup if it exists in initialState calculations
-     if (initialState.calculations?.markupType) {
-       setSelectedMarkupType(initialState.calculations.markupType);
-     }
-     
-     if (initialState.calculations?.markupPercentage) {
-       setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
-     }
-     
-     // Mark initialization as done for edit mode
-     setDirectInitializationDone(true);
-   }
- }, [initialState, isEditMode]);
+  useEffect(() => {
+    if (initialState && isEditMode) {
+      // Initialize form state with the provided data
+      dispatch({ type: "INITIALIZE_FORM", payload: initialState });
+      
+      // Log critical fields for debugging
+      console.log("BillingForm - Initializing with data:", {
+        projectName: initialState.orderAndPaper?.projectName,
+        jobType: initialState.orderAndPaper?.jobType,
+        quantity: initialState.orderAndPaper?.quantity,
+        paperName: initialState.orderAndPaper?.paperName,
+        dieCode: initialState.orderAndPaper?.dieCode
+      });
+      
+      // If client info exists in initialState, set the client for display
+      if (initialState.client?.clientId) {
+        console.log("Setting client from initialState:", initialState.client);
+        
+        // Create a client object from client info
+        const clientData = {
+          id: initialState.client.clientId,
+          clientId: initialState.client.clientId,
+          name: initialState.client.clientInfo?.name || "Unknown Client",
+          clientCode: initialState.client.clientInfo?.clientCode || "",
+          clientType: initialState.client.clientInfo?.clientType || "Direct",
+          contactPerson: initialState.client.clientInfo?.contactPerson || "",
+          email: initialState.client.clientInfo?.email || "",
+          phone: initialState.client.clientInfo?.phone || "",
+          ...initialState.client.clientInfo // Include any other client properties
+        };
+        
+        // Set the selected client for display
+        setSelectedClient(clientData);
+      }
+      
+      // Set selected version if it exists in initialState
+      if (initialState.versionId) {
+        setSelectedVersion(initialState.versionId);
+      }
+      
+      // CRITICAL FIX: Set markup BEFORE triggering calculations
+      if (initialState.calculations?.markupType && initialState.calculations?.markupPercentage) {
+        console.log("BillingForm - Setting markup from initialState:", {
+          type: initialState.calculations.markupType,
+          percentage: initialState.calculations.markupPercentage
+        });
+        
+        setSelectedMarkupType(initialState.calculations.markupType);
+        setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
+        
+        // Set the calculations immediately to avoid the ReviewAndSubmit component
+        // from overriding with defaults
+        setCalculations(initialState.calculations);
+      }
+      
+      // Mark initialization as done for edit mode
+      setDirectInitializationDone(true);
+    }
+  }, [initialState, isEditMode]);
 
  // Add useEffect to fetch B2B client data when component mounts
  useEffect(() => {
@@ -1298,62 +1314,149 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
  };
 
  // ⭐ UPDATED: Function to recalculate totals when markup changes (with fresh GST)
- const recalculateWithMarkup = async (markupType, markupPercentage) => {
-   console.log("Recalculating with new markup:", markupType, markupPercentage);
-   setIsCalculating(true);
-   try {
-     const jobType = state.orderAndPaper?.jobType || "Card";
-     
-     // Get GST rate (cached or fresh) for this job type
-     const gstRate = await getGSTRateForJobType(jobType);
-     
-     // Get the misc charge from the form state if available and misc is enabled
-     const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
-       ? parseFloat(state.misc.miscCharge) 
-       : null;
+  const recalculateWithMarkup = async (markupType, markupPercentage) => {
+    console.log("Recalculating with new markup:", markupType, markupPercentage);
+    setIsCalculating(true);
+    try {
+      const jobType = state.orderAndPaper?.jobType || "Card";
+      
+      // Get GST rate (cached or fresh) for this job type
+      const gstRate = await getGSTRateForJobType(jobType);
+      
+      // Get the misc charge from the form state if available and misc is enabled
+      const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
+        ? parseFloat(state.misc.miscCharge) 
+        : null;
 
-     // Use the recalculateTotals function from calculationsService if we already have base calculations
-     if (calculations && !calculations.error) {
-       // Call recalculateTotals with the existing calculations, updated markup info, quantity, and fresh GST rate
-       const result = await recalculateTotals(
-         calculations,
-         miscCharge, // Use the custom misc charge if available
-         markupPercentage,
-         parseInt(state.orderAndPaper?.quantity, 10) || 0,
-         markupType,
-         state.orderAndPaper?.jobType || "Card",
-         null, // clientLoyaltyTier
-         gstRate // ⭐ Pass fresh GST rate
-       );
+      // CRITICAL FIX: Handle edit mode differently
+      if (isEditMode && calculations && !calculations.error) {
+        console.log("Edit mode detected - using simplified markup recalculation");
+        
+        // Use the displayed subtotal as the base for markup calculation
+        const subtotalPerCard = parseFloat(calculations.subtotalPerCard || calculations.costWithMisc || 0);
+        const quantity = parseInt(state.orderAndPaper?.quantity || 1);
+        
+        // Calculate new markup amount based on displayed subtotal
+        const newMarkupAmount = subtotalPerCard * (markupPercentage / 100);
+        const newTotalCostPerCard = subtotalPerCard + newMarkupAmount;
+        const newTotalCost = newTotalCostPerCard * quantity;
+        
+        // Recalculate GST on the new total
+        const newGstAmount = newTotalCost * (gstRate / 100);
+        const newTotalWithGST = newTotalCost + newGstAmount;
+        
+        // Create updated calculations object
+        const updatedCalculations = {
+          ...calculations,
+          markupType: markupType,
+          markupPercentage: markupPercentage,
+          markupAmount: newMarkupAmount.toFixed(2),
+          totalCostPerCard: newTotalCostPerCard.toFixed(2),
+          totalCost: newTotalCost.toFixed(2),
+          gstRate: gstRate,
+          gstAmount: newGstAmount.toFixed(2),
+          totalWithGST: newTotalWithGST.toFixed(2)
+        };
+        
+        console.log("Edit mode markup recalculation completed:", {
+          subtotalPerCard: subtotalPerCard.toFixed(2),
+          markupPercentage,
+          markupAmount: newMarkupAmount.toFixed(2),
+          totalCostPerCard: newTotalCostPerCard.toFixed(2),
+          totalCost: newTotalCost.toFixed(2),
+          gstAmount: newGstAmount.toFixed(2),
+          totalWithGST: newTotalWithGST.toFixed(2)
+        });
+        
+        setCalculations(updatedCalculations);
+        return;
+      }
 
-       if (result.error) {
-         console.error("Error recalculating with new markup:", result.error);
-       } else {
-         console.log("Updated calculations with new markup:", result);
-         setCalculations(result);
-       }
-     } else {
-       // If we don't have base calculations yet, perform a complete calculation
-       const result = await performCompleteCalculations(
-         state,
-         miscCharge, // Use the custom misc charge if available
-         markupPercentage,
-         markupType,
-         gstRate // ⭐ Pass fresh GST rate
-       );
-       
-       if (result.error) {
-         console.error("Error during calculations:", result.error);
-       } else {
-         setCalculations(result);
-       }
-     }
-   } catch (error) {
-     console.error("Unexpected error during markup recalculation:", error);
-   } finally {
-     setIsCalculating(false);
-   }
- };
+      // For new estimates (non-edit mode), use the existing complex recalculation logic
+      console.log("New estimate mode - using full recalculation logic");
+      
+      // Use the recalculateTotals function from calculationsService if we already have base calculations
+      if (calculations && !calculations.error) {
+        console.log("Using existing calculations for recalculation");
+        
+        // Call recalculateTotals with the existing calculations, updated markup info, quantity, and fresh GST rate
+        const result = await recalculateTotals(
+          calculations,
+          miscCharge, // Use the custom misc charge if available
+          markupPercentage,
+          parseInt(state.orderAndPaper?.quantity, 10) || 0,
+          markupType,
+          state.orderAndPaper?.jobType || "Card",
+          null, // clientLoyaltyTier
+          gstRate // ⭐ Pass fresh GST rate
+        );
+
+        if (result.error) {
+          console.error("Error recalculating with new markup:", result.error);
+          // Don't update calculations if there's an error
+        } else {
+          console.log("Updated calculations with new markup:", result);
+          setCalculations(result);
+        }
+      } else {
+        console.log("No existing calculations - performing complete calculation");
+        
+        // If we don't have base calculations yet, perform a complete calculation
+        const result = await performCompleteCalculations(
+          state,
+          miscCharge, // Use the custom misc charge if available
+          markupPercentage,
+          markupType,
+          gstRate // ⭐ Pass fresh GST rate
+        );
+        
+        if (result.error) {
+          console.error("Error during complete calculations:", result.error);
+          // Don't update calculations if there's an error
+        } else {
+          console.log("Complete calculations performed successfully:", result);
+          setCalculations(result);
+        }
+      }
+    } catch (error) {
+      console.error("Unexpected error during markup recalculation:", error);
+      
+      // Fallback: If there's an error and we're in edit mode, try a simple calculation
+      if (isEditMode && calculations && !calculations.error) {
+        try {
+          const subtotalPerCard = parseFloat(calculations.subtotalPerCard || 0);
+          const quantity = parseInt(state.orderAndPaper?.quantity || 1);
+          const fallbackGstRate = 18; // Default GST rate
+          
+          const markupAmount = subtotalPerCard * (markupPercentage / 100);
+          const totalCostPerCard = subtotalPerCard + markupAmount;
+          const totalCost = totalCostPerCard * quantity;
+          const gstAmount = totalCost * (fallbackGstRate / 100);
+          const totalWithGST = totalCost + gstAmount;
+          
+          const fallbackCalculations = {
+            ...calculations,
+            markupType: markupType,
+            markupPercentage: markupPercentage,
+            markupAmount: markupAmount.toFixed(2),
+            totalCostPerCard: totalCostPerCard.toFixed(2),
+            totalCost: totalCost.toFixed(2),
+            gstRate: fallbackGstRate,
+            gstAmount: gstAmount.toFixed(2),
+            totalWithGST: totalWithGST.toFixed(2),
+            error: "Using fallback calculation due to error"
+          };
+          
+          console.log("Applied fallback calculation for edit mode:", fallbackCalculations);
+          setCalculations(fallbackCalculations);
+        } catch (fallbackError) {
+          console.error("Even fallback calculation failed:", fallbackError);
+        }
+      }
+    } finally {
+      setIsCalculating(false);
+    }
+  };
 
  // ⭐ UPDATED: Enhanced calculation function using the centralized calculation service (with fresh GST)
  const performCalculations = async () => {
@@ -2864,7 +2967,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
            {/* Magnet Section */}
            {isServiceVisible("MAGNET") && (
              <FormSection 
-               title="MAGNET" 
+               title="Magnet" 
                id="magnet"
                activeSection={activeSection}
                setActiveSection={setActiveSection}

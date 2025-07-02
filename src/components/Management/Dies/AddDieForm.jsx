@@ -9,13 +9,43 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
 
   useEffect(() => {
     if (editingDie) {
+      // Helper function to calculate plate size based on job type and frags
+      const calculatePlateSize = (jobType, frags, productSizeL, productSizeB, dieSizeL, dieSizeB) => {
+        const normalizedJobType = jobType?.toLowerCase();
+        const fragsNum = parseInt(frags) || 0;
+        
+        if (normalizedJobType === "envelope") {
+          return { plateSizeL: productSizeL, plateSizeB: productSizeB };
+        } else if (normalizedJobType === "packaging") {
+          return { plateSizeL: dieSizeL, plateSizeB: dieSizeB };
+        } else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+          if (fragsNum >= 2) {
+            return { plateSizeL: dieSizeL, plateSizeB: dieSizeB };
+          } else {
+            return { plateSizeL: productSizeL, plateSizeB: productSizeB };
+          }
+        } else {
+          return { plateSizeL: dieSizeL, plateSizeB: dieSizeB };
+        }
+      };
+
+      const plateSizes = calculatePlateSize(
+        editingDie.jobType,
+        editingDie.frags,
+        editingDie.productSizeL,
+        editingDie.productSizeB,
+        editingDie.dieSizeL,
+        editingDie.dieSizeB
+      );
+
       // Calculate fields if they don't exist in the editing die data
       const updatedDie = {
         ...editingDie,
         dieSizeL_CM: editingDie.dieSizeL_CM || calculateCM(editingDie.dieSizeL),
         dieSizeB_CM: editingDie.dieSizeB_CM || calculateCM(editingDie.dieSizeB),
-        plateSizeL: editingDie.plateSizeL || editingDie.productSizeL || "",
-        plateSizeB: editingDie.plateSizeB || editingDie.productSizeB || "",
+        // Calculate plate size based on job type and frags
+        plateSizeL: editingDie.plateSizeL || plateSizes.plateSizeL || "",
+        plateSizeB: editingDie.plateSizeB || plateSizes.plateSizeB || "",
         clsdPrntSizeL_CM: editingDie.clsdPrntSizeL_CM || calculateCM(editingDie.productSizeL),
         clsdPrntSizeB_CM: editingDie.clsdPrntSizeB_CM || calculateCM(editingDie.productSizeB),
         isTemporary: editingDie.isTemporary || false, // Default for isTemporary if missing
@@ -33,9 +63,35 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
     const dieSizeL_CM = calculateCM(formData.dieSizeL);
     const dieSizeB_CM = calculateCM(formData.dieSizeB);
     
-    // PLATE Size is the same as Product Size
-    const plateSizeL = formData.productSizeL;
-    const plateSizeB = formData.productSizeB;
+    // PLATE Size calculation based on job type and frags
+    let plateSizeL, plateSizeB;
+    const normalizedJobType = formData.jobType?.toLowerCase();
+    const frags = parseInt(formData.frags) || 0;
+    
+    if (normalizedJobType === "envelope") {
+      // For Envelope: Always use product dimensions
+      plateSizeL = formData.productSizeL;
+      plateSizeB = formData.productSizeB;
+    } else if (normalizedJobType === "packaging") {
+      // For Packaging: Always use die dimensions
+      plateSizeL = formData.dieSizeL;
+      plateSizeB = formData.dieSizeB;
+    } else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+      // For Card, Biz Card, Magnet, Seal, Liner, Notebook:
+      if (frags >= 2) {
+        // If frags >= 2: Use die dimensions
+        plateSizeL = formData.dieSizeL;
+        plateSizeB = formData.dieSizeB;
+      } else {
+        // If frags < 2: Use product dimensions
+        plateSizeL = formData.productSizeL;
+        plateSizeB = formData.productSizeB;
+      }
+    } else {
+      // Default case: Use die dimensions
+      plateSizeL = formData.dieSizeL;
+      plateSizeB = formData.dieSizeB;
+    }
     
     // Calculate CLSD PRNT Size in CM
     const clsdPrntSizeL_CM = calculateCM(formData.productSizeL);
@@ -50,12 +106,32 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
       clsdPrntSizeL_CM,
       clsdPrntSizeB_CM,
     }));
-  }, [formData.dieSizeL, formData.dieSizeB, formData.productSizeL, formData.productSizeB]);
+  }, [formData.dieSizeL, formData.dieSizeB, formData.productSizeL, formData.productSizeB, formData.jobType, formData.frags]);
 
   const resetForm = () => {
     setFormData(DEFAULT_DIE_FORM_DATA);
     setImage(null);
     setError(null);
+  };
+
+  // Helper function to get plate size label
+  const getPlateSizeLabel = () => {
+    const normalizedJobType = formData.jobType?.toLowerCase();
+    const frags = parseInt(formData.frags) || 0;
+    
+    if (normalizedJobType === "envelope") {
+      return "- Product Based";
+    } else if (normalizedJobType === "packaging") {
+      return "- Die Based";
+    } else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+      if (frags >= 2) {
+        return "- Die Based (Frags ≥ 2)";
+      } else {
+        return "- Product Based (Frags < 2)";
+      }
+    } else {
+      return "- Die Based";
+    }
   };
 
   const handleChange = (e) => {
@@ -301,7 +377,9 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             />
           </div>
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">PLATE Size (L Inch):</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              PLATE Size (L Inch) {getPlateSizeLabel()}:
+            </label>
             <input
               type="text"
               value={formData.plateSizeL || ""}
@@ -312,7 +390,9 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
         </div>
         <div className="grid grid-cols-3 gap-3">
           <div>
-            <label className="block text-xs font-medium text-gray-600 mb-1">PLATE Size (B Inch):</label>
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              PLATE Size (B Inch) {getPlateSizeLabel()}:
+            </label>
             <input
               type="text"
               value={formData.plateSizeB || ""}

@@ -1,4 +1,29 @@
 import { fetchStandardRate } from "../../../../../../utils/dbFetchUtils";
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../../../../firebaseConfig';
+
+/**
+ * Fetch die details from Firestore database
+ * @param {string} dieCode - Die code to look up
+ * @returns {Promise<Object|null>} - The die details or null if not found
+ */
+const fetchDieDetails = async (dieCode) => {
+  try {
+    const diesCollection = collection(db, "dies");
+    const q = query(diesCollection, where("dieCode", "==", dieCode));
+    const querySnapshot = await getDocs(q);
+    
+    if (!querySnapshot.empty) {
+      return { id: querySnapshot.docs[0].id, ...querySnapshot.docs[0].data() };
+    }
+    
+    console.warn(`Die not found for code: ${dieCode}`);
+    return null;
+  } catch (error) {
+    console.error("Error fetching die details:", error);
+    return null;
+  }
+};
 
 /**
  * Calculates pre die cutting costs based on form state
@@ -9,6 +34,7 @@ export const calculatePreDieCuttingCosts = async (state) => {
   try {
     const { preDieCutting, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const dieCode = orderAndPaper.dieCode;
 
     // Check if pre-DC is used
     if (!preDieCutting.isPreDieCuttingUsed) {
@@ -27,6 +53,19 @@ export const calculatePreDieCuttingCosts = async (state) => {
         preDieCuttingMRCostPerCard: "0.00",
         preDieCuttingImpressionCostPerCard: "0.00"
       };
+    }
+
+    // NEW STEP: Fetch die details to get frags
+    let dieDetails = null;
+    let fragsPerDie = 1; // Default to 1 if not found
+    
+    if (dieCode) {
+      dieDetails = await fetchDieDetails(dieCode);
+      console.log("Die details:", dieDetails);
+      if (dieDetails && dieDetails.frags) {
+        fragsPerDie = parseInt(dieDetails.frags) || 1;
+        console.log("PRE Frags per die:", fragsPerDie);
+      }
     }
 
     // 1. Fetch MR cost from standard rates using the concatenated value
@@ -53,9 +92,11 @@ export const calculatePreDieCuttingCosts = async (state) => {
       parseFloat(impressionDetails.finalRate || 0) : 
       0.25; // Default to 0.25 if not found
 
+    const impressCostingPerUnit = impressionCostPerUnit / fragsPerDie;
+
     // 3. Calculate costs per card
     const mrCostPerCard = mrRate / totalCards;
-    const impressionCostPerCard = impressionCostPerUnit; // Already per card
+    const impressionCostPerCard = impressCostingPerUnit; // Already per card
     
     // 4. Calculate total pre die cutting cost per card
     const preDieCuttingCostPerCard = mrCostPerCard + impressionCostPerCard;
@@ -67,7 +108,8 @@ export const calculatePreDieCuttingCosts = async (state) => {
       // Include additional info for debugging
       mrRate: mrRate.toFixed(2),
       mrConcatenated: mrConcatenated,
-      impressionRate: impressionCostPerUnit.toFixed(2)
+      impressionRate: impressionCostPerUnit.toFixed(2),
+      fragsPerDie: fragsPerDie // Include frags per die for debugging
     };
   } catch (error) {
     console.error("Error calculating pre die cutting costs:", error);

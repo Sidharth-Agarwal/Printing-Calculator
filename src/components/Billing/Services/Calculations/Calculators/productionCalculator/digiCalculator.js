@@ -1,5 +1,6 @@
 import { fetchPaperDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
+import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
 
 /**
  * Helper function to calculate maximum babies per sheet
@@ -33,6 +34,7 @@ export const calculateDigiDetailsCosts = async (state) => {
     const { digiDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const jobType = orderAndPaper.jobType || "CARD";
+    const fragsPerDie = orderAndPaper.frags || 1;
 
     // Check if digital printing is used
     if (!digiDetails.isDigiUsed) {
@@ -85,19 +87,22 @@ export const calculateDigiDetailsCosts = async (state) => {
     
     // PART 2: Calculations with respect to the die selected
     
-    // 1. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 1. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
     
-    // 2. Convert die size from inches to cm and add margin
+    // 2. Convert die size from inches to cm and add margins
     const dieWithMargin = {
-      length: (parseFloat(orderAndPaper.dieSize.length) * 2.54) + margin,
-      breadth: (parseFloat(orderAndPaper.dieSize.breadth) * 2.54) + margin
+      length: (parseFloat(orderAndPaper.dieSize.length) * 2.54) + lengthMargin,
+      breadth: (parseFloat(orderAndPaper.dieSize.breadth) * 2.54) + breadthMargin
     };
     
     // 3. Calculate maximum babies per sheet for die
     const maxBabiesPerSheetDie = calculateMaxBabiesPerSheet(dieWithMargin, digiDimensionsCm);
+    console.log(maxBabiesPerSheetPaper)
+    console.log(maxBabiesPerSheetDie)
     
     // Calculate total fragments per sheet
     const totalFragsPerSheet = maxBabiesPerSheetPaper * maxBabiesPerSheetDie;
@@ -119,17 +124,17 @@ export const calculateDigiDetailsCosts = async (state) => {
       0.25; // Default if not found
     
     // Calculate Digital Print cost per card (from standard rates)
-    const digiPrintCostPerCard = digitalPrintRateValue / totalFragsPerSheet;
+    const digiPrintCostPerCard = digitalPrintRateValue / maxBabiesPerSheetDie;
     
     // Calculate Digital Paper cost components
     const paperCostPerCard = (parseFloat(paperDetails.finalRate) * totalSheets) / totalCards;
-    const gilCutCostPerCard = (gilCutCostPerSheet * totalSheets) / totalCards;
+    const gilCutCostPerCard = gilCutCostPerSheet / fragsPerDie;
     
     // Total Digital Paper cost per card
-    const digiPaperCostPerCard = paperCostPerCard + gilCutCostPerCard;
+    const digiPaperCostPerCard = (paperCostPerCard) / fragsPerDie;
     
     // Total Digital Printing cost per card
-    const digiCostPerCard = digiPrintCostPerCard + digiPaperCostPerCard;
+    const digiCostPerCard = digiPrintCostPerCard + digiPaperCostPerCard + gilCutCostPerCard;
     
     return {
       digiCostPerCard: digiCostPerCard.toFixed(2),
@@ -144,7 +149,8 @@ export const calculateDigiDetailsCosts = async (state) => {
       paperRate: parseFloat(paperDetails.finalRate).toFixed(2),
       digitalPrintRate: digitalPrintRateValue.toFixed(2),
       gilCutRate: gilCutCostPerSheet.toFixed(2),
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating digital printing costs:", error);

@@ -1,5 +1,6 @@
 import { fetchMaterialDetails } from '../../../../../../utils/fetchDataUtils';
-import { fetchStandardRate, fetchMarginByJobType } from '../../../../../../utils/dbFetchUtils';
+import { fetchStandardRate } from '../../../../../../utils/dbFetchUtils';
+import { getMarginsByJobType } from '../../../../../../utils/marginUtils';
 
 /**
  * Calculates letter press (LP) costs based on form state
@@ -10,7 +11,12 @@ export const calculateLPCosts = async (state) => {
   try {
     const { lpDetails, orderAndPaper } = state;
     const totalCards = parseInt(orderAndPaper.quantity, 10);
+    const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
+    console.log("JOB TYPE being used : ", jobType)
+    const fragsPerDie = orderAndPaper.frags || 1;
+    const normalizedJobType = (jobType || "").toLowerCase();
+    console.log("JOB TYPE being used : ", normalizedJobType)
 
     // Check if LP is used
     if (!lpDetails.isLPUsed || !lpDetails.colorDetails?.length) {
@@ -21,6 +27,7 @@ export const calculateLPCosts = async (state) => {
         lpInkCostPerCard: "0.00",
         lpMRCostPerCard: "0.00",
         lpMkgCostPerCard: "0.00",
+        lpImpressionCostPerCard: "0.00", // Add impression cost field
         lpDstMaterialCostPerCard: "0.00", // Add DST material cost field
         lpTotalColorsCostPerCard: "0.00"
       };
@@ -36,15 +43,17 @@ export const calculateLPCosts = async (state) => {
         lpInkCostPerCard: "0.00",
         lpMRCostPerCard: "0.00",
         lpMkgCostPerCard: "0.00",
+        lpImpressionCostPerCard: "0.00", // Add impression cost field
         lpDstMaterialCostPerCard: "0.00", // Add DST material cost field
         lpTotalColorsCostPerCard: "0.00"
       };
     }
 
-    // 1. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 1. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
     
     // Initialize cost variables
     let totalPlateCost = 0;
@@ -52,6 +61,7 @@ export const calculateLPCosts = async (state) => {
     let totalInkCost = 0;
     let totalMRCost = 0;
     let totalMkgCost = 0;
+    let totalImpressionCost = 0; // Add impression cost tracking
     let totalDstMaterialCost = 0; // Add DST material cost tracking
     let totalColorsCost = 0;
 
@@ -64,21 +74,40 @@ export const calculateLPCosts = async (state) => {
       
       if (colorDetail.plateSizeType === "Auto") {
         // First check if product size is available
-        if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+        if (normalizedJobType === "envelope") {
           const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
           const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-          plateArea = (productLengthCm + margin) * (productBreadthCm + margin);
-        } else if (orderAndPaper.dieSize) {
-          // Fall back to die dimensions if product size is not available
+          console.log("Product length : ", productLengthCm)
+          console.log("Product length : ", productBreadthCm)
+          plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+        }
+        else if (normalizedJobType === "packaging") {
           const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
           const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-          plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
+          console.log("Die length : ", dieLengthCm)
+          console.log("Die length : ", dieBreadthCm)
+          plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+        }
+        else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+          if(fragsPerDie >= 2) {
+            const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+            const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+            console.log("Die length : ", dieLengthCm)
+            console.log("Die length : ", dieBreadthCm)
+            plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+          } else {
+            const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+            const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+            console.log("Product length : ", productLengthCm)
+            console.log("Product length : ", productBreadthCm)
+            plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+          }
         }
       } else {
         // Otherwise use the provided plate dimensions
         const providedLength = parseFloat(colorDetail.plateDimensions.length)
         const providedBreadth = parseFloat(colorDetail.plateDimensions.breadth)
-        plateArea = (providedLength + margin) * (providedBreadth + margin);
+        plateArea = (providedLength + lengthMargin) * (providedBreadth + breadthMargin);
       }
       
       // 2. Fetch plate material details
@@ -95,16 +124,16 @@ export const calculateLPCosts = async (state) => {
       totalPlateCost += plateCost;
       
       // 4. Fetch DST material details and calculate cost
-      if (colorDetail.dstMaterial) {
-        const dstMaterialDetails = await fetchMaterialDetails(colorDetail.dstMaterial);
-        if (dstMaterialDetails) {
-          // Calculate DST material cost based on plate area
-          const dstMaterialCost = plateArea * parseFloat(dstMaterialDetails.finalCostPerUnit || 0);
-          totalDstMaterialCost += dstMaterialCost;
-        } else {
-          console.warn(`Material details not found for DST material: ${colorDetail.dstMaterial}`);
-        }
-      }
+      // if (colorDetail.dstMaterial) {
+      //   const dstMaterialDetails = await fetchMaterialDetails(colorDetail.dstMaterial);
+      //   if (dstMaterialDetails) {
+      //     // Calculate DST material cost based on plate area
+      //     const dstMaterialCost = plateArea * parseFloat(dstMaterialDetails.finalCostPerUnit || 0);
+      //     totalDstMaterialCost += dstMaterialCost;
+      //   } else {
+      //     console.warn(`Material details not found for DST material: ${colorDetail.dstMaterial}`);
+      //   }
+      // }
       
       // 5. Fetch positive film material details
       const positiveFilmDetails = await fetchMaterialDetails("Positive Film");
@@ -116,15 +145,21 @@ export const calculateLPCosts = async (state) => {
         console.warn("Material details not found for Positive Film");
       }
       
-      // 8. Process color-specific costs
+      // 6. Process color-specific costs
       
-      // 8.1 Fetch ink cost from standard rates
+      // 6.1 Fetch ink cost from standard rates
       const inkDetails = await fetchStandardRate("INK", "PER PIECE");
       const inkCostPerUnit = inkDetails ? parseFloat(inkDetails.finalRate || 0) : 1; // Default to 1 if not found
       totalInkCost += inkCostPerUnit * totalCards; // Total ink cost for all cards
       
-      // 8.2 Fetch MR cost from standard rates
-      const mrType = colorDetail.mrType || "SIMPLE"; // Default to SIMPLE if not specified
+      // 6.2 Fetch impression cost from standard rates
+      const impressionDetails = await fetchStandardRate("IMPRESSION", "LP");
+      const impressionCostPerUnit = impressionDetails ? parseFloat(impressionDetails.finalRate || 0) : 1; // Default to 1 if not found
+      const impressionCostPerCard = impressionCostPerUnit / fragsPerDie;
+      totalImpressionCost += impressionCostPerCard;
+      
+      // 6.3 Fetch MR cost from standard rates
+      const mrType = colorDetail.mrType || "SIMPLE";
       const mrDetails = await fetchStandardRate("LP MR", mrType);
       
       let mrCost = 0;
@@ -139,7 +174,7 @@ export const calculateLPCosts = async (state) => {
       }
       totalMRCost += mrCost;
       
-      // 8.3 Fetch MKG (Making) cost from standard rates
+      // 6.4 Fetch MKG (Making) cost from standard rates
       const mkgDetails = await fetchStandardRate("MKG", "LP PLATE");
       let mkgCost = 0;
       
@@ -151,8 +186,8 @@ export const calculateLPCosts = async (state) => {
       }
       totalMkgCost += mkgCost;
       
-      // Add this color's cost to the total colors cost
-      const thisColorCost = inkCostPerUnit + (mrCost / totalCards) + (mkgCost / totalCards);
+      // Add this color's cost to the total colors cost (updated with impression cost)
+      const thisColorCost = inkCostPerUnit + impressionCostPerUnit + (mrCost / totalCards) + (mkgCost / totalCards);
       totalColorsCost += thisColorCost * totalCards; // Total cost for all cards for this color
     }
     
@@ -160,16 +195,18 @@ export const calculateLPCosts = async (state) => {
     const lpPlateCostPerCard = totalPlateCost / totalCards;
     const lpPositiveFilmCostPerCard = totalPositiveFilmCost / totalCards;
     const lpInkCostPerCard = totalInkCost / totalCards;
+    const lpImpressionCostPerCard = totalImpressionCost; // Add impression cost per card
     const lpMRCostPerCard = totalMRCost / totalCards;
     const lpMkgCostPerCard = totalMkgCost / totalCards;
     const lpDstMaterialCostPerCard = totalDstMaterialCost / totalCards;
     const lpTotalColorsCostPerCard = totalColorsCost / totalCards;
     
-    // Calculate total LP cost per card
+    // Calculate total LP cost per card (updated to include impression cost)
     const lpCostPerCard = 
       lpPlateCostPerCard + 
       lpPositiveFilmCostPerCard + 
       lpInkCostPerCard + 
+      lpImpressionCostPerCard + // Include impression cost
       lpMRCostPerCard + 
       lpMkgCostPerCard + 
       lpDstMaterialCostPerCard; // Include DST material cost
@@ -180,6 +217,7 @@ export const calculateLPCosts = async (state) => {
       lpPlateCostPerCard: lpPlateCostPerCard.toFixed(2),
       lpPositiveFilmCostPerCard: lpPositiveFilmCostPerCard.toFixed(2),
       lpInkCostPerCard: lpInkCostPerCard.toFixed(2),
+      lpImpressionCostPerCard: lpImpressionCostPerCard.toFixed(2), // Include impression cost
       lpMRCostPerCard: lpMRCostPerCard.toFixed(2),
       lpMkgCostPerCard: lpMkgCostPerCard.toFixed(2),
       lpDstMaterialCostPerCard: lpDstMaterialCostPerCard.toFixed(2), // Include DST material cost
@@ -188,12 +226,15 @@ export const calculateLPCosts = async (state) => {
       totalPlateCost: totalPlateCost.toFixed(2),
       totalPositiveFilmCost: totalPositiveFilmCost.toFixed(2),
       totalInkCost: totalInkCost.toFixed(2),
+      totalImpressionCost: totalImpressionCost.toFixed(2), // Include total impression cost
       totalMRCost: totalMRCost.toFixed(2),
       totalMkgCost: totalMkgCost.toFixed(2),
       totalDstMaterialCost: totalDstMaterialCost.toFixed(2), // Include DST material cost
       totalColorsCost: totalColorsCost.toFixed(2),
       colorsCount: lpDetails.colorDetails.length,
-      marginValue: margin.toFixed(2) // Added for debugging
+      fragsPerDie: fragsPerDie, // Include frags per die for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating LP costs:", error);
@@ -203,6 +244,7 @@ export const calculateLPCosts = async (state) => {
       lpPlateCostPerCard: "0.00",
       lpPositiveFilmCostPerCard: "0.00",
       lpInkCostPerCard: "0.00",
+      lpImpressionCostPerCard: "0.00", // Include impression cost
       lpMRCostPerCard: "0.00",
       lpMkgCostPerCard: "0.00",
       lpDstMaterialCostPerCard: "0.00", // Include DST material cost

@@ -1,5 +1,5 @@
 import { fetchMaterialDetails } from "../../../../../../utils/fetchDataUtils";
-import { fetchMarginByJobType } from "../../../../../../utils/dbFetchUtils";
+import { getMarginsByJobType } from "../../../../../../utils/marginUtils";
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
 
@@ -37,7 +37,11 @@ export const calculateMagnetCosts = async (state) => {
     const totalCards = parseInt(orderAndPaper.quantity, 10);
     const dieCode = orderAndPaper.dieCode;
     const jobType = orderAndPaper.jobType || "CARD";
-
+    console.log("JOB TYPE being used : ", jobType)
+    const fragsPerDie = orderAndPaper.frags || 1;
+    const normalizedJobType = (jobType || "").toLowerCase();
+    console.log("JOB TYPE being used : ", normalizedJobType)
+    
     // Check if magnet is used
     if (!magnet || !magnet.isMagnetUsed) {
       return { 
@@ -61,34 +65,45 @@ export const calculateMagnetCosts = async (state) => {
         magnetCostPerCard: "0.00"
       };
     }
-    
-    // Get the frags value or default to 1 if not found
-    const fragsPerDie = dieDetails.frags ? parseInt(dieDetails.frags) || 1 : 1;
-    console.log("Frags per die:", fragsPerDie);
 
-    // 2. Fetch margin value from standard rates based on job type
-    const marginRate = await fetchMarginByJobType(jobType);
-    const margin = marginRate ? parseFloat(marginRate.finalRate) : 2; // Default margin if not found
-    console.log("MARGIN : ",margin)
+    // 2. Get margin values based on job type
+    const margins = getMarginsByJobType(jobType);
+    const lengthMargin = margins.lengthMargin;
+    const breadthMargin = margins.breadthMargin;
+    console.log("MARGINS : ", margins);
     
     // 3. Calculate plate area for magnet material
     let plateArea = 0;
     
     // First check if product size is available
-    if (orderAndPaper.productSize && orderAndPaper.productSize.length && orderAndPaper.productSize.breadth) {
+    if (normalizedJobType === "envelope") {
       const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
       const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
-      plateArea = (productLengthCm + margin) * (productBreadthCm + margin);
-    } else if (orderAndPaper.dieSize && orderAndPaper.dieSize.length && orderAndPaper.dieSize.breadth) {
-      // Fall back to die dimensions if product size is not available
+      console.log("Product length : ", productLengthCm)
+      console.log("Product length : ", productBreadthCm)
+      plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+    }
+    else if (normalizedJobType === "packaging") {
       const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
       const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
-      plateArea = (dieLengthCm + margin) * (dieBreadthCm + margin);
-    } else {
-      return {
-        error: "Missing dimensions for magnet area calculation",
-        magnetCostPerCard: "0.00"
-      };
+      console.log("Die length : ", dieLengthCm)
+      console.log("Die length : ", dieBreadthCm)
+      plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+    }
+    else if (normalizedJobType === "card" || normalizedJobType === "biz card" || normalizedJobType === "magnet" || normalizedJobType === "seal" || normalizedJobType === "liner" || normalizedJobType === "notebook") {
+      if(fragsPerDie >= 2) {
+        const dieLengthCm = parseFloat(orderAndPaper.dieSize.length) * 2.54;
+        const dieBreadthCm = parseFloat(orderAndPaper.dieSize.breadth) * 2.54;
+        console.log("Die length : ", dieLengthCm)
+        console.log("Die length : ", dieBreadthCm)
+        plateArea = (dieLengthCm + lengthMargin) * (dieBreadthCm + breadthMargin);
+      } else {
+        const productLengthCm = parseFloat(orderAndPaper.productSize.length) * 2.54;
+        const productBreadthCm = parseFloat(orderAndPaper.productSize.breadth) * 2.54;
+        console.log("Product length : ", productLengthCm)
+        console.log("Product length : ", productBreadthCm)
+        plateArea = (productLengthCm + lengthMargin) * (productBreadthCm + breadthMargin);
+      }
     }
 
     // 4. Fetch magnet material details from materials DB
@@ -115,7 +130,8 @@ export const calculateMagnetCosts = async (state) => {
       plateArea: plateArea.toFixed(2),
       magnetMaterial: magnet.magnetMaterial,
       materialCostPerUnit: materialCostPerUnit.toFixed(2),
-      marginValue: margin.toFixed(2) // Added for debugging
+      lengthMargin: lengthMargin.toFixed(2), // Updated for debugging
+      breadthMargin: breadthMargin.toFixed(2) // Updated for debugging
     };
   } catch (error) {
     console.error("Error calculating magnet costs:", error);

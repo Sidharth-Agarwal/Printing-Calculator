@@ -205,8 +205,9 @@ const Header = () => {
       isDropdown: true,
       priority: 5,
       dropdownItems: [
-        { label: 'Lead Registration', path: '/crm/lead-registration', icon: '✏️' },
-        { label: 'Lead Pipeline', path: '/crm/lead-management', icon: '🔄' },
+        { label: 'Public Lead Form', path: '/request-kit', icon: '🌐' },
+        { label: 'Lead Pool', path: '/crm/lead-registration', icon: '✏️' },
+        { label: 'Qualified Leads', path: '/crm/lead-management', icon: '🔄' },
         { label: 'Qualification Badges', path: '/crm/badges', icon: '🏆' }
       ]
     },
@@ -290,9 +291,6 @@ const Header = () => {
               alt="Famous Logo" 
               className="h-8 w-8 transition-all duration-300 group-hover:scale-110 group-hover:rotate-12" 
             />
-            <div className="hidden sm:block">
-              <div className="text-base font-bold">Famous</div>
-            </div>
           </Link>
           
           {/* Desktop Navigation */}

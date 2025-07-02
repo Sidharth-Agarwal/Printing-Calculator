@@ -326,6 +326,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             min="1"
             max="10"
             onChange={handleChange}
+            onWheel={(e) => e.target.blur()}
             className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
           />
           {errors.noOfColors && (
@@ -358,7 +359,8 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   </div>
                   
                   {/* Single line layout for color fields */}
-                  <div className="grid grid-cols-7 gap-2">
+                  {/* <div className="grid grid-cols-7 gap-2"> */}
+                  <div className="grid grid-cols-6 gap-2">  
                     {/* First row with all fields in a single line */}
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -387,7 +389,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Length (in):
+                        Length (inches):
                       </label>
                       <input
                         type="number"
@@ -417,7 +419,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Breadth (in):
+                        Breadth (inches):
                       </label>
                       <input
                         type="number"
@@ -519,7 +521,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       )}
                     </div>
 
-                    <div className="col-span-1">
+                    {/* <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         DST Material:
                       </label>
@@ -545,7 +547,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       {dstMaterialsError && (
                         <p className="text-red-500 text-xs mt-1">Failed to load DST materials</p>
                       )}
-                    </div>
+                    </div> */}
                   </div>
                 </div>
               ))

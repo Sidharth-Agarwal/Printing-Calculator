@@ -21,6 +21,38 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
+  // Update dimensions when die size changes (for Auto mode)
+  useEffect(() => {
+    if (fsDetails.isFSUsed) {
+      const updatedFoilDetails = fsDetails.foilDetails.map((foil) => {
+        if (foil.blockSizeType === "Auto") {
+          const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+          const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+          
+          return {
+            ...foil,
+            blockDimension: {
+              length: lengthCm,
+              breadth: breadthCm,
+              lengthInInches: dieSize.length || "",
+              breadthInInches: dieSize.breadth || ""
+            },
+          };
+        }
+        return foil;
+      });
+
+      const needsUpdate = JSON.stringify(fsDetails.foilDetails) !== JSON.stringify(updatedFoilDetails);
+
+      if (needsUpdate) {
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: { foilDetails: updatedFoilDetails },
+        });
+      }
+    }
+  }, [fsDetails.isFSUsed, dieSize, dispatch, fsDetails.foilDetails]);
+
   // Validate foil details against available options
   useEffect(() => {
     // Skip during initial render
@@ -182,7 +214,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         };
       }
     } else if (field === "blockDimension") {
-      // Handle input values as inches
+      // Handle input values as inches - similar to LP component
       if (value.length !== undefined) {
         // Store original inches value
         updatedFoilDetails[index].blockDimension.lengthInInches = value.length;
@@ -314,7 +346,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                     <h4 className="text-sm font-medium text-gray-700">Foil {index + 1}</h4>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
                     {/* Block Size Type */}
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -344,11 +376,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           </label>
                           <input
                             type="number"
-                            placeholder="Enter length"
                             value={foil.blockDimension?.lengthInInches || ""}
                             onChange={(e) => handleFoilDetailsChange(index, "blockDimension", {
                               length: e.target.value,
                             })}
+                            onWheel={(e) => e.target.blur()}
                             className={`w-full px-3 py-2 border ${
                               errors[`blockLength-${index}`] ? "border-red-500" : "border-gray-300"
                             } rounded-md ${
@@ -370,11 +402,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           </label>
                           <input
                             type="number"
-                            placeholder="Enter breadth"
                             value={foil.blockDimension?.breadthInInches || ""}
                             onChange={(e) => handleFoilDetailsChange(index, "blockDimension", {
                               breadth: e.target.value,
                             })}
+                            onWheel={(e) => e.target.blur()}
                             className={`w-full px-3 py-2 border ${
                               errors[`blockBreadth-${index}`] ? "border-red-500" : "border-gray-300"
                             } rounded-md ${

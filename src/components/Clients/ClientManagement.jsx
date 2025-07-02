@@ -4,6 +4,7 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs, que
 import { db } from "../../firebaseConfig";
 import AddClientForm from "./AddClientForm";
 import DisplayClientTable from "./DisplayClientTable";
+import ClientDiscussionModal from "./ClientDiscussionModal"; // NEW: Import discussion modal
 import { useAuth } from "../Login/AuthContext";
 import B2BCredentialsManager from "./B2BCredentialsManager";
 import AdminPasswordModal from "./AdminPasswordModal";
@@ -13,11 +14,16 @@ import ConfirmationModal from "../Shared/ConfirmationModal";
 import DeleteConfirmationModal from "../Shared/DeleteConfirmationModal";
 import { CLIENT_FIELDS } from "../../constants/entityFields";
 import { generateClientCode, checkClientCodeExists } from "../../services/clientCodeService";
+import { 
+  createClientDiscussion, // NEW: Import client discussion service
+  getClientById
+} from "../../services";
 
 const ClientManagement = () => {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedClientForAuth, setSelectedClientForAuth] = useState(null);
+  const [discussionClient, setDiscussionClient] = useState(null); // NEW: Discussion modal state
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -49,7 +55,8 @@ const ClientManagement = () => {
     totalClients: 0,
     activeClients: 0,
     b2bClients: 0,
-    directClients: 0
+    directClients: 0,
+    totalDiscussions: 0 // NEW: Add discussion count to stats
   });
 
   // Get default form data structure based on CLIENT_FIELDS
@@ -89,6 +96,11 @@ const ClientManagement = () => {
     // Add other required properties
     clientData.isActive = true;
     
+    // NEW: Add discussion fields
+    clientData.lastDiscussionDate = null;
+    clientData.lastDiscussionSummary = null;
+    clientData.totalDiscussions = 0;
+    
     return clientData;
   };
 
@@ -114,12 +126,13 @@ const ClientManagement = () => {
       
       setClients(clientsData);
       
-      // Calculate client statistics
+      // Calculate client statistics including discussions
       const stats = {
         totalClients: clientsData.length,
         activeClients: clientsData.filter(client => client.isActive).length,
         b2bClients: clientsData.filter(client => client.clientType === "B2B").length,
-        directClients: clientsData.filter(client => client.clientType === "DIRECT").length
+        directClients: clientsData.filter(client => client.clientType === "DIRECT").length,
+        totalDiscussions: clientsData.reduce((sum, client) => sum + (client.totalDiscussions || 0), 0) // NEW: Calculate total discussions
       };
       setClientStats(stats);
       
@@ -151,6 +164,38 @@ const ClientManagement = () => {
   const handleAddClick = () => {
     setSelectedClient(null); // Ensure we're not in edit mode
     setIsFormModalOpen(true);
+  };
+
+  // NEW: Handle adding a discussion to a client
+  const handleAddDiscussion = (client) => {
+    setDiscussionClient(client);
+  };
+
+  // NEW: Handle submitting a client discussion
+  const handleSubmitDiscussion = async (clientId, discussionData) => {
+    try {
+      await createClientDiscussion(clientId, discussionData, currentUser.uid);
+      
+      setNotification({
+        isOpen: true,
+        message: "Discussion added successfully!",
+        title: "Success",
+        status: "success"
+      });
+      
+      // Close discussion modal
+      setDiscussionClient(null);
+      
+      // The onSnapshot listener will automatically update the client list
+    } catch (error) {
+      console.error("Error adding client discussion:", error);
+      setNotification({
+        isOpen: true,
+        message: `Error: ${error.message}`,
+        title: "Error",
+        status: "error"
+      });
+    }
   };
 
   const addClient = async (clientData) => {
@@ -189,7 +234,11 @@ const ClientManagement = () => {
         hasAccount: false, // Flag for B2B client login account
         userId: null, // Reference to Firebase Auth user ID if B2B client
         temporaryPassword: null, // To store the temporary password
-        passwordCreatedAt: null // When the password was created
+        passwordCreatedAt: null, // When the password was created
+        // NEW: Initialize discussion fields
+        lastDiscussionDate: null,
+        lastDiscussionSummary: null,
+        totalDiscussions: 0
       });
       
       setNotification({
@@ -391,13 +440,26 @@ const ClientManagement = () => {
       
       const estimatesSnapshot = await getDocs(estimatesQuery);
       
+      // Get all discussions associated with this client
+      const discussionsQuery = query(
+        collection(db, "discussions"),
+        where("clientId", "==", deleteConfirmation.itemId)
+      );
+      
+      const discussionsSnapshot = await getDocs(discussionsQuery);
+      
       // Delete each estimate
       const estimateDeletePromises = estimatesSnapshot.docs.map(doc => 
         deleteDoc(doc.ref)
       );
       
-      // Wait for all estimate deletions to complete
-      await Promise.all(estimateDeletePromises);
+      // Delete each discussion
+      const discussionDeletePromises = discussionsSnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
+      
+      // Wait for all deletions to complete
+      await Promise.all([...estimateDeletePromises, ...discussionDeletePromises]);
       
       // Now delete the client
       await deleteDoc(doc(db, "clients", deleteConfirmation.itemId));
@@ -406,7 +468,7 @@ const ClientManagement = () => {
       
       setNotification({
         isOpen: true,
-        message: `Client and ${estimatesSnapshot.size} associated estimate(s) deleted successfully!`,
+        message: `Client, ${estimatesSnapshot.size} estimate(s), and ${discussionsSnapshot.size} discussion(s) deleted successfully!`,
         title: "Success",
         status: "success"
       });
@@ -447,12 +509,12 @@ const ClientManagement = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
         <p className="text-gray-600 mt-1">
-          Add, edit, and manage your clients and their access credentials
+          Add, edit, and manage your clients and their communications
         </p>
       </div>
 
-      {/* Client Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      {/* Client Statistics - Updated with discussions */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-sm font-medium text-gray-500 mb-2">Total Clients</h2>
           <p className="text-2xl font-bold text-gray-800">{clientStats.totalClients}</p>
@@ -484,6 +546,15 @@ const ClientManagement = () => {
             {((clientStats.totalClients - clientStats.activeClients) / clientStats.totalClients * 100 || 0).toFixed(1)}% of total clients
           </p>
         </div>
+        
+        {/* NEW: Total Discussions stat */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Total Discussions</h2>
+          <p className="text-2xl font-bold text-green-600">{clientStats.totalDiscussions}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            {clientStats.totalClients > 0 ? (clientStats.totalDiscussions / clientStats.totalClients).toFixed(1) : 0} avg per client
+          </p>
+        </div>
       </div>
 
       {/* Action buttons */}
@@ -499,7 +570,7 @@ const ClientManagement = () => {
         </button>
       </div>
       
-      {/* Table component */}
+      {/* Table component - Updated with discussion support */}
       <div className="bg-white overflow-hidden">
         {isLoading ? (
           <div className="p-8 flex justify-center">
@@ -516,6 +587,7 @@ const ClientManagement = () => {
             onManageCredentials={handleManageCredentials}
             onActivateClient={handleActivateClient}
             onToggleStatus={toggleClientStatus}
+            onAddDiscussion={handleAddDiscussion} // NEW: Pass discussion handler
             isAdmin={isAdmin}
           />
         )}
@@ -536,6 +608,15 @@ const ClientManagement = () => {
           generateClientCode={generateClientCode}
         />
       </Modal>
+
+      {/* NEW: Client Discussion Modal */}
+      {discussionClient && (
+        <ClientDiscussionModal
+          client={discussionClient}
+          onClose={() => setDiscussionClient(null)}
+          onSubmit={handleSubmitDiscussion}
+        />
+      )}
 
       {/* B2B Client Credentials Manager Modal */}
       {selectedClientForAuth && (

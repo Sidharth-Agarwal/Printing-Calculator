@@ -13,7 +13,7 @@ export const jobTypeConfigurations = {
         postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MISC"],
         defaultActiveServices: {
             production: [],
-            postProduction: ["QC", "PACKING"]
+            postProduction: ["DC", "QC", "PACKING"]
         },
         defaultValues: { /* Liner-specific defaults (same as Card) */ }
     },

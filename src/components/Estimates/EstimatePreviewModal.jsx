@@ -1,16 +1,47 @@
 import React from 'react';
 
-const EstimatePreviewModal = ({ isOpen, onClose, onDownload, isGeneratingPDF, error, children }) => {
+const EstimatePreviewModal = ({ 
+  isOpen, 
+  onClose, 
+  onDownload, 
+  isGeneratingPDF, 
+  error, 
+  children, 
+  estimates = [] // Add estimates prop to show pagination info
+}) => {
   if (!isOpen) return null;
+
+  // Calculate pagination info
+  const ESTIMATES_PER_PAGE = 8;
+  const totalPages = Math.ceil(estimates.length / ESTIMATES_PER_PAGE);
+  const showPaginationInfo = estimates.length > ESTIMATES_PER_PAGE;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-5xl max-h-[90vh] flex flex-col">
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
-          <h2 className="text-xl font-bold text-gray-800">
-            Preview Customer Estimate
-          </h2>
+          <div>
+            <h2 className="text-xl font-bold text-gray-800">
+              Preview Customer Estimate
+            </h2>
+            {/* Pagination info */}
+            {showPaginationInfo && (
+              <div className="flex items-center gap-4 mt-1">
+                <div className="text-sm text-gray-600">
+                  <span className="inline-flex items-center px-2 py-1 bg-blue-50 text-blue-700 rounded-md text-xs font-medium">
+                    <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    {estimates.length} estimates across {totalPages} pages
+                  </span>
+                </div>
+                <div className="text-xs text-gray-500">
+                  ({ESTIMATES_PER_PAGE} estimates per page)
+                </div>
+              </div>
+            )}
+          </div>
           <div className="flex items-center gap-4">
             <button
               onClick={onDownload}
@@ -75,12 +106,34 @@ const EstimatePreviewModal = ({ isOpen, onClose, onDownload, isGeneratingPDF, er
                 <div className="p-4 bg-white bg-opacity-90 rounded-lg shadow-lg text-center">
                   <div className="animate-spin h-10 w-10 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
                   <p className="mt-2 text-blue-600">Please wait while we generate your PDF...</p>
+                  {showPaginationInfo && (
+                    <p className="mt-1 text-sm text-gray-500">Processing {totalPages} pages...</p>
+                  )}
                 </div>
               </div>
             )}
             {children}
           </div>
         </div>
+
+        {/* Footer with additional pagination info */}
+        {showPaginationInfo && (
+          <div className="px-6 py-3 bg-gray-50 border-t border-gray-200">
+            <div className="flex items-center justify-between text-sm text-gray-600">
+              <div className="flex items-center">
+                <svg className="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                <span>Document will be generated with proper page breaks</span>
+              </div>
+              <div>
+                <span className="text-xs bg-gray-200 px-2 py-1 rounded">
+                  {estimates.length} estimates • {totalPages} pages
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

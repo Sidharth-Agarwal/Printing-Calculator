@@ -834,3 +834,103 @@ export const recalculateTotals = async (
     return updatedCalculations;
   }
 };
+
+/**
+ * NEW: Function to recalculate markup for edit mode
+ * This ensures the markup is calculated on the correct base amount shown in UI
+ * @param {Object} calculations - Existing calculations
+ * @param {Number} newMarkupPercentage - New markup percentage
+ * @param {String} newMarkupType - New markup type
+ * @returns {Object} - Updated calculations with new markup
+ */
+export const recalculateMarkupForEdit = (calculations, newMarkupPercentage, newMarkupType) => {
+  try {
+    console.log("Recalculating markup for edit mode:", {
+      subtotalPerCard: calculations.subtotalPerCard,
+      newMarkupPercentage,
+      newMarkupType
+    });
+
+    // Use the subtotalPerCard as the base for markup calculation in edit mode
+    const subtotalPerCard = parseFloat(calculations.subtotalPerCard || calculations.costWithMisc || 0);
+    
+    // Calculate new markup amount
+    const newMarkupAmount = subtotalPerCard * (newMarkupPercentage / 100);
+    
+    // Calculate new total cost per card
+    const newTotalCostPerCard = subtotalPerCard + newMarkupAmount;
+    
+    // Calculate total for all cards
+    const quantity = parseInt(calculations.quantity || 1);
+    const newTotalCost = newTotalCostPerCard * quantity;
+    
+    // Recalculate GST on the new total
+    const gstRate = parseFloat(calculations.gstRate || 18);
+    const newGstAmount = newTotalCost * (gstRate / 100);
+    const newTotalWithGST = newTotalCost + newGstAmount;
+    
+    // Return updated calculations
+    const updatedCalculations = {
+      ...calculations,
+      markupType: newMarkupType,
+      markupPercentage: newMarkupPercentage,
+      markupAmount: newMarkupAmount.toFixed(2),
+      totalCostPerCard: newTotalCostPerCard.toFixed(2),
+      totalCost: newTotalCost.toFixed(2),
+      gstAmount: newGstAmount.toFixed(2),
+      totalWithGST: newTotalWithGST.toFixed(2)
+    };
+    
+    console.log("Updated calculations for edit:", {
+      markupAmount: updatedCalculations.markupAmount,
+      totalCostPerCard: updatedCalculations.totalCostPerCard,
+      totalCost: updatedCalculations.totalCost
+    });
+    
+    return updatedCalculations;
+  } catch (error) {
+    console.error("Error recalculating markup for edit:", error);
+    return calculations; // Return original if error
+  }
+};
+
+/**
+ * NEW: Simple markup recalculation function specifically for edit mode
+ * Uses the displayed subtotal as the base for consistent calculations
+ * @param {Object} existingCalculations - Current calculation state
+ * @param {Number} markupPercentage - New markup percentage
+ * @param {String} markupType - New markup type
+ * @param {Number} quantity - Number of items
+ * @param {Number} gstRate - GST rate to apply
+ * @returns {Object} - Updated calculations
+ */
+export const simpleMarkupRecalculation = (existingCalculations, markupPercentage, markupType, quantity, gstRate) => {
+  try {
+    // Use the subtotal that's displayed in the UI
+    const subtotalPerCard = parseFloat(existingCalculations.subtotalPerCard || 0);
+    
+    // Calculate new markup
+    const markupAmount = subtotalPerCard * (markupPercentage / 100);
+    const totalCostPerCard = subtotalPerCard + markupAmount;
+    const totalCost = totalCostPerCard * quantity;
+    
+    // Calculate GST
+    const gstAmount = totalCost * (gstRate / 100);
+    const totalWithGST = totalCost + gstAmount;
+    
+    return {
+      ...existingCalculations,
+      markupType: markupType,
+      markupPercentage: markupPercentage,
+      markupAmount: markupAmount.toFixed(2),
+      totalCostPerCard: totalCostPerCard.toFixed(2),
+      totalCost: totalCost.toFixed(2),
+      gstRate: gstRate,
+      gstAmount: gstAmount.toFixed(2),
+      totalWithGST: totalWithGST.toFixed(2)
+    };
+  } catch (error) {
+    console.error("Error in simple markup recalculation:", error);
+    return existingCalculations;
+  }
+};
