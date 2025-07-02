@@ -4,7 +4,9 @@ import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs, que
 import { db } from "../../firebaseConfig";
 import AddClientForm from "./AddClientForm";
 import DisplayClientTable from "./DisplayClientTable";
-import ClientDiscussionModal from "./ClientDiscussionModal"; // NEW: Import discussion modal
+import ClientDiscussionModal from "./ClientDiscussionModal";
+import ClientImportantDatesModal from "./ClientImportantDatesModal"; // NEW: Import important dates modal
+import ImportantDatesWidget from "./ImportantDatesWidget"; // NEW: Import widget
 import { useAuth } from "../Login/AuthContext";
 import B2BCredentialsManager from "./B2BCredentialsManager";
 import AdminPasswordModal from "./AdminPasswordModal";
@@ -15,15 +17,23 @@ import DeleteConfirmationModal from "../Shared/DeleteConfirmationModal";
 import { CLIENT_FIELDS } from "../../constants/entityFields";
 import { generateClientCode, checkClientCodeExists } from "../../services/clientCodeService";
 import { 
-  createClientDiscussion, // NEW: Import client discussion service
+  createClientDiscussion,
   getClientById
 } from "../../services";
+// NEW: Import important dates services
+import {
+  createClientDate,
+  updateClientDate,
+  deleteClientDate
+} from "../../services/clientDatesService";
 
 const ClientManagement = () => {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedClientForAuth, setSelectedClientForAuth] = useState(null);
-  const [discussionClient, setDiscussionClient] = useState(null); // NEW: Discussion modal state
+  const [discussionClient, setDiscussionClient] = useState(null);
+  const [importantDatesClient, setImportantDatesClient] = useState(null); // NEW: Important dates modal state
+  const [editingImportantDate, setEditingImportantDate] = useState(null); // NEW: Editing date state
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -56,7 +66,7 @@ const ClientManagement = () => {
     activeClients: 0,
     b2bClients: 0,
     directClients: 0,
-    totalDiscussions: 0 // NEW: Add discussion count to stats
+    totalDiscussions: 0
   });
 
   // Get default form data structure based on CLIENT_FIELDS
@@ -96,7 +106,7 @@ const ClientManagement = () => {
     // Add other required properties
     clientData.isActive = true;
     
-    // NEW: Add discussion fields
+    // Add discussion fields
     clientData.lastDiscussionDate = null;
     clientData.lastDiscussionSummary = null;
     clientData.totalDiscussions = 0;
@@ -132,7 +142,7 @@ const ClientManagement = () => {
         activeClients: clientsData.filter(client => client.isActive).length,
         b2bClients: clientsData.filter(client => client.clientType === "B2B").length,
         directClients: clientsData.filter(client => client.clientType === "DIRECT").length,
-        totalDiscussions: clientsData.reduce((sum, client) => sum + (client.totalDiscussions || 0), 0) // NEW: Calculate total discussions
+        totalDiscussions: clientsData.reduce((sum, client) => sum + (client.totalDiscussions || 0), 0)
       };
       setClientStats(stats);
       
@@ -166,12 +176,12 @@ const ClientManagement = () => {
     setIsFormModalOpen(true);
   };
 
-  // NEW: Handle adding a discussion to a client
+  // Handle adding a discussion to a client
   const handleAddDiscussion = (client) => {
     setDiscussionClient(client);
   };
 
-  // NEW: Handle submitting a client discussion
+  // Handle submitting a client discussion
   const handleSubmitDiscussion = async (clientId, discussionData) => {
     try {
       await createClientDiscussion(clientId, discussionData, currentUser.uid);
@@ -195,6 +205,103 @@ const ClientManagement = () => {
         title: "Error",
         status: "error"
       });
+    }
+  };
+
+  // NEW: Handle important dates operations
+  const handleAddImportantDate = (client) => {
+    setImportantDatesClient(client);
+    setEditingImportantDate(null);
+  };
+
+  const handleEditImportantDate = (client, dateItem) => {
+    setImportantDatesClient(client);
+    setEditingImportantDate(dateItem);
+  };
+
+  const handleSubmitImportantDate = async (clientId, dateData, editingDateId = null) => {
+    try {
+      if (editingDateId) {
+        // Update existing date
+        await updateClientDate(editingDateId, dateData);
+        setNotification({
+          isOpen: true,
+          message: "Important date updated successfully!",
+          title: "Success",
+          status: "success"
+        });
+      } else {
+        // Create new date
+        await createClientDate(clientId, dateData, currentUser.uid);
+        setNotification({
+          isOpen: true,
+          message: "Important date added successfully!",
+          title: "Success",
+          status: "success"
+        });
+      }
+      
+      // Close modal
+      setImportantDatesClient(null);
+      setEditingImportantDate(null);
+      
+    } catch (error) {
+      console.error("Error submitting important date:", error);
+      setNotification({
+        isOpen: true,
+        message: `Error: ${error.message}`,
+        title: "Error",
+        status: "error"
+      });
+    }
+  };
+
+  const handleDeleteImportantDate = async (dateId) => {
+    try {
+      await deleteClientDate(dateId);
+      setNotification({
+        isOpen: true,
+        message: "Important date deleted successfully!",
+        title: "Success",
+        status: "success"
+      });
+    } catch (error) {
+      console.error("Error deleting important date:", error);
+      setNotification({
+        isOpen: true,
+        message: `Error: ${error.message}`,
+        title: "Error",
+        status: "error"
+      });
+    }
+  };
+
+  const handleCloseImportantDatesModal = () => {
+    setImportantDatesClient(null);
+    setEditingImportantDate(null);
+  };
+
+  // NEW: Handle client click from widget
+  const handleClientClickFromWidget = async (clientId) => {
+    try {
+      // Find client in current clients list first
+      let client = clients.find(c => c.id === clientId);
+      
+      // If not found, fetch from database
+      if (!client) {
+        client = await getClientById(clientId);
+      }
+      
+      if (client) {
+        // You can either open client details modal directly or scroll to client in table
+        // For now, let's focus the table on that client
+        const tableElement = document.getElementById('clients-table');
+        if (tableElement) {
+          tableElement.scrollIntoView({ behavior: 'smooth' });
+        }
+      }
+    } catch (error) {
+      console.error("Error handling client click from widget:", error);
     }
   };
 
@@ -235,7 +342,7 @@ const ClientManagement = () => {
         userId: null, // Reference to Firebase Auth user ID if B2B client
         temporaryPassword: null, // To store the temporary password
         passwordCreatedAt: null, // When the password was created
-        // NEW: Initialize discussion fields
+        // Initialize discussion fields
         lastDiscussionDate: null,
         lastDiscussionSummary: null,
         totalDiscussions: 0
@@ -447,6 +554,14 @@ const ClientManagement = () => {
       );
       
       const discussionsSnapshot = await getDocs(discussionsQuery);
+
+      // NEW: Get all important dates associated with this client
+      const datesQuery = query(
+        collection(db, "clientImportantDates"),
+        where("clientId", "==", deleteConfirmation.itemId)
+      );
+      
+      const datesSnapshot = await getDocs(datesQuery);
       
       // Delete each estimate
       const estimateDeletePromises = estimatesSnapshot.docs.map(doc => 
@@ -457,9 +572,14 @@ const ClientManagement = () => {
       const discussionDeletePromises = discussionsSnapshot.docs.map(doc => 
         deleteDoc(doc.ref)
       );
+
+      // NEW: Delete each important date
+      const dateDeletePromises = datesSnapshot.docs.map(doc => 
+        deleteDoc(doc.ref)
+      );
       
       // Wait for all deletions to complete
-      await Promise.all([...estimateDeletePromises, ...discussionDeletePromises]);
+      await Promise.all([...estimateDeletePromises, ...discussionDeletePromises, ...dateDeletePromises]);
       
       // Now delete the client
       await deleteDoc(doc(db, "clients", deleteConfirmation.itemId));
@@ -468,7 +588,7 @@ const ClientManagement = () => {
       
       setNotification({
         isOpen: true,
-        message: `Client, ${estimatesSnapshot.size} estimate(s), and ${discussionsSnapshot.size} discussion(s) deleted successfully!`,
+        message: `Client, ${estimatesSnapshot.size} estimate(s), ${discussionsSnapshot.size} discussion(s), and ${datesSnapshot.size} important date(s) deleted successfully!`,
         title: "Success",
         status: "success"
       });
@@ -513,8 +633,8 @@ const ClientManagement = () => {
         </p>
       </div>
 
-      {/* Client Statistics - Updated with discussions */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-6">
+      {/* Client Statistics */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-sm font-medium text-gray-500 mb-2">Total Clients</h2>
           <p className="text-2xl font-bold text-gray-800">{clientStats.totalClients}</p>
@@ -547,7 +667,6 @@ const ClientManagement = () => {
           </p>
         </div>
         
-        {/* NEW: Total Discussions stat */}
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-sm font-medium text-gray-500 mb-2">Total Discussions</h2>
           <p className="text-2xl font-bold text-green-600">{clientStats.totalDiscussions}</p>
@@ -555,6 +674,15 @@ const ClientManagement = () => {
             {clientStats.totalClients > 0 ? (clientStats.totalDiscussions / clientStats.totalClients).toFixed(1) : 0} avg per client
           </p>
         </div>
+      </div>
+
+      {/* NEW: Important Dates Widget in dedicated section */}
+      <div className="mb-6">
+        <ImportantDatesWidget 
+          onClientClick={handleClientClickFromWidget}
+          daysAhead={30}
+          maxDisplay={5}
+        />
       </div>
 
       {/* Action buttons */}
@@ -570,8 +698,8 @@ const ClientManagement = () => {
         </button>
       </div>
       
-      {/* Table component - Updated with discussion support */}
-      <div className="bg-white overflow-hidden">
+      {/* Table component */}
+      <div className="bg-white overflow-hidden" id="clients-table">
         {isLoading ? (
           <div className="p-8 flex justify-center">
             <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
@@ -587,7 +715,7 @@ const ClientManagement = () => {
             onManageCredentials={handleManageCredentials}
             onActivateClient={handleActivateClient}
             onToggleStatus={toggleClientStatus}
-            onAddDiscussion={handleAddDiscussion} // NEW: Pass discussion handler
+            onAddDiscussion={handleAddDiscussion}
             isAdmin={isAdmin}
           />
         )}
@@ -609,12 +737,22 @@ const ClientManagement = () => {
         />
       </Modal>
 
-      {/* NEW: Client Discussion Modal */}
+      {/* Client Discussion Modal */}
       {discussionClient && (
         <ClientDiscussionModal
           client={discussionClient}
           onClose={() => setDiscussionClient(null)}
           onSubmit={handleSubmitDiscussion}
+        />
+      )}
+
+      {/* NEW: Client Important Dates Modal */}
+      {importantDatesClient && (
+        <ClientImportantDatesModal
+          client={importantDatesClient}
+          editingDate={editingImportantDate}
+          onClose={handleCloseImportantDatesModal}
+          onSubmit={handleSubmitImportantDate}
         />
       )}
 

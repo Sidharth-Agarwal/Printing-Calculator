@@ -215,11 +215,11 @@ const ClientDiscussionModal = ({ client, onClose, onSubmit }) => {
           </div>
           
           {/* Discussion Type Context (informational) */}
-          <div className="mb-3 p-2 bg-blue-50 rounded-md">
+          {/* <div className="mb-3 p-2 bg-blue-50 rounded-md">
             <p className="text-xs text-blue-800">
               <strong>Discussion Types:</strong> Sales calls, support requests, project updates, account reviews, or general client communication.
             </p>
-          </div>
+          </div> */}
           
           {/* Error message */}
           {errors.submit && (
