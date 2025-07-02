@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { LEAD_TABLE_FIELDS } from "../../../constants/leadFields";
-import { LEAD_STATUSES } from "../../../constants/leadStatuses";
+import { LEAD_STATUSES } from "../../../constants/leadStatuses"; // Updated import
 import LeadStatusBadge from "../../Shared/LeadStatusBadge";
 import { LeadSourceDisplay } from "../../Shared/LeadSourceSelector";
 import QualificationBadge from "../../Shared/QualificationBadge";
@@ -85,7 +85,7 @@ const InlineQualificationDropdown = ({
 };
 
 /**
- * Inline dropdown component for editing lead status
+ * Inline dropdown component for editing lead status - Updated to use LEAD_STATUSES
  */
 const InlineStatusDropdown = ({ 
   leadId, 

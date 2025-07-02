@@ -4,24 +4,37 @@ import { db } from "../../firebaseConfig";
 import { CLIENT_FIELDS } from "../../constants/entityFields";
 import DiscussionHistory from "../Shared/DiscussionHistory";
 import CRMActionButton from "../Shared/CRMActionButton";
+import ImportantDatesList from "./ImportantDatesList";
+import ClientImportantDatesModal from "./ClientImportantDatesModal";
+import { 
+  createClientDate, 
+  updateClientDate, 
+  deleteClientDate 
+} from "../../services/clientDatesService";
 
 const ClientDetailsModal = ({ 
   client, 
   onClose, 
   onEdit, 
   onToggleStatus, 
-  onAddDiscussion, // NEW: Add discussion handler
+  onAddDiscussion,
   isAdmin 
 }) => {
-  const [discussions, setDiscussions] = useState([]); // NEW: Discussion state
-  const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(true); // NEW: Loading state
+  const [discussions, setDiscussions] = useState([]);
+  const [isLoadingDiscussions, setIsLoadingDiscussions] = useState(true);
+  const [importantDatesModal, setImportantDatesModal] = useState({
+    isOpen: false,
+    editingDate: null
+  });
+  const [datesLoading, setDatesLoading] = useState(false);
+  const [importantDatesKey, setImportantDatesKey] = useState(0); // NEW: Force refresh key
   const [notification, setNotification] = useState({
     show: false,
     message: "",
     type: "success"
   });
 
-  // NEW: Show notification
+  // Show notification
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type });
     
@@ -31,7 +44,7 @@ const ClientDetailsModal = ({
     }, 3000);
   };
 
-  // NEW: Fetch discussions when client changes - using real-time updates
+  // Fetch discussions when client changes - using real-time updates
   useEffect(() => {
     if (!client || !client.id) {
       console.log("No client provided or client missing ID");
@@ -67,7 +80,7 @@ const ClientDetailsModal = ({
     return () => unsubscribe();
   }, [client]);
 
-  // NEW: Handle discussion updates (refresh when edited/deleted)
+  // Handle discussion updates (refresh when edited/deleted)
   const refreshDiscussions = async () => {
     if (!client || !client.id) return;
     
@@ -93,6 +106,72 @@ const ClientDetailsModal = ({
     } finally {
       setIsLoadingDiscussions(false);
     }
+  };
+
+  // Handle important dates operations
+  const handleAddImportantDate = (client) => {
+    setImportantDatesModal({
+      isOpen: true,
+      editingDate: null
+    });
+  };
+
+  const handleEditImportantDate = (dateItem) => {
+    setImportantDatesModal({
+      isOpen: true,
+      editingDate: dateItem
+    });
+  };
+
+  const handleSubmitImportantDate = async (clientId, dateData, editingDateId = null) => {
+    try {
+      setDatesLoading(true);
+      
+      if (editingDateId) {
+        // Update existing date
+        await updateClientDate(editingDateId, dateData);
+        showNotification("Important date updated successfully!", "success");
+      } else {
+        // Create new date
+        await createClientDate(clientId, dateData, "current-user-id"); // Replace with actual user ID
+        showNotification("Important date added successfully!", "success");
+      }
+      
+      // Close modal
+      setImportantDatesModal({ isOpen: false, editingDate: null });
+      
+      // Force refresh of ImportantDatesList
+      setImportantDatesKey(prev => prev + 1);
+      
+      // The ImportantDatesList component will auto-refresh
+    } catch (error) {
+      console.error("Error submitting important date:", error);
+      showNotification(`Error: ${error.message}`, "error");
+    } finally {
+      setDatesLoading(false);
+    }
+  };
+
+  const handleDeleteImportantDate = async (dateId) => {
+    try {
+      setDatesLoading(true);
+      await deleteClientDate(dateId);
+      showNotification("Important date deleted successfully!", "success");
+      
+      // Force refresh of ImportantDatesList
+      setImportantDatesKey(prev => prev + 1);
+      
+      // The ImportantDatesList component will auto-refresh
+    } catch (error) {
+      console.error("Error deleting important date:", error);
+      showNotification(`Error: ${error.message}`, "error");
+    } finally {
+      setDatesLoading(false);
+    }
+  };
+
+  const handleCloseImportantDatesModal = () => {
+    setImportantDatesModal({ isOpen: false, editingDate: null });
   };
 
   if (!client) return null;
@@ -179,7 +258,7 @@ const ClientDetailsModal = ({
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-xl w-full max-w-6xl mx-4 overflow-auto max-h-[90vh]">
+      <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 overflow-auto max-h-[90vh]">
         {/* Header with loyalty tier styling if applicable */}
         <div className="p-4 flex justify-between items-center" style={getHeaderStyle()}>
           <h3 className="text-lg font-semibold">
@@ -201,7 +280,7 @@ const ClientDetailsModal = ({
           </button>
         </div>
         
-        {/* NEW: Notification */}
+        {/* Notification */}
         {notification.show && (
           <div className={`mx-4 mt-4 p-3 rounded ${
             notification.type === "success" 
@@ -214,7 +293,7 @@ const ClientDetailsModal = ({
         
         <div className="flex flex-col lg:flex-row h-[calc(90vh-4rem)] overflow-hidden">
           {/* Client Information */}
-          <div className="w-full lg:w-1/2 p-4 overflow-y-auto">
+          <div className="w-full lg:w-1/3 p-4 overflow-y-auto border-r border-gray-200">
             {/* Basic Info */}
             <div className="mb-6">
               <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start">
@@ -314,7 +393,6 @@ const ClientDetailsModal = ({
                     <p className="text-gray-500">Avg. Order Value</p>
                     <p className="text-lg font-medium">{formatCurrency(client.averageOrderValue)}</p>
                   </div>
-                  {/* NEW: Discussion statistics */}
                   <div>
                     <p className="text-gray-500">Total Discussions</p>
                     <p className="text-lg font-medium">{client.totalDiscussions || 0}</p>
@@ -437,8 +515,20 @@ const ClientDetailsModal = ({
             </div>
           </div>
           
-          {/* NEW: Discussion History */}
-          <div className="w-full lg:w-1/2 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 overflow-y-auto bg-gray-50">
+          {/* Important Dates Section */}
+          <div className="w-full lg:w-1/3 border-t lg:border-t-0 lg:border-l border-gray-200 overflow-y-auto bg-gray-50">
+            <ImportantDatesList
+              key={importantDatesKey}
+              client={client}
+              onAddDate={handleAddImportantDate}
+              onEditDate={handleEditImportantDate}
+              onDeleteDate={handleDeleteImportantDate}
+              loading={datesLoading}
+            />
+          </div>
+          
+          {/* Discussion History */}
+          <div className="w-full lg:w-1/3 border-t lg:border-t-0 lg:border-l border-gray-200 p-4 overflow-y-auto bg-gray-50">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">Discussions</h3>
               {onAddDiscussion && (
@@ -461,14 +551,24 @@ const ClientDetailsModal = ({
               discussions={discussions}
               loading={isLoadingDiscussions}
               formatDate={formatDate}
-              entity={client} // Pass client instead of lead
+              entity={client}
               onUpdate={refreshDiscussions}
-              readOnly={false} // Allow editing for active clients
-              entityType="client" // NEW: Specify entity type
+              readOnly={false}
+              entityType="client"
             />
           </div>
         </div>
       </div>
+      
+      {/* Important Dates Modal */}
+      {importantDatesModal.isOpen && (
+        <ClientImportantDatesModal
+          client={client}
+          editingDate={importantDatesModal.editingDate}
+          onClose={handleCloseImportantDatesModal}
+          onSubmit={handleSubmitImportantDate}
+        />
+      )}
     </div>
   );
 };

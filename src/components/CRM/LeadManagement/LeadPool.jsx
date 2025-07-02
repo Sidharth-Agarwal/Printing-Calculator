@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from "react";
-import { LEAD_STATUSES, getStatusById } from "../../../constants/leadStatuses";
+import { LEAD_STATUSES, getKanbanStatusForLead } from "../../../constants/leadStatuses";
 import QualificationBadge from "../../Shared/QualificationBadge";
 import { LeadSourceDisplay } from "../../Shared/LeadSourceSelector";
 import CRMActionButton from "../../Shared/CRMActionButton";
@@ -83,7 +83,7 @@ const InlineKanbanBadgeEditor = ({ leadId, currentBadgeId, onUpdate, disabled = 
 };
 
 /**
- * Lead Pool component for kanban-style lead management with Notion-like drag and drop
+ * Lead Pool component for kanban-style lead management with 4 columns
  * @param {Object} props - Component props
  * @param {Array} props.leads - Array of lead objects (pre-filtered)
  * @param {function} props.onView - View handler
@@ -102,7 +102,7 @@ const LeadPool = ({
   onConvert,
   onDelete,
   loading = false,
-  onLeadUpdate // NEW: Callback for lead updates
+  onLeadUpdate
 }) => {
   const [draggedLead, setDraggedLead] = useState(null);
   const [updatingLeadId, setUpdatingLeadId] = useState(null);
@@ -116,21 +116,20 @@ const LeadPool = ({
   const lastMousePosition = useRef({ x: 0, y: 0 });
   
   // Memoize grouped leads to prevent unnecessary recalculations
+  // Group leads by their Kanban status (mapping intermediate statuses)
   const groupedLeads = useMemo(() => {
     const groups = {};
     
-    // Initialize groups with empty arrays
+    // Initialize groups with empty arrays for the 4 Kanban columns
     LEAD_STATUSES.forEach(status => {
       groups[status.id] = [];
     });
     
-    // Group leads by status and sort by order
+    // Group leads by their Kanban status
     leads.forEach(lead => {
-      if (groups[lead.status]) {
-        groups[lead.status].push(lead);
-      } else {
-        // If status doesn't exist in our predefined statuses, put it in newLead
-        groups["newLead"].push(lead);
+      const kanbanStatus = getKanbanStatusForLead(lead.status);
+      if (groups[kanbanStatus]) {
+        groups[kanbanStatus].push(lead);
       }
     });
     
@@ -238,14 +237,36 @@ const LeadPool = ({
       
       await batch.commit();
       console.log(`Successfully reordered ${reorderedLeadIds.length} leads in status ${statusId}`);
-      handleLeadUpdate(); // Trigger update callback
+      handleLeadUpdate();
     } catch (error) {
       console.error(`Error reordering leads in status ${statusId}:`, error);
     }
   }, [handleLeadUpdate]);
   
+  // Get the actual status to update when dropping (maps Kanban column back to lead status)
+  const getTargetStatusForDrop = (kanbanStatusId, originalLeadStatus) => {
+    // If dropping in the same Kanban column, keep original status
+    if (getKanbanStatusForLead(originalLeadStatus) === kanbanStatusId) {
+      return originalLeadStatus;
+    }
+    
+    // Map Kanban columns to appropriate statuses
+    switch (kanbanStatusId) {
+      case "newLead":
+        return "newLead";
+      case "qualified":
+        return "qualified";
+      case "converted":
+        return "converted";
+      case "lost":
+        return "lost";
+      default:
+        return originalLeadStatus;
+    }
+  };
+  
   // Optimized drag start
-  const handleDragStart = useCallback((e, lead, status, index) => {
+  const handleDragStart = useCallback((e, lead, kanbanStatus, index) => {
     // Don't allow dragging if lead is moved to clients
     if (isLeadAddedToClients(lead)) {
       e.preventDefault();
@@ -253,7 +274,7 @@ const LeadPool = ({
     }
     
     setIsDragging(true);
-    setDraggedLead({ ...lead, status, index });
+    setDraggedLead({ ...lead, kanbanStatus, index });
     dragNode.current = e.target;
     
     // Create ghost content
@@ -268,7 +289,7 @@ const LeadPool = ({
           </div>
           <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #6b7280;">
             <div>${lead.source || ''}</div>
-            <div>May 22</div>
+            <div>Status: ${lead.status}</div>
           </div>
         </div>
       `;
@@ -364,7 +385,7 @@ const LeadPool = ({
   }, [draggedLead, dragOverIndex, dragOverStatus]);
   
   // Optimized drop handler
-  const handleDrop = useCallback(async (e, statusId, dropIndex = -1) => {
+  const handleDrop = useCallback(async (e, kanbanStatusId, dropIndex = -1) => {
     e.preventDefault();
     
     if (!draggedLead) return;
@@ -380,12 +401,16 @@ const LeadPool = ({
     setDragOverIndex(null);
     
     try {
-      if (draggedLead.status !== statusId) {
-        // Moving to different status
+      const originalKanbanStatus = getKanbanStatusForLead(draggedLead.status);
+      
+      if (originalKanbanStatus !== kanbanStatusId) {
+        // Moving to different Kanban column - update status
+        const newStatus = getTargetStatusForDrop(kanbanStatusId, draggedLead.status);
+        
         let newOrder = 1000;
         
         if (dropIndex > 0) {
-          const statusLeads = groupedLeads[statusId] || [];
+          const statusLeads = groupedLeads[kanbanStatusId] || [];
           if (dropIndex >= statusLeads.length) {
             const lastLead = statusLeads[statusLeads.length - 1];
             newOrder = (lastLead?.order || 0) + 1000;
@@ -405,15 +430,15 @@ const LeadPool = ({
         
         const leadRef = doc(db, "leads", draggedLead.id);
         await updateDoc(leadRef, {
-          status: statusId,
+          status: newStatus,
           order: newOrder,
           updatedAt: serverTimestamp()
         });
         
-        handleLeadUpdate(); // Trigger update callback
+        handleLeadUpdate();
       } else if (dropIndex !== -1 && draggedLead.index !== dropIndex) {
-        // Reordering within same status
-        const leadsInStatus = groupedLeads[statusId] || [];
+        // Reordering within same Kanban column
+        const leadsInStatus = groupedLeads[kanbanStatusId] || [];
         const reorderedLeads = [...leadsInStatus];
         const draggedLeadObject = reorderedLeads.find(lead => lead.id === draggedLead.id);
         const filteredLeads = reorderedLeads.filter(lead => lead.id !== draggedLead.id);
@@ -421,7 +446,7 @@ const LeadPool = ({
         filteredLeads.splice(dropIndex > draggedLead.index ? dropIndex - 1 : dropIndex, 0, draggedLeadObject);
         
         const reorderedLeadIds = filteredLeads.map(lead => lead.id);
-        await handleReorderLeads(statusId, reorderedLeadIds);
+        await handleReorderLeads(kanbanStatusId, reorderedLeadIds);
       }
     } catch (error) {
       console.error("Error updating lead:", error);
@@ -430,7 +455,7 @@ const LeadPool = ({
     }
     
     setDraggedLead(null);
-  }, [draggedLead, groupedLeads, handleReorderLeads, handleLeadUpdate]);
+  }, [draggedLead, groupedLeads, handleReorderLeads, handleLeadUpdate, getTargetStatusForDrop]);
   
   // Memoized utility functions
   const formatDate = useCallback((timestamp) => {
@@ -493,8 +518,8 @@ const LeadPool = ({
   
   return (
     <div className="pb-6">
-      {/* Lead Pool Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      {/* Lead Pool Grid - 4 columns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
         {LEAD_STATUSES.map((status) => (
           <div 
             key={status.id}
@@ -524,7 +549,7 @@ const LeadPool = ({
               </div>
             </div>
             
-            {/* Lead Cards Container - Fixed spacing */}
+            {/* Lead Cards Container */}
             <div 
               className="p-2 flex-grow space-y-2"
               onDragOver={(e) => {
@@ -573,9 +598,15 @@ const LeadPool = ({
                               {lead.company && (
                                 <p className="text-gray-500 text-xs truncate">{lead.company}</p>
                               )}
+                              {/* Show actual status if different from Kanban column */}
+                              {lead.status !== status.id && (
+                                <p className="text-xs text-blue-600 font-medium">
+                                  {lead.status === "contacted" ? "Contacted" : 
+                                   lead.status === "negotiation" ? "In Negotiation" : lead.status}
+                                </p>
+                              )}
                             </div>
                             <div className="flex-shrink-0 ml-2">
-                              {/* NEW: Inline badge editor */}
                               <InlineKanbanBadgeEditor
                                 leadId={lead.id}
                                 currentBadgeId={lead.badgeId}
@@ -647,26 +678,78 @@ const LeadPool = ({
                                       Talk
                                     </CRMActionButton>
                                     
-                                    <CRMActionButton
-                                      type="success"
-                                      size="xs"
-                                      onClick={async () => {
-                                        try {
-                                          await updateLeadStatus(lead.id, "converted");
-                                          handleLeadUpdate();
-                                        } catch (error) {
-                                          console.error("Error converting lead:", error);
+                                    {/* Quick action buttons based on current status */}
+                                    {status.id === "newLead" && (
+                                      <CRMActionButton
+                                        type="success"
+                                        size="xs"
+                                        onClick={async () => {
+                                          try {
+                                            await updateLeadStatus(lead.id, "qualified");
+                                            handleLeadUpdate();
+                                          } catch (error) {
+                                            console.error("Error qualifying lead:", error);
+                                          }
+                                        }}
+                                        aria-label="Qualify lead"
+                                        icon={
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          </svg>
                                         }
-                                      }}
-                                      aria-label="Convert lead"
-                                      icon={
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                      }
-                                    >
-                                      Convert
-                                    </CRMActionButton>
+                                      >
+                                        Qualify
+                                      </CRMActionButton>
+                                    )}
+                                    
+                                    {status.id === "qualified" && (
+                                      <CRMActionButton
+                                        type="success"
+                                        size="xs"
+                                        onClick={async () => {
+                                          try {
+                                            await updateLeadStatus(lead.id, "converted");
+                                            handleLeadUpdate();
+                                          } catch (error) {
+                                            console.error("Error converting lead:", error);
+                                          }
+                                        }}
+                                        aria-label="Convert lead"
+                                        icon={
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          </svg>
+                                        }
+                                      >
+                                        Convert
+                                      </CRMActionButton>
+                                    )}
+                                    
+                                    {/* Mark as Lost button (available for non-lost leads) */}
+                                    {status.id !== "lost" && (
+                                      <CRMActionButton
+                                        type="danger"
+                                        size="xs"
+                                        onClick={async () => {
+                                          if (window.confirm(`Mark "${lead.name}" as lost?`)) {
+                                            try {
+                                              await updateLeadStatus(lead.id, "lost");
+                                              handleLeadUpdate();
+                                            } catch (error) {
+                                              console.error("Error marking lead as lost:", error);
+                                            }
+                                          }
+                                        }}
+                                        aria-label="Mark as lost"
+                                        icon={
+                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                          </svg>
+                                        }
+                                      >
+                                        Lost
+                                      </CRMActionButton>
+                                    )}
                                   </>
                                 )}
                               </>
@@ -682,7 +765,12 @@ const LeadPool = ({
                 </>
               ) : (
                 <div className="text-center p-4 text-gray-400 text-sm min-h-[100px] flex items-center justify-center">
-                  <p>No leads in this status</p>
+                  <div>
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 mx-auto text-gray-300 mb-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <p>No leads in this status</p>
+                  </div>
                 </div>
               )}
             </div>
