@@ -8,6 +8,7 @@ import Modal from "../../Shared/Modal";
 import { useCRM } from "../../../context/CRMContext";
 import DisplayLeadsTable from "../LeadRegistration/DisplayLeadsTable";
 import { LEAD_PIPELINE_FIELDS } from "../../../constants/leadFields";
+import { getKanbanStatusForLead } from "../../../constants/leadStatuses";
 import { 
   createLead,  
   updateLead, 
@@ -18,7 +19,7 @@ import {
 import { useAuth } from "../../Login/AuthContext";
 
 /**
- * Main page component for lead management (lead pool)
+ * Main page component for lead management (lead pool) - Updated for 4-column Kanban
  */
 const LeadManagementPage = () => {
   const { currentUser, userRole } = useAuth();
@@ -278,21 +279,27 @@ const LeadManagementPage = () => {
     );
   }
   
-  // Calculate lead statistics - Updated to consider showMovedToClients toggle
+  // Calculate lead statistics - Updated for 4-column Kanban structure
   const displayedLeads = showMovedToClients ? leads : leads.filter(lead => !isLeadAddedToClients(lead));
-  const leadStats = {
+  
+  // Group leads by Kanban status for statistics
+  const kanbanStats = {
+    newLead: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "newLead").length,
+    qualified: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "qualified").length,
+    converted: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "converted").length,
+    lost: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "lost").length
+  };
+  
+  // Additional detailed stats for intermediate statuses
+  const detailedStats = {
     total: displayedLeads.length,
-    new: displayedLeads.filter(lead => lead.status === "newLead").length,
     contacted: displayedLeads.filter(lead => lead.status === "contacted").length,
-    qualified: displayedLeads.filter(lead => lead.status === "qualified").length,
-    negotiation: displayedLeads.filter(lead => lead.status === "negotiation").length,
-    converted: displayedLeads.filter(lead => lead.status === "converted").length,
-    lost: displayedLeads.filter(lead => lead.status === "lost").length
+    negotiation: displayedLeads.filter(lead => lead.status === "negotiation").length
   };
   
   // Calculate conversion rate
   const conversionRate = displayedLeads.length > 0 
-    ? Math.round((leadStats.converted / displayedLeads.length) * 100)
+    ? Math.round((kanbanStats.converted / displayedLeads.length) * 100)
     : 0;
   
   // Count leads moved to clients
@@ -319,38 +326,45 @@ const LeadManagementPage = () => {
         </div>
       )}
       
-      {/* Lead Statistics */}
+      {/* Lead Statistics - Updated for 4-column layout */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+        {/* Total Leads */}
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Total Leads</span>
-          <span className="text-2xl font-bold text-gray-800 mt-1">{leadStats.total}</span>
+          <span className="text-2xl font-bold text-gray-800 mt-1">{detailedStats.total}</span>
         </div>
         
+        {/* New Leads (includes contacted) */}
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">New</span>
-          <span className="text-2xl font-bold text-blue-600 mt-1">{leadStats.new}</span>
+          <span className="text-xs font-medium text-gray-500">New Leads</span>
+          <span className="text-2xl font-bold text-blue-600 mt-1">{kanbanStats.newLead}</span>
+          {detailedStats.contacted > 0 && (
+            <span className="text-xs text-gray-400 mt-1">{detailedStats.contacted} contacted</span>
+          )}
         </div>
         
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Contacted</span>
-          <span className="text-2xl font-bold text-purple-600 mt-1">{leadStats.contacted}</span>
-        </div>
-        
+        {/* Qualified (includes negotiation) */}
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Qualified</span>
-          <span className="text-2xl font-bold text-green-600 mt-1">{leadStats.qualified}</span>
+          <span className="text-2xl font-bold text-green-600 mt-1">{kanbanStats.qualified}</span>
+          {detailedStats.negotiation > 0 && (
+            <span className="text-xs text-gray-400 mt-1">{detailedStats.negotiation} negotiating</span>
+          )}
         </div>
         
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Negotiation</span>
-          <span className="text-2xl font-bold text-yellow-500 mt-1">{leadStats.negotiation}</span>
-        </div>
-        
+        {/* Converted */}
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Converted</span>
-          <span className="text-2xl font-bold text-green-600 mt-1">{leadStats.converted}</span>
+          <span className="text-2xl font-bold text-purple-600 mt-1">{kanbanStats.converted}</span>
         </div>
         
+        {/* Lost */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
+          <span className="text-xs font-medium text-gray-500">Lost</span>
+          <span className="text-2xl font-bold text-red-600 mt-1">{kanbanStats.lost}</span>
+        </div>
+        
+        {/* Conversion Rate */}
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Conversion Rate</span>
           <span className="text-2xl font-bold text-purple-600 mt-1">{conversionRate}%</span>
@@ -360,6 +374,16 @@ const LeadManagementPage = () => {
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Added to Clients</span>
           <span className="text-2xl font-bold text-blue-600 mt-1">{movedToClientsCount}</span>
+        </div>
+        
+        {/* Win Rate (Converted vs Lost) */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
+          <span className="text-xs font-medium text-gray-500">Win Rate</span>
+          <span className="text-2xl font-bold text-green-600 mt-1">
+            {(kanbanStats.converted + kanbanStats.lost) > 0 
+              ? Math.round((kanbanStats.converted / (kanbanStats.converted + kanbanStats.lost)) * 100)
+              : 0}%
+          </span>
         </div>
       </div>
       
@@ -377,7 +401,7 @@ const LeadManagementPage = () => {
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
             </svg>
-            Kanban View
+            Kanban View (4 Columns)
           </button>
           
           <button
@@ -426,7 +450,7 @@ const LeadManagementPage = () => {
           </div>
           
           <div className="flex items-center space-x-2 w-full md:w-auto">
-            {/* Status Filter */}
+            {/* Status Filter - Updated for all statuses */}
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -513,6 +537,26 @@ const LeadManagementPage = () => {
         )}
       </div>
       
+      {/* Kanban Column Explanation */}
+      {/* {viewMode === "kanban" && (
+        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <div className="flex items-start">
+            <svg className="h-5 w-5 text-blue-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div>
+              <h4 className="text-sm font-medium text-blue-800">4-Column Kanban View</h4>
+              <p className="text-sm text-blue-700 mt-1">
+                <strong>New Lead:</strong> includes "New Lead" and "Contacted" status leads • 
+                <strong>Qualified:</strong> includes "Qualified" and "Negotiation" status leads • 
+                <strong>Converted:</strong> successfully closed deals • 
+                <strong>Lost:</strong> leads that didn't convert
+              </p>
+            </div>
+          </div>
+        </div>
+      )} */}
+      
       {/* Main Content - Conditionally render based on viewMode */}
       {viewMode === "kanban" ? (
         <LeadPool
@@ -524,7 +568,7 @@ const LeadManagementPage = () => {
           onDelete={handleDelete}
           loading={isLoadingLeads}
           showMovedToClients={showMovedToClients}
-          onLeadUpdate={handleLeadUpdate} // Pass the update callback
+          onLeadUpdate={handleLeadUpdate}
         />
       ) : (
         <DisplayLeadsTable
@@ -537,7 +581,7 @@ const LeadManagementPage = () => {
           loading={isLoadingLeads}
           fields={LEAD_PIPELINE_FIELDS}
           showMovedToClients={showMovedToClients}
-          onLeadUpdate={handleLeadUpdate} // Pass the update callback
+          onLeadUpdate={handleLeadUpdate}
         />
       )}
       
@@ -549,7 +593,7 @@ const LeadManagementPage = () => {
           onEdit={handleEdit}
           onAddDiscussion={handleAddDiscussion}
           onConvert={handleConvert}
-          onLeadUpdate={handleLeadUpdate} // Pass the update callback to refresh lead data
+          onLeadUpdate={handleLeadUpdate}
         />
       )}
       
