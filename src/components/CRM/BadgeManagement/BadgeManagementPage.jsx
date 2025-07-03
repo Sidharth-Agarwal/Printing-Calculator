@@ -33,6 +33,21 @@ const BadgeManagementPage = () => {
     badge: null
   });
   
+  // Debug logging to understand badge structure
+  useEffect(() => {
+    console.log("=== BADGE DATA DEBUG ===");
+    console.log("qualificationBadges:", qualificationBadges);
+    console.log("isLoadingBadges:", isLoadingBadges);
+    
+    if (qualificationBadges && qualificationBadges.length > 0) {
+      console.log("Sample badge structure:", qualificationBadges[0]);
+      console.log("Available keys:", Object.keys(qualificationBadges[0]));
+      console.log("Badge ID field:", qualificationBadges[0].id);
+      console.log("Badge name field:", qualificationBadges[0].name);
+    }
+    console.log("=======================");
+  }, [qualificationBadges]);
+  
   // Check if user has permission to manage badges
   const hasPermission = userRole === "admin" || userRole === "staff";
   
@@ -54,6 +69,7 @@ const BadgeManagementPage = () => {
   
   // Handle opening the form for editing a badge
   const handleEdit = (badge) => {
+    console.log("Edit badge:", badge);
     setSelectedBadge(badge);
     setIsFormOpen(true);
   };
@@ -71,7 +87,11 @@ const BadgeManagementPage = () => {
     try {
       if (selectedBadge) {
         // Update existing badge
-        await updateBadge(selectedBadge.id, formData);
+        const badgeId = selectedBadge.id;
+        if (!badgeId) {
+          throw new Error("Badge ID is missing for update");
+        }
+        await updateBadge(badgeId, formData);
         showNotification(`Badge "${formData.name}" updated successfully`);
       } else {
         // Create new badge
@@ -97,6 +117,19 @@ const BadgeManagementPage = () => {
   
   // Handle delete confirmation
   const handleDeleteClick = (badge) => {
+    console.log("=== DELETE CLICK DEBUG ===");
+    console.log("Badge object received:", badge);
+    console.log("Badge type:", typeof badge);
+    console.log("Badge ID:", badge?.id);
+    console.log("Badge keys:", badge ? Object.keys(badge) : "No badge");
+    console.log("==========================");
+    
+    if (!badge) {
+      console.error("No badge provided to delete");
+      showNotification("Error: No badge selected", "error");
+      return;
+    }
+    
     setDeleteConfirmation({
       isOpen: true,
       badge
@@ -113,10 +146,34 @@ const BadgeManagementPage = () => {
   
   // Handle confirming badge deletion
   const handleConfirmDelete = async () => {
-    if (!deleteConfirmation.badge) return;
+    if (!deleteConfirmation.badge) {
+      console.error("No badge in confirmation state");
+      return;
+    }
+    
+    console.log("=== CONFIRM DELETE DEBUG ===");
+    console.log("Badge to delete:", deleteConfirmation.badge);
+    console.log("Badge ID:", deleteConfirmation.badge.id);
+    console.log("Badge keys:", Object.keys(deleteConfirmation.badge));
+    console.log("============================");
+    
+    // Try different possible ID field names
+    const badgeId = deleteConfirmation.badge.id || 
+                   deleteConfirmation.badge._id || 
+                   deleteConfirmation.badge.badgeId ||
+                   deleteConfirmation.badge.key;
+    
+    console.log("Extracted badge ID:", badgeId);
+    
+    if (!badgeId) {
+      console.error("Badge ID is missing! Badge object:", deleteConfirmation.badge);
+      showNotification("Error: Badge ID is missing", "error");
+      return;
+    }
     
     try {
-      await deleteBadge(deleteConfirmation.badge.id);
+      console.log("Calling deleteBadge with ID:", badgeId);
+      await deleteBadge(badgeId);
       showNotification(`Badge "${deleteConfirmation.badge.name}" deleted successfully`);
       
       // Refresh badges after deletion
@@ -128,6 +185,12 @@ const BadgeManagementPage = () => {
       handleCloseDeleteConfirmation();
     } catch (error) {
       console.error("Error deleting badge:", error);
+      console.error("Error details:", {
+        message: error.message,
+        stack: error.stack,
+        badgeId: badgeId,
+        badge: deleteConfirmation.badge
+      });
       showNotification(`Error: ${error.message}`, "error");
     }
   };
@@ -172,6 +235,18 @@ const BadgeManagementPage = () => {
           Create and manage badges to categorize your leads by potential value or interest level
         </p>
       </div>
+      
+      {/* Debug Info (Remove in production) */}
+      {/* {process.env.NODE_ENV === 'development' && (
+        <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded text-sm">
+          <p><strong>Debug Info:</strong></p>
+          <p>Badges loaded: {qualificationBadges?.length || 0}</p>
+          <p>Loading: {isLoadingBadges ? 'Yes' : 'No'}</p>
+          {qualificationBadges?.length > 0 && (
+            <p>Sample badge keys: {Object.keys(qualificationBadges[0]).join(', ')}</p>
+          )}
+        </div>
+      )} */}
       
       {/* Notification */}
       {notification.show && (
