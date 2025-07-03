@@ -30,12 +30,10 @@ const Login = () => {
       } catch (err) {
         console.error("Error checking for admin:", err);
         setCheckingAdmin(false);
-        // Default to assuming admin exists to prevent redirect loops
         setAdminExists(true);
       }
     };
 
-    // Only check if user is not already logged in
     if (!currentUser) {
       checkForAdmin();
     } else {
@@ -53,37 +51,29 @@ const Login = () => {
   // Redirect if user is already logged in
   useEffect(() => {
     if (currentUser) {
-      // When user is already logged in, fetch their role and redirect accordingly
       const fetchUserRoleAndRedirect = async () => {
         try {
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           if (userDoc.exists()) {
             const userData = userDoc.data();
             
-            // Redirect based on role
             if (userData.role === "admin") {
-              // Admin users go to transactions dashboard
               navigate("/transactions");
             } else if (userData.role === "b2b") {
-              // B2B users go to their dashboard
               navigate("/orders");
             } else if (userData.role === "staff") {
-              // Staff and production users go to the billing form
               navigate("/new-bill");
             } else if (userData.role === "production") {
-              // B2B users go to their dashboard
               navigate("/orders");
             } else {
-              // Default fallback
               navigate("/new-bill");
             }
           } else {
-            // If user document doesn't exist, fallback to new bill
             navigate("/new-bill");
           }
         } catch (error) {
           console.error("Error fetching user role:", error);
-          navigate("/new-bill"); // Fallback
+          navigate("/new-bill");
         }
       };
       
@@ -98,13 +88,10 @@ const Login = () => {
     
     try {
       const userCredential = await login(email, password);
-      
-      // After login is successful, fetch the user's role from Firestore
       const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
       
       if (userDoc.exists()) {
         const userData = userDoc.data();
-        // Redirect based on role
         if (userData.role === "admin") {
           navigate("/transactions");
         } else if (userData.role === "b2b") {
@@ -113,7 +100,6 @@ const Login = () => {
           navigate("/new-bill");
         }
       } else {
-        // If user document doesn't exist in Firestore, fallback to new bill
         navigate("/new-bill");
       }
     } catch (error) {
@@ -128,74 +114,89 @@ const Login = () => {
     }
   };
 
-  // Show loading spinner while checking for admin
+  // Loading state
   if (checkingAdmin) {
     return (
-      <div className="p-6 bg-gray-100 min-h-screen flex items-center justify-center">
-        <div className="bg-white p-8 rounded shadow-md max-w-sm w-full text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading authentication system...</p>
+      <div className="fixed inset-0 flex items-center justify-center">
+        <div className="bg-white p-4 rounded shadow-lg text-center">
+          <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-2 text-gray-600 text-xs">Loading...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="p-6 bg-gray-100 min-h-screen flex items-center justify-center">
-      <form
-        onSubmit={handleSubmit}
-        className="bg-white p-8 rounded shadow-md max-w-sm w-full"
-      >
-        <h2 className="text-2xl font-bold mb-6 text-center">Famous Letterpress</h2>
-        <h3 className="text-lg mb-6 text-center text-gray-600">Login to your account</h3>
-        
-        {error && (
-          <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
-            {error}
+    <div className="fixed inset-0 flex items-center justify-center">
+      <div className="w-full max-w-sm mx-4">
+        <div className="bg-white rounded-lg shadow-lg p-6">
+          {/* Header */}
+          <div className="text-center mb-6">
+            <h1 className="text-xl font-bold text-gray-900">Famous Letterpress</h1>
+            <p className="text-sm text-gray-600 mt-1">Login to your account</p>
           </div>
-        )}
-        
-        <div className="mb-4">
-          <label className="block text-gray-700 font-medium mb-2">Email</label>
-          <input
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            className="w-full px-4 py-2 border rounded"
-          />
+
+          {/* Error Message */}
+          {error && (
+            <div className="mb-4 p-2 bg-red-50 border border-red-200 text-red-700 rounded text-sm">
+              {error}
+            </div>
+          )}
+
+          {/* Login Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="email" className="block text-xs font-medium text-gray-700 mb-1">
+                Email
+              </label>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your email"
+              />
+            </div>
+
+            <div>
+              <label htmlFor="password" className="block text-xs font-medium text-gray-700 mb-1">
+                Password
+              </label>
+              <input
+                id="password"
+                type="password"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter your password"
+              />
+            </div>
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md text-sm font-medium hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              {loading ? "Signing in..." : "Login"}
+            </button>
+          </form>
+
+          {/* Forgot Password Link */}
+          <div className="mt-4 text-center">
+            <button
+              type="button"
+              onClick={() => setShowForgotPassword(true)}
+              className="text-xs text-blue-600 hover:text-blue-800 hover:underline"
+            >
+              Forgot Password?
+            </button>
+          </div>
         </div>
-        
-        <div className="mb-6">
-          <label className="block text-gray-700 font-medium mb-2">Password</label>
-          <input
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            className="w-full px-4 py-2 border rounded"
-          />
-        </div>
-        
-        <button
-          type="submit"
-          disabled={loading}
-          className="w-full bg-blue-600 text-white py-2 rounded hover:bg-blue-700 disabled:bg-blue-300"
-        >
-          {loading ? "Logging in..." : "Login"}
-        </button>
-        
-        <div className="mt-4 text-center">
-          <button
-            type="button"
-            onClick={() => setShowForgotPassword(true)}
-            className="text-blue-600 hover:text-blue-800 text-sm"
-          >
-            Forgot Password?
-          </button>
-        </div>
-      </form>
-      
+      </div>
+
       <ForgotPasswordModal 
         isOpen={showForgotPassword} 
         onClose={() => setShowForgotPassword(false)} 

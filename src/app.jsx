@@ -1,5 +1,5 @@
 import React from "react";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useLocation } from "react-router-dom";
 import BillingForm from "./components/Billing/BillingForm"
 import PaperManagement from "./components/Management/Papers/PaperManagement"
 import MaterialManagement from "./components/Management/Materials/MaterialManagement"
@@ -36,230 +36,242 @@ import PublicLeadForm from "./components/CRM/LeadRegistration/PublicLeadForm";
 
 import "./styles/tailwind.css";
 
+function AppContent() {
+  const location = useLocation();
+  
+  // Pages that don't need header padding
+  const noHeaderPages = ['/', '/setup-admin', '/unauthorized', '/user-created-success', '/request-kit'];
+  const needsHeaderPadding = !noHeaderPages.includes(location.pathname);
+
+  return (
+    <div className="flex flex-col min-h-screen">
+      <Header />
+      {/* Conditionally apply header padding */}
+      <main className={`container mx-auto p-6 flex-grow ${needsHeaderPadding ? 'pt-20' : ''}`}>
+        <Routes>
+          <Route path="/request-kit" element={<PublicLeadForm />} />
+          <Route path="/" element={<Login />} />
+          <Route path="/setup-admin" element={<AdminUser />} />
+          <Route path="/unauthorized" element={<Unauthorized />} />
+          <Route path="/user-created-success" element={<UserCreatedSuccess />} />
+          
+          {/* Protected routes - all authenticated users */}
+          <Route 
+            path="/change-password" 
+            element={
+              <ProtectedRoute>
+                <ChangePassword />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Routes with predefined access */}
+          <Route 
+            path="/transactions" 
+            element={
+              <ProtectedRoute>
+                <TransactionsDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/user-management" 
+            element={
+              <ProtectedRoute>
+                <UserManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/orders" 
+            element={
+              <ProtectedRoute>
+                <OrdersPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/invoices" 
+            element={
+              <ProtectedRoute>
+                <InvoicesPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/clients" 
+            element={
+              <ProtectedRoute>
+                <ClientManagement />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/vendors" 
+            element={
+              <ProtectedRoute>
+                <VendorManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/estimates" 
+            element={
+              <ProtectedRoute>
+                <EstimatesPage />
+              </ProtectedRoute>
+            } 
+          />
+
+          <Route 
+            path="/escrow" 
+            element={
+              <ProtectedRoute>
+                <EscrowDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/b2b-dashboard" 
+            element={
+              <ProtectedRoute>
+                <B2BClientDashboard />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/new-bill" 
+            element={
+              <ProtectedRoute>
+                <BillingForm />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* CRM Routes */}
+          <Route 
+            path="/crm/lead-registration" 
+            element={
+              <ProtectedRoute>
+                <LeadRegistrationPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/crm/lead-management" 
+            element={
+              <ProtectedRoute>
+                <LeadManagementPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/crm/badges" 
+            element={
+              <ProtectedRoute>
+                <BadgeManagementPage />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/material-stock/paper-db" 
+            element={
+              <ProtectedRoute>
+                <PaperManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/material-stock/material-db" 
+            element={
+              <ProtectedRoute>
+                <MaterialManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/material-stock/dies-db" 
+            element={
+              <ProtectedRoute>
+                <DieManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/material-stock/standard-rates-db" 
+            element={
+              <ProtectedRoute>
+                <StandardRateManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* NEW: Route for GST & HSN management */}
+          <Route 
+            path="/material-stock/gst-hsn-db" 
+            element={
+              <ProtectedRoute>
+                <GstHsnManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          <Route 
+            path="/material-stock/overheads" 
+            element={
+              <ProtectedRoute>
+                <OverheadManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Route for loyalty tier management */}
+          <Route 
+            path="/material-stock/loyalty-tiers" 
+            element={
+              <ProtectedRoute>
+                <LoyaltyTierManagement />
+              </ProtectedRoute>
+            } 
+          />
+          
+          {/* Route for loyalty dashboard */}
+          <Route 
+            path="/loyalty-dashboard" 
+            element={
+              <ProtectedRoute>
+                <LoyaltyDashboard />
+              </ProtectedRoute>
+            } 
+          />
+        </Routes>
+      </main>
+    </div>
+  );
+}
+
 function App() {
   return (
     <AuthProvider>
       <CRMProvider>
-        <div className="flex flex-col min-h-screen">
-          <Header />
-          {/* Increased padding-top to match the new header height */}
-          <main className="container mx-auto p-6 pt-20 flex-grow">
-            <Routes>
-              <Route path="/request-kit" element={<PublicLeadForm />} />
-              <Route path="/" element={<Login />} />
-              <Route path="/setup-admin" element={<AdminUser />} />
-              <Route path="/unauthorized" element={<Unauthorized />} />
-              <Route path="/user-created-success" element={<UserCreatedSuccess />} />
-              
-              {/* Protected routes - all authenticated users */}
-              <Route 
-                path="/change-password" 
-                element={
-                  <ProtectedRoute>
-                    <ChangePassword />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* Routes with predefined access */}
-              <Route 
-                path="/transactions" 
-                element={
-                  <ProtectedRoute>
-                    <TransactionsDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/user-management" 
-                element={
-                  <ProtectedRoute>
-                    <UserManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/orders" 
-                element={
-                  <ProtectedRoute>
-                    <OrdersPage />
-                  </ProtectedRoute>
-                } 
-              />
-
-              <Route 
-                path="/invoices" 
-                element={
-                  <ProtectedRoute>
-                    <InvoicesPage />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/clients" 
-                element={
-                  <ProtectedRoute>
-                    <ClientManagement />
-                  </ProtectedRoute>
-                } 
-              />
-
-              <Route 
-                path="/vendors" 
-                element={
-                  <ProtectedRoute>
-                    <VendorManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/estimates" 
-                element={
-                  <ProtectedRoute>
-                    <EstimatesPage />
-                  </ProtectedRoute>
-                } 
-              />
-
-              <Route 
-                path="/escrow" 
-                element={
-                  <ProtectedRoute>
-                    <EscrowDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/b2b-dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <B2BClientDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/new-bill" 
-                element={
-                  <ProtectedRoute>
-                    <BillingForm />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* CRM Routes */}
-              <Route 
-                path="/crm/lead-registration" 
-                element={
-                  <ProtectedRoute>
-                    <LeadRegistrationPage />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/crm/lead-management" 
-                element={
-                  <ProtectedRoute>
-                    <LeadManagementPage />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/crm/badges" 
-                element={
-                  <ProtectedRoute>
-                    <BadgeManagementPage />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/material-stock/paper-db" 
-                element={
-                  <ProtectedRoute>
-                    <PaperManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/material-stock/material-db" 
-                element={
-                  <ProtectedRoute>
-                    <MaterialManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/material-stock/dies-db" 
-                element={
-                  <ProtectedRoute>
-                    <DieManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/material-stock/standard-rates-db" 
-                element={
-                  <ProtectedRoute>
-                    <StandardRateManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* NEW: Route for GST & HSN management */}
-              <Route 
-                path="/material-stock/gst-hsn-db" 
-                element={
-                  <ProtectedRoute>
-                    <GstHsnManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              <Route 
-                path="/material-stock/overheads" 
-                element={
-                  <ProtectedRoute>
-                    <OverheadManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* Route for loyalty tier management */}
-              <Route 
-                path="/material-stock/loyalty-tiers" 
-                element={
-                  <ProtectedRoute>
-                    <LoyaltyTierManagement />
-                  </ProtectedRoute>
-                } 
-              />
-              
-              {/* Route for loyalty dashboard */}
-              <Route 
-                path="/loyalty-dashboard" 
-                element={
-                  <ProtectedRoute>
-                    <LoyaltyDashboard />
-                  </ProtectedRoute>
-                } 
-              />
-            </Routes>
-          </main>
-        </div>
+        <AppContent />
       </CRMProvider>
     </AuthProvider>
   );
 }
- 
+
 export default App;
