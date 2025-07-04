@@ -361,7 +361,28 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
  const [calculations, setCalculations] = useState(null);
  const [isCalculating, setIsCalculating] = useState(false);
  const [isSubmitting, setIsSubmitting] = useState(false);
- const [activeSection, setActiveSection] = useState("reviewAndSubmit"); // Initially expand ReviewAndSubmit
+ 
+ // UPDATED: Multiple sections can be open simultaneously
+ const [activeSections, setActiveSections] = useState({
+   reviewAndSubmit: true, // Cost calculations always open
+   lp: false,
+   fs: false,
+   emb: false,
+   digi: false,
+   notebook: false,
+   screenPrint: false,
+   preDieCutting: false,
+   dieCutting: false,
+   postDC: false,
+   foldAndPaste: false,
+   dstPaste: false,
+   magnet: false,
+   qc: false,
+   packing: false,
+   misc: false,
+   sandwich: false
+ });
+ 
  const [validationErrors, setValidationErrors] = useState({});
  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
  const [selectedClient, setSelectedClient] = useState(null);
@@ -394,6 +415,21 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
  const [directInitializationDone, setDirectInitializationDone] = useState(false);
 
  const formRef = useRef(null);
+ 
+ // UPDATED: Helper functions for multiple sections
+ const toggleSection = (sectionId) => {
+   setActiveSections(prev => ({
+     ...prev,
+     [sectionId]: !prev[sectionId]
+   }));
+ };
+
+ const expandSection = (sectionId) => {
+   setActiveSections(prev => ({
+     ...prev,
+     [sectionId]: true
+   }));
+ };
  
  // ⭐ NEW: GST Rate Caching with job type change detection
  useEffect(() => {
@@ -697,7 +733,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
          }
        });
      }
-     
+
      if (defaultActivePostProductionServices.includes("DST PASTE")) {
        console.log("Activating DST PASTE service");
        dispatch({
@@ -777,7 +813,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
      
      if (sectionToExpand) {
        console.log(`Expanding section: ${sectionToExpand}`);
-       setActiveSection(sectionToExpand);
+       expandSection(sectionToExpand);
      }
      
      // Mark initialization as done
@@ -1280,7 +1316,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
        
        if (sectionToExpand) {
          console.log(`Expanding section: ${sectionToExpand}`);
-         setActiveSection(sectionToExpand);
+         expandSection(sectionToExpand);
        }
      }, 0);
    }
@@ -1565,7 +1601,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    dispatch({ type: "INITIALIZE_FORM", payload: partialReset });
    setCalculations(null);
-   setActiveSection("reviewAndSubmit");
+   setActiveSections(prev => ({
+     ...prev,
+     reviewAndSubmit: true // Keep cost calculations open
+   }));
    
    // Reset direct initialization flag to reapply default services
    setDirectInitializationDone(false);
@@ -1586,216 +1625,20 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
        postProduction: defaultActivePostProductionServices
      });
      
-     // DIRECT SERVICE ACTIVATION - Production Services
-     if (defaultActiveProductionServices.includes("LP")) {
-       dispatch({
-         type: "UPDATE_LP_DETAILS",
-         payload: { 
-           isLPUsed: true,
-           noOfColors: 1,
-           colorDetails: [
-             {
-               plateSizeType: "Auto",
-               plateDimensions: { 
-                 length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-                 breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-               },
-               pantoneType: "",
-               plateType: "Polymer Plate",
-               mrType: "SIMPLE",
-               mrTypeConcatenated: "LP MR SIMPLE"
-             }
-           ]
-         }
-       });
-     }
+     // Re-activate default services and expand their sections
+     defaultActiveProductionServices.forEach(serviceCode => {
+       const sectionId = serviceRegistry[serviceCode]?.id;
+       if (sectionId) {
+         expandSection(sectionId);
+       }
+     });
      
-     if (defaultActiveProductionServices.includes("DIGI")) {
-       dispatch({
-         type: "UPDATE_DIGI_DETAILS",
-         payload: { 
-           isDigiUsed: true,
-           digiDie: "12x18",
-           digiDimensions: { length: "12", breadth: "18" }
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("FS")) {
-       dispatch({
-         type: "UPDATE_FS_DETAILS",
-         payload: { 
-           isFSUsed: true,
-           fsType: "FS1",
-           foilDetails: [
-             {
-               blockSizeType: "Auto",
-               blockDimension: { 
-                 length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-                 breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-               },
-               foilType: "Gold MTS 220",
-               blockType: "Magnesium Block 3MM",
-               mrType: "SIMPLE",
-               mrTypeConcatenated: "FS MR SIMPLE"
-             }
-           ]
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("EMB")) {
-       dispatch({
-         type: "UPDATE_EMB_DETAILS",
-         payload: { 
-           isEMBUsed: true,
-           plateSizeType: "Auto",
-           plateDimensions: { 
-             length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-             breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-           },
-           plateTypeMale: "Polymer Plate",
-           plateTypeFemale: "Polymer Plate",
-           embMR: "SIMPLE",
-           embMRConcatenated: "EMB MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("SCREEN")) {
-       dispatch({
-         type: "UPDATE_SCREEN_PRINT",
-         payload: { 
-           isScreenPrintUsed: true,
-           noOfColors: 1,
-           screenMR: "SIMPLE",
-           screenMRConcatenated: "SCREEN MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("NOTEBOOK")) {
-       dispatch({
-         type: "UPDATE_NOTEBOOK_DETAILS",
-         payload: { 
-           isNotebookUsed: true,
-           orientation: "",
-           length: "",
-           breadth: "",
-           calculatedLength: "",
-           calculatedBreadth: "",
-           numberOfPages: "",
-           bindingType: "",
-           bindingTypeConcatenated: "",
-           paperName: papers.length > 0 ? papers[0].paperName : ""
-         }
-       });
-     }
-     
-     // DIRECT SERVICE ACTIVATION - Post-Production Services
-     if (defaultActivePostProductionServices.includes("PRE DC")) {
-       dispatch({
-         type: "UPDATE_PRE_DIE_CUTTING",
-         payload: { 
-           isPreDieCuttingUsed: true,
-           predcMR: "SIMPLE",
-           predcMRConcatenated: "PREDC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("DC")) {
-       dispatch({
-         type: "UPDATE_DIE_CUTTING",
-         payload: { 
-           isDieCuttingUsed: true,
-           dcMR: "SIMPLE",
-           dcMRConcatenated: "DC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("POST DC")) {
-       dispatch({
-         type: "UPDATE_POST_DC",
-         payload: { 
-           isPostDCUsed: true,
-           pdcMR: "SIMPLE",
-           pdcMRConcatenated: "PDC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
-       dispatch({
-         type: "UPDATE_FOLD_AND_PASTE",
-         payload: { 
-           isFoldAndPasteUsed: true,
-           dstMaterial: "",
-           dstType: ""
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("DST PASTE")) {
-       dispatch({
-         type: "UPDATE_DST_PASTE",
-         payload: { 
-           isDstPasteUsed: true,
-           dstType: ""
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("MAGNET")) {
-       dispatch({
-         type: "UPDATE_MAGNET",
-         payload: { 
-           isMagnetUsed: true,
-           magnetMaterial: ""
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("QC")) {
-       dispatch({
-         type: "UPDATE_QC",
-         payload: { 
-           isQCUsed: true
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("PACKING")) {
-       dispatch({
-         type: "UPDATE_PACKING",
-         payload: { 
-           isPackingUsed: true
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("DUPLEX")) {
-       dispatch({
-         type: "UPDATE_SANDWICH",
-         payload: { 
-           isSandwichComponentUsed: true,
-           paperInfo: {
-             paperName: papers.length > 0 ? papers[0].paperName : ""
-           }
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("MISC")) {
-       dispatch({
-         type: "UPDATE_MISC",
-         payload: { 
-           isMiscUsed: true,
-           miscCharge: ""
-         }
-       });
-     }
+     defaultActivePostProductionServices.forEach(serviceCode => {
+       const sectionId = serviceRegistry[serviceCode]?.id;
+       if (sectionId) {
+         expandSection(sectionId);
+       }
+     });
      
      // Mark initialization as done
      setDirectInitializationDone(true);
@@ -1805,7 +1648,25 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
  // Function for full reset (used by the reset button)
  const fullResetForm = () => {
    dispatch({ type: "RESET_FORM" });
-   setActiveSection(null);
+   setActiveSections({
+     reviewAndSubmit: true, // Keep cost calculations open
+     lp: false,
+     fs: false,
+     emb: false,
+     digi: false,
+     notebook: false,
+     screenPrint: false,
+     preDieCutting: false,
+     dieCutting: false,
+     postDC: false,
+     foldAndPaste: false,
+     dstPaste: false,
+     magnet: false,
+     qc: false,
+     packing: false,
+     misc: false,
+     sandwich: false
+   });
    setValidationErrors({});
    setCalculations(null);
    
@@ -1844,225 +1705,23 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
        postProduction: defaultActivePostProductionServices
      });
      
-     // DIRECT SERVICE ACTIVATION - Production Services
-     if (defaultActiveProductionServices.includes("LP")) {
-       dispatch({
-         type: "UPDATE_LP_DETAILS",
-         payload: { 
-           isLPUsed: true,
-           noOfColors: 1,
-           colorDetails: [
-             {
-               plateSizeType: "Auto",
-               plateDimensions: { length: "", breadth: "" },
-               pantoneType: "",
-               plateType: "Polymer Plate",
-               mrType: "SIMPLE",
-               mrTypeConcatenated: "LP MR SIMPLE"
-             }
-           ]
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("DIGI")) {
-       dispatch({
-         type: "UPDATE_DIGI_DETAILS",
-         payload: { 
-           isDigiUsed: true,
-           digiDie: "12x18",
-           digiDimensions: { length: "12", breadth: "18" }
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("FS")) {
-       dispatch({
-         type: "UPDATE_FS_DETAILS",
-         payload: { 
-           isFSUsed: true,
-           fsType: "FS1",
-           foilDetails: [
-             {
-               blockSizeType: "Auto",
-               blockDimension: { length: "", breadth: "" },
-               foilType: "Gold MTS 220",
-               blockType: "Magnesium Block 3MM",
-               mrType: "SIMPLE",
-               mrTypeConcatenated: "FS MR SIMPLE"
-             }
-           ]
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("EMB")) {
-       dispatch({
-         type: "UPDATE_EMB_DETAILS",
-         payload: { 
-           isEMBUsed: true,
-           plateSizeType: "Auto",
-           plateDimensions: { length: "", breadth: "" },
-           plateTypeMale: "Polymer Plate",
-           plateTypeFemale: "Polymer Plate",
-           embMR: "SIMPLE",
-           embMRConcatenated: "EMB MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("SCREEN")) {
-       dispatch({
-         type: "UPDATE_SCREEN_PRINT",
-         payload: { 
-           isScreenPrintUsed: true,
-           noOfColors: 1,
-           screenMR: "SIMPLE",
-           screenMRConcatenated: "SCREEN MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("NOTEBOOK")) {
-       dispatch({
-         type: "UPDATE_NOTEBOOK_DETAILS",
-         payload: { 
-           isNotebookUsed: true,
-           orientation: "",
-           length: "",
-           breadth: "",
-           calculatedLength: "",
-           calculatedBreadth: "",
-           numberOfPages: "",
-           bindingType: "",
-           bindingTypeConcatenated: "",
-           paperName: papers.length > 0 ? papers[0].paperName : ""
-         }
-       });
-     }
-     
-     // DIRECT SERVICE ACTIVATION - Post-Production Services
-     if (defaultActivePostProductionServices.includes("PRE DC")) {
-       dispatch({
-         type: "UPDATE_PRE_DIE_CUTTING",
-         payload: { 
-           isPreDieCuttingUsed: true,
-           predcMR: "SIMPLE",
-           predcMRConcatenated: "PREDC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("DC")) {
-       dispatch({
-         type: "UPDATE_DIE_CUTTING",
-         payload: { 
-           isDieCuttingUsed: true,
-           dcMR: "SIMPLE",
-           dcMRConcatenated: "DC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("POST DC")) {
-       dispatch({
-         type: "UPDATE_POST_DC",
-         payload: { 
-           isPostDCUsed: true,
-           pdcMR: "SIMPLE",
-           pdcMRConcatenated: "PDC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
-       dispatch({
-         type: "UPDATE_FOLD_AND_PASTE",
-         payload: { 
-           isFoldAndPasteUsed: true,
-           dstMaterial: "",
-           dstType: ""
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("DST PASTE")) {
-       dispatch({
-         type: "UPDATE_DST_PASTE",
-         payload: { 
-           isDstPasteUsed: true,
-           dstType: ""
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("MAGNET")) {
-       dispatch({
-         type: "UPDATE_MAGNET",
-         payload: { 
-           isMagnetUsed: true,
-           magnetMaterial: ""
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("QC")) {
-       dispatch({
-         type: "UPDATE_QC",
-         payload: { 
-           isQCUsed: true
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("PACKING")) {
-       dispatch({
-         type: "UPDATE_PACKING",
-         payload: { 
-           isPackingUsed: true
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("DUPLEX")) {
-       dispatch({
-         type: "UPDATE_SANDWICH",
-         payload: { 
-           isSandwichComponentUsed: true,
-           paperInfo: {
-             paperName: papers.length > 0 ? papers[0].paperName : ""
-           }
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("MISC")) {
-       dispatch({
-         type: "UPDATE_MISC",
-         payload: { 
-           isMiscUsed: true,
-           miscCharge: ""
-         }
-       });
-     }
-     
      // Mark as initialized
      setDirectInitializationDone(true);
      
-     // Expand a default section
-     if (defaultActiveProductionServices.length > 0) {
-       const serviceCode = defaultActiveProductionServices[0];
+     // Expand default sections
+     defaultActiveProductionServices.forEach(serviceCode => {
        const sectionId = serviceRegistry[serviceCode]?.id;
        if (sectionId) {
-         setActiveSection(sectionId);
+         expandSection(sectionId);
        }
-     } else if (defaultActivePostProductionServices.length > 0) {
-       const serviceCode = defaultActivePostProductionServices[0];
+     });
+     
+     defaultActivePostProductionServices.forEach(serviceCode => {
        const sectionId = serviceRegistry[serviceCode]?.id;
        if (sectionId) {
-         setActiveSection(sectionId);
+         expandSection(sectionId);
        }
-     }
+     });
    }, 0);
    
    // Scroll to top of form
@@ -2225,7 +1884,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    }
  };
 
- // Toggle functions for all service sections
+ // UPDATED: Toggle functions for all service sections
  const toggleLPUsage = () => {
    const isCurrentlyUsed = state.lpDetails.isLPUsed;
    
@@ -2255,7 +1914,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("lp");
+     expandSection("lp");
    }
  };  
  
@@ -2287,7 +1946,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("fs");
+     expandSection("fs");
    }
  };
  
@@ -2315,7 +1974,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("emb");
+     expandSection("emb");
    }
  };    
  
@@ -2346,7 +2005,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("digi");
+     expandSection("digi");
    }
  };
  
@@ -2373,7 +2032,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("notebook");
+     expandSection("notebook");
    }
  };
 
@@ -2394,7 +2053,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("screenPrint");
+     expandSection("screenPrint");
    }
  };
  
@@ -2415,7 +2074,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("preDieCutting");
+     expandSection("preDieCutting");
    }
  };
  
@@ -2435,7 +2094,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("dieCutting");
+     expandSection("dieCutting");
    }
  };
  
@@ -2455,7 +2114,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("postDC");
+     expandSection("postDC");
    }
  };
  
@@ -2475,7 +2134,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("foldAndPaste");
+     expandSection("foldAndPaste");
    }
  };
  
@@ -2494,7 +2153,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("dstPaste");
+     expandSection("dstPaste");
    }
  };
 
@@ -2513,7 +2172,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("magnet");
+     expandSection("magnet");
    }
  };
  
@@ -2527,7 +2186,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("qc");
+     expandSection("qc");
    }
  };
  
@@ -2541,7 +2200,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("packing");
+     expandSection("packing");
    }
  };
  
@@ -2558,7 +2217,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("misc");
+     expandSection("misc");
    }
  };
  
@@ -2605,18 +2264,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    
    // Auto expand when toggled on
    if (!isCurrentlyUsed) {
-     setActiveSection("sandwich");
+     expandSection("sandwich");
    }
  };
  
- // Special function for ReviewAndSubmit section
+ // UPDATED: Special function for ReviewAndSubmit section
  const toggleReviewSection = () => {
-   // This only expands/collapses the section without changing any usage state
-   if (activeSection === "reviewAndSubmit") {
-     setActiveSection(null);
-   } else {
-     setActiveSection("reviewAndSubmit");
-   }
+   toggleSection("reviewAndSubmit");
  };
 
  // Handle reset form
@@ -2744,8 +2398,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Letter Press (LP)" 
                id="lp"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.lp ? "lp" : null}
+               setActiveSection={() => toggleSection("lp")}
                isUsed={state.lpDetails.isLPUsed}
                onToggleUsage={toggleLPUsage}
              >
@@ -2764,11 +2418,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Foil Stamping (FS)" 
                id="fs"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.fs ? "fs" : null}
+               setActiveSection={() => toggleSection("fs")}
                isUsed={state.fsDetails.isFSUsed}
                onToggleUsage={toggleFSUsage}
-             >
+              >
                <FSDetails 
                  state={state} 
                  dispatch={dispatch} 
@@ -2784,8 +2438,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Embossing (EMB)" 
                id="emb"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.emb ? "emb" : null}
+               setActiveSection={() => toggleSection("emb")}
                isUsed={state.embDetails.isEMBUsed}
                onToggleUsage={toggleEMBUsage}
              >
@@ -2804,8 +2458,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Digital Printing" 
                id="digi"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.digi ? "digi" : null}
+               setActiveSection={() => toggleSection("digi")}
                isUsed={state.digiDetails.isDigiUsed}
                onToggleUsage={toggleDigiUsage}
              >
@@ -2824,8 +2478,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Notebook Details" 
                id="notebook"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.notebook ? "notebook" : null}
+               setActiveSection={() => toggleSection("notebook")}
                isUsed={state.notebookDetails?.isNotebookUsed || false}
                onToggleUsage={toggleNotebookUsage}
              >
@@ -2844,8 +2498,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Screen Printing" 
                id="screenPrint"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.screenPrint ? "screenPrint" : null}
+               setActiveSection={() => toggleSection("screenPrint")}
                isUsed={state.screenPrint?.isScreenPrintUsed || false}
                onToggleUsage={toggleScreenPrintUsage}
              >
@@ -2869,8 +2523,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Pre Die Cutting" 
                id="preDieCutting"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.preDieCutting ? "preDieCutting" : null}
+               setActiveSection={() => toggleSection("preDieCutting")}
                isUsed={state.preDieCutting?.isPreDieCuttingUsed || false}
                onToggleUsage={togglePreDieCuttingUsage}
              >
@@ -2889,8 +2543,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Die Cutting" 
                id="dieCutting"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.dieCutting ? "dieCutting" : null}
+               setActiveSection={() => toggleSection("dieCutting")}
                isUsed={state.dieCutting.isDieCuttingUsed}
                onToggleUsage={toggleDieCuttingUsage}
              >
@@ -2909,8 +2563,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Post Die Cutting" 
                id="postDC"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.postDC ? "postDC" : null}
+               setActiveSection={() => toggleSection("postDC")}
                isUsed={state.postDC?.isPostDCUsed || false}
                onToggleUsage={togglePostDCUsage}
              >
@@ -2929,8 +2583,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="DST Paste" 
                id="dstPaste"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.dstPaste ? "dstPaste" : null}
+               setActiveSection={() => toggleSection("dstPaste")}
                isUsed={state.dstPaste?.isDstPasteUsed || false}
                onToggleUsage={toggleDstPasteUsage}
              >
@@ -2949,8 +2603,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Fold & Paste" 
                id="foldAndPaste"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.foldAndPaste ? "foldAndPaste" : null}
+               setActiveSection={() => toggleSection("foldAndPaste")}
                isUsed={state.foldAndPaste?.isFoldAndPasteUsed || false}
                onToggleUsage={toggleFoldAndPasteUsage}
              >
@@ -2969,8 +2623,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Magnet" 
                id="magnet"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.magnet ? "magnet" : null}
+               setActiveSection={() => toggleSection("magnet")}
                isUsed={state.magnet?.isMagnetUsed || false}
                onToggleUsage={toggleMagnetUsage}
              >
@@ -2989,8 +2643,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Quality Check" 
                id="qc"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.qc ? "qc" : null}
+               setActiveSection={() => toggleSection("qc")}
                isUsed={state.qc?.isQCUsed || false}
                onToggleUsage={toggleQCUsage}
              >
@@ -3009,8 +2663,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Packing" 
                id="packing"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.packing ? "packing" : null}
+               setActiveSection={() => toggleSection("packing")}
                isUsed={state.packing?.isPackingUsed || false}
                onToggleUsage={togglePackingUsage}
              >
@@ -3029,8 +2683,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Miscellaneous" 
                id="misc"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.misc ? "misc" : null}
+               setActiveSection={() => toggleSection("misc")}
                isUsed={state.misc?.isMiscUsed || false}
                onToggleUsage={toggleMiscUsage}
              >
@@ -3049,8 +2703,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              <FormSection 
                title="Duplex/Sandwich" 
                id="sandwich"
-               activeSection={activeSection}
-               setActiveSection={setActiveSection}
+               activeSection={activeSections.sandwich ? "sandwich" : null}
+               setActiveSection={() => toggleSection("sandwich")}
                isUsed={state.sandwich?.isSandwichComponentUsed || false}
                onToggleUsage={toggleSandwichUsage}
              >
@@ -3065,13 +2719,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
            )}
          </div>
 
-         {/* Cost Calculation & Review Section - Now Collapsible */}
+         {/* Cost Calculation & Review Section - Now Always Open but Still Collapsible */}
          <div className="mt-6">
            <FormSection 
              title="COST CALCULATION" 
              id="reviewAndSubmit"
-             activeSection={activeSection}
-             setActiveSection={setActiveSection}
+             activeSection={activeSections.reviewAndSubmit ? "reviewAndSubmit" : null}
+             setActiveSection={() => toggleSection("reviewAndSubmit")}
              isUsed={true}
              onToggleUsage={toggleReviewSection}
              bgColor="bg-blue-50"

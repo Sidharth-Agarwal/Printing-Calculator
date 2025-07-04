@@ -118,7 +118,7 @@ const Login = () => {
   if (checkingAdmin) {
     return (
       <div className="fixed inset-0 flex items-center justify-center">
-        <div className="bg-white p-4 rounded shadow-lg text-center">
+        <div className="bg-white p-4 rounded text-center">
           <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-2 text-gray-600 text-xs">Loading...</p>
         </div>
@@ -128,8 +128,8 @@ const Login = () => {
 
   return (
     <div className="fixed inset-0 flex items-center justify-center">
-      <div className="w-full max-w-sm mx-4">
-        <div className="bg-white rounded-lg shadow-lg p-6">
+      <div className="w-full max-w-sm mx-4 mt-6">
+        <div className="bg-white rounded-lg shadow-md p-6">
           {/* Header */}
           <div className="text-center mb-6">
             <h1 className="text-xl font-bold text-gray-900">Famous Letterpress</h1>
