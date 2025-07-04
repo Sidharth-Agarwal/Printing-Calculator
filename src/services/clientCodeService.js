@@ -21,27 +21,28 @@ export const checkClientCodeExists = async (code) => {
 
 /**
  * Generate a unique client code based on the client name
- * Uses sequential numbering to ensure uniqueness
+ * Uses "CLI-" prefix followed by name abbreviation and sequential numbering
+ * Similar to vendor code generation (VND-XXX001)
  * @param {string} clientName - The client name to generate code from
- * @returns {Promise<string>} - The generated client code
+ * @returns {Promise<string>} - The generated client code (e.g., CLI-ABC001)
  */
 export const generateClientCode = async (clientName) => {
   try {
-    // Clean the name: remove spaces, special characters, and take first 4 letters
-    const prefix = clientName
+    // Clean the name: remove spaces, special characters, and take first 3 letters
+    const namePrefix = clientName
       .replace(/[^a-zA-Z0-9]/g, '')
-      .substring(0, 4)
+      .substring(0, 3)
       .toUpperCase();
     
-    // If prefix is empty after cleaning, use a default
-    const finalPrefix = prefix || 'CLNT';
+    // Create the full prefix: CLI- + first 3 letters of name
+    const prefix = "CLI-" + (namePrefix || "GEN");
     
-    // Get all clients to find the highest number for this prefix
+    // Get all clients with this prefix to find the highest number
     const clientsCollection = collection(db, "clients");
     const querySnapshot = await getDocs(clientsCollection);
     
     let highestNum = 0;
-    const pattern = new RegExp(`^${finalPrefix}(\\d+)$`);
+    const pattern = new RegExp(`^${prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(\\d+)$`);
     
     // Look for existing codes with the same prefix
     querySnapshot.forEach(doc => {
@@ -59,15 +60,17 @@ export const generateClientCode = async (clientName) => {
     
     // Generate new code with incremented number
     const nextNum = highestNum + 1;
-    // Pad to ensure at least 3 digits
+    // Pad to ensure at least 3 digits (001, 002, etc.)
     const paddedNum = nextNum.toString().padStart(3, '0');
     
-    return `${finalPrefix}${paddedNum}`;
+    return `${prefix}${paddedNum}`;
   } catch (error) {
     console.error("Error generating client code:", error);
     // Fallback to a simple random code if there's an error
     const randomNum = Math.floor(Math.random() * 900) + 100;
-    const prefix = clientName.substring(0, 4).toUpperCase() || 'CLNT';
-    return `${prefix}${randomNum}`;
+    const namePrefix = clientName
+      ? clientName.replace(/[^a-zA-Z0-9]/g, '').substring(0, 3).toUpperCase()
+      : "GEN";
+    return `CLI-${namePrefix}${randomNum}`;
   }
 };

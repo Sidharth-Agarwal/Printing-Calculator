@@ -7,6 +7,14 @@ import { useAuth } from "../Login/AuthContext";
 import Modal from "../Shared/Modal";
 import ConfirmationModal from "../Shared/ConfirmationModal";
 import DeleteConfirmationModal from "../Shared/DeleteConfirmationModal";
+import { 
+  validateVendorData, 
+  normalizeEmail, 
+  normalizePhone, 
+  normalizeGstin,
+  normalizeAccountNumber,
+  normalizeIfscCode
+} from "../../services/vendorValidationService";
 
 const VendorManagement = () => {
   const [vendors, setVendors] = useState([]);
@@ -128,9 +136,26 @@ const VendorManagement = () => {
     setIsFormModalOpen(true);
   };
 
+  // UPDATED: Enhanced addVendor function with validation
   const addVendor = async (vendorData) => {
     setIsSubmitting(true);
     try {
+      // Validate vendor data including uniqueness checks
+      const validation = await validateVendorData(vendorData);
+      
+      if (!validation.isValid) {
+        // Show validation errors to user
+        const errorMessages = Object.values(validation.errors).join(', ');
+        setNotification({
+          isOpen: true,
+          message: `Validation failed: ${errorMessages}`,
+          title: "Validation Error",
+          status: "error"
+        });
+        setIsSubmitting(false);
+        return false;
+      }
+
       // If vendor code not provided or is empty, generate one based on vendor name
       if (!vendorData.vendorCode || vendorData.vendorCode.trim() === "") {
         vendorData.vendorCode = await generateVendorCode(vendorData.name);
@@ -141,7 +166,7 @@ const VendorManagement = () => {
           setNotification({
             isOpen: true,
             message: "This vendor code already exists. Please use a different code.",
-            title: "Error",
+            title: "Duplicate Vendor Code",
             status: "error"
           });
           setIsSubmitting(false);
@@ -149,10 +174,23 @@ const VendorManagement = () => {
         }
       }
       
+      // Normalize data before saving
+      const normalizedData = {
+        ...vendorData,
+        email: normalizeEmail(vendorData.email),
+        phone: normalizePhone(vendorData.phone),
+        gstin: normalizeGstin(vendorData.gstin),
+        accountDetails: {
+          ...vendorData.accountDetails,
+          accountNumber: normalizeAccountNumber(vendorData.accountDetails.accountNumber),
+          ifscCode: normalizeIfscCode(vendorData.accountDetails.ifscCode)
+        }
+      };
+      
       // Add the vendor
       const vendorsCollection = collection(db, "vendors");
       await addDoc(vendorsCollection, {
-        ...vendorData,
+        ...normalizedData,
         activeOrders: 0,
         totalOrders: 0,
         totalSpend: 0,
@@ -188,9 +226,26 @@ const VendorManagement = () => {
     setIsFormModalOpen(true);
   };
 
+  // UPDATED: Enhanced updateVendor function with validation
   const updateVendor = async (id, updatedData) => {
     setIsSubmitting(true);
     try {
+      // Validate vendor data including uniqueness checks (excluding current vendor)
+      const validation = await validateVendorData(updatedData, id);
+      
+      if (!validation.isValid) {
+        // Show validation errors to user
+        const errorMessages = Object.values(validation.errors).join(', ');
+        setNotification({
+          isOpen: true,
+          message: `Validation failed: ${errorMessages}`,
+          title: "Validation Error",
+          status: "error"
+        });
+        setIsSubmitting(false);
+        return false;
+      }
+
       // If vendor code changed, check if the new code is unique
       if (selectedVendor.vendorCode !== updatedData.vendorCode) {
         const exists = await checkVendorCodeExists(updatedData.vendorCode);
@@ -198,7 +253,7 @@ const VendorManagement = () => {
           setNotification({
             isOpen: true,
             message: "This vendor code already exists. Please use a different code.",
-            title: "Error",
+            title: "Duplicate Vendor Code",
             status: "error"
           });
           setIsSubmitting(false);
@@ -206,9 +261,22 @@ const VendorManagement = () => {
         }
       }
       
+      // Normalize data before saving
+      const normalizedData = {
+        ...updatedData,
+        email: normalizeEmail(updatedData.email),
+        phone: normalizePhone(updatedData.phone),
+        gstin: normalizeGstin(updatedData.gstin),
+        accountDetails: {
+          ...updatedData.accountDetails,
+          accountNumber: normalizeAccountNumber(updatedData.accountDetails.accountNumber),
+          ifscCode: normalizeIfscCode(updatedData.accountDetails.ifscCode)
+        }
+      };
+      
       const vendorDoc = doc(db, "vendors", id);
       await updateDoc(vendorDoc, {
-        ...updatedData,
+        ...normalizedData,
         updatedAt: new Date(),
       });
       

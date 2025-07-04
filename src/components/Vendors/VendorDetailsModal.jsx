@@ -1,4 +1,5 @@
 import React from "react";
+import VendorDuplicateIndicator from "./VendorDuplicateIndicator";
 
 const VendorDetailsModal = ({ vendor, onClose, onEdit, onToggleStatus, isAdmin }) => {
   if (!vendor) return null;
@@ -82,21 +83,48 @@ const VendorDetailsModal = ({ vendor, onClose, onEdit, onToggleStatus, isAdmin }
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             {/* Left column */}
             <div className="space-y-4">
-              {/* Contact Information */}
+              {/* Contact Information with Duplicate Indicators */}
               <div className="bg-gray-50 rounded p-3">
                 <h4 className="text-base font-semibold mb-2 text-gray-700">Contact Information</h4>
                 <div className="space-y-1 text-sm">
                   <div>
                     <span className="text-gray-500">Email:</span> 
-                    <span className="ml-1 font-medium">{vendor.email || "N/A"}</span>
+                    <div className="inline-flex items-center ml-1">
+                      <span className="font-medium">{vendor.email || "N/A"}</span>
+                      {vendor.email && (
+                        <VendorDuplicateIndicator 
+                          type="email" 
+                          value={vendor.email} 
+                          currentVendorId={vendor.id}
+                        />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <span className="text-gray-500">Phone:</span> 
-                    <span className="ml-1 font-medium">{vendor.phone || "N/A"}</span>
+                    <div className="inline-flex items-center ml-1">
+                      <span className="font-medium">{vendor.phone || "N/A"}</span>
+                      {vendor.phone && (
+                        <VendorDuplicateIndicator 
+                          type="phone" 
+                          value={vendor.phone} 
+                          currentVendorId={vendor.id}
+                        />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <span className="text-gray-500">GSTIN:</span> 
-                    <span className="ml-1 font-medium">{vendor.gstin || "N/A"}</span>
+                    <div className="inline-flex items-center ml-1">
+                      <span className="font-medium">{vendor.gstin || "N/A"}</span>
+                      {vendor.gstin && (
+                        <VendorDuplicateIndicator 
+                          type="gstin" 
+                          value={vendor.gstin} 
+                          currentVendorId={vendor.id}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -151,7 +179,7 @@ const VendorDetailsModal = ({ vendor, onClose, onEdit, onToggleStatus, isAdmin }
             
             {/* Right column */}
             <div className="space-y-4">
-              {/* Account Details */}
+              {/* Account Details with Duplicate Indicators */}
               <div className="bg-gray-50 rounded p-3">
                 <h4 className="text-base font-semibold mb-2 text-gray-700">Account Details</h4>
                 {vendor.accountDetails?.bankName ? (
@@ -162,7 +190,16 @@ const VendorDetailsModal = ({ vendor, onClose, onEdit, onToggleStatus, isAdmin }
                     </div>
                     <div>
                       <span className="text-gray-500">Account Number:</span> 
-                      <span className="ml-1 font-medium">{vendor.accountDetails.accountNumber}</span>
+                      <div className="inline-flex items-center ml-1">
+                        <span className="font-medium">{vendor.accountDetails.accountNumber}</span>
+                        {vendor.accountDetails.accountNumber && (
+                          <VendorDuplicateIndicator 
+                            type="account" 
+                            value={vendor.accountDetails.accountNumber} 
+                            currentVendorId={vendor.id}
+                          />
+                        )}
+                      </div>
                     </div>
                     <div>
                       <span className="text-gray-500">IFSC Code:</span> 

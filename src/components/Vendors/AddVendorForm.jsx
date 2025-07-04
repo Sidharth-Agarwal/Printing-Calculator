@@ -1,5 +1,17 @@
 import React, { useState, useEffect } from "react";
 import { VENDOR_FIELDS } from "../../constants/entityFields";
+import { 
+  validateVendorData, 
+  checkVendorEmailExists, 
+  checkVendorPhoneExists,
+  checkVendorGstinExists,
+  checkVendorAccountExists,
+  normalizeEmail,
+  normalizePhone,
+  normalizeGstin,
+  normalizeAccountNumber,
+  normalizeIfscCode
+} from "../../services/vendorValidationService";
 
 const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, generateVendorCode }) => {
   const [formData, setFormData] = useState({
@@ -31,6 +43,13 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
   });
 
   const [submitLoading, setSubmitLoading] = useState(false);
+  const [errors, setErrors] = useState({});
+  const [validationLoading, setValidationLoading] = useState({
+    email: false,
+    phone: false,
+    gstin: false,
+    account: false
+  });
 
   useEffect(() => {
     if (selectedVendor) {
@@ -51,6 +70,7 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
           creditDays: 30
         }
       });
+      setErrors({}); // Clear errors when switching to edit mode
     } else {
       resetForm();
     }
@@ -100,6 +120,120 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
       notes: "",
       isActive: true,
     });
+    setErrors({});
+  };
+
+  // Debounced validation functions
+  const validateEmailUniqueness = async (email) => {
+    if (!email || email === selectedVendor?.email) return;
+    
+    setValidationLoading(prev => ({ ...prev, email: true }));
+    try {
+      const emailExists = await checkVendorEmailExists(email, selectedVendor?.id);
+      if (emailExists) {
+        setErrors(prev => ({
+          ...prev,
+          email: "This email address is already used by another vendor"
+        }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.email;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        email: error.message
+      }));
+    } finally {
+      setValidationLoading(prev => ({ ...prev, email: false }));
+    }
+  };
+
+  const validatePhoneUniqueness = async (phone) => {
+    if (!phone || phone === selectedVendor?.phone) return;
+    
+    setValidationLoading(prev => ({ ...prev, phone: true }));
+    try {
+      const phoneExists = await checkVendorPhoneExists(phone, selectedVendor?.id);
+      if (phoneExists) {
+        setErrors(prev => ({
+          ...prev,
+          phone: "This phone number is already used by another vendor"
+        }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.phone;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        phone: error.message
+      }));
+    } finally {
+      setValidationLoading(prev => ({ ...prev, phone: false }));
+    }
+  };
+
+  const validateGstinUniqueness = async (gstin) => {
+    if (!gstin || gstin === selectedVendor?.gstin) return;
+    
+    setValidationLoading(prev => ({ ...prev, gstin: true }));
+    try {
+      const gstinExists = await checkVendorGstinExists(gstin, selectedVendor?.id);
+      if (gstinExists) {
+        setErrors(prev => ({
+          ...prev,
+          gstin: "This GSTIN is already used by another vendor"
+        }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors.gstin;
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        gstin: error.message
+      }));
+    } finally {
+      setValidationLoading(prev => ({ ...prev, gstin: false }));
+    }
+  };
+
+  const validateAccountUniqueness = async (accountNumber) => {
+    if (!accountNumber || accountNumber === selectedVendor?.accountDetails?.accountNumber) return;
+    
+    setValidationLoading(prev => ({ ...prev, account: true }));
+    try {
+      const accountExists = await checkVendorAccountExists(accountNumber, selectedVendor?.id);
+      if (accountExists) {
+        setErrors(prev => ({
+          ...prev,
+          'accountDetails.accountNumber': "This account number is already used by another vendor"
+        }));
+      } else {
+        setErrors(prev => {
+          const newErrors = { ...prev };
+          delete newErrors['accountDetails.accountNumber'];
+          return newErrors;
+        });
+      }
+    } catch (error) {
+      setErrors(prev => ({
+        ...prev,
+        'accountDetails.accountNumber': error.message
+      }));
+    } finally {
+      setValidationLoading(prev => ({ ...prev, account: false }));
+    }
   };
 
   const handleChange = (e) => {
@@ -108,6 +242,15 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
     // Don't allow changing vendor code manually
     if (name === "vendorCode") {
       return;
+    }
+    
+    // Clear specific field error when user starts typing
+    if (errors[name]) {
+      setErrors(prev => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
     
     if (type === "checkbox") {
@@ -135,27 +278,85 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
     }
   };
 
+  // Handle blur events for validation
+  const handleEmailBlur = (e) => {
+    const email = e.target.value.trim();
+    if (email && email !== selectedVendor?.email) {
+      setTimeout(() => validateEmailUniqueness(email), 500);
+    }
+  };
+
+  const handlePhoneBlur = (e) => {
+    const phone = e.target.value.trim();
+    if (phone && phone !== selectedVendor?.phone) {
+      setTimeout(() => validatePhoneUniqueness(phone), 500);
+    }
+  };
+
+  const handleGstinBlur = (e) => {
+    const gstin = e.target.value.trim();
+    if (gstin && gstin !== selectedVendor?.gstin) {
+      setTimeout(() => validateGstinUniqueness(gstin), 500);
+    }
+  };
+
+  const handleAccountBlur = (e) => {
+    const accountNumber = e.target.value.trim();
+    if (accountNumber && accountNumber !== selectedVendor?.accountDetails?.accountNumber) {
+      setTimeout(() => validateAccountUniqueness(accountNumber), 500);
+    }
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setSubmitLoading(true);
+    setErrors({});
 
-    let success = false;
-    if (selectedVendor) {
-      success = await onUpdate(selectedVendor.id, formData);
-    } else {
-      success = await onSubmit(formData);
-    }
+    try {
+      // Validate form data including uniqueness checks
+      const validation = await validateVendorData(formData, selectedVendor?.id);
+      
+      if (!validation.isValid) {
+        setErrors(validation.errors);
+        setSubmitLoading(false);
+        return;
+      }
 
-    if (success) {
-      resetForm();
+      // Normalize data before saving
+      const normalizedData = {
+        ...formData,
+        email: normalizeEmail(formData.email),
+        phone: normalizePhone(formData.phone),
+        gstin: normalizeGstin(formData.gstin),
+        accountDetails: {
+          ...formData.accountDetails,
+          accountNumber: normalizeAccountNumber(formData.accountDetails.accountNumber),
+          ifscCode: normalizeIfscCode(formData.accountDetails.ifscCode)
+        }
+      };
+
+      let success = false;
+      if (selectedVendor) {
+        success = await onUpdate(selectedVendor.id, normalizedData);
+      } else {
+        success = await onSubmit(normalizedData);
+      }
+
+      if (success) {
+        resetForm();
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setErrors({ submit: error.message || "An error occurred while saving the vendor" });
+    } finally {
+      setSubmitLoading(false);
     }
-    
-    setSubmitLoading(false);
   };
 
   // Render a field based on its type and configuration
   const renderField = (field) => {
     const { name, label, type, required, readOnly, options } = field;
+    const hasError = errors[name];
     
     switch (type) {
       case "select":
@@ -168,7 +369,9 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
                 ? formData[name.split(".")[0]][name.split(".")[1]] 
                 : formData[name]}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
+                hasError ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-red-500"
+              }`}
               required={required}
               disabled={readOnly}
             >
@@ -178,6 +381,9 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
                 </option>
               ))}
             </select>
+            {hasError && (
+              <p className="mt-1 text-xs text-red-500">{hasError}</p>
+            )}
           </div>
         );
         
@@ -189,10 +395,15 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
               name={name}
               value={formData[name]}
               onChange={handleChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 ${
+                hasError ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-red-500"
+              }`}
               rows="4"
               required={required}
             ></textarea>
+            {hasError && (
+              <p className="mt-1 text-xs text-red-500">{hasError}</p>
+            )}
           </div>
         );
         
@@ -216,23 +427,53 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
         );
         
       default: // text, email, tel, number, etc.
+        const getBlurHandler = () => {
+          if (name === "email") return handleEmailBlur;
+          if (name === "phone") return handlePhoneBlur;
+          if (name === "gstin") return handleGstinBlur;
+          if (name === "accountDetails.accountNumber") return handleAccountBlur;
+          return undefined;
+        };
+
+        const getLoadingIndicator = () => {
+          if (name === "email" && validationLoading.email) return true;
+          if (name === "phone" && validationLoading.phone) return true;
+          if (name === "gstin" && validationLoading.gstin) return true;
+          if (name === "accountDetails.accountNumber" && validationLoading.account) return true;
+          return false;
+        };
+
         return (
           <div key={name} className="mb-3">
             <label className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
-            <input
-              type={type}
-              name={name}
-              value={name.includes(".") 
-                ? formData[name.split(".")[0]][name.split(".")[1]] 
-                : formData[name]}
-              onChange={handleChange}
-              className={`w-full px-3 py-2 border border-gray-300 rounded-md ${
-                readOnly ? "bg-gray-100 cursor-not-allowed" : "focus:outline-none focus:ring-1 focus:ring-red-500"
-              }`}
-              placeholder={`Enter ${label.toLowerCase()}`}
-              required={required}
-              readOnly={readOnly}
-            />
+            <div className="relative">
+              <input
+                type={type}
+                name={name}
+                value={name.includes(".") 
+                  ? formData[name.split(".")[0]][name.split(".")[1]] 
+                  : formData[name]}
+                onChange={handleChange}
+                onBlur={getBlurHandler()}
+                className={`w-full px-3 py-2 border rounded-md ${
+                  readOnly ? "bg-gray-100 cursor-not-allowed" : `focus:outline-none focus:ring-1 ${
+                    hasError ? "border-red-500 focus:ring-red-500" : "border-gray-300 focus:ring-red-500"
+                  }`
+                }`}
+                placeholder={`Enter ${label.toLowerCase()}`}
+                required={required}
+                readOnly={readOnly}
+              />
+              {/* Loading indicator for validation */}
+              {getLoadingIndicator() && (
+                <div className="absolute right-3 top-2.5">
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                </div>
+              )}
+            </div>
+            {hasError && (
+              <p className="mt-1 text-xs text-red-500">{hasError}</p>
+            )}
             {name === "vendorCode" && (
               <p className="mt-1 text-xs text-gray-500">
                 Automatically generated based on vendor name
@@ -245,6 +486,13 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
 
   return (
     <form onSubmit={handleSubmit} className="bg-white rounded">
+      {/* Submit Error */}
+      {errors.submit && (
+        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded text-sm">
+          {errors.submit}
+        </div>
+      )}
+
       {/* Basic Information */}
       <div className="mb-6">
         <h3 className="text-lg font-medium mb-4 text-gray-700 border-b border-gray-200 pb-2">Basic Information</h3>
@@ -288,6 +536,7 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
             type="button"
             onClick={() => setSelectedVendor(null)}
             className="mr-2 px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-md text-sm"
+            disabled={submitLoading}
           >
             Cancel
           </button>
@@ -295,8 +544,8 @@ const AddVendorForm = ({ onSubmit, selectedVendor, onUpdate, setSelectedVendor, 
         
         <button 
           type="submit" 
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm"
-          disabled={submitLoading}
+          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm disabled:bg-red-300"
+          disabled={submitLoading || Object.values(validationLoading).some(loading => loading)}
         >
           {submitLoading ? (
             <span className="flex items-center">

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import VendorDetailsModal from "./VendorDetailsModal";
+import VendorDuplicateIndicator from "./VendorDuplicateIndicator";
 
 const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin }) => {
   // State for search term, filter, sorting, and view type
@@ -127,6 +128,58 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
     onToggleStatus(vendor.id, !vendor.isActive);
   };
 
+  // Get field value from vendor object with duplicate indicators
+  const getFieldValue = (vendor, fieldName) => {
+    if (fieldName.includes('.')) {
+      const [parent, child] = fieldName.split('.');
+      return vendor[parent] && vendor[parent][child] ? vendor[parent][child] : '-';
+    }
+    
+    const value = vendor[fieldName] || '-';
+    
+    // Add duplicate indicators for email, phone, gstin, and account fields
+    if (fieldName === 'email' && vendor.email) {
+      return (
+        <div className="flex items-center">
+          <span>{value}</span>
+          <VendorDuplicateIndicator 
+            type="email" 
+            value={vendor.email} 
+            currentVendorId={vendor.id}
+          />
+        </div>
+      );
+    }
+    
+    if (fieldName === 'phone' && vendor.phone) {
+      return (
+        <div className="flex items-center">
+          <span>{value}</span>
+          <VendorDuplicateIndicator 
+            type="phone" 
+            value={vendor.phone} 
+            currentVendorId={vendor.id}
+          />
+        </div>
+      );
+    }
+    
+    if (fieldName === 'gstin' && vendor.gstin) {
+      return (
+        <div className="flex items-center">
+          <span>{value}</span>
+          <VendorDuplicateIndicator 
+            type="gstin" 
+            value={vendor.gstin} 
+            currentVendorId={vendor.id}
+          />
+        </div>
+      );
+    }
+    
+    return value;
+  };
+
   // Compact view - shows essential information
   const renderCompactView = () => {
     return (
@@ -153,9 +206,9 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                 >
                   <td className="px-3 py-3">{vendor.vendorCode}</td>
                   <td className="px-3 py-3 font-medium">{vendor.name}</td>
-                  <td className="px-3 py-3">{vendor.email || "-"}</td>
-                  <td className="px-3 py-3">{vendor.phone || "-"}</td>
-                  <td className="px-3 py-3">{vendor.gstin || "-"}</td>
+                  <td className="px-3 py-3">{getFieldValue(vendor, 'email')}</td>
+                  <td className="px-3 py-3">{getFieldValue(vendor, 'phone')}</td>
+                  <td className="px-3 py-3">{getFieldValue(vendor, 'gstin')}</td>
                   <td className="px-3 py-3">{vendor.paymentTerms?.creditDays || 0} days</td>
                   <td className="px-3 py-3">
                     <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -256,7 +309,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
     );
   };
 
-  // Detailed view - shows all columns
+  // Detailed view - shows all columns with duplicate indicators
   const renderDetailedView = () => {
     return (
       <div className="overflow-x-auto bg-white">
@@ -270,6 +323,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               <SortableHeader field="gstin" label="GSTIN" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Address</th>
               <SortableHeader field="accountDetails.bankName" label="Bank" />
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Account</th>
               <SortableHeader field="paymentTerms.creditDays" label="Credit Days" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
@@ -284,13 +338,25 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               >
                 <td className="px-3 py-3">{vendor.vendorCode}</td>
                 <td className="px-3 py-3 font-medium">{vendor.name}</td>
-                <td className="px-3 py-3">{vendor.email || "-"}</td>
-                <td className="px-3 py-3">{vendor.phone || "-"}</td>
-                <td className="px-3 py-3">{vendor.gstin || "-"}</td>
+                <td className="px-3 py-3">{getFieldValue(vendor, 'email')}</td>
+                <td className="px-3 py-3">{getFieldValue(vendor, 'phone')}</td>
+                <td className="px-3 py-3">{getFieldValue(vendor, 'gstin')}</td>
                 <td className="px-3 py-3">
                   {vendor.address?.city ? `${vendor.address.city}, ${vendor.address.state || ""}` : "-"}
                 </td>
                 <td className="px-3 py-3">{vendor.accountDetails?.bankName || "-"}</td>
+                <td className="px-3 py-3">
+                  <div className="flex items-center">
+                    <span>{vendor.accountDetails?.accountNumber || "-"}</span>
+                    {vendor.accountDetails?.accountNumber && (
+                      <VendorDuplicateIndicator 
+                        type="account" 
+                        value={vendor.accountDetails.accountNumber} 
+                        currentVendorId={vendor.id}
+                      />
+                    )}
+                  </div>
+                </td>
                 <td className="px-3 py-3">{vendor.paymentTerms?.creditDays || 0} days</td>
                 <td className="px-3 py-3">
                   <span className={`px-2 py-1 rounded-full text-xs font-medium ${
@@ -354,7 +420,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
     );
   };
 
-  // Mobile card view (keeping text labels for better UX on mobile)
+  // Mobile card view with duplicate indicators
   const renderMobileCardView = () => {
     return (
       <div className="space-y-4">
@@ -382,13 +448,46 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               </div>
               
               <div className="mt-3 pt-3 border-t border-gray-200">
-                <div className="flex justify-between">
+                <div className="space-y-2">
                   <div className="text-sm">
-                    <span className="text-gray-500">Email:</span> {vendor.email || "N/A"}
+                    <span className="text-gray-500">Email:</span>
+                    <div className="flex items-center">
+                      <span className="ml-1">{vendor.email || "N/A"}</span>
+                      {vendor.email && (
+                        <VendorDuplicateIndicator 
+                          type="email" 
+                          value={vendor.email} 
+                          currentVendorId={vendor.id}
+                        />
+                      )}
+                    </div>
                   </div>
                   <div className="text-sm">
-                    <span className="text-gray-500">Phone:</span> {vendor.phone || "N/A"}
+                    <span className="text-gray-500">Phone:</span>
+                    <div className="flex items-center">
+                      <span className="ml-1">{vendor.phone || "N/A"}</span>
+                      {vendor.phone && (
+                        <VendorDuplicateIndicator 
+                          type="phone" 
+                          value={vendor.phone} 
+                          currentVendorId={vendor.id}
+                        />
+                      )}
+                    </div>
                   </div>
+                  {vendor.gstin && (
+                    <div className="text-sm">
+                      <span className="text-gray-500">GSTIN:</span>
+                      <div className="flex items-center">
+                        <span className="ml-1">{vendor.gstin}</span>
+                        <VendorDuplicateIndicator 
+                          type="gstin" 
+                          value={vendor.gstin} 
+                          currentVendorId={vendor.id}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
               
@@ -432,10 +531,6 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               <div className="border-t border-gray-200 p-4 bg-gray-50">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
-                    <p className="font-medium text-gray-700">GSTIN:</p>
-                    <p>{vendor.gstin || "N/A"}</p>
-                  </div>
-                  <div>
                     <p className="font-medium text-gray-700">Credit Period:</p>
                     <p>{vendor.paymentTerms?.creditDays || 0} days</p>
                   </div>
@@ -446,7 +541,19 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                   <div>
                     <p className="font-medium text-gray-700">Bank:</p>
                     <p>{vendor.accountDetails?.bankName || "N/A"}</p>
-                    <p>Account: {vendor.accountDetails?.accountNumber || "N/A"}</p>
+                  </div>
+                  <div>
+                    <p className="font-medium text-gray-700">Account:</p>
+                    <div className="flex items-center">
+                      <span>{vendor.accountDetails?.accountNumber || "N/A"}</span>
+                      {vendor.accountDetails?.accountNumber && (
+                        <VendorDuplicateIndicator 
+                          type="account" 
+                          value={vendor.accountDetails.accountNumber} 
+                          currentVendorId={vendor.id}
+                        />
+                      )}
+                    </div>
                   </div>
                 </div>
                 
