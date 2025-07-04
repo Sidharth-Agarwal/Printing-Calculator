@@ -1,12 +1,11 @@
-// ClientManagement.jsx
 import React, { useState, useEffect } from "react";
 import { collection, addDoc, onSnapshot, deleteDoc, doc, updateDoc, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import AddClientForm from "./AddClientForm";
 import DisplayClientTable from "./DisplayClientTable";
 import ClientDiscussionModal from "./ClientDiscussionModal";
-import ClientImportantDatesModal from "./ClientImportantDatesModal"; // NEW: Import important dates modal
-import ImportantDatesWidget from "./ImportantDatesWidget"; // NEW: Import widget
+import ClientImportantDatesModal from "./ClientImportantDatesModal";
+import ImportantDatesWidget from "./ImportantDatesWidget";
 import { useAuth } from "../Login/AuthContext";
 import B2BCredentialsManager from "./B2BCredentialsManager";
 import AdminPasswordModal from "./AdminPasswordModal";
@@ -20,20 +19,24 @@ import {
   createClientDiscussion,
   getClientById
 } from "../../services";
-// NEW: Import important dates services
 import {
   createClientDate,
   updateClientDate,
   deleteClientDate
 } from "../../services/clientDatesService";
+import { 
+  validateClientData, 
+  normalizeEmail, 
+  normalizePhone 
+} from "../../services/clientValidationService";
 
 const ClientManagement = () => {
   const [clients, setClients] = useState([]);
   const [selectedClient, setSelectedClient] = useState(null);
   const [selectedClientForAuth, setSelectedClientForAuth] = useState(null);
   const [discussionClient, setDiscussionClient] = useState(null);
-  const [importantDatesClient, setImportantDatesClient] = useState(null); // NEW: Important dates modal state
-  const [editingImportantDate, setEditingImportantDate] = useState(null); // NEW: Editing date state
+  const [importantDatesClient, setImportantDatesClient] = useState(null);
+  const [editingImportantDate, setEditingImportantDate] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -208,7 +211,7 @@ const ClientManagement = () => {
     }
   };
 
-  // NEW: Handle important dates operations
+  // Handle important dates operations
   const handleAddImportantDate = (client) => {
     setImportantDatesClient(client);
     setEditingImportantDate(null);
@@ -281,7 +284,7 @@ const ClientManagement = () => {
     setEditingImportantDate(null);
   };
 
-  // NEW: Handle client click from widget
+  // Handle client click from widget
   const handleClientClickFromWidget = async (clientId) => {
     try {
       // Find client in current clients list first
@@ -305,9 +308,26 @@ const ClientManagement = () => {
     }
   };
 
+  // UPDATED: Enhanced addClient function with validation
   const addClient = async (clientData) => {
     setIsSubmitting(true);
     try {
+      // Validate client data including uniqueness checks
+      const validation = await validateClientData(clientData);
+      
+      if (!validation.isValid) {
+        // Show validation errors to user
+        const errorMessages = Object.values(validation.errors).join(', ');
+        setNotification({
+          isOpen: true,
+          message: `Validation failed: ${errorMessages}`,
+          title: "Validation Error",
+          status: "error"
+        });
+        setIsSubmitting(false);
+        return false;
+      }
+
       // If client code not provided or is empty, generate one based on client name
       if (!clientData.clientCode || clientData.clientCode.trim() === "") {
         clientData.clientCode = await generateClientCode(clientData.name);
@@ -318,7 +338,7 @@ const ClientManagement = () => {
           setNotification({
             isOpen: true,
             message: "This client code already exists. Please use a different code.",
-            title: "Error",
+            title: "Duplicate Client Code",
             status: "error"
           });
           setIsSubmitting(false);
@@ -326,10 +346,17 @@ const ClientManagement = () => {
         }
       }
       
+      // Normalize email and phone before saving
+      const normalizedData = {
+        ...clientData,
+        email: normalizeEmail(clientData.email),
+        phone: normalizePhone(clientData.phone)
+      };
+      
       // Add the client with additional metadata fields
       const clientsCollection = collection(db, "clients");
       await addDoc(clientsCollection, {
-        ...clientData,
+        ...normalizedData,
         activeEstimates: 0,
         activeOrders: 0,
         totalOrders: 0,
@@ -375,9 +402,26 @@ const ClientManagement = () => {
     setIsFormModalOpen(true);
   };
 
+  // UPDATED: Enhanced updateClient function with validation
   const updateClient = async (id, updatedData) => {
     setIsSubmitting(true);
     try {
+      // Validate client data including uniqueness checks (excluding current client)
+      const validation = await validateClientData(updatedData, id);
+      
+      if (!validation.isValid) {
+        // Show validation errors to user
+        const errorMessages = Object.values(validation.errors).join(', ');
+        setNotification({
+          isOpen: true,
+          message: `Validation failed: ${errorMessages}`,
+          title: "Validation Error",
+          status: "error"
+        });
+        setIsSubmitting(false);
+        return false;
+      }
+
       // If client code changed, check if the new code is unique
       if (selectedClient.clientCode !== updatedData.clientCode) {
         const exists = await checkClientCodeExists(updatedData.clientCode);
@@ -385,7 +429,7 @@ const ClientManagement = () => {
           setNotification({
             isOpen: true,
             message: "This client code already exists. Please use a different code.",
-            title: "Error",
+            title: "Duplicate Client Code",
             status: "error"
           });
           setIsSubmitting(false);
@@ -393,9 +437,16 @@ const ClientManagement = () => {
         }
       }
       
+      // Normalize email and phone before saving
+      const normalizedData = {
+        ...updatedData,
+        email: normalizeEmail(updatedData.email),
+        phone: normalizePhone(updatedData.phone)
+      };
+      
       const clientDoc = doc(db, "clients", id);
       await updateDoc(clientDoc, {
-        ...updatedData,
+        ...normalizedData,
         updatedAt: new Date(),
       });
       
@@ -555,7 +606,7 @@ const ClientManagement = () => {
       
       const discussionsSnapshot = await getDocs(discussionsQuery);
 
-      // NEW: Get all important dates associated with this client
+      // Get all important dates associated with this client
       const datesQuery = query(
         collection(db, "clientImportantDates"),
         where("clientId", "==", deleteConfirmation.itemId)
@@ -573,7 +624,7 @@ const ClientManagement = () => {
         deleteDoc(doc.ref)
       );
 
-      // NEW: Delete each important date
+      // Delete each important date
       const dateDeletePromises = datesSnapshot.docs.map(doc => 
         deleteDoc(doc.ref)
       );
@@ -676,7 +727,7 @@ const ClientManagement = () => {
         </div>
       </div>
 
-      {/* NEW: Important Dates Widget in dedicated section */}
+      {/* Important Dates Widget */}
       <div className="mb-6">
         <ImportantDatesWidget 
           onClientClick={handleClientClickFromWidget}
@@ -746,7 +797,7 @@ const ClientManagement = () => {
         />
       )}
 
-      {/* NEW: Client Important Dates Modal */}
+      {/* Client Important Dates Modal */}
       {importantDatesClient && (
         <ClientImportantDatesModal
           client={importantDatesClient}

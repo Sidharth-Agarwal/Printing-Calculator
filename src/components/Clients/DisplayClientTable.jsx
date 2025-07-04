@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import { TABLE_DISPLAY_FIELDS, DETAILED_DISPLAY_FIELDS } from "../../constants/entityFields";
 import ClientDetailsModal from "./ClientDetailsModal";
+import DuplicateIndicator from "./DuplicateIndicator";
 
 const DisplayClientTable = ({ 
   clients, 
@@ -201,13 +202,43 @@ const DisplayClientTable = ({
     return <span className="text-gray-500">Not enrolled</span>;
   };
 
-  // Get field value from client object
+  // Get field value from client object with duplicate indicators
   const getFieldValue = (client, fieldName) => {
     if (fieldName.includes('.')) {
       const [parent, child] = fieldName.split('.');
       return client[parent] && client[parent][child] ? client[parent][child] : '-';
     }
-    return client[fieldName] || '-';
+    
+    const value = client[fieldName] || '-';
+    
+    // Add duplicate indicators for email and phone fields
+    if (fieldName === 'email' && client.email) {
+      return (
+        <div className="flex items-center">
+          <span>{value}</span>
+          <DuplicateIndicator 
+            type="email" 
+            value={client.email} 
+            currentClientId={client.id}
+          />
+        </div>
+      );
+    }
+    
+    if (fieldName === 'phone' && client.phone) {
+      return (
+        <div className="flex items-center">
+          <span>{value}</span>
+          <DuplicateIndicator 
+            type="phone" 
+            value={client.phone} 
+            currentClientId={client.id}
+          />
+        </div>
+      );
+    }
+    
+    return value;
   };
 
   // Compact view - shows essential information
@@ -392,7 +423,16 @@ const DisplayClientTable = ({
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="font-medium text-gray-700">Email:</p>
-                          <p>{client.email || "-"}</p>
+                          <div className="flex items-center">
+                            <p>{client.email || "-"}</p>
+                            {client.email && (
+                              <DuplicateIndicator 
+                                type="email" 
+                                value={client.email} 
+                                currentClientId={client.id}
+                              />
+                            )}
+                          </div>
                         </div>
                         <div>
                           <p className="font-medium text-gray-700">Address:</p>
@@ -424,7 +464,7 @@ const DisplayClientTable = ({
     );
   };
 
-  // Detailed view - shows all columns
+  // Detailed view - shows all columns with duplicate indicators
   const renderDetailedView = () => {
     return (
       <div className="overflow-x-auto bg-white">
@@ -615,7 +655,32 @@ const DisplayClientTable = ({
                     <span className="text-gray-500">Contact:</span> {client.contactPerson || "N/A"}
                   </div>
                   <div className="text-sm">
-                    <span className="text-gray-500">Phone:</span> {client.phone || "N/A"}
+                    <span className="text-gray-500">Phone:</span> 
+                    <div className="flex items-center">
+                      <span>{client.phone || "N/A"}</span>
+                      {client.phone && (
+                        <DuplicateIndicator 
+                          type="phone" 
+                          value={client.phone} 
+                          currentClientId={client.id}
+                        />
+                      )}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Email with duplicate indicator */}
+                <div className="mt-2">
+                  <span className="text-gray-500 text-sm">Email:</span>
+                  <div className="flex items-center">
+                    <span className="text-sm">{client.email || "N/A"}</span>
+                    {client.email && (
+                      <DuplicateIndicator 
+                        type="email" 
+                        value={client.email} 
+                        currentClientId={client.id}
+                      />
+                    )}
                   </div>
                 </div>
                 
@@ -694,7 +759,16 @@ const DisplayClientTable = ({
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div>
                     <p className="font-medium text-gray-700">Email:</p>
-                    <p>{client.email || "N/A"}</p>
+                    <div className="flex items-center">
+                      <p>{client.email || "N/A"}</p>
+                      {client.email && (
+                        <DuplicateIndicator 
+                          type="email" 
+                          value={client.email} 
+                          currentClientId={client.id}
+                        />
+                      )}
+                    </div>
                   </div>
                   <div>
                     <p className="font-medium text-gray-700">GSTIN:</p>

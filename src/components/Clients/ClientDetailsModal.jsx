@@ -6,6 +6,7 @@ import DiscussionHistory from "../Shared/DiscussionHistory";
 import CRMActionButton from "../Shared/CRMActionButton";
 import ImportantDatesList from "./ImportantDatesList";
 import ClientImportantDatesModal from "./ClientImportantDatesModal";
+import DuplicateIndicator from "./DuplicateIndicator"
 import { 
   createClientDate, 
   updateClientDate, 
@@ -27,7 +28,7 @@ const ClientDetailsModal = ({
     editingDate: null
   });
   const [datesLoading, setDatesLoading] = useState(false);
-  const [importantDatesKey, setImportantDatesKey] = useState(0); // NEW: Force refresh key
+  const [importantDatesKey, setImportantDatesKey] = useState(0);
   const [notification, setNotification] = useState({
     show: false,
     message: "",
@@ -244,8 +245,7 @@ const ClientDetailsModal = ({
           <p>{addressObject.line1}</p>
           {addressObject.line2 && <p>{addressObject.line2}</p>}
           <p>
-            {[
-              addressObject.city, 
+            {[addressObject.city, 
               addressObject.state, 
               addressObject.postalCode
             ].filter(Boolean).join(", ")}
@@ -345,7 +345,7 @@ const ClientDetailsModal = ({
               </div>
             </div>
             
-            {/* Contact Information */}
+            {/* Contact Information with Duplicate Indicators */}
             <div className="mb-6">
               <div className="bg-gray-50 rounded p-3">
                 <h4 className="text-base font-semibold mb-2 text-gray-700">Contact Information</h4>
@@ -355,7 +355,31 @@ const ClientDetailsModal = ({
                   ).map(field => (
                     <div key={field.name}>
                       <span className="text-gray-500">{field.label}:</span> 
-                      <span className="ml-1 font-medium">{getFieldValue(field.name) || "N/A"}</span>
+                      {field.name === 'email' ? (
+                        <div className="inline-flex items-center ml-1">
+                          <span className="font-medium">{getFieldValue(field.name) || "N/A"}</span>
+                          {client.email && (
+                            <DuplicateIndicator 
+                              type="email" 
+                              value={client.email} 
+                              currentClientId={client.id}
+                            />
+                          )}
+                        </div>
+                      ) : field.name === 'phone' ? (
+                        <div className="inline-flex items-center ml-1">
+                          <span className="font-medium">{getFieldValue(field.name) || "N/A"}</span>
+                          {client.phone && (
+                            <DuplicateIndicator 
+                              type="phone" 
+                              value={client.phone} 
+                              currentClientId={client.id}
+                            />
+                          )}
+                        </div>
+                      ) : (
+                        <span className="ml-1 font-medium">{getFieldValue(field.name) || "N/A"}</span>
+                      )}
                     </div>
                   ))}
                 </div>
