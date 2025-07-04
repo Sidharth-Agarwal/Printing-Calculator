@@ -2,8 +2,10 @@ import React, { useState } from 'react';
 import { collection, getDocs, doc, setDoc, addDoc, deleteDoc, query, where } from 'firebase/firestore';
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
+import { LEAD_SOURCES } from '../../constants/leadSources';
+import { ALL_LEAD_STATUSES } from '../../constants/leadStatuses';
 
-// Utility for exporting/importing Firestore collections
+// Enhanced utility for exporting/importing Firestore collections with lead-specific support
 const DBExportImport = ({ 
   db, 
   collectionName, 
@@ -13,7 +15,8 @@ const DBExportImport = ({
   allowImport = true,
   allowExport = true,
   idField = "id",
-  dateFields = ['timestamp', 'createdAt', 'updatedAt']
+  dateFields = ['timestamp', 'createdAt', 'updatedAt'],
+  qualificationBadges = [] // Pass badges for lead processing
 }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [isImporting, setIsImporting] = useState(false);
@@ -33,6 +36,174 @@ const DBExportImport = ({
     return processed;
   };
 
+  // Lead-specific data processing for export
+  const processLeadForExport = (leadData) => {
+    // Get badge name from qualification badges
+    const badgeName = qualificationBadges.find(b => b.id === leadData.badgeId)?.name || '';
+    
+    // Get source label from LEAD_SOURCES
+    const sourceInfo = LEAD_SOURCES.find(s => s.id === leadData.source);
+    const sourceLabel = sourceInfo?.label || leadData.source || '';
+    
+    // Get status label from ALL_LEAD_STATUSES
+    const statusInfo = ALL_LEAD_STATUSES.find(s => s.id === leadData.status);
+    const statusLabel = statusInfo?.label || leadData.status || '';
+    
+    return {
+      id: leadData.id,
+      name: leadData.name || '',
+      company: leadData.company || '',
+      email: leadData.email || '',
+      phone: leadData.phone || '',
+      source: leadData.source || '',
+      sourceLabel: sourceLabel,
+      status: leadData.status || '',
+      statusLabel: statusLabel,
+      qualificationBadgeId: leadData.badgeId || '',
+      qualificationBadgeName: badgeName,
+      jobType: leadData.jobType || '',
+      budget: leadData.budget || '',
+      urgency: leadData.urgency || '',
+      notes: leadData.notes || '',
+      // Flatten address object
+      address_line1: leadData.address?.line1 || '',
+      address_line2: leadData.address?.line2 || '',
+      address_city: leadData.address?.city || '',
+      address_state: leadData.address?.state || '',
+      address_postalCode: leadData.address?.postalCode || '',
+      address_country: leadData.address?.country || '',
+      // Additional lead fields
+      lastDiscussionSummary: leadData.lastDiscussionSummary || '',
+      movedToClients: leadData.movedToClients || false,
+      order: leadData.order || 0,
+      // Process timestamps
+      ...processTimestamps(leadData)
+    };
+  };
+
+  // Lead-specific data processing for import
+  const processLeadForImport = (importData) => {
+    // Reconstruct address object
+    const address = {
+      line1: importData.address_line1 || '',
+      line2: importData.address_line2 || '',
+      city: importData.address_city || '',
+      state: importData.address_state || '',
+      postalCode: importData.address_postalCode || '',
+      country: importData.address_country || 'India'
+    };
+    
+    // Map badge name to ID if provided
+    let badgeId = importData.qualificationBadgeId || '';
+    if (importData.qualificationBadgeName && !badgeId) {
+      const badge = qualificationBadges.find(b => 
+        b.name.toLowerCase() === importData.qualificationBadgeName.toLowerCase()
+      );
+      badgeId = badge?.id || '';
+    }
+    
+    // Use source ID, fallback to mapping from label
+    let sourceId = importData.source || '';
+    if (!sourceId && importData.sourceLabel) {
+      const source = LEAD_SOURCES.find(s => 
+        s.label.toLowerCase() === importData.sourceLabel.toLowerCase()
+      );
+      sourceId = source?.id || '';
+    }
+    
+    // Use status ID, fallback to mapping from label
+    let statusId = importData.status || '';
+    if (!statusId && importData.statusLabel) {
+      const status = ALL_LEAD_STATUSES.find(s => 
+        s.label.toLowerCase() === importData.statusLabel.toLowerCase()
+      );
+      statusId = status?.id || 'newLead'; // Default to newLead
+    }
+    
+    return {
+      name: importData.name || '',
+      company: importData.company || '',
+      email: importData.email || '',
+      phone: importData.phone || '',
+      source: sourceId,
+      status: statusId,
+      badgeId: badgeId,
+      jobType: importData.jobType || '',
+      budget: importData.budget || '',
+      urgency: importData.urgency || '',
+      notes: importData.notes || '',
+      address: address,
+      lastDiscussionSummary: importData.lastDiscussionSummary || '',
+      movedToClients: importData.movedToClients === true || importData.movedToClients === 'true',
+      order: parseInt(importData.order) || Date.now() // Use current timestamp as default order
+    };
+  };
+
+  // Lead-specific validation
+  const validateLeadData = (leadData, index) => {
+    const errors = [];
+    
+    // Required fields
+    if (!leadData.name?.trim()) {
+      errors.push(`Row ${index + 1}: Name is required`);
+    }
+    if (!leadData.phone?.trim()) {
+      errors.push(`Row ${index + 1}: Phone is required`);
+    }
+    if (!leadData.source?.trim()) {
+      errors.push(`Row ${index + 1}: Source is required`);
+    }
+    if (!leadData.status?.trim()) {
+      errors.push(`Row ${index + 1}: Status is required`);
+    }
+    
+    // Email validation (if provided)
+    if (leadData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(leadData.email)) {
+      errors.push(`Row ${index + 1}: Invalid email format`);
+    }
+    
+    // Source validation
+    const validSources = LEAD_SOURCES.map(s => s.id);
+    if (leadData.source && !validSources.includes(leadData.source)) {
+      errors.push(`Row ${index + 1}: Invalid source "${leadData.source}". Valid sources: ${validSources.join(', ')}`);
+    }
+    
+    // Status validation
+    const validStatuses = ALL_LEAD_STATUSES.map(s => s.id);
+    if (leadData.status && !validStatuses.includes(leadData.status)) {
+      errors.push(`Row ${index + 1}: Invalid status "${leadData.status}". Valid statuses: ${validStatuses.join(', ')}`);
+    }
+    
+    // Badge validation (if provided)
+    if (leadData.badgeId && !qualificationBadges.find(b => b.id === leadData.badgeId)) {
+      errors.push(`Row ${index + 1}: Invalid qualification badge ID "${leadData.badgeId}"`);
+    }
+    
+    return errors;
+  };
+
+  // Generic data processor - determines which processor to use
+  const processDataForExport = (data) => {
+    if (collectionName === 'leads') {
+      return processLeadForExport(data);
+    }
+    return processTimestamps(data); // Default processing
+  };
+
+  const processDataForImport = (data) => {
+    if (collectionName === 'leads') {
+      return processLeadForImport(data);
+    }
+    return data; // Default processing
+  };
+
+  const validateImportData = (data, index) => {
+    if (collectionName === 'leads') {
+      return validateLeadData(data, index);
+    }
+    return []; // No validation for other collections
+  };
+
   // Handle export operation
   const handleExport = async () => {
     setIsExporting(true);
@@ -43,14 +214,28 @@ const DBExportImport = ({
       // Process data for export
       const data = querySnapshot.docs.map(doc => {
         const docData = doc.data();
-        return {
+        const processedData = processDataForExport({
           [idField]: doc.id, // Always include the document ID
-          ...processTimestamps(docData) // Process any timestamp fields
-        };
+          ...docData
+        });
+        return processedData;
       });
       
       // Create worksheet
       const worksheet = XLSX.utils.json_to_sheet(data);
+      
+      // Set column widths for better readability
+      const columnWidths = [];
+      if (data.length > 0) {
+        Object.keys(data[0]).forEach((key, index) => {
+          const maxLength = Math.max(
+            key.length,
+            ...data.map(row => String(row[key] || '').length)
+          );
+          columnWidths[index] = { wch: Math.min(maxLength + 2, 50) };
+        });
+      }
+      worksheet['!cols'] = columnWidths;
       
       // Create workbook and add the worksheet
       const workbook = XLSX.utils.book_new();
@@ -98,37 +283,60 @@ const DBExportImport = ({
       
       setImportStatus({ 
         status: 'processing', 
-        message: `Importing ${jsonData.length} records...` 
+        message: `Processing ${jsonData.length} records...` 
       });
       
+      // Process and validate data
+      const processedData = [];
+      const validationErrors = [];
+      
+      for (let i = 0; i < jsonData.length; i++) {
+        const item = jsonData[i];
+        const processedItem = processDataForImport(item);
+        const errors = validateImportData(processedItem, i);
+        
+        if (errors.length > 0) {
+          validationErrors.push(...errors);
+        } else {
+          processedData.push({
+            id: item[idField],
+            data: processedItem
+          });
+        }
+      }
+      
+      // If there are validation errors, show them
+      if (validationErrors.length > 0) {
+        const errorMessage = `Validation errors found:\n${validationErrors.slice(0, 10).join('\n')}${
+          validationErrors.length > 10 ? `\n... and ${validationErrors.length - 10} more errors` : ''
+        }`;
+        throw new Error(errorMessage);
+      }
+      
       // Confirmation dialog
-      if (!window.confirm(`You're about to import ${jsonData.length} records to "${collectionName}" collection. This may overwrite existing data. Continue?`)) {
+      if (!window.confirm(`You're about to import ${processedData.length} valid records to "${collectionName}" collection. This may overwrite existing data. Continue?`)) {
         setImportStatus(null);
         setIsImporting(false);
         return;
       }
       
+      setImportStatus({ 
+        status: 'processing', 
+        message: `Importing ${processedData.length} records...` 
+      });
+      
       // Process and import data
       let successCount = 0;
       let errorCount = 0;
-      let skippedCount = 0;
       
-      for (const item of jsonData) {
+      for (const item of processedData) {
         try {
-          // Extract the ID field
-          const docId = item[idField];
-          delete item[idField]; // Remove ID field from data
+          const processedItem = { ...item.data };
           
           // Process date strings back to Firestore timestamps
-          const processedItem = { ...item };
-          
-          // Process fields with dates - convert valid date strings to timestamps
           for (const [key, value] of Object.entries(processedItem)) {
-            // If it's a date string or date object, convert to Firestore timestamp
             if (value && (value instanceof Date || (typeof value === 'string' && !isNaN(Date.parse(value))))) {
               const dateValue = value instanceof Date ? value : new Date(value);
-              
-              // Store as a Firestore-compatible timestamp object
               processedItem[key] = {
                 seconds: Math.floor(dateValue.getTime() / 1000),
                 nanoseconds: 0
@@ -136,17 +344,18 @@ const DBExportImport = ({
             }
           }
           
-          // Add fields if they're missing
-          if (!processedItem.timestamp) {
-            processedItem.timestamp = { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 };
+          // Add timestamps if missing
+          const currentTimestamp = { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 };
+          if (!processedItem.createdAt) {
+            processedItem.createdAt = currentTimestamp;
           }
           if (!processedItem.updatedAt) {
-            processedItem.updatedAt = { seconds: Math.floor(Date.now() / 1000), nanoseconds: 0 };
+            processedItem.updatedAt = currentTimestamp;
           }
           
-          if (docId) {
+          if (item.id) {
             // Update existing document
-            await setDoc(doc(db, collectionName, docId), processedItem);
+            await setDoc(doc(db, collectionName, item.id), processedItem);
             successCount++;
           } else {
             // Add new document
@@ -159,12 +368,13 @@ const DBExportImport = ({
         }
       }
       
+      const resultMessage = `Import completed: ${successCount} succeeded${errorCount > 0 ? `, ${errorCount} failed` : ''}`;
       setImportStatus({ 
         status: 'success', 
-        message: `Import completed: ${successCount} succeeded, ${errorCount} failed, ${skippedCount} skipped` 
+        message: resultMessage
       });
       
-      if (onSuccess) onSuccess(`Import completed: ${successCount} succeeded, ${errorCount} failed, ${skippedCount} skipped`);
+      if (onSuccess) onSuccess(resultMessage);
     } catch (error) {
       console.error(`Error importing ${collectionName}:`, error);
       setImportStatus({ status: 'error', message: error.message });
@@ -244,8 +454,8 @@ const DBExportImport = ({
       )}
       
       {importStatus && (
-        <div className={`mt-2 text-sm ${importStatus.status === 'error' ? 'text-red-600' : 'text-gray-600'}`}>
-          {importStatus.message}
+        <div className={`mt-2 text-sm max-w-md ${importStatus.status === 'error' ? 'text-red-600' : 'text-gray-600'}`}>
+          <div className="whitespace-pre-wrap">{importStatus.message}</div>
         </div>
       )}
     </div>

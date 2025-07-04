@@ -17,9 +17,11 @@ import {
   createDiscussion 
 } from "../../../services";
 import { useAuth } from "../../Login/AuthContext";
+import DBExportImport from "../../Shared/DBExportImport"; // Import the enhanced component
+import { db } from "../../../firebaseConfig"; // Import db for DBExportImport
 
 /**
- * Main page component for lead management (lead pool) - Updated for 4-column Kanban
+ * Main page component for lead management (lead pool) - Updated for 4-column Kanban with Import/Export
  */
 const LeadManagementPage = () => {
   const { currentUser, userRole } = useAuth();
@@ -54,6 +56,9 @@ const LeadManagementPage = () => {
     type: "success"
   });
   
+  // Check if user is admin
+  const isAdmin = userRole === "admin";
+  
   // Show notification
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type });
@@ -62,6 +67,19 @@ const LeadManagementPage = () => {
     setTimeout(() => {
       setNotification(prev => ({ ...prev, show: false }));
     }, 3000);
+  };
+  
+  // Handle notification from export/import operations
+  const handleExportImportSuccess = (message) => {
+    showNotification(message, "success");
+    // Trigger leads refresh if refreshLeads function is available
+    if (refreshLeads) {
+      refreshLeads();
+    }
+  };
+
+  const handleExportImportError = (message) => {
+    showNotification(message, "error");
   };
   
   // Check if user has permission to manage leads
@@ -387,8 +405,22 @@ const LeadManagementPage = () => {
         </div>
       </div>
       
-      {/* Action Button and View Toggle */}
-      <div className="flex justify-between items-center mb-4">
+      {/* Action buttons with Export/Import options - UPDATED SECTION */}
+      <div className="flex flex-col md:flex-row justify-between mb-4">
+        <div className="mb-2 md:mb-0">
+          {/* Only show import/export to admins */}
+          {isAdmin && (
+            <DBExportImport 
+              db={db}
+              collectionName="leads"
+              onSuccess={handleExportImportSuccess}
+              onError={handleExportImportError}
+              dateFields={['createdAt', 'updatedAt', 'lastDiscussionDate']}
+              qualificationBadges={qualificationBadges} // Pass badges for processing
+            />
+          )}
+        </div>
+        
         <div className="flex space-x-2">
           <button
             onClick={() => setViewMode("kanban")}
@@ -417,17 +449,17 @@ const LeadManagementPage = () => {
             </svg>
             List View
           </button>
+          
+          <button
+            onClick={handleAddNew}
+            className="px-4 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700 flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Add New Lead
+          </button>
         </div>
-        
-        <button
-          onClick={handleAddNew}
-          className="px-4 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700 flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-          </svg>
-          Add New Lead
-        </button>
       </div>
       
       {/* Search and Filters */}
@@ -536,26 +568,6 @@ const LeadManagementPage = () => {
           </span>
         )}
       </div>
-      
-      {/* Kanban Column Explanation */}
-      {/* {viewMode === "kanban" && (
-        <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
-          <div className="flex items-start">
-            <svg className="h-5 w-5 text-blue-400 mr-2 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div>
-              <h4 className="text-sm font-medium text-blue-800">4-Column Kanban View</h4>
-              <p className="text-sm text-blue-700 mt-1">
-                <strong>New Lead:</strong> includes "New Lead" and "Contacted" status leads • 
-                <strong>Qualified:</strong> includes "Qualified" and "Negotiation" status leads • 
-                <strong>Converted:</strong> successfully closed deals • 
-                <strong>Lost:</strong> leads that didn't convert
-              </p>
-            </div>
-          </div>
-        </div>
-      )} */}
       
       {/* Main Content - Conditionally render based on viewMode */}
       {viewMode === "kanban" ? (
