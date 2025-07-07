@@ -481,7 +481,7 @@ const OrdersPage = () => {
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="flex justify-between items-center mb-6">
           <h1 className="text-2xl font-bold text-gray-900">
-            {isB2BClient ? "Your Orders" : "Orders Management"}
+            {isB2BClient ? "Your Orders" : "Job Dashboard"}
           </h1>
           <div className="animate-pulse w-64 h-8 bg-gray-200 rounded-md"></div>
         </div>
@@ -515,7 +515,7 @@ const OrdersPage = () => {
       {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
-          {isB2BClient ? "Your Orders" : "Orders Management"}
+          {isB2BClient ? "Your Orders" : "Job Dashboard"}
         </h1>
         <p className="text-gray-600 mt-1">
           {isB2BClient 
