@@ -137,6 +137,7 @@ const initialFormState = {
  packing: {
    isPackingUsed: false,
  },
+ // FIXED: Proper misc initial state
  misc: {
    isMiscUsed: false,
    miscCharge: ""
@@ -173,7 +174,7 @@ const initialFormState = {
  }
 };
 
-// Reducer function to handle updates to the state
+// UPDATED: Reducer function with fixed misc handling
 const reducer = (state, action) => {
  switch (action.type) {
    case "UPDATE_CLIENT":
@@ -276,7 +277,10 @@ const mapStateToFirebaseStructure = (state, calculations) => {
    paperName: orderAndPaper?.paperName,
    dieCode: orderAndPaper?.dieCode,
    frags: orderAndPaper?.frags,
-   type: orderAndPaper?.type
+   type: orderAndPaper?.type,
+   // ADDED: Log misc state for debugging
+   miscUsed: state.misc?.isMiscUsed,
+   miscCharge: state.misc?.miscCharge
  });
 
  // Create the sanitized Firebase data structure
@@ -333,7 +337,13 @@ const mapStateToFirebaseStructure = (state, calculations) => {
    dstPaste: state.dstPaste?.isDstPasteUsed ? sanitizeForFirestore(state.dstPaste) : null,
    qc: state.qc?.isQCUsed ? sanitizeForFirestore(state.qc) : null,
    packing: state.packing?.isPackingUsed ? sanitizeForFirestore(state.packing) : null,
-   misc: state.misc?.isMiscUsed ? sanitizeForFirestore(state.misc) : null,
+   
+   // FIXED: Always include misc in the formData, whether it's used or not
+   // This ensures EditEstimateModal gets the current misc state
+   misc: state.misc?.isMiscUsed ? sanitizeForFirestore(state.misc) : sanitizeForFirestore({
+     isMiscUsed: false,
+     miscCharge: ""
+   }),
    
    // Calculations - ensure markup values are included
    calculations: sanitizeForFirestore(calculations),
@@ -349,7 +359,10 @@ const mapStateToFirebaseStructure = (state, calculations) => {
    jobType: firestoreData.jobDetails.jobType,
    quantity: firestoreData.jobDetails.quantity,
    paperName: firestoreData.jobDetails.paperName,
-   dieCode: firestoreData.dieDetails.dieCode
+   dieCode: firestoreData.dieDetails.dieCode,
+   // ADDED: Log final misc state
+   miscUsed: firestoreData.misc?.isMiscUsed,
+   miscCharge: firestoreData.misc?.miscCharge
  });
  
  return firestoreData;
@@ -789,13 +802,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
        });
      }
      
+     // FIXED: Updated MISC activation with consistent pattern
      if (defaultActivePostProductionServices.includes("MISC")) {
        console.log("Activating MISC service");
        dispatch({
          type: "UPDATE_MISC",
          payload: { 
            isMiscUsed: true,
-           miscCharge: ""
+           miscCharge: "" // Start empty, let component fetch default
          }
        });
      }
@@ -1292,13 +1306,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
          });
        }
        
+       // FIXED: Updated MISC activation with consistent pattern
        if (defaultActivePostProductionServices.includes("MISC")) {
          console.log("Activating MISC service");
          dispatch({
            type: "UPDATE_MISC",
            payload: { 
              isMiscUsed: true,
-             miscCharge: ""
+             miscCharge: "" // Start empty, let component fetch default
            }
          });
        }
@@ -2204,6 +2219,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    }
  };
  
+ // FIXED: Updated toggleMiscUsage with proper state clearing pattern
  const toggleMiscUsage = () => {
    const isCurrentlyUsed = state.misc?.isMiscUsed || false;
    
@@ -2211,7 +2227,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
      type: "UPDATE_MISC",
      payload: { 
        isMiscUsed: !isCurrentlyUsed,
-       miscCharge: "" // Initialize as empty string to allow fetching from DB
+       // Only initialize when toggling ON (same pattern as other services)
+       ...((!isCurrentlyUsed) && {
+         miscCharge: "" // Initialize as empty string to allow fetching from DB
+       })
      }
    });
    
@@ -2678,7 +2697,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
              </FormSection>
            )}
            
-           {/* Misc Section */}
+           {/* FIXED: Misc Section with proper toggle function */}
            {isServiceVisible("MISC") && (
              <FormSection 
                title="Miscellaneous" 
