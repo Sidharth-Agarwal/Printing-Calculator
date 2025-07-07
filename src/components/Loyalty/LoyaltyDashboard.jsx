@@ -128,7 +128,7 @@ const LoyaltyDashboard = () => {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-2xl font-bold text-gray-900">B2B Loyalty Program</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Loyalty Dashboard</h1>
           <div className="animate-pulse w-64 h-8 bg-gray-200 rounded-md"></div>
         </div>
         <div className="animate-pulse space-y-4">
@@ -164,7 +164,7 @@ const LoyaltyDashboard = () => {
     <div className="p-4 max-w-screen-xl mx-auto">
       {/* Page Header */}
       <div className="mb-6">
-        <h1 className="text-2xl font-bold text-gray-900">B2B Loyalty Program</h1>
+        <h1 className="text-2xl font-bold text-gray-900">Loyalty Dashboard</h1>
         <p className="text-gray-600 mt-1">
           Manage B2B client loyalty tiers and view loyalty program statistics
         </p>

@@ -225,26 +225,28 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* HSN Summary - Show on all pages - More Compact */}
-      <div className="mb-2">
-        <div className="font-medium text-xs mb-1">HSN Summary:</div>
-        <table className="w-full border-collapse text-xs">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="py-0.5 px-2 border border-gray-300 text-left">HSN Code</th>
-              <th className="py-0.5 px-2 border border-gray-300 text-left">Job Types</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
-              <tr key={idx}>
-                <td className="py-0.5 px-2 border border-gray-300 font-mono">{hsnCode}</td>
-                <td className="py-0.5 px-2 border border-gray-300">{data.jobTypes.join(', ')}</td>
+      {/* HSN Summary - Only show on last page - More Compact */}
+      {isLastPage && (
+        <div className="mb-2">
+          <div className="font-medium text-xs mb-1">HSN Summary:</div>
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="py-0.5 px-2 border border-gray-300 text-left">HSN Code</th>
+                <th className="py-0.5 px-2 border border-gray-300 text-left">Job Types</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
+                <tr key={idx}>
+                  <td className="py-0.5 px-2 border border-gray-300 font-mono">{hsnCode}</td>
+                  <td className="py-0.5 px-2 border border-gray-300">{data.jobTypes.join(', ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       
       {/* Terms and Conditions - Only on last page - More Compact */}
       {isLastPage && (
@@ -474,26 +476,28 @@ const PageContent = ({
         </div>
       )}
       
-      {/* HSN Summary - Show on all pages */}
-      <div className="mb-3">
-        <div className="font-medium text-sm mb-1">HSN Summary:</div>
-        <table className="w-full border-collapse text-xs">
-          <thead>
-            <tr className="bg-gray-50">
-              <th className="py-1 px-4 border border-gray-300 text-left">HSN Code</th>
-              <th className="py-1 px-4 border border-gray-300 text-left">Job Types</th>
-            </tr>
-          </thead>
-          <tbody>
-            {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
-              <tr key={idx}>
-                <td className="py-1 px-4 border border-gray-300 font-mono">{hsnCode}</td>
-                <td className="py-1 px-4 border border-gray-300">{data.jobTypes.join(', ')}</td>
+      {/* HSN Summary - Only show on last page */}
+      {isLastPage && (
+        <div className="mb-3">
+          <div className="font-medium text-sm mb-1">HSN Summary:</div>
+          <table className="w-full border-collapse text-xs">
+            <thead>
+              <tr className="bg-gray-50">
+                <th className="py-1 px-4 border border-gray-300 text-left">HSN Code</th>
+                <th className="py-1 px-4 border border-gray-300 text-left">Job Types</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+            </thead>
+            <tbody>
+              {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
+                <tr key={idx}>
+                  <td className="py-1 px-4 border border-gray-300 font-mono">{hsnCode}</td>
+                  <td className="py-1 px-4 border border-gray-300">{data.jobTypes.join(', ')}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
       
       {/* Terms and Conditions - Only on last page */}
       {isLastPage && (

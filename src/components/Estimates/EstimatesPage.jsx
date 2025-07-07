@@ -274,6 +274,14 @@ const EstimatesPage = () => {
     return groups;
   }, [allEstimates, searchQuery, filterStatus, clientTypeFilter, activeClientsMap, showInactiveClients, isB2BClient, linkedClientId]);
 
+  // Sort client groups alphabetically by client name
+  const sortedClientGroups = React.useMemo(() => {
+    return Object.values(clientGroups).sort((a, b) => {
+      // Sort alphabetically by client name, case-insensitive
+      return a.name.toLowerCase().localeCompare(b.name.toLowerCase());
+    });
+  }, [clientGroups]);
+
   // Get a count of selected valid estimates
   const getSelectedEstimatesCount = () => {
     let count = 0;
@@ -1110,7 +1118,7 @@ const EstimatesPage = () => {
           <div className="animate-spin h-10 w-10 border-4 border-red-500 rounded-full border-t-transparent mb-4"></div>
           <p className="text-gray-500">Loading estimates...</p>
         </div>
-      ) : Object.keys(clientGroups).length === 0 ? (
+      ) : sortedClientGroups.length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
           <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -1157,8 +1165,8 @@ const EstimatesPage = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {/* Client Groups */}
-          {Object.values(clientGroups).map((client) => (
+          {/* Client Groups - Now sorted alphabetically */}
+          {sortedClientGroups.map((client) => (
             <div key={client.id} className={`bg-white rounded-lg shadow-sm border ${!client.isActive ? 'border-red-300 border-l-4' : 'border-gray-200'} overflow-hidden`}>
               {/* Client Header */}
               <div 
