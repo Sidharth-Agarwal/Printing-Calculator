@@ -99,17 +99,16 @@ const SinglePageContent = ({
               <div>Tentative Delivery Date: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
             </div>
             
-            {/* Process Legend - Compact */}
+            {/* Process Legend - Compact - FIXED: Show processes on separate lines */}
             {usedProcesses.length > 0 && (
               <div className="mb-1">
-                <div className="text-xs font-medium text-gray-700">Processes: 
-                  <span className="font-normal ml-1">
-                    {usedProcesses.map((process, index) => (
-                      <span key={index} className="mr-2">
-                        {process.abbreviation} - {process.fullForm}
-                      </span>
-                    ))}
-                  </span>
+                <div className="text-xs font-medium text-gray-700 mb-1">Processes:</div>
+                <div className="text-xs text-gray-600">
+                  {usedProcesses.map((process, index) => (
+                    <div key={index} className="leading-tight">
+                      {process.abbreviation} - {process.fullForm}
+                    </div>
+                  ))}
                 </div>
               </div>
             )}
@@ -178,7 +177,7 @@ const SinglePageContent = ({
               <tr key={item.id} className="text-gray-700">
                 <td className="py-2 px-1 border border-gray-300 text-center">{item.serialNumber}</td>
                 <td className="py-2 px-1 border border-gray-300">
-                  <div className="font-medium text-xs leading-relaxed mb-1">{item.name}</div>
+                  <div className="font-medium text-xs leading-relaxed">{item.name}</div>
                   {item.processSummary && (
                     <div className="text-xs font-medium leading-relaxed text-gray-600">{item.processSummary}</div>
                   )}
@@ -229,7 +228,7 @@ const SinglePageContent = ({
       {/* HSN Summary - Only show on last page - More Compact */}
       {isLastPage && (
         <div className="mb-2">
-          <div className="font-medium text-xs mb-1">HSN Summary:</div>
+          <div className="font-medium text-xs mb-3">HSN Summary:</div>
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50">
