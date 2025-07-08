@@ -67,7 +67,7 @@ const SinglePageContent = ({
   const isLastPage = pageNumber === totalPages;
 
   return (
-    <div className="p-2" style={{ minHeight: '100vh', fontSize: '11px' }}>
+    <div className="p-2 pb-6" style={{ minHeight: '100vh', fontSize: '11px' }}>
       {/* Header - Only on First Page */}
       {isFirstPage && (
         <div className="flex justify-between mb-2">
@@ -95,7 +95,8 @@ const SinglePageContent = ({
             
             {/* Date Information - Compact */}
             <div className="text-xs text-gray-600 mb-1">
-              <div>Estimate: {currentDate} | Delivery: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+              <div>Estimate: {currentDate}</div>
+              <div>Tentative Delivery Date: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
             </div>
             
             {/* Process Legend - Compact */}
@@ -154,43 +155,43 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* Line Items Table - More Compact */}
+      {/* Line Items Table - FIXED: Much better padding and spacing for PDF mode */}
       <div className="mb-2 overflow-x-auto">
         <table className="w-full border-collapse" style={{ fontSize: '10px' }}>
           <thead>
             <tr className="bg-gray-100 text-gray-700">
-              <th className="py-0.5 px-1 border border-gray-300 text-center">S.No</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-left">Item</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center">Job Type</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center">Paper</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center">Size</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center">Qty</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right">Unit Cost</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right">Total</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center">GST %</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right">GST Amt</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right">Final Total</th>
+              <th className="py-2 px-1 border border-gray-300 text-center">S.No</th>
+              <th className="py-2 px-1 border border-gray-300 text-left">Item</th>
+              <th className="py-2 px-1 border border-gray-300 text-center">Job Type</th>
+              <th className="py-2 px-1 border border-gray-300 text-center">Paper</th>
+              <th className="py-2 px-1 border border-gray-300 text-center">Size</th>
+              <th className="py-2 px-1 border border-gray-300 text-center">Qty</th>
+              <th className="py-2 px-1 border border-gray-300 text-right">Unit Cost</th>
+              <th className="py-2 px-1 border border-gray-300 text-right">Total</th>
+              <th className="py-2 px-1 border border-gray-300 text-center">GST %</th>
+              <th className="py-2 px-1 border border-gray-300 text-right">GST Amt</th>
+              <th className="py-2 px-1 border border-gray-300 text-right">Final Total</th>
             </tr>
           </thead>
           <tbody>
             {allLineItems.map((item) => (
               <tr key={item.id} className="text-gray-700">
-                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.serialNumber}</td>
-                <td className="py-0.5 px-1 border border-gray-300">
-                  <div className="font-medium text-xs leading-tight">{item.name}</div>
+                <td className="py-2 px-1 border border-gray-300 text-center">{item.serialNumber}</td>
+                <td className="py-2 px-1 border border-gray-300">
+                  <div className="font-medium text-xs leading-relaxed mb-1">{item.name}</div>
                   {item.processSummary && (
-                    <div className="text-xs font-medium leading-tight">{item.processSummary}</div>
+                    <div className="text-xs font-medium leading-relaxed text-gray-600">{item.processSummary}</div>
                   )}
                 </td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.jobType}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center text-xs">{item.paperInfo}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center whitespace-nowrap text-xs">{item.productDimensions}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.quantity}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.total.toFixed(2)}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.gstRate}%</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
+                <td className="py-2 px-1 border border-gray-300 text-center">{item.jobType}</td>
+                <td className="py-2 px-1 border border-gray-300 text-center text-xs">{item.paperInfo}</td>
+                <td className="py-2 px-1 border border-gray-300 text-center whitespace-nowrap text-xs">{item.productDimensions}</td>
+                <td className="py-2 px-1 border border-gray-300 text-center">{item.quantity}</td>
+                <td className="py-2 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
+                <td className="py-2 px-1 border border-gray-300 text-right font-mono">{item.total.toFixed(2)}</td>
+                <td className="py-2 px-1 border border-gray-300 text-center">{item.gstRate}%</td>
+                <td className="py-2 px-1 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
+                <td className="py-2 px-1 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
               </tr>
             ))}
           </tbody>
@@ -208,14 +209,14 @@ const SinglePageContent = ({
               </div>
             </div>
             
-            <div className="flex justify-between py-0.5 text-xs">
+            <div className="flex justify-between pt-1 pb-2 text-xs">
               <div className="text-gray-700">GST Amount:</div>
               <div className="text-gray-900 font-mono">
                 {formatCurrency(totals.gstAmount)}
               </div>
             </div>
             
-            <div className="flex justify-between py-0.5 font-bold border-t border-gray-300 text-sm">
+            <div className="flex justify-between pt-1 pb-2 font-bold border-t border-gray-300">
               <div>Total:</div>
               <div className="font-mono">
                 {formatCurrency(totals.total)}
@@ -232,15 +233,15 @@ const SinglePageContent = ({
           <table className="w-full border-collapse text-xs">
             <thead>
               <tr className="bg-gray-50">
-                <th className="py-0.5 px-2 border border-gray-300 text-left">HSN Code</th>
-                <th className="py-0.5 px-2 border border-gray-300 text-left">Job Types</th>
+                <th className="pt-0.5 pb-2 px-2 border border-gray-300 text-left">HSN Code</th>
+                <th className="pt-0.5 pb-2 px-2 border border-gray-300 text-left">Job Types</th>
               </tr>
             </thead>
             <tbody>
               {Object.entries(hsnSummary).map(([hsnCode, data], idx) => (
                 <tr key={idx}>
-                  <td className="py-0.5 px-2 border border-gray-300 font-mono">{hsnCode}</td>
-                  <td className="py-0.5 px-2 border border-gray-300">{data.jobTypes.join(', ')}</td>
+                  <td className="pt-0.5 pb-2 px-2 border border-gray-300 font-mono">{hsnCode}</td>
+                  <td className="pt-0.5 pb-2 px-2 border border-gray-300">{data.jobTypes.join(', ')}</td>
                 </tr>
               ))}
             </tbody>
@@ -405,7 +406,7 @@ const PageContent = ({
         </div>
       )}
       
-      {/* Line Items Table */}
+      {/* Line Items Table - Keep original preview mode styling */}
       <div className="mb-4 overflow-x-auto">
         <table className="w-full border-collapse text-xs">
           <thead>
@@ -459,14 +460,14 @@ const PageContent = ({
               </div>
             </div>
             
-            <div className="flex justify-between py-1 text-sm">
+            <div className="flex justify-between pt-1 pb-2 text-sm">
               <div className="text-gray-700">GST Amount:</div>
               <div className="text-gray-900 font-mono">
                 {formatCurrency(totals.gstAmount)}
               </div>
             </div>
             
-            <div className="flex justify-between py-1 font-bold border-t border-gray-300">
+            <div className="flex justify-between pt-1 pb-2 font-bold border-t border-gray-300">
               <div>Total:</div>
               <div className="font-mono">
                 {formatCurrency(totals.total)}
