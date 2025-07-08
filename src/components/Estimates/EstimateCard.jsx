@@ -29,10 +29,13 @@ const EstimateCard = ({
   // Determine if this estimate can be selected (not moved, canceled, or in escrow)
   const isSelectable = !isMovedToOrders && !isCanceled && !isInEscrow;
   
-  // Check client type for both B2B and Direct
+  // FIXED: Match exact database values
   const clientType = estimate.clientInfo?.clientType;
-  const isLoyaltyEligible = clientType === "B2B";
-  const isDirectClient = !clientType || clientType === "Direct" || clientType === "direct";
+  const isB2BClient = clientType === "B2B";
+  const isDirectClient = clientType === "DIRECT" || !clientType; // Handle both "DIRECT" and null/undefined
+  
+  // For backward compatibility
+  const isLoyaltyEligible = isB2BClient;
 
   // Format last activity date
   const formatLastActivity = () => {
@@ -288,18 +291,17 @@ const EstimateCard = ({
         {estimate?.projectName || "No Project Name"}
       </p>
       
-      {/* Info line with smaller text and more compact layout */}
+      {/* Info line with smaller text and more compact layout - FIXED: Show both client types */}
       <div className="flex justify-between text-[10px] text-gray-500 mb-1">
         <div className="flex items-center gap-1 min-w-0">
           <span className="text-[10px]">HSN: {estimate?.jobDetails?.hsnCode || "N/A"}</span>
           
-          {/* Client type tags - smaller */}
-          {isLoyaltyEligible && (
+          {/* Client type tags - FIXED: Handle both "B2B" and "DIRECT" values */}
+          {isB2BClient ? (
             <span className="px-1 py-0.5 bg-purple-50 text-purple-700 rounded text-[10px] font-medium">
               B2B
             </span>
-          )}
-          {isDirectClient && (
+          ) : (
             <span className="px-1 py-0.5 bg-blue-50 text-blue-700 rounded text-[10px] font-medium">
               Direct
             </span>
@@ -381,7 +383,7 @@ const EstimateCard = ({
               {isCancelling ? (
                 <svg className="animate-spin h-3.5 w-3.5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mx-auto" viewBox="0 0 20 20" fill="currentColor">

@@ -8,8 +8,8 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
   const [clientInfo, setClientInfo] = useState(null);
   const [isLoadingClient, setIsLoadingClient] = useState(true);
   const [initialFormState, setInitialFormState] = useState(null);
-  const [isClientInactive, setIsClientInactive] = useState(false); // Track client active status
-  const [formChangeDebug, setFormChangeDebug] = useState({}); // Debug state for tracking form changes
+  const [isClientInactive, setIsClientInactive] = useState(false);
+  const [formChangeDebug, setFormChangeDebug] = useState({});
 
   // Enhanced sanitizeEstimateStructure function
   const sanitizeEstimateStructure = (estimateData) => {
@@ -20,11 +20,10 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     // Convert map to array for LP Details
     if (sanitized.lpDetails) {
       if (!Array.isArray(sanitized.lpDetails.colorDetails)) {
-        // If it's an object with numeric keys, convert to array
         if (sanitized.lpDetails.colorDetails && typeof sanitized.lpDetails.colorDetails === 'object') {
           const tempArray = [];
           Object.keys(sanitized.lpDetails.colorDetails)
-            .sort((a, b) => parseInt(a) - parseInt(b)) // Ensure proper order
+            .sort((a, b) => parseInt(a) - parseInt(b))
             .forEach(key => {
               tempArray.push(sanitized.lpDetails.colorDetails[key]);
             });
@@ -39,11 +38,10 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     // Convert map to array for FS Details
     if (sanitized.fsDetails) {
       if (!Array.isArray(sanitized.fsDetails.foilDetails)) {
-        // If it's an object with numeric keys, convert to array
         if (sanitized.fsDetails.foilDetails && typeof sanitized.fsDetails.foilDetails === 'object') {
           const tempArray = [];
           Object.keys(sanitized.fsDetails.foilDetails)
-            .sort((a, b) => parseInt(a) - parseInt(b)) // Ensure proper order
+            .sort((a, b) => parseInt(a) - parseInt(b))
             .forEach(key => {
               tempArray.push(sanitized.fsDetails.foilDetails[key]);
             });
@@ -58,7 +56,6 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     // Handle sandwich component if present
     if (sanitized.sandwich) {
       if (sanitized.sandwich.lpDetailsSandwich && !Array.isArray(sanitized.sandwich.lpDetailsSandwich.colorDetails)) {
-        // Same approach as above
         if (sanitized.sandwich.lpDetailsSandwich.colorDetails && 
             typeof sanitized.sandwich.lpDetailsSandwich.colorDetails === 'object') {
           const tempArray = [];
@@ -74,7 +71,6 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       }
       
       if (sanitized.sandwich.fsDetailsSandwich && !Array.isArray(sanitized.sandwich.fsDetailsSandwich.foilDetails)) {
-        // Same approach as above
         if (sanitized.sandwich.fsDetailsSandwich.foilDetails && 
             typeof sanitized.sandwich.fsDetailsSandwich.foilDetails === 'object') {
           const tempArray = [];
@@ -104,9 +100,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       setIsLoadingClient(true);
       
       try {
-        // First check if we have the clientId
         if (estimate.clientId) {
-          // Fetch the complete client details
           const clientDoc = await getDoc(doc(db, "clients", estimate.clientId));
           
           if (clientDoc.exists()) {
@@ -118,30 +112,22 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
             
             setClientInfo(clientData);
             
-            // Check if client is inactive
             if (clientData.isActive === false) {
               setIsClientInactive(true);
             }
             
-            // Sanitize estimate before converting to form state
             const sanitizedEstimate = sanitizeEstimateStructure(estimate);
-            
-            // Create form state with fetched client data and sanitized estimate
             const formState = convertEstimateToFormState(sanitizedEstimate, clientData);
             setInitialFormState(formState);
           } else {
             console.error("Client not found for ID:", estimate.clientId);
-            
-            // Try to use existing client info from the estimate
             const sanitizedEstimate = sanitizeEstimateStructure(estimate);
             const formState = convertEstimateToFormState(sanitizedEstimate, estimate.clientInfo || null);
             setInitialFormState(formState);
           }
         } else if (estimate.clientInfo) {
-          // Use the client info already in the estimate
           setClientInfo(estimate.clientInfo);
           
-          // Check if client is inactive
           if (estimate.clientInfo.isActive === false) {
             setIsClientInactive(true);
           }
@@ -151,16 +137,12 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           setInitialFormState(formState);
         } else {
           console.error("No client information available in the estimate");
-          
-          // Create form state with minimal client info
           const sanitizedEstimate = sanitizeEstimateStructure(estimate);
           const formState = convertEstimateToFormState(sanitizedEstimate, null);
           setInitialFormState(formState);
         }
       } catch (error) {
         console.error("Error fetching client info:", error);
-        
-        // Create form state with existing client info on error
         const sanitizedEstimate = sanitizeEstimateStructure(estimate);
         const formState = convertEstimateToFormState(sanitizedEstimate, estimate.clientInfo || null);
         setInitialFormState(formState);
@@ -173,7 +155,6 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
   }, [estimate]);
 
   const convertEstimateToFormState = (estimate, fetchedClientInfo) => {
-    // Use the provided client info or build from available data
     let enhancedClientInfo = fetchedClientInfo;
     
     if (!enhancedClientInfo) {
@@ -191,9 +172,17 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       quantity: estimate.jobDetails?.quantity,
       paperName: estimate.jobDetails?.paperName,
       dieCode: estimate.dieDetails?.dieCode,
-      // ADD: Log markup information
+      frags: estimate.dieDetails?.frags,
+      type: estimate.dieDetails?.type,
       markupType: estimate.calculations?.markupType,
       markupPercentage: estimate.calculations?.markupPercentage
+    });
+    
+    // Enhanced misc details logging
+    console.log("Form state misc details:", {
+      isMiscUsed: estimate.misc?.isMiscUsed,
+      miscCharge: estimate.misc?.miscCharge,
+      miscChargeType: typeof estimate.misc?.miscCharge
     });
     
     // Ensure arrays are properly set up
@@ -225,19 +214,19 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         dieSize: estimate.dieDetails?.dieSize || { length: "", breadth: "" },
         productSize: estimate.dieDetails?.productSize || { length: "", breadth: "" },
         image: estimate.dieDetails?.image || "",
-        hsnCode: estimate.jobDetails?.hsnCode || "", // Include HSN code
-        frags: estimate.dieDetails?.frags || "",        // ← Already exists
-        type: estimate.dieDetails?.type || ""           // ← ADD THIS LINE
+        hsnCode: estimate.jobDetails?.hsnCode || "",
+        frags: estimate.dieDetails?.frags || "",
+        type: estimate.dieDetails?.type || ""
       },
       lpDetails: {
         isLPUsed: estimate.lpDetails?.isLPUsed || false,
         noOfColors: estimate.lpDetails?.noOfColors || 0,
-        colorDetails: colorDetails, // Use sanitized array
+        colorDetails: colorDetails,
       },
       fsDetails: {
         isFSUsed: estimate.fsDetails?.isFSUsed || false,
         fsType: estimate.fsDetails?.fsType || "",
-        foilDetails: foilDetails, // Use sanitized array
+        foilDetails: foilDetails,
       },
       embDetails: {
         isEMBUsed: estimate.embDetails?.isEMBUsed || false,
@@ -247,6 +236,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         plateTypeFemale: estimate.embDetails?.plateTypeFemale || "",
         embMR: estimate.embDetails?.embMR || "",
         embMRConcatenated: estimate.embDetails?.embMRConcatenated || "",
+        dstMaterial: estimate.embDetails?.dstMaterial || ""
       },
       digiDetails: {
         isDigiUsed: estimate.digiDetails?.isDigiUsed || false,
@@ -305,6 +295,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       packing: {
         isPackingUsed: estimate.packing?.isPackingUsed || false,
       },
+      // FIXED: Proper misc handling - the BillingForm reducer will handle state management
       misc: {
         isMiscUsed: estimate.misc?.isMiscUsed || false,
         miscCharge: estimate.misc?.miscCharge || ""
@@ -329,13 +320,19 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         embDetailsSandwich: {
           isEMBUsed: estimate.sandwich?.embDetailsSandwich?.isEMBUsed || false,
           plateSizeType: estimate.sandwich?.embDetailsSandwich?.plateSizeType || "",
-          plateDimensions: estimate.sandwich?.embDetailsSandwich?.plateDimensions || { length: "", breadth: "" },
+          plateDimensions: estimate.sandwich?.embDetailsSandwich?.plateDimensions || { 
+            length: "", 
+            breadth: "",
+            lengthInInches: "",
+            breadthInInches: ""
+          },
           plateTypeMale: estimate.sandwich?.embDetailsSandwich?.plateTypeMale || "",
           plateTypeFemale: estimate.sandwich?.embDetailsSandwich?.plateTypeFemale || "",
           embMR: estimate.sandwich?.embDetailsSandwich?.embMR || "",
+          embMRConcatenated: estimate.sandwich?.embDetailsSandwich?.embMRConcatenated || ""
         },
       },
-      // CRITICAL FIX: Preserve the original calculations INCLUDING markup information
+      // Preserve the original calculations INCLUDING markup information
       calculations: estimate.calculations || {},
     };
   };
@@ -346,12 +343,10 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     
     const sanitized = {...data};
     
-    // Convert any undefined values to null
     Object.keys(sanitized).forEach(key => {
       if (sanitized[key] === undefined) {
         sanitized[key] = null;
       } else if (sanitized[key] !== null && typeof sanitized[key] === 'object' && !Array.isArray(sanitized[key])) {
-        // Recursively sanitize nested objects
         sanitized[key] = sanitizeForFirestore(sanitized[key]);
       }
     });
@@ -359,9 +354,8 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     return sanitized;
   };
 
-  // UPDATED: This is the key fix - properly extract values from formData with timestamp handling
+  // UPDATED: Enhanced handleSave with proper misc handling
   const handleSave = async (formData) => {
-    // Show a warning if client is inactive
     if (isClientInactive) {
       if (!window.confirm("This client is inactive. Are you sure you want to update this estimate?")) {
         return;
@@ -370,16 +364,20 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     
     setIsSaving(true);
     try {
-      // Log the complete formData to help debugging
       console.log("COMPLETE FORM DATA:", formData);
       
-      // CRITICAL FIX: We need to check the structure of the formData
-      // In some cases, formData contains a nested structure, in others it contains flattened data
+      // Enhanced misc logging for debugging
+      console.log("Saving misc details:", {
+        originalMiscCharge: estimate.misc?.miscCharge,
+        formDataMiscCharge: formData.misc?.miscCharge,
+        finalMiscCharge: (formData.misc || estimate.misc)?.miscCharge,
+        originalMiscUsed: estimate.misc?.isMiscUsed,
+        formDataMiscUsed: formData.misc?.isMiscUsed
+      });
       
-      // For the project name, check directly on formData first
+      // Extract and prioritize form data values
       const updatedProjectName = formData.projectName || estimate.projectName || "Untitled Project";
       
-      // For job details, prioritize direct job details in formData
       const updatedJobType = 
         (formData.jobDetails?.jobType) || 
         (formData.orderAndPaper?.jobType) || 
@@ -422,7 +420,6 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         estimate.jobDetails?.hsnCode || 
         "";
       
-      // For die details, prioritize direct die details in formData
       const updatedDieSelection = 
         (formData.dieDetails?.dieSelection) || 
         (formData.orderAndPaper?.dieSelection) || 
@@ -453,41 +450,48 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         estimate.dieDetails?.image || 
         "";
       
-      // Log extracted values for debugging
+      const updatedFrags = 
+        (formData.dieDetails?.frags) || 
+        (formData.orderAndPaper?.frags) || 
+        estimate.dieDetails?.frags || 
+        "";
+      
+      const updatedType = 
+        (formData.dieDetails?.type) || 
+        (formData.orderAndPaper?.type) || 
+        estimate.dieDetails?.type || 
+        "";
+      
       console.log("Extracted critical values:", {
         projectName: updatedProjectName,
         jobType: updatedJobType,
         quantity: updatedQuantity,
         paperName: updatedPaperName,
-        dieCode: updatedDieCode
+        dieCode: updatedDieCode,
+        frags: updatedFrags,
+        type: updatedType
       });
       
-      // Determine client name from available sources, ensuring it's never undefined
       const clientName = formData.clientInfo?.name || 
                          formData.client?.clientInfo?.name || 
                          estimate.clientInfo?.name || 
                          estimate.clientName || 
                          "Unknown Client";
       
-      // UPDATED: Proper timestamp handling
       const currentTimestamp = new Date().toISOString();
       
       // Create updated estimate with explicit values for critical fields
       const updatedEstimate = {
-        // Start with a completely fresh object
         id: estimate.id,
         clientId: formData.clientId || formData.client?.clientId || estimate.clientId,
         clientInfo: formData.clientInfo || formData.client?.clientInfo || estimate.clientInfo,
         clientName: clientName,
         
-        // EXPLICITLY set project name with the value we extracted above
         projectName: updatedProjectName,
         
-        // Extract dates directly from form data
         date: formData.date || estimate.date,
         deliveryDate: formData.deliveryDate || estimate.deliveryDate,
         
-        // Format job details from form data - EXPLICITLY use our extracted values
         jobDetails: {
           jobType: updatedJobType,
           quantity: updatedQuantity,
@@ -498,13 +502,14 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           hsnCode: updatedHsnCode,
         },
         
-        // Die details - EXPLICITLY use our extracted values
         dieDetails: {
           dieSelection: updatedDieSelection,
           dieCode: updatedDieCode,
           dieSize: updatedDieSize,
           productSize: updatedProductSize,
           image: updatedImage,
+          frags: updatedFrags,
+          type: updatedType
         },
         
         // All other processing details from form data - preserve any updates
@@ -523,42 +528,46 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         dstPaste: formData.dstPaste || estimate.dstPaste,
         qc: formData.qc || estimate.qc,
         packing: formData.packing || estimate.packing,
+        
+        // FIXED: Enhanced misc handling - the fixed BillingForm reducer ensures proper state management
         misc: formData.misc || estimate.misc,
         
-        // Calculations
         calculations: formData.calculations || estimate.calculations,
         
-        // Preserve version and flags
         versionId: formData.versionId || estimate.versionId || "1",
         movedToOrders: estimate.movedToOrders || false,
         isCanceled: estimate.isCanceled || false,
         
-        // UPDATED: Proper timestamp handling - preserve createdAt, update updatedAt
-        createdAt: estimate.createdAt || currentTimestamp, // Preserve original creation time
-        updatedAt: currentTimestamp, // Always update to current time when editing
+        createdAt: estimate.createdAt || currentTimestamp,
+        updatedAt: currentTimestamp,
       };
       
-      // Double-check critical fields are properly set before saving
       console.log("FINAL VERIFICATION - Critical Values:", {
         projectName: updatedEstimate.projectName,
         jobType: updatedEstimate.jobDetails.jobType,
         quantity: updatedEstimate.jobDetails.quantity,
         paperName: updatedEstimate.jobDetails.paperName,
         dieCode: updatedEstimate.dieDetails.dieCode,
+        frags: updatedEstimate.dieDetails.frags,
+        type: updatedEstimate.dieDetails.type,
+        miscUsed: updatedEstimate.misc?.isMiscUsed,
+        miscCharge: updatedEstimate.misc?.miscCharge,
         createdAt: updatedEstimate.createdAt,
         updatedAt: updatedEstimate.updatedAt
       });
       
-      // Sanitize data before saving to Firestore to prevent undefined values
       const sanitizedEstimate = sanitizeForFirestore(updatedEstimate);
       
-      // Last check on critical fields
       console.log("FINAL SANITIZED ESTIMATE - Critical Fields:", {
         projectName: sanitizedEstimate.projectName,
         jobType: sanitizedEstimate.jobDetails.jobType,
         quantity: sanitizedEstimate.jobDetails.quantity,
         paperName: sanitizedEstimate.jobDetails.paperName,
         dieCode: sanitizedEstimate.dieDetails.dieCode,
+        frags: sanitizedEstimate.dieDetails.frags,
+        type: sanitizedEstimate.dieDetails.type,
+        miscUsed: sanitizedEstimate.misc?.isMiscUsed,
+        miscCharge: sanitizedEstimate.misc?.miscCharge,
         createdAt: sanitizedEstimate.createdAt,
         updatedAt: sanitizedEstimate.updatedAt
       });

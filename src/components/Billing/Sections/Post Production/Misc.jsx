@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { fetchOverheadValue } from "../../../../utils/dbFetchUtils";
 
 const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
@@ -9,13 +9,27 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
 
   const [loading, setLoading] = useState(false);
   const [dbDefaultValue, setDbDefaultValue] = useState(null);
+  const [isInitialized, setIsInitialized] = useState(false);
+  const prevMiscUsed = useRef(misc.isMiscUsed);
 
   // Fetch the default value from DB when component mounts or when isMiscUsed changes
   useEffect(() => {
+    // Only fetch default when misc is used and either:
+    // 1. Component not initialized yet, OR
+    // 2. Just toggled ON and no existing value
     if (misc.isMiscUsed) {
-      fetchDefaultMiscCharge();
+      if (!isInitialized || (!misc.miscCharge && misc.isMiscUsed !== prevMiscUsed.current)) {
+        fetchDefaultMiscCharge();
+      }
+    } else {
+      // Reset initialization when toggled off
+      setIsInitialized(false);
+      setDbDefaultValue(null);
     }
-  }, [misc.isMiscUsed]);
+    
+    // Track changes to isMiscUsed
+    prevMiscUsed.current = misc.isMiscUsed;
+  }, [misc.isMiscUsed, misc.miscCharge]);
 
   // Function to fetch default misc charge from DB
   const fetchDefaultMiscCharge = async () => {
@@ -28,12 +42,17 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
       
       setDbDefaultValue(defaultValue);
       
-      // Only set the value if it hasn't been manually set yet
-      if (!misc.miscCharge) {
+      // Only set the value if:
+      // 1. There's no existing value (new form), OR
+      // 2. We're in a fresh initialization and haven't set a custom value yet
+      if (!misc.miscCharge && !isInitialized) {
         handleMiscChargeChange({ target: { value: defaultValue.toString() } });
       }
+      
+      setIsInitialized(true);
     } catch (error) {
       console.error("Error fetching misc charge:", error);
+      setIsInitialized(true);
     } finally {
       setLoading(false);
     }
@@ -67,6 +86,12 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
     return null;
   }
 
+  // Helper to determine if current value is custom
+  const isCustomValue = () => {
+    if (!dbDefaultValue || !misc.miscCharge) return false;
+    return parseFloat(misc.miscCharge) !== dbDefaultValue;
+  };
+
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
@@ -85,23 +110,34 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
               disabled={loading}
               value={misc.miscCharge}
               onChange={handleMiscChargeChange}
-              className={`w-full px-3 py-2 pl-7 pr-12 border ${loading ? "bg-gray-50" : ""} border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-3 py-2 pl-7 pr-12 border ${loading ? "bg-gray-50" : ""} ${isCustomValue() ? "border-blue-300 bg-blue-50" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
               placeholder={loading ? "Loading..." : "0.00"}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
               <span className="text-gray-500 sm:text-sm">per card</span>
             </div>
           </div>
-          {dbDefaultValue !== null && (
-            <p className="mt-1 text-xs text-gray-500">
-              Default value from database: ₹ {dbDefaultValue.toFixed(2)}
-              {misc.miscCharge && parseFloat(misc.miscCharge) !== dbDefaultValue && (
-                <span className="ml-1 text-red-500">
-                  (You've customized this value)
-                </span>
-              )}
-            </p>
-          )}
+          
+          {/* Enhanced feedback section */}
+          <div className="mt-1 space-y-1">
+            {dbDefaultValue !== null && (
+              <p className="text-xs text-gray-500">
+                Default value from database: ₹ {dbDefaultValue.toFixed(2)}
+              </p>
+            )}
+            
+            {isCustomValue() && (
+              <p className="text-xs text-blue-600 font-medium">
+                ✓ Using custom value: ₹ {parseFloat(misc.miscCharge).toFixed(2)}
+              </p>
+            )}
+            
+            {misc.miscCharge && !isCustomValue() && dbDefaultValue !== null && (
+              <p className="text-xs text-green-600">
+                ✓ Using default value
+              </p>
+            )}
+          </div>
         </div>
         
         <div className="p-3 mt-2 bg-green-50 border border-green-100 rounded-md">

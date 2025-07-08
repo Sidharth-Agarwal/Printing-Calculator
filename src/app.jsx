@@ -26,8 +26,6 @@ import ProtectedRoute from "./components/Login/ProtectedRoute";
 import { AuthProvider } from "./components/Login/AuthContext";
 import B2BClientDashboard from "./components/Clients/B2BClientDashboard";
 import EscrowDashboard from "./components/Escrow/EscrowDashboard";
-
-// Import CRM components
 import { CRMProvider } from "./context/CRMContext";
 import LeadRegistrationPage from "./components/CRM/LeadRegistration/LeadRegistrationPage";
 import LeadManagementPage from "./components/CRM/LeadManagement/LeadManagementPage";

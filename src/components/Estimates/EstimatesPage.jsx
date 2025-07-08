@@ -83,9 +83,19 @@ const EstimatesPage = () => {
   // Sort estimates by creation/update time (oldest first)
   const sortEstimatesByTimestamp = (estimates) => {
     return [...estimates].sort((a, b) => {
+      // Use createdAt as primary sort field
+      const createdAtA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      const createdAtB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      
+      // If both have createdAt, sort by createdAt (oldest first)
+      if (createdAtA && createdAtB) {
+        return createdAtA - createdAtB; // A - B for ascending order (oldest first)
+      }
+      
+      // Fallback to existing logic if createdAt is missing
       const timestampA = getEstimateTimestamp(a);
       const timestampB = getEstimateTimestamp(b);
-      return timestampA - timestampB;
+      return timestampA - timestampB; // A - B for ascending order
     });
   };
 
