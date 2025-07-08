@@ -75,7 +75,7 @@ const SinglePageContent = ({
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
               {totalPages > 1 && (
-                <span className="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
+                <span className="text-xs text-gray-500 px-1 py-0.5 rounded">
                   Page {pageNumber} of {totalPages}
                 </span>
               )}
@@ -149,7 +149,7 @@ const SinglePageContent = ({
       {!isFirstPage && (
         <div className="flex justify-between items-center mb-2">
           <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
-          <span className="text-xs text-gray-500 bg-gray-100 px-1 py-0.5 rounded">
+          <span className="text-xs text-gray-500 px-1 py-0.5 rounded">
             Page {pageNumber} of {totalPages}
           </span>
         </div>
@@ -320,7 +320,7 @@ const PageContent = ({
             <div className="flex items-center gap-2 mb-1">
               <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
               {totalPages > 1 && (
-                <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+                <span className="text-sm text-gray-500 px-2 py-1 rounded">
                   Page {pageNumber} of {totalPages}
                 </span>
               )}
@@ -400,7 +400,7 @@ const PageContent = ({
       {!isFirstPage && (
         <div className="flex justify-between items-center mb-3">
           <h1 className="text-lg font-bold text-gray-900">ESTIMATE</h1>
-          <span className="text-sm text-gray-500 bg-gray-100 px-2 py-1 rounded">
+          <span className="text-sm text-gray-500 px-2 py-1 rounded">
             Page {pageNumber} of {totalPages}
           </span>
         </div>
