@@ -11,7 +11,6 @@ const useDSTTypes = () => {
   useEffect(() => {
     const fetchDSTTypes = async () => {
       try {
-        // Query to fetch DST types from standard rates
         const ratesCollection = collection(db, "standard_rates");
         const dstQuery = query(ratesCollection, where("group", "==", "DST"));
         
@@ -48,15 +47,38 @@ const DstPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   // Use the custom hook to fetch DST types
   const { dstTypes, loading: dstTypesLoading, error: dstTypesError } = useDSTTypes();
 
+  // FIXED: Clear errors when DST Paste is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!dstPaste.isDstPasteUsed) {
+      setErrors({});
+    }
+  }, [dstPaste.isDstPasteUsed]);
+
+  // FIXED: Reset DST Paste data when toggled off
+  useEffect(() => {
+    if (!dstPaste.isDstPasteUsed) {
+      // When DST Paste is not used, ensure clean state
+      if (dstPaste.dstType !== "") {
+        dispatch({
+          type: "UPDATE_DST_PASTE",
+          payload: {
+            isDstPasteUsed: false,
+            dstType: ""
+          }
+        });
+      }
+    }
+  }, [dstPaste.isDstPasteUsed, dstPaste.dstType, dispatch]);
+
   // Automatically select first option when types load
   useEffect(() => {
-    if (dstTypes.length > 0 && !dstPaste.dstType) {
+    if (dstPaste.isDstPasteUsed && dstTypes.length > 0 && !dstPaste.dstType) {
       dispatch({
         type: "UPDATE_DST_PASTE",
         payload: { dstType: dstTypes[0].type }
       });
     }
-  }, [dstTypes, dispatch, dstPaste.dstType]);
+  }, [dstTypes, dispatch, dstPaste.dstType, dstPaste.isDstPasteUsed]);
 
   // Handle changes in the component
   const handleChange = (e) => {
@@ -89,7 +111,7 @@ const DstPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   };
 
-  // When DST Paste is not used, don't render content
+  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
   if (!dstPaste.isDstPasteUsed) {
     return null;
   }
@@ -106,17 +128,18 @@ const DstPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             name="dstType"
             value={dstPaste.dstType || ""}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.dstType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            className={`w-full px-3 py-2 border ${errors.dstType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             disabled={dstTypesLoading}
           >
-            <option value="">
-              {dstTypesLoading ? "Loading DST Types..." : "Select DST Type"}
-            </option>
-            {dstTypes.map((type) => (
-              <option key={type.id} value={type.type}>
-                {`${type.type}`}
-              </option>
-            ))}
+            {dstTypesLoading ? (
+              <option value="" disabled>Loading DST Types...</option>
+            ) : (
+              dstTypes.map((type) => (
+                <option key={type.id} value={type.type}>
+                  {type.type}
+                </option>
+              ))
+            )}
           </select>
           {errors.dstType && (
             <p className="text-red-500 text-xs mt-1">{errors.dstType}</p>
@@ -125,24 +148,6 @@ const DstPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             <p className="text-red-500 text-xs mt-1">Failed to load DST types</p>
           )}
         </div>
-
-        {!singlePageMode && (
-          <div className="flex justify-between mt-6">
-            <button
-              type="button"
-              onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-            >
-              Previous
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
     </form>
   );

@@ -1,9 +1,22 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 const QC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const qc = state.qc || {
     isQCUsed: false
   };
+
+  // FIXED: Reset QC data when toggled off (same pattern as other components)
+  useEffect(() => {
+    if (!qc.isQCUsed) {
+      // When QC is not used, ensure clean state
+      dispatch({
+        type: "UPDATE_QC",
+        payload: {
+          isQCUsed: false
+        }
+      });
+    }
+  }, [qc.isQCUsed, dispatch]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -12,7 +25,7 @@ const QC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => 
     }
   };
 
-  // If QC is not used, don't render any content
+  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
   if (!qc.isQCUsed) {
     return null;
   }

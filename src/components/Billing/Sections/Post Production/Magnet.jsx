@@ -11,7 +11,6 @@ const useMagnetMaterials = () => {
   useEffect(() => {
     const fetchMagnetMaterials = async () => {
       try {
-        // Query to fetch Magnet materials from materials collection
         const materialsCollection = collection(db, "materials");
         const magnetMaterialsQuery = query(
           materialsCollection, 
@@ -51,15 +50,38 @@ const Magnet = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
   // Use the custom hook to fetch Magnet materials
   const { magnetMaterials, loading: magnetMaterialsLoading, error: magnetMaterialsError } = useMagnetMaterials();
 
+  // FIXED: Clear errors when Magnet is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!magnet.isMagnetUsed) {
+      setErrors({});
+    }
+  }, [magnet.isMagnetUsed]);
+
+  // FIXED: Reset Magnet data when toggled off
+  useEffect(() => {
+    if (!magnet.isMagnetUsed) {
+      // When Magnet is not used, ensure clean state
+      if (magnet.magnetMaterial !== "") {
+        dispatch({
+          type: "UPDATE_MAGNET",
+          payload: {
+            isMagnetUsed: false,
+            magnetMaterial: ""
+          }
+        });
+      }
+    }
+  }, [magnet.isMagnetUsed, magnet.magnetMaterial, dispatch]);
+
   // Automatically select first option when materials load
   useEffect(() => {
-    if (magnetMaterials.length > 0 && !magnet.magnetMaterial) {
+    if (magnet.isMagnetUsed && magnetMaterials.length > 0 && !magnet.magnetMaterial) {
       dispatch({
         type: "UPDATE_MAGNET",
         payload: { magnetMaterial: magnetMaterials[0].materialName }
       });
     }
-  }, [magnetMaterials, dispatch, magnet.magnetMaterial]);
+  }, [magnetMaterials, dispatch, magnet.magnetMaterial, magnet.isMagnetUsed]);
 
   // Handle changes in the component
   const handleChange = (e) => {
@@ -92,7 +114,7 @@ const Magnet = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
     }
   };
 
-  // When Magnet is not used, don't render content
+  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
   if (!magnet.isMagnetUsed) {
     return null;
   }
@@ -114,14 +136,15 @@ const Magnet = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
             } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             disabled={magnetMaterialsLoading}
           >
-            {/* <option value="">
-              {magnetMaterialsLoading ? "Loading Magnet Materials..." : "Select Magnet Material"}
-            </option> */}
-            {magnetMaterials.map((material) => (
-              <option key={material.id} value={material.materialName}>
-                {material.materialName}
-              </option>
-            ))}
+            {magnetMaterialsLoading ? (
+              <option value="" disabled>Loading Magnet Materials...</option>
+            ) : (
+              magnetMaterials.map((material) => (
+                <option key={material.id} value={material.materialName}>
+                  {material.materialName}
+                </option>
+              ))
+            )}
           </select>
           {errors.magnetMaterial && (
             <p className="text-red-500 text-xs mt-1">{errors.magnetMaterial}</p>
@@ -130,24 +153,6 @@ const Magnet = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
             <p className="text-red-500 text-xs mt-1">Failed to load Magnet materials</p>
           )}
         </div>
-
-        {!singlePageMode && (
-          <div className="flex justify-between mt-6">
-            <button
-              type="button"
-              onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-xs"
-            >
-              Previous
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs"
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
     </form>
   );

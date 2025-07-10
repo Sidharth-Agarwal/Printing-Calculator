@@ -61,6 +61,30 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
+  // FIXED: Clear errors when LP is turned off (same pattern as Misc component)
+  useEffect(() => {
+    if (!lpDetails.isLPUsed) {
+      setErrors({});
+    }
+  }, [lpDetails.isLPUsed]);
+
+  // FIXED: Reset LP data when toggled off (similar to how Misc component works)
+  useEffect(() => {
+    if (!lpDetails.isLPUsed) {
+      // When LP is not used, ensure clean state
+      if (lpDetails.noOfColors !== 0 || lpDetails.colorDetails.length !== 0) {
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { 
+            isLPUsed: false,
+            noOfColors: 0,
+            colorDetails: []
+          }
+        });
+      }
+    }
+  }, [lpDetails.isLPUsed, lpDetails.noOfColors, lpDetails.colorDetails.length, dispatch]);
+
   // Update dimensions when die size changes (for Auto mode)
   useEffect(() => {
     if (lpDetails.isLPUsed) {
@@ -305,7 +329,8 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     }
   };
 
-  // When LP is not used, we don't need to show any content
+  // FIXED: Same pattern as Misc component - return null if not being used
+  // This ensures the component doesn't render when LP is toggled off
   if (!lpDetails.isLPUsed) {
     return null;
   }
@@ -337,8 +362,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         {/* Color Details Sections */}
         {lpDetails.noOfColors > 0 && (
           <div>
-            {/* <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">COLOR DETAILS</h3> */}
-            
             {/* Loading state */}
             {mrTypesLoading || plateTypesLoading || dstMaterialsLoading ? (
               <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
@@ -359,7 +382,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   </div>
                   
                   {/* Single line layout for color fields */}
-                  {/* <div className="grid grid-cols-7 gap-2"> */}
                   <div className="grid grid-cols-6 gap-2">  
                     {/* First row with all fields in a single line */}
                     <div className="col-span-1">
@@ -482,7 +504,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           errors[`plateType_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                       >
-                        {/* <option value="">Select Type</option> */}
                         {plateTypes.map((plateType, idx) => (
                           <option key={idx} value={plateType.materialName}>
                             {plateType.materialName}
@@ -507,7 +528,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           errors[`mrType_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                       >
-                        {/* <option value="">Select Type</option> */}
                         {mrTypes.map((typeOption, idx) => (
                           <option key={idx} value={typeOption.type}>
                             {typeOption.type}
@@ -520,34 +540,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         </p>
                       )}
                     </div>
-
-                    {/* <div className="col-span-1">
-                      <label className="block text-xs font-medium text-gray-600 mb-1">
-                        DST Material:
-                      </label>
-                      <select
-                        value={lpDetails.colorDetails[index]?.dstMaterial || ""}
-                        onChange={(e) => handleColorDetailsChange(index, "dstMaterial", e.target.value)}
-                        className={`w-full px-2 py-2 border ${
-                          errors[`dstMaterial_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
-                      >
-                        <option value="">Select Material</option>
-                        {dstMaterials.map((material) => (
-                          <option key={material.id} value={material.materialName}>
-                            {material.materialName}
-                          </option>
-                        ))}
-                      </select>
-                      {errors[`dstMaterial_${index}`] && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors[`dstMaterial_${index}`]}
-                        </p>
-                      )}
-                      {dstMaterialsError && (
-                        <p className="text-red-500 text-xs mt-1">Failed to load DST materials</p>
-                      )}
-                    </div> */}
                   </div>
                 </div>
               ))

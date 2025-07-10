@@ -1,9 +1,22 @@
-import React from "react";
+import React, { useEffect } from "react";
 
 const Packing = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => {
   const packing = state.packing || {
     isPackingUsed: false
   };
+
+  // FIXED: Reset Packing data when toggled off (same pattern as other components)
+  useEffect(() => {
+    if (!packing.isPackingUsed) {
+      // When Packing is not used, ensure clean state
+      dispatch({
+        type: "UPDATE_PACKING",
+        payload: {
+          isPackingUsed: false
+        }
+      });
+    }
+  }, [packing.isPackingUsed, dispatch]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -12,7 +25,7 @@ const Packing = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }
     }
   };
 
-  // If Packing is not used, don't render any content
+  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
   if (!packing.isPackingUsed) {
     return null;
   }

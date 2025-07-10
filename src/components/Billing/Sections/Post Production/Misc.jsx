@@ -12,11 +12,8 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
   const [isInitialized, setIsInitialized] = useState(false);
   const prevMiscUsed = useRef(misc.isMiscUsed);
 
-  // Fetch the default value from DB when component mounts or when isMiscUsed changes
+  // FIXED: Clear errors and reset when toggled off (this is the working pattern)
   useEffect(() => {
-    // Only fetch default when misc is used and either:
-    // 1. Component not initialized yet, OR
-    // 2. Just toggled ON and no existing value
     if (misc.isMiscUsed) {
       if (!isInitialized || (!misc.miscCharge && misc.isMiscUsed !== prevMiscUsed.current)) {
         fetchDefaultMiscCharge();
@@ -42,9 +39,6 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
       
       setDbDefaultValue(defaultValue);
       
-      // Only set the value if:
-      // 1. There's no existing value (new form), OR
-      // 2. We're in a fresh initialization and haven't set a custom value yet
       if (!misc.miscCharge && !isInitialized) {
         handleMiscChargeChange({ target: { value: defaultValue.toString() } });
       }
@@ -81,7 +75,7 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
     }
   };
 
-  // If Misc is not used, don't render any content
+  // FIXED: This is the working pattern - return null if not being used
   if (!misc.isMiscUsed) {
     return null;
   }
@@ -118,14 +112,7 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
             </div>
           </div>
           
-          {/* Enhanced feedback section */}
           <div className="mt-1 space-y-1">
-            {/* {dbDefaultValue !== null && (
-              <p className="text-xs text-gray-500">
-                Default value from database: ₹ {dbDefaultValue.toFixed(2)}
-              </p>
-            )} */}
-            
             {isCustomValue() && (
               <p className="text-xs text-blue-600 font-medium">
                 ✓ Using custom value: ₹ {parseFloat(misc.miscCharge).toFixed(2)}

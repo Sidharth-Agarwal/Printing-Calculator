@@ -5,12 +5,37 @@ const PostDC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
   const postDC = state.postDC || {
     isPostDCUsed: false,
     pdcMR: "",
+    pdcMRConcatenated: ""
   };
 
   const [errors, setErrors] = useState({});
   
   // Use the custom hook to fetch PDC MR types
   const { mrTypes, loading: mrTypesLoading } = useMRTypes("PDC MR");
+
+  // FIXED: Clear errors when Post DC is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!postDC.isPostDCUsed) {
+      setErrors({});
+    }
+  }, [postDC.isPostDCUsed]);
+
+  // FIXED: Reset Post DC data when toggled off
+  useEffect(() => {
+    if (!postDC.isPostDCUsed) {
+      // When Post DC is not used, ensure clean state
+      if (postDC.pdcMR !== "" || postDC.pdcMRConcatenated !== "") {
+        dispatch({
+          type: "UPDATE_POST_DC",
+          payload: {
+            isPostDCUsed: false,
+            pdcMR: "",
+            pdcMRConcatenated: ""
+          }
+        });
+      }
+    }
+  }, [postDC.isPostDCUsed, postDC.pdcMR, postDC.pdcMRConcatenated, dispatch]);
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -19,7 +44,7 @@ const PostDC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
     // For MR type, also store the concatenated value for calculations
     if (name === "pdcMR" && mrTypes.length > 0) {
       const selectedMRType = mrTypes.find(type => type.type === value);
-      const concatenatedValue = selectedMRType ? selectedMRType.concatenate : `PDC MR ${value}`;
+      const concatenatedValue = selectedMRType ? selectedMRType.concatenated : `PDC MR ${value}`;
       
       dispatch({
         type: "UPDATE_POST_DC",
@@ -69,7 +94,7 @@ const PostDC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
     }
   };
 
-  // When Post DC is not used, we don't need to show any content
+  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
   if (!postDC.isPostDCUsed) {
     return null;
   }
@@ -86,9 +111,8 @@ const PostDC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
             name="pdcMR"
             value={postDC.pdcMR}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.pdcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            className={`w-full px-3 py-2 border ${errors.pdcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
           >
-            <option value="">Select MR Type</option>
             {mrTypesLoading ? (
               <option value="" disabled>Loading MR Types...</option>
             ) : (
@@ -103,24 +127,6 @@ const PostDC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
             <p className="text-red-500 text-xs mt-1">{errors.pdcMR}</p>
           )}
         </div>
-
-        {!singlePageMode && (
-          <div className="flex justify-between mt-6">
-            <button
-              type="button"
-              onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-            >
-              Previous
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
     </form>
   );

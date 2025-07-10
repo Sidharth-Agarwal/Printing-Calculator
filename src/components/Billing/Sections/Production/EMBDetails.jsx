@@ -65,7 +65,37 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
 
-  // Set default MR Type and DST Material when component mounts or when EMB is first enabled
+  // FIXED: Clear errors when EMB is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!isEMBUsed) {
+      setErrors({});
+    }
+  }, [isEMBUsed]);
+
+  // FIXED: Reset EMB data when toggled off
+  useEffect(() => {
+    if (!isEMBUsed) {
+      // When EMB is not used, ensure clean state
+      if (plateSizeType !== "" || plateDimensions.length !== "" || plateDimensions.breadth !== "" || 
+          plateTypeMale !== "" || plateTypeFemale !== "" || embMR !== "" || dstMaterial !== "") {
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: { 
+            isEMBUsed: false,
+            plateSizeType: "",
+            plateDimensions: { length: "", breadth: "", lengthInInches: "", breadthInInches: "" },
+            plateTypeMale: "",
+            plateTypeFemale: "",
+            embMR: "",
+            embMRConcatenated: "",
+            dstMaterial: ""
+          }
+        });
+      }
+    }
+  }, [isEMBUsed, plateSizeType, plateDimensions.length, plateDimensions.breadth, plateTypeMale, plateTypeFemale, embMR, dstMaterial, dispatch]);
+
+  // Set default MR Type and DST Material when they are loaded
   useEffect(() => {
     if (isEMBUsed && mrTypes.length > 0 && dstMaterials.length > 0) {
       const defaultMRType = mrTypes[0];
@@ -252,7 +282,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     }
   }, [dieSize, isEMBUsed, plateSizeType, plateDimensions, dispatch]);
 
-  // If EMB is not used, don't render any content
+  // FIXED: Same pattern as LPDetails - return null if not being used
   if (!isEMBUsed) {
     return null;
   }
@@ -273,7 +303,6 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               onChange={handleChange}
               className={`w-full px-2 py-2 border ${errors.plateSizeType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             >
-              {/* <option value="">Select Option</option> */}
               <option value="Auto">Auto</option>
               <option value="Manual">Manual</option>
             </select>
@@ -334,7 +363,6 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               onChange={handleChange}
               className={`w-full px-2 py-2 border ${errors.embMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             >
-              {/* <option value="">Select Type</option> */}
               {mrTypesLoading ? (
                 <option value="" disabled>Loading...</option>
               ) : (
@@ -362,9 +390,6 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               disabled={dstMaterialsLoading}
             >
-              {/* <option value="">
-                {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
-              </option> */}
               {dstMaterials
                 .sort((a, b) => {
                   // Prioritize "DST PP PLATE" at the top
@@ -375,7 +400,6 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
                 .map((material) => (
                   <option key={material.id} value={material.materialName}>
                     {material.materialName}
-                    {material.materialName === "DST PP PLATE"}
                   </option>
                 ))}
             </select>

@@ -9,6 +9,30 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
     "13x19": { length: "13", breadth: "19" },
   };
 
+  // FIXED: Clear errors when Digi is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!isDigiUsed) {
+      setErrors({});
+    }
+  }, [isDigiUsed]);
+
+  // FIXED: Reset Digi data when toggled off
+  useEffect(() => {
+    if (!isDigiUsed) {
+      // When Digi is not used, ensure clean state
+      if (digiDie !== "" || Object.keys(digiDimensions).length !== 0) {
+        dispatch({
+          type: "UPDATE_DIGI_DETAILS",
+          payload: { 
+            isDigiUsed: false,
+            digiDie: "",
+            digiDimensions: {}
+          }
+        });
+      }
+    }
+  }, [isDigiUsed, digiDie, digiDimensions, dispatch]);
+
   // Set default selection when Digi is first enabled
   useEffect(() => {
     if (isDigiUsed && !digiDie && Object.keys(DIGI_DIE_OPTIONS).length > 0) {
@@ -59,17 +83,7 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
     }
   };
 
-  useEffect(() => {
-    if (!isDigiUsed) {
-      dispatch({
-        type: "UPDATE_DIGI_DETAILS",
-        payload: { digiDie: "", digiDimensions: {} },
-      });
-      setErrors({});
-    }
-  }, [isDigiUsed, dispatch]);
-
-  // If Digi is not used, don't render any content
+  // FIXED: Same pattern as LPDetails - return null if not being used
   if (!isDigiUsed) {
     return null;
   }
@@ -77,9 +91,7 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        {/* Single line layout: 1/3 each column */}
         <div className="grid grid-cols-3 gap-2 items-end">
-          {/* Digital Die Selection - 1/3 width */}
           <div className="col-span-1">
             <label htmlFor="digiDie" className="block text-xs font-medium text-gray-600 mb-1">
               Digital Printing Die:
@@ -99,7 +111,6 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
             </select>
           </div>
 
-          {/* Dimensions Display */}
           {digiDie && (
             <>
               <div className="col-span-1">
@@ -118,7 +129,6 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
           )}
         </div>
 
-        {/* Error display */}
         {errors.digiDie && (
           <p className="text-red-500 text-xs">{errors.digiDie}</p>
         )}

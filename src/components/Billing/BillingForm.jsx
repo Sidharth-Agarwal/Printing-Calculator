@@ -230,142 +230,218 @@ const reducer = (state, action) => {
 
 // Map state to Firebase structure with sanitization for undefined values
 const mapStateToFirebaseStructure = (state, calculations) => {
- const { 
-   client, 
-   versionId, 
-   orderAndPaper, 
-   lpDetails, 
-   fsDetails, 
-   embDetails, 
-   digiDetails, 
-   screenPrint, 
-   preDieCutting,
-   dieCutting, 
-   sandwich,
-   magnet,
-   notebookDetails
- } = state;
+  const { 
+    client, 
+    versionId, 
+    orderAndPaper, 
+    lpDetails, 
+    fsDetails, 
+    embDetails, 
+    digiDetails, 
+    screenPrint, 
+    preDieCutting,
+    dieCutting, 
+    sandwich,
+    magnet,
+    notebookDetails
+  } = state;
 
- // Helper function to sanitize objects for Firebase
- const sanitizeForFirestore = (obj) => {
-   if (obj === null || obj === undefined) return null;
-   if (typeof obj !== 'object') return obj;
-   
-   const sanitized = {};
-   for (const [key, value] of Object.entries(obj)) {
-     // Replace undefined values with null (Firebase accepts null but not undefined)
-     if (value === undefined) {
-       sanitized[key] = null;
-     } 
-     // Recursively sanitize nested objects
-     else if (value !== null && typeof value === 'object') {
-       sanitized[key] = sanitizeForFirestore(value);
-     } 
-     // Keep other values as-is
-     else {
-       sanitized[key] = value;
-     }
-   }
-   return sanitized;
- };
+  // Helper function to sanitize objects for Firebase
+  const sanitizeForFirestore = (obj) => {
+    if (obj === null || obj === undefined) return null;
+    if (typeof obj !== 'object') return obj;
+    
+    const sanitized = {};
+    for (const [key, value] of Object.entries(obj)) {
+      // Replace undefined values with null (Firebase accepts null but not undefined)
+      if (value === undefined) {
+        sanitized[key] = null;
+      } 
+      // Recursively sanitize nested objects
+      else if (value !== null && typeof value === 'object') {
+        sanitized[key] = sanitizeForFirestore(value);
+      } 
+      // Keep other values as-is
+      else {
+        sanitized[key] = value;
+      }
+    }
+    return sanitized;
+  };
 
- // Log critical fields for debugging
- console.log("mapStateToFirebaseStructure - critical fields:", {
-   projectName: orderAndPaper?.projectName,
-   jobType: orderAndPaper?.jobType,
-   quantity: orderAndPaper?.quantity,
-   paperName: orderAndPaper?.paperName,
-   dieCode: orderAndPaper?.dieCode,
-   frags: orderAndPaper?.frags,
-   type: orderAndPaper?.type,
-   // ADDED: Log misc state for debugging
-   miscUsed: state.misc?.isMiscUsed,
-   miscCharge: state.misc?.miscCharge
- });
+  // Create the sanitized Firebase data structure
+  const firestoreData = {
+    // Client reference information
+    clientId: client.clientId,
+    clientInfo: sanitizeForFirestore(client.clientInfo),
+    
+    // Version information
+    versionId: versionId || "1", // Default to version 1 if not specified
+    
+    // Project specific information - explicitly extract projectName
+    projectName: orderAndPaper.projectName || "",
+    date: orderAndPaper.date?.toISOString() || null,
+    deliveryDate: orderAndPaper.deliveryDate?.toISOString() || null,
+    
+    // Job details with HSN code included
+    jobDetails: sanitizeForFirestore({
+      jobType: orderAndPaper.jobType,
+      quantity: orderAndPaper.quantity,
+      paperProvided: orderAndPaper.paperProvided,
+      paperName: orderAndPaper.paperName,
+      paperGsm: orderAndPaper.paperGsm,
+      paperCompany: orderAndPaper.paperCompany,
+      hsnCode: orderAndPaper.hsnCode || "",
+    }),
+    
+    // Die details with product size directly from orderAndPaper
+    dieDetails: sanitizeForFirestore({
+      dieSelection: orderAndPaper.dieSelection,
+      dieCode: orderAndPaper.dieCode,
+      dieSize: orderAndPaper.dieSize,
+      productSize: orderAndPaper.productSize,
+      image: orderAndPaper.image,
+      frags: orderAndPaper.frags,
+      type: orderAndPaper.type
+    }),
+    
+    // Processing options (only included when selected)
+    lpDetails: state.lpDetails?.isLPUsed ? sanitizeForFirestore(state.lpDetails) : sanitizeForFirestore({
+      isLPUsed: false,
+      noOfColors: 0,
+      colorDetails: []
+    }),
 
- // Create the sanitized Firebase data structure
- const firestoreData = {
-   // Client reference information
-   clientId: client.clientId,
-   clientInfo: sanitizeForFirestore(client.clientInfo),
-   
-   // Version information
-   versionId: versionId || "1", // Default to version 1 if not specified
-   
-   // Project specific information - explicitly extract projectName
-   projectName: orderAndPaper.projectName || "",
-   date: orderAndPaper.date?.toISOString() || null,
-   deliveryDate: orderAndPaper.deliveryDate?.toISOString() || null,
-   
-   // Job details with HSN code included
-   jobDetails: sanitizeForFirestore({
-     jobType: orderAndPaper.jobType,
-     quantity: orderAndPaper.quantity,
-     paperProvided: orderAndPaper.paperProvided,
-     paperName: orderAndPaper.paperName,
-     paperGsm: orderAndPaper.paperGsm,
-     paperCompany: orderAndPaper.paperCompany,
-     hsnCode: orderAndPaper.hsnCode || "",
-   }),
-   
-   // Die details with product size directly from orderAndPaper
-   dieDetails: sanitizeForFirestore({
-     dieSelection: orderAndPaper.dieSelection,
-     dieCode: orderAndPaper.dieCode,
-     dieSize: orderAndPaper.dieSize,
-     productSize: orderAndPaper.productSize,
-     image: orderAndPaper.image,
-     frags: orderAndPaper.frags,
-     type: orderAndPaper.type
-   }),
-   
-   // Processing options (only included when selected)
-   lpDetails: lpDetails.isLPUsed ? sanitizeForFirestore(lpDetails) : null,
-   fsDetails: fsDetails.isFSUsed ? sanitizeForFirestore(fsDetails) : null,
-   embDetails: embDetails.isEMBUsed ? sanitizeForFirestore(embDetails) : null,
-   digiDetails: digiDetails.isDigiUsed ? sanitizeForFirestore(digiDetails) : null,
-   notebookDetails: notebookDetails?.isNotebookUsed ? sanitizeForFirestore(notebookDetails) : null,
-   screenPrint: screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(screenPrint) : null,
-   preDieCutting: preDieCutting?.isPreDieCuttingUsed ? sanitizeForFirestore(preDieCutting) : null,
-   dieCutting: dieCutting.isDieCuttingUsed ? sanitizeForFirestore(dieCutting) : null,
-   sandwich: sandwich.isSandwichComponentUsed ? sanitizeForFirestore(sandwich) : null,
-   magnet: magnet?.isMagnetUsed ? sanitizeForFirestore(magnet) : null,
-   
-   // Include other details based on what's enabled
-   postDC: state.postDC?.isPostDCUsed ? sanitizeForFirestore(state.postDC) : null,
-   foldAndPaste: state.foldAndPaste?.isFoldAndPasteUsed ? sanitizeForFirestore(state.foldAndPaste) : null,
-   dstPaste: state.dstPaste?.isDstPasteUsed ? sanitizeForFirestore(state.dstPaste) : null,
-   qc: state.qc?.isQCUsed ? sanitizeForFirestore(state.qc) : null,
-   packing: state.packing?.isPackingUsed ? sanitizeForFirestore(state.packing) : null,
-   
-   // FIXED: Always include misc in the formData, whether it's used or not
-   // This ensures EditEstimateModal gets the current misc state
-   misc: state.misc?.isMiscUsed ? sanitizeForFirestore(state.misc) : sanitizeForFirestore({
-     isMiscUsed: false,
-     miscCharge: ""
-   }),
-   
-   // Calculations - ensure markup values are included
-   calculations: sanitizeForFirestore(calculations),
-   
-   // Metadata
-   createdAt: new Date().toISOString(),
-   updatedAt: new Date().toISOString(),
- };
+    fsDetails: state.fsDetails?.isFSUsed ? sanitizeForFirestore(state.fsDetails) : sanitizeForFirestore({
+      isFSUsed: false,
+      fsType: "",
+      foilDetails: []
+    }),
 
- // Final verification log for critical fields
- console.log("mapStateToFirebaseStructure - final critical fields:", {
-   projectName: firestoreData.projectName,
-   jobType: firestoreData.jobDetails.jobType,
-   quantity: firestoreData.jobDetails.quantity,
-   paperName: firestoreData.jobDetails.paperName,
-   dieCode: firestoreData.dieDetails.dieCode,
-   // ADDED: Log final misc state
-   miscUsed: firestoreData.misc?.isMiscUsed,
-   miscCharge: firestoreData.misc?.miscCharge
- });
- 
- return firestoreData;
+    embDetails: state.embDetails?.isEMBUsed ? sanitizeForFirestore(state.embDetails) : sanitizeForFirestore({
+      isEMBUsed: false,
+      plateSizeType: "",
+      plateDimensions: { length: "", breadth: "" },
+      plateTypeMale: "",
+      plateTypeFemale: "",
+      embMR: "",
+      embMRConcatenated: "",
+      dstMaterial: ""
+    }),
+
+    digiDetails: state.digiDetails?.isDigiUsed ? sanitizeForFirestore(state.digiDetails) : sanitizeForFirestore({
+      isDigiUsed: false,
+      digiDie: "",
+      digiDimensions: { length: "", breadth: "" }
+    }),
+
+    notebookDetails: state.notebookDetails?.isNotebookUsed ? sanitizeForFirestore(state.notebookDetails) : sanitizeForFirestore({
+      isNotebookUsed: false,
+      orientation: "",
+      length: "",
+      breadth: "",
+      calculatedLength: "",
+      calculatedBreadth: "",
+      numberOfPages: "",
+      bindingType: "",
+      bindingTypeConcatenated: "",
+      paperName: ""
+    }),
+
+    screenPrint: state.screenPrint?.isScreenPrintUsed ? sanitizeForFirestore(state.screenPrint) : sanitizeForFirestore({
+      isScreenPrintUsed: false,
+      noOfColors: 1,
+      screenMR: "",
+      screenMRConcatenated: ""
+    }),
+
+    preDieCutting: state.preDieCutting?.isPreDieCuttingUsed ? sanitizeForFirestore(state.preDieCutting) : sanitizeForFirestore({
+      isPreDieCuttingUsed: false,
+      predcMR: "",
+      predcMRConcatenated: ""
+    }),
+
+    dieCutting: state.dieCutting?.isDieCuttingUsed ? sanitizeForFirestore(state.dieCutting) : sanitizeForFirestore({
+      isDieCuttingUsed: false,
+      dcMR: "",
+      dcMRConcatenated: ""
+    }),
+
+    sandwich: state.sandwich?.isSandwichComponentUsed ? sanitizeForFirestore(state.sandwich) : sanitizeForFirestore({
+      isSandwichComponentUsed: false,
+      paperInfo: { paperName: "" },
+      lpDetailsSandwich: {
+        isLPUsed: false,
+        noOfColors: 0,
+        colorDetails: []
+      },
+      fsDetailsSandwich: {
+        isFSUsed: false,
+        fsType: "",
+        foilDetails: []
+      },
+      embDetailsSandwich: {
+        isEMBUsed: false,
+        plateSizeType: "",
+        plateDimensions: { 
+          length: "", 
+          breadth: "",
+          lengthInInches: "",
+          breadthInInches: ""
+        },
+        plateTypeMale: "",
+        plateTypeFemale: "",
+        embMR: "",
+        embMRConcatenated: ""
+      }
+    }),
+
+    magnet: state.magnet?.isMagnetUsed ? sanitizeForFirestore(state.magnet) : sanitizeForFirestore({
+      isMagnetUsed: false,
+      magnetMaterial: ""
+    }),
+
+    // Include other details based on what's enabled
+    postDC: state.postDC?.isPostDCUsed ? sanitizeForFirestore(state.postDC) : sanitizeForFirestore({
+      isPostDCUsed: false,
+      pdcMR: "",
+      pdcMRConcatenated: ""
+    }),
+
+    foldAndPaste: state.foldAndPaste?.isFoldAndPasteUsed ? sanitizeForFirestore(state.foldAndPaste) : sanitizeForFirestore({
+      isFoldAndPasteUsed: false,
+      dstMaterial: "",
+      dstType: ""
+    }),
+
+    dstPaste: state.dstPaste?.isDstPasteUsed ? sanitizeForFirestore(state.dstPaste) : sanitizeForFirestore({
+      isDstPasteUsed: false,
+      dstType: ""
+    }),
+
+    qc: state.qc?.isQCUsed ? sanitizeForFirestore(state.qc) : sanitizeForFirestore({
+      isQCUsed: false
+    }),
+
+    packing: state.packing?.isPackingUsed ? sanitizeForFirestore(state.packing) : sanitizeForFirestore({
+      isPackingUsed: false
+    }),
+
+    // FIXED: Always include misc in the formData, whether it's used or not
+    misc: state.misc?.isMiscUsed ? sanitizeForFirestore(state.misc) : sanitizeForFirestore({
+      isMiscUsed: false,
+      miscCharge: ""
+    }),
+    
+    // Calculations - ensure markup values are included
+    calculations: sanitizeForFirestore(calculations),
+    
+    // Metadata
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+  };
+
+  return firestoreData;
 };
 
 const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess = null, onClose = null }) => {
@@ -1899,393 +1975,586 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    }
  };
 
- // UPDATED: Toggle functions for all service sections
- const toggleLPUsage = () => {
-   const isCurrentlyUsed = state.lpDetails.isLPUsed;
-   
-   dispatch({
-     type: "UPDATE_LP_DETAILS",
-     payload: { 
-       isLPUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         noOfColors: 1,
-         colorDetails: [
-           {
-             plateSizeType: "Auto",
-             plateDimensions: { 
-               length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-               breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-             },
-             pantoneType: "",
-             plateType: "Polymer Plate",
-             mrType: "SIMPLE",
-             mrTypeConcatenated: "LP MR SIMPLE",
-             dstMaterial: ""
-           }
-         ]
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("lp");
-   }
- };  
- 
- const toggleFSUsage = () => {
-   const isCurrentlyUsed = state.fsDetails.isFSUsed;
-   
-   dispatch({
-     type: "UPDATE_FS_DETAILS",
-     payload: { 
-       isFSUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         fsType: "FS1",
-         foilDetails: [
-           {
-             blockSizeType: "Auto",
-             blockDimension: { 
-               length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-               breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-             },
-             foilType: "Gold MTS 220",
-             blockType: "Magnesium Block 3MM",
-             mrType: "SIMPLE", // Display value
-             mrTypeConcatenated: "FS MR SIMPLE" // Value for calculations
-           }
-         ]
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("fs");
-   }
- };
- 
- const toggleEMBUsage = () => {
-   const isCurrentlyUsed = state.embDetails.isEMBUsed;
-   
-   dispatch({
-     type: "UPDATE_EMB_DETAILS",
-     payload: { 
-       isEMBUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         plateSizeType: "Auto",
-         plateDimensions: { 
-           length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-           breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-         },
-         plateTypeMale: "Polymer Plate",
-         plateTypeFemale: "Polymer Plate",
-         embMR: "SIMPLE",
-         embMRConcatenated: "EMB MR SIMPLE",
-         dstMaterial: ""
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("emb");
-   }
- };    
- 
- const toggleDigiUsage = () => {
-   const isCurrentlyUsed = state.digiDetails.isDigiUsed;
-   
-   // Define default DIGI_DIE_OPTIONS (same as in DigiDetails component)
-   const DIGI_DIE_OPTIONS = {
-     "12x18": { length: "12", breadth: "18" },
-     "13x19": { length: "13", breadth: "19" },
-   };
-   
-   // Get the first option as default
-   const firstOption = Object.keys(DIGI_DIE_OPTIONS)[0] || "12x18";
-   const defaultDimensions = DIGI_DIE_OPTIONS[firstOption] || { length: "12", breadth: "18" };
-   
-   dispatch({
-     type: "UPDATE_DIGI_DETAILS",
-     payload: { 
-       isDigiUsed: !isCurrentlyUsed,
-       // When toggling on, initialize with the first option
-       ...(!isCurrentlyUsed && {
-         digiDie: firstOption,
-         digiDimensions: defaultDimensions
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("digi");
-   }
- };
- 
- const toggleNotebookUsage = () => {
-   const isCurrentlyUsed = state.notebookDetails?.isNotebookUsed || false;
-   
-   dispatch({
-     type: "UPDATE_NOTEBOOK_DETAILS",
-     payload: { 
-       isNotebookUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         orientation: "",
-         length: "",
-         breadth: "",
-         calculatedLength: "",
-         calculatedBreadth: "",
-         numberOfPages: "",
-         bindingType: "",
-         bindingTypeConcatenated: "",
-         paperName: papers.length > 0 ? papers[0].paperName : ""
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("notebook");
-   }
- };
+  // 1. UPDATED toggleLPUsage function (already working)
+  const toggleLPUsage = () => {
+    const isCurrentlyUsed = state.lpDetails.isLPUsed;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data (same pattern as Misc)
+      dispatch({
+        type: "UPDATE_LP_DETAILS",
+        payload: { 
+          isLPUsed: false,
+          noOfColors: 0,
+          colorDetails: []
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_LP_DETAILS",
+        payload: { 
+          isLPUsed: true,
+          noOfColors: 1,
+          colorDetails: [
+            {
+              plateSizeType: "Auto",
+              plateDimensions: { 
+                length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+              },
+              pantoneType: "",
+              plateType: "Polymer Plate",
+              mrType: "SIMPLE",
+              mrTypeConcatenated: "LP MR SIMPLE",
+              dstMaterial: ""
+            }
+          ]
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("lp");
+    }
+  };
 
- const toggleScreenPrintUsage = () => {
-   const isCurrentlyUsed = state.screenPrint?.isScreenPrintUsed || false;
-   
-   dispatch({
-     type: "UPDATE_SCREEN_PRINT",
-     payload: { 
-       isScreenPrintUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         noOfColors: 1,
-         screenMR: "SIMPLE", // Default value
-         screenMRConcatenated: "SCREEN MR SIMPLE" // Default concatenated value
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("screenPrint");
-   }
- };
- 
- // Add Toggle function for PreDieCutting
- const togglePreDieCuttingUsage = () => {
-   const isCurrentlyUsed = state.preDieCutting?.isPreDieCuttingUsed || false;
-   
-   dispatch({
-     type: "UPDATE_PRE_DIE_CUTTING",
-     payload: { 
-       isPreDieCuttingUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         predcMR: "SIMPLE", // Default value
-         predcMRConcatenated: "PREDC MR SIMPLE" // Default concatenated value
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("preDieCutting");
-   }
- };
- 
- const toggleDieCuttingUsage = () => {
-   const isCurrentlyUsed = state.dieCutting.isDieCuttingUsed;
-   
-   dispatch({
-     type: "UPDATE_DIE_CUTTING",
-     payload: { 
-       isDieCuttingUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         dcMR: "SIMPLE",
-         dcMRConcatenated: "DC MR SIMPLE"
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("dieCutting");
-   }
- };
- 
- const togglePostDCUsage = () => {
-   const isCurrentlyUsed = state.postDC?.isPostDCUsed || false;
-   
-   dispatch({
-     type: "UPDATE_POST_DC",
-     payload: { 
-       isPostDCUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         pdcMR: "SIMPLE", // Default value, will be replaced when MR types are loaded
-         pdcMRConcatenated: "PDC MR SIMPLE" // Default concatenated value
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("postDC");
-   }
- };
- 
- const toggleFoldAndPasteUsage = () => {
-   const isCurrentlyUsed = state.foldAndPaste?.isFoldAndPasteUsed || false;
-   
-   dispatch({
-     type: "UPDATE_FOLD_AND_PASTE",
-     payload: { 
-       isFoldAndPasteUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         dstMaterial: "", // Initialize dstMaterial field
-         dstType: ""      // Initialize dstType field
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("foldAndPaste");
-   }
- };
- 
- const toggleDstPasteUsage = () => {
-   const isCurrentlyUsed = state.dstPaste?.isDstPasteUsed || false;
-   
-   dispatch({
-     type: "UPDATE_DST_PASTE",
-     payload: { 
-       isDstPasteUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         dstType: ""  // Initialize dstType field
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("dstPaste");
-   }
- };
+  // 2. UPDATED toggleFSUsage function
+  const toggleFSUsage = () => {
+    const isCurrentlyUsed = state.fsDetails.isFSUsed;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_FS_DETAILS",
+        payload: { 
+          isFSUsed: false,
+          fsType: "",
+          foilDetails: []
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_FS_DETAILS",
+        payload: { 
+          isFSUsed: true,
+          fsType: "FS1",
+          foilDetails: [
+            {
+              blockSizeType: "Auto",
+              blockDimension: { 
+                length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+              },
+              foilType: "Gold MTS 220",
+              blockType: "Magnesium Block 3MM",
+              mrType: "SIMPLE",
+              mrTypeConcatenated: "FS MR SIMPLE"
+            }
+          ]
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("fs");
+    }
+  };
 
- const toggleMagnetUsage = () => {
-   const isCurrentlyUsed = state.magnet?.isMagnetUsed || false;
-   
-   dispatch({
-     type: "UPDATE_MAGNET",
-     payload: { 
-       isMagnetUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         magnetMaterial: ""
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("magnet");
-   }
- };
- 
- const toggleQCUsage = () => {
-   const isCurrentlyUsed = state.qc?.isQCUsed || false;
-   
-   dispatch({
-     type: "UPDATE_QC",
-     payload: { isQCUsed: !isCurrentlyUsed }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("qc");
-   }
- };
- 
- const togglePackingUsage = () => {
-   const isCurrentlyUsed = state.packing?.isPackingUsed || false;
-   
-   dispatch({
-     type: "UPDATE_PACKING",
-     payload: { isPackingUsed: !isCurrentlyUsed }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("packing");
-   }
- };
- 
- // FIXED: Updated toggleMiscUsage with proper state clearing pattern
- const toggleMiscUsage = () => {
-   const isCurrentlyUsed = state.misc?.isMiscUsed || false;
-   
-   dispatch({
-     type: "UPDATE_MISC",
-     payload: { 
-       isMiscUsed: !isCurrentlyUsed,
-       // Only initialize when toggling ON (same pattern as other services)
-       ...((!isCurrentlyUsed) && {
-         miscCharge: "" // Initialize as empty string to allow fetching from DB
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("misc");
-   }
- };
- 
- const toggleSandwichUsage = () => {
-   const isCurrentlyUsed = state.sandwich?.isSandwichComponentUsed || false;
-   const defaultPaperName = papers.length > 0 ? papers[0].paperName : "";
-   
-   dispatch({
-     type: "UPDATE_SANDWICH",
-     payload: { 
-       isSandwichComponentUsed: !isCurrentlyUsed,
-       ...((!isCurrentlyUsed) && {
-         // Initialize with the default paper if available
-         paperInfo: {
-           paperName: defaultPaperName
-         },
-         lpDetailsSandwich: {
-           isLPUsed: false,
-           noOfColors: 0,
-           colorDetails: []
-         },
-         fsDetailsSandwich: {
-           isFSUsed: false,
-           fsType: "",
-           foilDetails: []
-         },
-         embDetailsSandwich: {
-           isEMBUsed: false,
-           plateSizeType: "",
-           plateDimensions: { 
-             length: "", 
-             breadth: "",
-             lengthInInches: "",
-             breadthInInches: "" 
-           },
-           plateTypeMale: "",
-           plateTypeFemale: "",
-           embMR: "",
-           embMRConcatenated: ""
-         }
-       })
-     }
-   });
-   
-   // Auto expand when toggled on
-   if (!isCurrentlyUsed) {
-     expandSection("sandwich");
-   }
- };
+  // 3. UPDATED toggleEMBUsage function
+  const toggleEMBUsage = () => {
+    const isCurrentlyUsed = state.embDetails.isEMBUsed;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_EMB_DETAILS",
+        payload: { 
+          isEMBUsed: false,
+          plateSizeType: "",
+          plateDimensions: { length: "", breadth: "" },
+          plateTypeMale: "",
+          plateTypeFemale: "",
+          embMR: "",
+          embMRConcatenated: "",
+          dstMaterial: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_EMB_DETAILS",
+        payload: { 
+          isEMBUsed: true,
+          plateSizeType: "Auto",
+          plateDimensions: { 
+            length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+            breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+          },
+          plateTypeMale: "Polymer Plate",
+          plateTypeFemale: "Polymer Plate",
+          embMR: "SIMPLE",
+          embMRConcatenated: "EMB MR SIMPLE",
+          dstMaterial: ""
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("emb");
+    }
+  };
+
+  // 4. UPDATED toggleDigiUsage function
+  const toggleDigiUsage = () => {
+    const isCurrentlyUsed = state.digiDetails.isDigiUsed;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_DIGI_DETAILS",
+        payload: { 
+          isDigiUsed: false,
+          digiDie: "",
+          digiDimensions: { length: "", breadth: "" }
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      const DIGI_DIE_OPTIONS = {
+        "12x18": { length: "12", breadth: "18" },
+        "13x19": { length: "13", breadth: "19" },
+      };
+      
+      const firstOption = Object.keys(DIGI_DIE_OPTIONS)[0] || "12x18";
+      const defaultDimensions = DIGI_DIE_OPTIONS[firstOption] || { length: "12", breadth: "18" };
+      
+      dispatch({
+        type: "UPDATE_DIGI_DETAILS",
+        payload: { 
+          isDigiUsed: true,
+          digiDie: firstOption,
+          digiDimensions: defaultDimensions
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("digi");
+    }
+  };
+
+  // 5. UPDATED toggleNotebookUsage function
+  const toggleNotebookUsage = () => {
+    const isCurrentlyUsed = state.notebookDetails?.isNotebookUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_NOTEBOOK_DETAILS",
+        payload: { 
+          isNotebookUsed: false,
+          orientation: "",
+          length: "",
+          breadth: "",
+          calculatedLength: "",
+          calculatedBreadth: "",
+          numberOfPages: "",
+          bindingType: "",
+          bindingTypeConcatenated: "",
+          paperName: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_NOTEBOOK_DETAILS",
+        payload: { 
+          isNotebookUsed: true,
+          orientation: "",
+          length: "",
+          breadth: "",
+          calculatedLength: "",
+          calculatedBreadth: "",
+          numberOfPages: "",
+          bindingType: "",
+          bindingTypeConcatenated: "",
+          paperName: papers.length > 0 ? papers[0].paperName : ""
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("notebook");
+    }
+  };
+
+  // 6. UPDATED toggleScreenPrintUsage function
+  const toggleScreenPrintUsage = () => {
+    const isCurrentlyUsed = state.screenPrint?.isScreenPrintUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_SCREEN_PRINT",
+        payload: { 
+          isScreenPrintUsed: false,
+          noOfColors: 1,
+          screenMR: "",
+          screenMRConcatenated: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_SCREEN_PRINT",
+        payload: { 
+          isScreenPrintUsed: true,
+          noOfColors: 1,
+          screenMR: "SIMPLE",
+          screenMRConcatenated: "SCREEN MR SIMPLE"
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("screenPrint");
+    }
+  };
+
+  // 7. UPDATED togglePreDieCuttingUsage function
+  const togglePreDieCuttingUsage = () => {
+    const isCurrentlyUsed = state.preDieCutting?.isPreDieCuttingUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_PRE_DIE_CUTTING",
+        payload: { 
+          isPreDieCuttingUsed: false,
+          predcMR: "",
+          predcMRConcatenated: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_PRE_DIE_CUTTING",
+        payload: { 
+          isPreDieCuttingUsed: true,
+          predcMR: "SIMPLE",
+          predcMRConcatenated: "PREDC MR SIMPLE"
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("preDieCutting");
+    }
+  };
+
+  // 8. UPDATED toggleDieCuttingUsage function
+  const toggleDieCuttingUsage = () => {
+    const isCurrentlyUsed = state.dieCutting.isDieCuttingUsed;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_DIE_CUTTING",
+        payload: { 
+          isDieCuttingUsed: false,
+          dcMR: "",
+          dcMRConcatenated: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_DIE_CUTTING",
+        payload: { 
+          isDieCuttingUsed: true,
+          dcMR: "SIMPLE",
+          dcMRConcatenated: "DC MR SIMPLE"
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("dieCutting");
+    }
+  };
+
+  // 9. UPDATED togglePostDCUsage function
+  const togglePostDCUsage = () => {
+    const isCurrentlyUsed = state.postDC?.isPostDCUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_POST_DC",
+        payload: { 
+          isPostDCUsed: false,
+          pdcMR: "",
+          pdcMRConcatenated: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_POST_DC",
+        payload: { 
+          isPostDCUsed: true,
+          pdcMR: "SIMPLE",
+          pdcMRConcatenated: "PDC MR SIMPLE"
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("postDC");
+    }
+  };
+
+  // 10. UPDATED toggleFoldAndPasteUsage function
+  const toggleFoldAndPasteUsage = () => {
+    const isCurrentlyUsed = state.foldAndPaste?.isFoldAndPasteUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_FOLD_AND_PASTE",
+        payload: { 
+          isFoldAndPasteUsed: false,
+          dstMaterial: "",
+          dstType: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_FOLD_AND_PASTE",
+        payload: { 
+          isFoldAndPasteUsed: true,
+          dstMaterial: "",
+          dstType: ""
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("foldAndPaste");
+    }
+  };
+
+  // 11. UPDATED toggleDstPasteUsage function
+  const toggleDstPasteUsage = () => {
+    const isCurrentlyUsed = state.dstPaste?.isDstPasteUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_DST_PASTE",
+        payload: { 
+          isDstPasteUsed: false,
+          dstType: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_DST_PASTE",
+        payload: { 
+          isDstPasteUsed: true,
+          dstType: ""
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("dstPaste");
+    }
+  };
+
+  // 12. UPDATED toggleMagnetUsage function
+  const toggleMagnetUsage = () => {
+    const isCurrentlyUsed = state.magnet?.isMagnetUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_MAGNET",
+        payload: { 
+          isMagnetUsed: false,
+          magnetMaterial: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_MAGNET",
+        payload: { 
+          isMagnetUsed: true,
+          magnetMaterial: ""
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("magnet");
+    }
+  };
+
+  // 13. UPDATED toggleQCUsage function
+  const toggleQCUsage = () => {
+    const isCurrentlyUsed = state.qc?.isQCUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_QC",
+        payload: { 
+          isQCUsed: false
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_QC",
+        payload: { 
+          isQCUsed: true
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("qc");
+    }
+  };
+
+  // 14. UPDATED togglePackingUsage function
+  const togglePackingUsage = () => {
+    const isCurrentlyUsed = state.packing?.isPackingUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_PACKING",
+        payload: { 
+          isPackingUsed: false
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_PACKING",
+        payload: { 
+          isPackingUsed: true
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("packing");
+    }
+  };
+
+  // 15. UPDATED toggleMiscUsage function (already working correctly)
+  const toggleMiscUsage = () => {
+    const isCurrentlyUsed = state.misc?.isMiscUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_MISC",
+        payload: { 
+          isMiscUsed: false,
+          miscCharge: ""
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      dispatch({
+        type: "UPDATE_MISC",
+        payload: { 
+          isMiscUsed: true,
+          miscCharge: ""
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("misc");
+    }
+  };
+
+  // 16. UPDATED toggleSandwichUsage function
+  const toggleSandwichUsage = () => {
+    const isCurrentlyUsed = state.sandwich?.isSandwichComponentUsed || false;
+    
+    if (isCurrentlyUsed) {
+      // FIXED: When toggling OFF, clear all data
+      dispatch({
+        type: "UPDATE_SANDWICH",
+        payload: { 
+          isSandwichComponentUsed: false,
+          paperInfo: {
+            paperName: ""
+          },
+          lpDetailsSandwich: {
+            isLPUsed: false,
+            noOfColors: 0,
+            colorDetails: []
+          },
+          fsDetailsSandwich: {
+            isFSUsed: false,
+            fsType: "",
+            foilDetails: []
+          },
+          embDetailsSandwich: {
+            isEMBUsed: false,
+            plateSizeType: "",
+            plateDimensions: { 
+              length: "", 
+              breadth: "",
+              lengthInInches: "",
+              breadthInInches: "" 
+            },
+            plateTypeMale: "",
+            plateTypeFemale: "",
+            embMR: "",
+            embMRConcatenated: ""
+          }
+        }
+      });
+    } else {
+      // When toggling ON, initialize with defaults
+      const defaultPaperName = papers.length > 0 ? papers[0].paperName : "";
+      
+      dispatch({
+        type: "UPDATE_SANDWICH",
+        payload: { 
+          isSandwichComponentUsed: true,
+          paperInfo: {
+            paperName: defaultPaperName
+          },
+          lpDetailsSandwich: {
+            isLPUsed: false,
+            noOfColors: 0,
+            colorDetails: []
+          },
+          fsDetailsSandwich: {
+            isFSUsed: false,
+            fsType: "",
+            foilDetails: []
+          },
+          embDetailsSandwich: {
+            isEMBUsed: false,
+            plateSizeType: "",
+            plateDimensions: { 
+              length: "", 
+              breadth: "",
+              lengthInInches: "",
+              breadthInInches: "" 
+            },
+            plateTypeMale: "",
+            plateTypeFemale: "",
+            embMR: "",
+            embMRConcatenated: ""
+          }
+        }
+      });
+      
+      // Auto expand when toggled on
+      expandSection("sandwich");
+    }
+  };
+
  
  // UPDATED: Special function for ReviewAndSubmit section
  const toggleReviewSection = () => {
