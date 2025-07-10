@@ -32,7 +32,7 @@ const FixedSection = ({
       
       <div className="p-5 grid grid-cols-[30%_70%] gap-4">
         {/* Client and Version Selection - Side by Side */}
-        <div className="flex flex-wrap flex-col gap-6">
+        <div className="flex flex-wrap flex-col gap-2">
           {/* Client Selection */}
           <div>
             <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Client Information</h3>
