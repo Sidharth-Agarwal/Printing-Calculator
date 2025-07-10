@@ -849,7 +849,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                   placeholder="Search by code, type or job type"
                   value={searchTerm}
                   onChange={handleTextSearch}
-                  className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                  className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
                   data-testid="die-search-input"
                 />
               </div>
@@ -857,16 +857,16 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
             
             {/* Length input - takes 1 column (25%) */}
             <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Length (inches) - Die or Product</label>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Length - Die or Product</label>
               <input
                 type="number"
                 name="length"
                 step="0.01"
-                placeholder="Enter Length"
+                placeholder="Length (inches)"
                 value={searchDimensions.length}
                 onChange={handleSearchChange}
                 onWheel={(e) => e.target.blur()}
-                className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
                 data-testid="die-length-input"
               />
             </div>
@@ -878,11 +878,11 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 type="number"
                 name="breadth"
                 step="0.01"
-                placeholder="Enter Breadth"
+                placeholder="Breadth (inches)"
                 value={searchDimensions.breadth}
                 onChange={handleSearchChange}
                 onWheel={(e) => e.target.blur()}
-                className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
                 data-testid="die-breadth-input"
               />
             </div>
@@ -900,14 +900,14 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                 >
                   <div className="flex justify-between items-center">
                     <div>
-                      <p className="text-sm font-medium text-gray-800">Die Code: <span className="text-red-600">{die.dieCode}</span></p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-xs font-medium text-gray-800">Die Code: <span className="text-red-600">{die.dieCode}</span></p>
+                      <p className="text-[10px] text-gray-600">
                         Die Size: {die.dieSizeL}" × {die.dieSizeB}"
                       </p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-[10px] text-gray-600">
                         Product Size: {die.productSizeL || "N/A"}" × {die.productSizeB || "N/A"}"
                       </p>
-                      <p className="text-xs text-gray-600">
+                      <p className="text-[10px] text-gray-600">
                         Type: {die.type || "N/A"} | Frags: {die.frags || "N/A"}
                       </p>
                     </div>

@@ -105,7 +105,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
       {/* Selected paper display (closed state) - Updated for consistent height */}
       <div
         onClick={() => setIsOpen(!isOpen)}
-        className="border border-gray-300 rounded-md px-2 py-1.5 w-full text-sm flex justify-between items-center cursor-pointer bg-white hover:border-gray-400 transition-colors h-[38px]"
+        className="border border-gray-300 rounded-md px-2 py-1 w-full text-xs flex justify-between items-center cursor-pointer bg-white hover:border-gray-400 transition-colors h-[36px]"
         data-testid="paper-dropdown-selector"
       >
         <div className="flex-1 overflow-hidden">

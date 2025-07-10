@@ -111,12 +111,12 @@ const Magnet = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
             onChange={handleChange}
             className={`w-full px-3 py-2 border ${
               errors.magnetMaterial ? "border-red-500" : "border-gray-300"
-            } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             disabled={magnetMaterialsLoading}
           >
-            <option value="">
+            {/* <option value="">
               {magnetMaterialsLoading ? "Loading Magnet Materials..." : "Select Magnet Material"}
-            </option>
+            </option> */}
             {magnetMaterials.map((material) => (
               <option key={material.id} value={material.materialName}>
                 {material.materialName}
@@ -136,13 +136,13 @@ const Magnet = ({ state, dispatch, onNext, onPrevious, singlePageMode = false })
             <button
               type="button"
               onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-xs"
             >
               Previous
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs"
             >
               Next
             </button>

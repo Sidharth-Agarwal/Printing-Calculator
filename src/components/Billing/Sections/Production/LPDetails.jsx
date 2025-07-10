@@ -337,7 +337,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         {/* Color Details Sections */}
         {lpDetails.noOfColors > 0 && (
           <div>
-            <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">COLOR DETAILS</h3>
+            {/* <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">COLOR DETAILS</h3> */}
             
             {/* Loading state */}
             {mrTypesLoading || plateTypesLoading || dstMaterialsLoading ? (
@@ -352,7 +352,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
               Array.from({ length: lpDetails.noOfColors }, (_, index) => (
                 <div
                   key={index}
-                  className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-md"
+                  className="mb-4"
                 >
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="text-sm font-medium text-gray-700">Color {index + 1}</h4>
@@ -375,7 +375,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         )}
                         className={`w-full px-2 py-2 border ${
                           errors[`plateSizeType_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                       >
                         <option value="Auto">Auto</option>
                         <option value="Manual">Manual</option>
@@ -389,7 +389,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Length (inches):
+                        Length:
                       </label>
                       <input
                         type="number"
@@ -402,7 +402,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           errors[`plateLength_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md ${
                           lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
-                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                         readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
                       />
                       {lpDetails.colorDetails[index]?.plateDimensions?.length && (
@@ -419,7 +419,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">
-                        Breadth (inches):
+                        Breadth:
                       </label>
                       <input
                         type="number"
@@ -432,7 +432,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           errors[`plateBreadth_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md ${
                           lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
-                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                         readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
                       />
                       {lpDetails.colorDetails[index]?.plateDimensions?.breadth && (
@@ -461,7 +461,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         )}
                         className={`w-full px-2 py-2 border ${
                           errors[`pantoneType_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                         placeholder="Pantone"
                       />
                       {errors[`pantoneType_${index}`] && (
@@ -480,9 +480,9 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         onChange={(e) => handleColorDetailsChange(index, "plateType", e.target.value)}
                         className={`w-full px-2 py-2 border ${
                           errors[`plateType_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                       >
-                        <option value="">Select Type</option>
+                        {/* <option value="">Select Type</option> */}
                         {plateTypes.map((plateType, idx) => (
                           <option key={idx} value={plateType.materialName}>
                             {plateType.materialName}
@@ -505,9 +505,9 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         onChange={(e) => handleColorDetailsChange(index, "mrType", e.target.value)}
                         className={`w-full px-2 py-2 border ${
                           errors[`mrType_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                       >
-                        <option value="">Select Type</option>
+                        {/* <option value="">Select Type</option> */}
                         {mrTypes.map((typeOption, idx) => (
                           <option key={idx} value={typeOption.type}>
                             {typeOption.type}

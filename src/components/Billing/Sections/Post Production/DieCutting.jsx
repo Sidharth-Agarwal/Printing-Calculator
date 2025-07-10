@@ -86,9 +86,9 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             name="dcMR"
             value={dieCutting.dcMR}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.dcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            className={`w-full px-3 py-2 border ${errors.dcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
           >
-            <option value="">Select MR Type</option>
+            {/* <option value="">Select MR Type</option> */}
             {mrTypesLoading ? (
               <option value="" disabled>Loading MR Types...</option>
             ) : (
@@ -109,13 +109,13 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             <button
               type="button"
               onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-xs"
             >
               Previous
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs"
             >
               Next
             </button>

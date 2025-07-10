@@ -107,8 +107,8 @@ const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
       <div className="space-y-5">
         {/* Screen Print Configuration - Fields side by side */}
         <div>
-          <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Screen Print Configuration</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Screen Print Configuration</h3> */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {/* Number of Colors Input */}
             <div>
               <label htmlFor="noOfColors" className="block text-xs font-medium text-gray-600 mb-1">
@@ -123,7 +123,7 @@ const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
                 max="10"
                 onChange={handleChange}
                 onWheel={(e) => e.target.blur()}
-                className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               />
               {errors.noOfColors && (
                 <p className="text-red-500 text-xs mt-1">{errors.noOfColors}</p>
@@ -140,9 +140,9 @@ const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
                 name="screenMR"
                 value={screenPrint.screenMR || ""}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border ${errors.screenMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                className={`w-full px-3 py-2 border ${errors.screenMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               >
-                <option value="">Select Type</option>
+                {/* <option value="">Select Type</option> */}
                 {mrTypesLoading ? (
                   <option value="" disabled>Loading...</option>
                 ) : (

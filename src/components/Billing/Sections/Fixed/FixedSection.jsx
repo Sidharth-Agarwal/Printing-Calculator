@@ -27,12 +27,12 @@ const FixedSection = ({
     <div className="bg-white rounded-lg shadow-sm border border-gray-200 mb-6 overflow-hidden">
       {/* Header */}
       <div className="bg-gray-50 px-4 py-3 border-b border-gray-200">
-        <h2 className="text-lg font-medium text-gray-800">Project Information</h2>
+        <h2 className="text-md font-medium text-gray-800">Project Information</h2>
       </div>
       
-      <div className="p-5">
+      <div className="p-5 grid grid-cols-[30%_70%] gap-4">
         {/* Client and Version Selection - Side by Side */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="flex flex-wrap flex-col gap-6">
           {/* Client Selection */}
           <div>
             <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Client Information</h3>
@@ -69,7 +69,7 @@ const FixedSection = ({
           
           {/* Version Selection */}
           <div>
-            <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Version</h3>
+            <h3 className="text-xs uppercase font-medium text-gray-500 mb-1">Version</h3>
             {state.client.clientId ? (
               <VersionSelection 
                 clientId={state.client.clientId}
@@ -78,7 +78,7 @@ const FixedSection = ({
                 compact={true} // Use compact mode
               />
             ) : (
-              <div className="p-3 bg-gray-50 rounded-md border border-gray-200 text-sm text-gray-500">
+              <div className="p-3 bg-gray-50 rounded-md border border-gray-200 text-sm text-gray-500 text-xs">
                 Select a client first to choose a version
               </div>
             )}
@@ -89,7 +89,7 @@ const FixedSection = ({
         </div>
         
         {/* Project & Paper Details */}
-        <div className="mt-4">
+        <div className="pr-3">
           <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Project & Paper Details</h3>
           <div>
             <OrderAndPaper 
