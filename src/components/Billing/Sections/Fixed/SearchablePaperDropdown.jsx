@@ -144,10 +144,10 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search papers..."
-                className="border border-gray-300 rounded-md pl-8 pr-2 py-1.5 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                className="border border-gray-300 rounded-md pl-6 pr-2 py-1.5 w-full text-xs focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
                 data-testid="paper-search-input"
               />
-              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-2.5 top-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 absolute left-2.5 top-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </div>
@@ -159,7 +159,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
               filteredPapers.map((paper) => (
                 <div
                   key={paper.id}
-                  className={`p-2 hover:bg-gray-50 cursor-pointer transition-colors ${
+                  className={`p-1 hover:bg-gray-50 cursor-pointer transition-colors ${
                     selectedPaper === paper.paperName ? "bg-red-50" : ""
                   }`}
                   onClick={(e) => {
@@ -170,11 +170,11 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                   }}
                   data-testid={`paper-option-${paper.paperName}`}
                 >
-                  <div className="flex flex-col">
+                  <div className="flex flex-col text-[12px]">
                     <span className={`font-medium ${selectedPaper === paper.paperName ? "text-red-700" : "text-gray-800"}`}>
                       {paper.paperName}
                     </span>
-                    <span className="text-xs text-gray-500">
+                    <span className="text-gray-500">
                       {paper.company} | {paper.gsm}gsm
                     </span>
                   </div>
