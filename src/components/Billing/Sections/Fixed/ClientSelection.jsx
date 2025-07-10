@@ -83,9 +83,9 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     const clientType = (client.clientType || "DIRECT").toUpperCase();
     
     if (clientType === "B2B") {
-      return <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">B2B</span>;
+      return <span className="ml-1 text-gray-800 text-xs rounded-full">B2B</span>;
     } else {
-      return <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-800 text-xs rounded-full">Direct</span>;
+      return <span className="ml-1 text-gray-800 text-xs rounded-full">Direct</span>;
     }
   };
 
@@ -94,12 +94,12 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
     return (
       <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
         <div className="flex items-center mb-2">
-          <span className="font-bold text-gray-800">Client:</span>
-          <span className="ml-2 text-lg">{selectedClient.name}</span>
+          <span className="text-sm text-gray-800">Client:</span>
+          <span className="ml-2 text-xs">{selectedClient.name}</span>
           {getClientTypeBadge(selectedClient)}
         </div>
-        <div className="text-sm text-gray-700">
-          <p><strong>Code:</strong> {selectedClient.clientCode}</p>
+        <div className="text-xs text-gray-700">
+          {/* <p><strong>Code:</strong> {selectedClient.clientCode}</p> */}
           {selectedClient.contactPerson && (
             <p><strong>Contact:</strong> {selectedClient.contactPerson}</p>
           )}
@@ -127,9 +127,8 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
       <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
         <div className="flex justify-between items-start mb-2">
           <div className="flex items-center">
-            <span className="font-bold text-gray-800">Client:</span>
-            <span className="ml-2 text-lg">{selectedClient.name}</span>
-            {getClientTypeBadge(selectedClient)}
+            <span className="font-bold text-gray-800 text-sm">Client:</span>
+            <span className="ml-2 text-sm">{selectedClient.name}</span>
           </div>
           {/* Only show change client button if not in edit mode */}
           {!isEditMode && (
@@ -138,13 +137,14 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
                 onClientSelect(null);
                 setSelectedClient(null);
               }}
-              className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-sm"
+              className="px-2 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 text-xs"
             >
               Change Client
             </button>
           )}
         </div>
-        <div className="text-sm text-gray-700">
+        <div className="text-xs text-gray-700">
+          <p><strong>Type:</strong> {getClientTypeBadge(selectedClient)}</p>
           <p><strong>Code:</strong> {selectedClient.clientCode}</p>
           {selectedClient.contactPerson && (
             <p><strong>Contact:</strong> {selectedClient.contactPerson}</p>
@@ -171,16 +171,16 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
   return (
     <div>
       {/* Search input with improved placeholder text */}
-      <div className="mb-4">
+      <div className="mb-4 text-xs">
         <div className="relative">
           <input
             type="text"
             placeholder="Search by client name, code, contact person or email..."
             value={searchTerm}
             onChange={handleSearchChange}
-            className="w-full px-4 py-2 pl-10 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            className="w-full px-4 py-2 pl-7 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
           />
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 absolute left-3 top-2.5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
           </svg>
         </div>
@@ -191,30 +191,22 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
         <div className="border border-gray-300 rounded-md max-h-60 overflow-y-auto">
           {filteredClients.length === 0 ? (
             <div className="p-4 text-center">
-              <p className="text-gray-500">No clients found</p>
-              {/* <button
-                onClick={() => {
-                  if (onCreateNewClient) onCreateNewClient();
-                }}
-                className="mt-2 text-red-600 hover:underline text-sm"
-              >
-                + Create new client
-              </button> */}
+              <p className="text-gray-500 text-xs">No clients found</p>
             </div>
           ) : (
             filteredClients.map(client => (
               <div
                 key={client.id}
-                className="p-3 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
+                className="p-2 border-b border-gray-200 hover:bg-gray-50 cursor-pointer transition-colors"
                 onClick={() => handleClientSelect(client)}
               >
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="flex items-center">
-                      <span className="font-medium text-gray-800">{client.name}</span>
+                      <span className="font-medium text-gray-800 text-xs">{client.name}</span>
                       {getClientTypeBadge(client)}
                     </div>
-                    <div className="text-sm text-gray-500">{client.clientCode}</div>
+                    <div className="text-xs text-gray-500">{client.clientCode}</div>
                     {client.contactPerson && (
                       <div className="text-xs text-gray-500">Contact: {client.contactPerson}</div>
                     )}
@@ -240,7 +232,7 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
                 if (selected) handleClientSelect(selected);
               }
             }}
-            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
           >
             <option value="">Select a client</option>
             {clients.map(client => {
@@ -253,16 +245,6 @@ const ClientSelection = ({ onClientSelect, selectedClient, setSelectedClient, ge
               );
             })}
           </select>
-          <div className="mt-2 text-right">
-            {/* <button
-              onClick={() => {
-                if (onCreateNewClient) onCreateNewClient();
-              }}
-              className="text-red-600 hover:underline text-sm"
-            >
-              + Create new client
-            </button> */}
-          </div>
         </div>
       )}
     </div>

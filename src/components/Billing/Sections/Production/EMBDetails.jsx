@@ -261,7 +261,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     <form onSubmit={handleSubmit}>
       <div className="space-y-5">
         {/* All Fields in a Single Line */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
           <div>
             <label htmlFor="plateSizeType" className="block text-xs font-medium text-gray-600 mb-1">
               Plate Size:
@@ -271,9 +271,9 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               name="plateSizeType"
               value={plateSizeType}
               onChange={handleChange}
-              className={`w-full px-2 py-2 border ${errors.plateSizeType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.plateSizeType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             >
-              <option value="">Select Option</option>
+              {/* <option value="">Select Option</option> */}
               <option value="Auto">Auto</option>
               <option value="Manual">Manual</option>
             </select>
@@ -286,7 +286,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             <>
               <div>
                 <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
-                  Length (inches):
+                  Length:
                 </label>
                 <input
                   type="number"
@@ -294,7 +294,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
                   placeholder="Length"
                   value={plateDimensions.lengthInInches || ""}
                   onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("length", e.target.value) : null}
-                  className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                  className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                   readOnly={plateSizeType === "Auto"}
                 />
                 {plateDimensions.length && (
@@ -304,7 +304,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               </div>
               <div>
                 <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
-                  Breadth (inches):
+                  Breadth:
                 </label>
                 <input
                   type="number"
@@ -312,7 +312,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
                   placeholder="Breadth"
                   value={plateDimensions.breadthInInches || ""}
                   onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("breadth", e.target.value) : null}
-                  className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                  className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                   readOnly={plateSizeType === "Auto"}
                 />
                 {plateDimensions.breadth && (
@@ -332,9 +332,9 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               name="embMR"
               value={embMR}
               onChange={handleChange}
-              className={`w-full px-2 py-2 border ${errors.embMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.embMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             >
-              <option value="">Select Type</option>
+              {/* <option value="">Select Type</option> */}
               {mrTypesLoading ? (
                 <option value="" disabled>Loading...</option>
               ) : (
@@ -359,13 +359,12 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               onChange={handleChange}
               className={`w-full px-2 py-2 border ${
                 errors.dstMaterial ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               disabled={dstMaterialsLoading}
             >
-              <option value="">
+              {/* <option value="">
                 {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
-              </option>
-              {/* UPDATED: Sort DST materials to show DST PP PLATE first if available */}
+              </option> */}
               {dstMaterials
                 .sort((a, b) => {
                   // Prioritize "DST PP PLATE" at the top
@@ -390,12 +389,12 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
         </div>
 
         {/* Plate Cost Message */}
-        <div className="p-4 bg-yellow-50 border border-yellow-100 rounded-md mt-2">
+        <div className="px-3 py-2 bg-yellow-50 border border-yellow-100 rounded-md mt-2">
           <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
             </svg>
-            <p className="text-yellow-700 text-sm">
+            <p className="text-yellow-700 text-xs">
               Embossing plate costs will be calculated separately.
             </p>
           </div>

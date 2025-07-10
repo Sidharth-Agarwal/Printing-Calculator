@@ -328,7 +328,7 @@ const OrderAndPaper = ({
                 placeholder="Enter the project name"
                 value={orderAndPaper.projectName || ""}
                 onChange={handleChange}
-                className={`border rounded-md p-2 w-full text-sm ${
+                className={`border rounded-md p-2 w-full text-xs ${
                   validationErrors.projectName ? "border-red-500" : ""
                 }`}
                 required
@@ -348,7 +348,7 @@ const OrderAndPaper = ({
                 name="jobType"
                 value={orderAndPaper.jobType || "Card"}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full text-sm"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               >
                 <option value="Card">Card</option>
@@ -377,7 +377,7 @@ const OrderAndPaper = ({
                 onChange={handleChange}
                 ref={quantityInputRef}
                 onWheel={(e) => e.target.blur()}
-                className={`border rounded-md p-2 w-full text-sm no-spinner ${
+                className={`text-xs border rounded-md p-2 w-full text-sm no-spinner ${
                   validationErrors.quantity ? "border-red-500" : ""
                 }`}
                 required
@@ -398,7 +398,7 @@ const OrderAndPaper = ({
                 onChange={(date) => handleDateChange("date", date)}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full text-sm"
+                className="border rounded-md p-2 w-full text-xs"
                 required
                 popperClassName="small-calendar"
                 calendarClassName="small-calendar"
@@ -416,7 +416,7 @@ const OrderAndPaper = ({
                 onChange={(date) => handleDateChange("deliveryDate", date)}
                 dateFormat="dd/MM/yyyy"
                 placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full text-sm"
+                className="border rounded-md p-2 w-full text-xs"
                 required
                 popperClassName="small-calendar"
                 calendarClassName="small-calendar"
@@ -433,7 +433,7 @@ const OrderAndPaper = ({
                 name="paperProvided"
                 value={orderAndPaper.paperProvided || "Yes"}
                 onChange={handleChange}
-                className="border rounded-md p-2 w-full text-sm"
+                className="border rounded-md p-2 w-full text-xs"
                 required
               >
                 <option value="Yes">Yes</option>

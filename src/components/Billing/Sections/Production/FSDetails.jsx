@@ -315,9 +315,9 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             name="fsType"
             value={fsDetails.fsType || ""}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.fsType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            className={`w-full px-2 py-2 border ${errors.fsType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
           >
-            <option value="">Select FS Type</option>
+            {/* <option value="">Select FS Type</option> */}
             {["FS1", "FS2", "FS3", "FS4", "FS5"].map((type) => (
               <option key={type} value={type}>
                 {type}
@@ -330,7 +330,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
         {/* Foil Details Section */}
         {fsDetails.fsType && (
           <div>
-            <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">Foil Details</h3>
+            {/* <h3 className="text-xs uppercase font-medium text-gray-500 mb-3">Foil Details</h3> */}
             
             {isLoading ? (
               <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
@@ -341,12 +341,12 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
               </div>
             ) : (
               fsDetails.foilDetails.map((foil, index) => (
-                <div key={index} className="mb-4 p-4 bg-gray-50 border border-gray-200 rounded-md">
+                <div key={index} className="mb-4">
                   <div className="flex justify-between items-center mb-3">
                     <h4 className="text-sm font-medium text-gray-700">Foil {index + 1}</h4>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
                     {/* Block Size Type */}
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
@@ -355,9 +355,9 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       <select
                         value={foil.blockSizeType || "Auto"}
                         onChange={(e) => handleFoilDetailsChange(index, "blockSizeType", e.target.value)}
-                        className={`w-full px-3 py-2 border ${
+                        className={`w-full px-2 py-2 border ${
                           errors[`blockSizeType-${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                       >
                         <option value="Auto">Auto</option>
                         <option value="Manual">Manual</option>
@@ -372,7 +372,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       <>
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Length (inches):
+                            Length:
                           </label>
                           <input
                             type="number"
@@ -381,11 +381,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                               length: e.target.value,
                             })}
                             onWheel={(e) => e.target.blur()}
-                            className={`w-full px-3 py-2 border ${
+                            className={`w-full px-2 py-2 border ${
                               errors[`blockLength-${index}`] ? "border-red-500" : "border-gray-300"
                             } rounded-md ${
                               foil.blockSizeType === "Auto" ? "bg-gray-50" : ""
-                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                             readOnly={foil.blockSizeType === "Auto"}
                           />
                           {foil.blockDimension?.length && (
@@ -398,7 +398,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
 
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">
-                            Breadth (inches):
+                            Breadth:
                           </label>
                           <input
                             type="number"
@@ -407,11 +407,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                               breadth: e.target.value,
                             })}
                             onWheel={(e) => e.target.blur()}
-                            className={`w-full px-3 py-2 border ${
+                            className={`w-full px-2 py-2 border ${
                               errors[`blockBreadth-${index}`] ? "border-red-500" : "border-gray-300"
                             } rounded-md ${
                               foil.blockSizeType === "Auto" ? "bg-gray-50" : ""
-                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                            } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                             readOnly={foil.blockSizeType === "Auto"}
                           />
                           {foil.blockDimension?.breadth && (
@@ -432,12 +432,12 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       <select
                         value={foil.foilType || ""}
                         onChange={(e) => handleFoilDetailsChange(index, "foilType", e.target.value)}
-                        className={`w-full px-3 py-2 border ${
+                        className={`w-full px-2 py-2 border ${
                           errors[`foilType-${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                         data-testid={`foil-type-select-${index}`}
                       >
-                        <option value="">Select Foil Type</option>
+                        {/* <option value="">Select Foil Type</option> */}
                         {foilTypes.map((foilType, idx) => (
                           <option key={idx} value={foilType.materialName}>
                             {foilType.materialName}
@@ -457,11 +457,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       <select
                         value={foil.blockType || ""}
                         onChange={(e) => handleFoilDetailsChange(index, "blockType", e.target.value)}
-                        className={`w-full px-3 py-2 border ${
+                        className={`w-full px-2 py-2 border ${
                           errors[`blockType-${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                       >
-                        <option value="">Select Block Type</option>
+                        {/* <option value="">Select Block Type</option> */}
                         {blockTypes.map((blockType, idx) => (
                           <option key={idx} value={blockType.materialName}>
                             {blockType.materialName}
@@ -481,11 +481,11 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                       <select
                         value={foil.mrType || ""}
                         onChange={(e) => handleFoilDetailsChange(index, "mrType", e.target.value)}
-                        className={`w-full px-3 py-2 border ${
+                        className={`w-full px-2 py-2 border ${
                           errors[`mrType-${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
                       >
-                        <option value="">Select MR Type</option>
+                        {/* <option value="">Select MR Type</option> */}
                         {mrTypes.map((typeOption, idx) => (
                           <option key={idx} value={typeOption.type}>
                             {typeOption.type}

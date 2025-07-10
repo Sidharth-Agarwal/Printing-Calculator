@@ -160,7 +160,7 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {/* DST Material Dropdown */}
           <div>
             <label htmlFor="dstMaterial" className="block text-xs font-medium text-gray-600 mb-1">
@@ -173,12 +173,12 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
               onChange={handleChange}
               className={`w-full px-3 py-2 border ${
                 errors.dstMaterial ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               disabled={dstMaterialsLoading}
             >
-              <option value="">
+              {/* <option value="">
                 {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
-              </option>
+              </option> */}
               {dstMaterials.map((material) => (
                 <option key={material.id} value={material.materialName}>
                   {material.materialName}
@@ -205,12 +205,12 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
               onChange={handleChange}
               className={`w-full px-3 py-2 border ${
                 errors.dstType ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               disabled={dstTypesLoading}
             >
-              <option value="">
+              {/* <option value="">
                 {dstTypesLoading ? "Loading DST Types..." : "Select DST Type"}
-              </option>
+              </option> */}
               {dstTypes.map((type) => (
                 <option key={type.id} value={type.type}>
                   {type.type}
@@ -231,13 +231,13 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
             <button
               type="button"
               onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
+              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-xs"
             >
               Previous
             </button>
             <button
               type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-xs"
             >
               Next
             </button>

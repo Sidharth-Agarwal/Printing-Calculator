@@ -224,7 +224,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               name="orientation"
               value={notebookDetails.orientation || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.orientation ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.orientation ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             >
               <option value="">Select Orientation</option>
               <option value="Length Wise Baby Size">Length Wise Baby Size</option>
@@ -247,7 +247,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               placeholder="Number of formas"
               value={notebookDetails.numberOfPages || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.numberOfPages ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.numberOfPages ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               min="1"
             />
             {errors.numberOfPages && (
@@ -265,7 +265,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               name="bindingType"
               value={notebookDetails.bindingType || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.bindingType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.bindingType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               disabled={isLoading}
             >
               <option value="">Select Binding Type</option>
@@ -304,7 +304,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               placeholder="Length"
               value={notebookDetails.length || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               step="0.01"
             />
             {errors.length && (
@@ -324,7 +324,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               placeholder="Breadth"
               value={notebookDetails.breadth || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               step="0.01"
             />
             {errors.breadth && (
@@ -335,12 +335,12 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
           {/* Final Length */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Final Length (inches):
+              Final Length:
             </label>
             <input
               type="text"
               value={notebookDetails.calculatedLength || notebookDetails.length || ""}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+              className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs"
               readOnly
               placeholder="Calculated length"
             />
@@ -349,12 +349,12 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
           {/* Final Breadth */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Final Breadth (inches):
+              Final Breadth:
             </label>
             <input
               type="text"
               value={notebookDetails.calculatedBreadth || notebookDetails.breadth || ""}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+              className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs"
               readOnly
               placeholder="Calculated breadth"
             />

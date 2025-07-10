@@ -120,7 +120,7 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
             <select
               value={selectedVersion}
               onChange={handleVersionChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm appearance-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs appearance-none"
               disabled={!clientId}
             >
               <option value="">Select a Version</option>
@@ -137,7 +137,7 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
             type="button"
             onClick={addNewVersion}
             disabled={!clientId}
-            className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-sm"
+            className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-xs"
             title={clientId ? "Add a new version" : "Select a client first"}
           >
             + New
@@ -148,7 +148,7 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
             <button
               type="button"
               onClick={() => setShowEstimates(!showEstimates)}
-              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-sm"
+              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-xs"
             >
               {showEstimates ? "Hide Estimates" : `View ${existingEstimates.length} Estimates`}
             </button>

@@ -2319,485 +2319,488 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    );
  };
 
- return (
-   <div className="bg-white rounded-lg">
-     <div className="max-w-screen-xl mx-auto p-4">
-       <div className="flex justify-between items-center mb-4">
-         <div className="mb-6">
-           <h1 className="text-2xl font-bold text-gray-900">
-             New Bill
-           </h1>
-           <p className="text-gray-600 mt-1">
-             Create, edit and generate new bills and estimates
-           </p>
-         </div>
-         
-         <div className="flex space-x-3">
-           {/* Reset Form Button */}
-           <button 
-             type="button"
-             onClick={handleResetForm}
-             className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-           >
-             Reset Form
-           </button>
-         </div>
-       </div>
+  return (
+    <div className="bg-white rounded-lg">
+      <div className="max-w-screen-xl mx-auto p-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="mb-6">
+            <h1 className="text-2xl font-bold text-gray-900">
+              New Bill
+            </h1>
+            <p className="text-gray-600 mt-1">
+              Create, edit and generate new bills and estimates
+            </p>
+          </div>
+          
+          <div className="flex space-x-3">
+            {/* Reset Form Button */}
+            <button 
+              type="button"
+              onClick={handleResetForm}
+              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+            >
+              Reset Form
+            </button>
+          </div>
+        </div>
 
-       {/* ⭐ UPDATED: GST Error Display */}
-       {gstError && (
-         <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
-           <p className="text-red-600 text-sm">
-             <strong>GST Configuration Error:</strong> {gstError}
-           </p>
-           <p className="text-red-500 text-xs mt-1">
-             Please ensure GST rates are configured in the database for all job types.
-           </p>
-         </div>
-       )}
+        {/* ⭐ UPDATED: GST Error Display */}
+        {gstError && (
+          <div className="bg-red-50 border border-red-200 rounded-md p-3 mb-4">
+            <p className="text-red-600 text-sm">
+              <strong>GST Configuration Error:</strong> {gstError}
+            </p>
+            <p className="text-red-500 text-xs mt-1">
+              Please ensure GST rates are configured in the database for all job types.
+            </p>
+          </div>
+        )}
 
-       {/* Success Notification Component */}
-       <SuccessNotification
-         message="Estimate Created Successfully! You can create another estimate with the same client and project details."
-         isVisible={showSuccessNotification}
-         onClose={closeSuccessNotification}
-         duration={3000}
-       />
+        {/* Success Notification Component */}
+        <SuccessNotification
+          message="Estimate Created Successfully! You can create another estimate with the same client and project details."
+          isVisible={showSuccessNotification}
+          onClose={closeSuccessNotification}
+          duration={3000}
+        />
 
-       {/* Reset Confirmation Modal */}
-       {showResetConfirmation && (
-         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-           <div className="bg-white p-6 rounded-lg shadow-lg max-w-md">
-             <h2 className="text-xl font-bold mb-4">Confirm Reset</h2>
-             <p className="mb-6">Are you sure you want to reset the form? All entered data will be lost.</p>
-             <div className="flex justify-end space-x-4">
-             <button 
-                 type="button"
-                 onClick={() => setShowResetConfirmation(false)}
-                 className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 transition-colors"
-               >
-                 Cancel
-               </button>
-               <button 
-                 type="button"
-                 onClick={confirmResetForm}
-                 className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
-               >
-                 Reset Form
-               </button>
-             </div>
-           </div>
-         </div>
-       )}
+        {/* Reset Confirmation Modal */}
+        {showResetConfirmation && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg shadow-lg max-w-md">
+              <h2 className="text-xl font-bold mb-4">Confirm Reset</h2>
+              <p className="mb-6">Are you sure you want to reset the form? All entered data will be lost.</p>
+              <div className="flex justify-end space-x-4">
+              <button 
+                  type="button"
+                  onClick={() => setShowResetConfirmation(false)}
+                  className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button 
+                  type="button"
+                  onClick={confirmResetForm}
+                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                >
+                  Reset Form
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
-       <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
-         {/* Client Selection Section - Modified for B2B users */}
-         <FixedSection
-           state={state}
-           dispatch={dispatch}
-           isEditMode={isEditMode}
-           selectedClient={selectedClient}
-           setSelectedClient={setSelectedClient}
-           selectedVersion={selectedVersion}
-           handleClientSelect={handleClientSelect}
-           handleVersionSelect={handleVersionSelect}
-           generateClientCode={generateClientCode}
-           isB2BClient={isB2BClient}
-           linkedClientData={linkedClientData}
-           validationErrors={validationErrors}
-           handleJobTypeChange={handleJobTypeChange}
-         />
+        <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
+          {/* Client Selection Section - Modified for B2B users */}
+          <FixedSection
+            state={state}
+            dispatch={dispatch}
+            isEditMode={isEditMode}
+            selectedClient={selectedClient}
+            setSelectedClient={setSelectedClient}
+            selectedVersion={selectedVersion}
+            handleClientSelect={handleClientSelect}
+            handleVersionSelect={handleVersionSelect}
+            generateClientCode={generateClientCode}
+            isB2BClient={isB2BClient}
+            linkedClientData={linkedClientData}
+            validationErrors={validationErrors}
+            handleJobTypeChange={handleJobTypeChange}
+          />
 
-         {/* Production Services Section */}
-         <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
-           <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
-           
-           {/* LP Section */}
-           {isServiceVisible("LP") && (
-             <FormSection 
-               title="Letter Press (LP)" 
-               id="lp"
-               activeSection={activeSections.lp ? "lp" : null}
-               setActiveSection={() => toggleSection("lp")}
-               isUsed={state.lpDetails.isLPUsed}
-               onToggleUsage={toggleLPUsage}
-             >
-               <LPDetails 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
+            {/* Services Section - Side by Side Layout */}
+            <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Production Services Section */}
+              <div className="shadow rounded-lg px-4 py-3 border-b border-gray-200">
+                <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
+                
+                {/* LP Section */}
+                {isServiceVisible("LP") && (
+                  <FormSection 
+                    title="Letter Press (LP)" 
+                    id="lp"
+                    activeSection={activeSections.lp ? "lp" : null}
+                    setActiveSection={() => toggleSection("lp")}
+                    isUsed={state.lpDetails.isLPUsed}
+                    onToggleUsage={toggleLPUsage}
+                  >
+                    <LPDetails 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
 
-           {/* FS Section */}
-           {isServiceVisible("FS") && (
-             <FormSection 
-               title="Foil Stamping (FS)" 
-               id="fs"
-               activeSection={activeSections.fs ? "fs" : null}
-               setActiveSection={() => toggleSection("fs")}
-               isUsed={state.fsDetails.isFSUsed}
-               onToggleUsage={toggleFSUsage}
+                {/* FS Section */}
+                {isServiceVisible("FS") && (
+                  <FormSection 
+                    title="Foil Stamping (FS)" 
+                    id="fs"
+                    activeSection={activeSections.fs ? "fs" : null}
+                    setActiveSection={() => toggleSection("fs")}
+                    isUsed={state.fsDetails.isFSUsed}
+                    onToggleUsage={toggleFSUsage}
+                  >
+                    <FSDetails 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+                
+                {/* EMB Section */}
+                {isServiceVisible("EMB") && (
+                  <FormSection 
+                    title="Embossing (EMB)" 
+                    id="emb"
+                    activeSection={activeSections.emb ? "emb" : null}
+                    setActiveSection={() => toggleSection("emb")}
+                    isUsed={state.embDetails.isEMBUsed}
+                    onToggleUsage={toggleEMBUsage}
+                  >
+                    <EMBDetails 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+                
+                {/* DIGI Section */}
+                {isServiceVisible("DIGI") && (
+                  <FormSection 
+                    title="Digital Printing" 
+                    id="digi"
+                    activeSection={activeSections.digi ? "digi" : null}
+                    setActiveSection={() => toggleSection("digi")}
+                    isUsed={state.digiDetails.isDigiUsed}
+                    onToggleUsage={toggleDigiUsage}
+                  >
+                    <DigiDetails 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+                
+                {/* NOTEBOOK Section */}
+                {isServiceVisible("NOTEBOOK") && (
+                  <FormSection 
+                    title="Notebook Details" 
+                    id="notebook"
+                    activeSection={activeSections.notebook ? "notebook" : null}
+                    setActiveSection={() => toggleSection("notebook")}
+                    isUsed={state.notebookDetails?.isNotebookUsed || false}
+                    onToggleUsage={toggleNotebookUsage}
+                  >
+                    <NotebookDetails 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+                
+                {/* SCREEN Section */}
+                {isServiceVisible("SCREEN") && (
+                  <FormSection 
+                    title="Screen Printing" 
+                    id="screenPrint"
+                    activeSection={activeSections.screenPrint ? "screenPrint" : null}
+                    setActiveSection={() => toggleSection("screenPrint")}
+                    isUsed={state.screenPrint?.isScreenPrintUsed || false}
+                    onToggleUsage={toggleScreenPrintUsage}
+                  >
+                    <ScreenPrint 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+              </div>
+
+              {/* Post-Production Services Section */}
+              <div className="shadow rounded-lg px-4 py-3 border-b border-gray-200">
+                <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
+                
+                {/* Pre Die Cutting Section */}
+                {isServiceVisible("PRE DC") && (
+                  <FormSection 
+                    title="Pre Die Cutting" 
+                    id="preDieCutting"
+                    activeSection={activeSections.preDieCutting ? "preDieCutting" : null}
+                    setActiveSection={() => toggleSection("preDieCutting")}
+                    isUsed={state.preDieCutting?.isPreDieCuttingUsed || false}
+                    onToggleUsage={togglePreDieCuttingUsage}
+                  >
+                    <PreDieCutting 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+                
+                {/* Die Cutting Section */}
+                {isServiceVisible("DC") && (
+                  <FormSection 
+                    title="Die Cutting" 
+                    id="dieCutting"
+                    activeSection={activeSections.dieCutting ? "dieCutting" : null}
+                    setActiveSection={() => toggleSection("dieCutting")}
+                    isUsed={state.dieCutting.isDieCuttingUsed}
+                    onToggleUsage={toggleDieCuttingUsage}
+                  >
+                    <DieCutting 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+
+                {/* Post DC Section */}
+                {isServiceVisible("POST DC") && (
+                  <FormSection 
+                    title="Post Die Cutting" 
+                    id="postDC"
+                    activeSection={activeSections.postDC ? "postDC" : null}
+                    setActiveSection={() => toggleSection("postDC")}
+                    isUsed={state.postDC?.isPostDCUsed || false}
+                    onToggleUsage={togglePostDCUsage}
+                  >
+                    <PostDC 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+
+                {/* DST Paste Section */}
+                {isServiceVisible("DST PASTE") && (
+                  <FormSection 
+                    title="DST Paste" 
+                    id="dstPaste"
+                    activeSection={activeSections.dstPaste ? "dstPaste" : null}
+                    setActiveSection={() => toggleSection("dstPaste")}
+                    isUsed={state.dstPaste?.isDstPasteUsed || false}
+                    onToggleUsage={toggleDstPasteUsage}
+                  >
+                    <DstPaste 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+
+                {/* Fold & Paste Section */}
+                {isServiceVisible("FOLD & PASTE") && (
+                  <FormSection 
+                    title="Fold & Paste" 
+                    id="foldAndPaste"
+                    activeSection={activeSections.foldAndPaste ? "foldAndPaste" : null}
+                    setActiveSection={() => toggleSection("foldAndPaste")}
+                    isUsed={state.foldAndPaste?.isFoldAndPasteUsed || false}
+                    onToggleUsage={toggleFoldAndPasteUsage}
+                  >
+                    <FoldAndPaste 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+
+                {/* Magnet Section */}
+                {isServiceVisible("MAGNET") && (
+                  <FormSection 
+                    title="Magnet" 
+                    id="magnet"
+                    activeSection={activeSections.magnet ? "magnet" : null}
+                    setActiveSection={() => toggleSection("magnet")}
+                    isUsed={state.magnet?.isMagnetUsed || false}
+                    onToggleUsage={toggleMagnetUsage}
+                  >
+                    <Magnet 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+
+                {/* QC Section */}
+                {isServiceVisible("QC") && (
+                  <FormSection 
+                    title="Quality Check" 
+                    id="qc"
+                    activeSection={activeSections.qc ? "qc" : null}
+                    setActiveSection={() => toggleSection("qc")}
+                    isUsed={state.qc?.isQCUsed || false}
+                    onToggleUsage={toggleQCUsage}
+                  >
+                    <QC 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+
+                {/* Packing Section */}
+                {isServiceVisible("PACKING") && (
+                  <FormSection 
+                    title="Packing" 
+                    id="packing"
+                    activeSection={activeSections.packing ? "packing" : null}
+                    setActiveSection={() => toggleSection("packing")}
+                    isUsed={state.packing?.isPackingUsed || false}
+                    onToggleUsage={togglePackingUsage}
+                  >
+                    <Packing 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+                
+                {/* Misc Section */}
+                {isServiceVisible("MISC") && (
+                  <FormSection 
+                    title="Miscellaneous" 
+                    id="misc"
+                    activeSection={activeSections.misc ? "misc" : null}
+                    setActiveSection={() => toggleSection("misc")}
+                    isUsed={state.misc?.isMiscUsed || false}
+                    onToggleUsage={toggleMiscUsage}
+                  >
+                    <Misc 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+
+                {/* Sandwich Section */}
+                {isServiceVisible("DUPLEX") && (
+                  <FormSection 
+                    title="Duplex/Sandwich" 
+                    id="sandwich"
+                    activeSection={activeSections.sandwich ? "sandwich" : null}
+                    setActiveSection={() => toggleSection("sandwich")}
+                    isUsed={state.sandwich?.isSandwichComponentUsed || false}
+                    onToggleUsage={toggleSandwichUsage}
+                  >
+                    <Sandwich 
+                      state={state} 
+                      dispatch={dispatch} 
+                      onNext={() => {}} 
+                      onPrevious={() => {}} 
+                      singlePageMode={true}
+                    />
+                  </FormSection>
+                )}
+              </div>
+            </div>
+
+          {/* Cost Calculation & Review Section - Now Always Open but Still Collapsible */}
+          <div className="mt-6">
+            <FormSection 
+              title="COST CALCULATION" 
+              id="reviewAndSubmit"
+              activeSection={activeSections.reviewAndSubmit ? "reviewAndSubmit" : null}
+              setActiveSection={() => toggleSection("reviewAndSubmit")}
+              isUsed={true}
+              onToggleUsage={toggleReviewSection}
+              bgColor="bg-blue-50"
+            >
+              <ReviewAndSubmit 
+                state={state} 
+                calculations={calculations} 
+                isCalculating={isCalculating} 
+                onCreateEstimate={handleCreateEstimate}
+                onMarkupChange={handleMarkupChange} 
+                isEditMode={isEditMode}
+                isSaving={isSubmitting}
+                previewMode={!isSubmitting}
+              />
+            </FormSection>
+          </div>
+
+          <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">
+            {/* Right side: Cancel and Submit buttons */}
+            <div className="flex">
+              {onClose && (
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="mr-3 px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
+                  disabled={isSubmitting}
+                >
+                  Cancel
+                </button>
+              )}
+              <button
+                type="submit"
+                className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
+                disabled={isSubmitting}
               >
-               <FSDetails 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-           
-           {/* EMB Section */}
-           {isServiceVisible("EMB") && (
-             <FormSection 
-               title="Embossing (EMB)" 
-               id="emb"
-               activeSection={activeSections.emb ? "emb" : null}
-               setActiveSection={() => toggleSection("emb")}
-               isUsed={state.embDetails.isEMBUsed}
-               onToggleUsage={toggleEMBUsage}
-             >
-               <EMBDetails 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-           
-           {/* DIGI Section */}
-           {isServiceVisible("DIGI") && (
-             <FormSection 
-               title="Digital Printing" 
-               id="digi"
-               activeSection={activeSections.digi ? "digi" : null}
-               setActiveSection={() => toggleSection("digi")}
-               isUsed={state.digiDetails.isDigiUsed}
-               onToggleUsage={toggleDigiUsage}
-             >
-               <DigiDetails 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-           
-           {/* NOTEBOOK Section */}
-           {isServiceVisible("NOTEBOOK") && (
-             <FormSection 
-               title="Notebook Details" 
-               id="notebook"
-               activeSection={activeSections.notebook ? "notebook" : null}
-               setActiveSection={() => toggleSection("notebook")}
-               isUsed={state.notebookDetails?.isNotebookUsed || false}
-               onToggleUsage={toggleNotebookUsage}
-             >
-               <NotebookDetails 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-           
-           {/* SCREEN Section */}
-           {isServiceVisible("SCREEN") && (
-             <FormSection 
-               title="Screen Printing" 
-               id="screenPrint"
-               activeSection={activeSections.screenPrint ? "screenPrint" : null}
-               setActiveSection={() => toggleSection("screenPrint")}
-               isUsed={state.screenPrint?.isScreenPrintUsed || false}
-               onToggleUsage={toggleScreenPrintUsage}
-             >
-               <ScreenPrint 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-         </div>
-
-         {/* Post-Production Services Section */}
-         <div className="mb-6 shadow rounded-lg px-4 py-3 border-b border-gray-200">
-           <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
-           
-           {/* Pre Die Cutting Section */}
-           {isServiceVisible("PRE DC") && (
-             <FormSection 
-               title="Pre Die Cutting" 
-               id="preDieCutting"
-               activeSection={activeSections.preDieCutting ? "preDieCutting" : null}
-               setActiveSection={() => toggleSection("preDieCutting")}
-               isUsed={state.preDieCutting?.isPreDieCuttingUsed || false}
-               onToggleUsage={togglePreDieCuttingUsage}
-             >
-               <PreDieCutting 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-           
-           {/* Die Cutting Section */}
-           {isServiceVisible("DC") && (
-             <FormSection 
-               title="Die Cutting" 
-               id="dieCutting"
-               activeSection={activeSections.dieCutting ? "dieCutting" : null}
-               setActiveSection={() => toggleSection("dieCutting")}
-               isUsed={state.dieCutting.isDieCuttingUsed}
-               onToggleUsage={toggleDieCuttingUsage}
-             >
-               <DieCutting 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-
-           {/* Post DC Section */}
-           {isServiceVisible("POST DC") && (
-             <FormSection 
-               title="Post Die Cutting" 
-               id="postDC"
-               activeSection={activeSections.postDC ? "postDC" : null}
-               setActiveSection={() => toggleSection("postDC")}
-               isUsed={state.postDC?.isPostDCUsed || false}
-               onToggleUsage={togglePostDCUsage}
-             >
-               <PostDC 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-
-           {/* DST Paste Section */}
-           {isServiceVisible("DST PASTE") && (
-             <FormSection 
-               title="DST Paste" 
-               id="dstPaste"
-               activeSection={activeSections.dstPaste ? "dstPaste" : null}
-               setActiveSection={() => toggleSection("dstPaste")}
-               isUsed={state.dstPaste?.isDstPasteUsed || false}
-               onToggleUsage={toggleDstPasteUsage}
-             >
-               <DstPaste 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-
-           {/* Fold & Paste Section */}
-           {isServiceVisible("FOLD & PASTE") && (
-             <FormSection 
-               title="Fold & Paste" 
-               id="foldAndPaste"
-               activeSection={activeSections.foldAndPaste ? "foldAndPaste" : null}
-               setActiveSection={() => toggleSection("foldAndPaste")}
-               isUsed={state.foldAndPaste?.isFoldAndPasteUsed || false}
-               onToggleUsage={toggleFoldAndPasteUsage}
-             >
-               <FoldAndPaste 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-
-           {/* Magnet Section */}
-           {isServiceVisible("MAGNET") && (
-             <FormSection 
-               title="Magnet" 
-               id="magnet"
-               activeSection={activeSections.magnet ? "magnet" : null}
-               setActiveSection={() => toggleSection("magnet")}
-               isUsed={state.magnet?.isMagnetUsed || false}
-               onToggleUsage={toggleMagnetUsage}
-             >
-               <Magnet 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-
-           {/* QC Section */}
-           {isServiceVisible("QC") && (
-             <FormSection 
-               title="Quality Check" 
-               id="qc"
-               activeSection={activeSections.qc ? "qc" : null}
-               setActiveSection={() => toggleSection("qc")}
-               isUsed={state.qc?.isQCUsed || false}
-               onToggleUsage={toggleQCUsage}
-             >
-               <QC 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-
-           {/* Packing Section */}
-           {isServiceVisible("PACKING") && (
-             <FormSection 
-               title="Packing" 
-               id="packing"
-               activeSection={activeSections.packing ? "packing" : null}
-               setActiveSection={() => toggleSection("packing")}
-               isUsed={state.packing?.isPackingUsed || false}
-               onToggleUsage={togglePackingUsage}
-             >
-               <Packing 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-           
-           {/* FIXED: Misc Section with proper toggle function */}
-           {isServiceVisible("MISC") && (
-             <FormSection 
-               title="Miscellaneous" 
-               id="misc"
-               activeSection={activeSections.misc ? "misc" : null}
-               setActiveSection={() => toggleSection("misc")}
-               isUsed={state.misc?.isMiscUsed || false}
-               onToggleUsage={toggleMiscUsage}
-             >
-               <Misc 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-
-           {/* Sandwich Section */}
-           {isServiceVisible("DUPLEX") && (
-             <FormSection 
-               title="Duplex/Sandwich" 
-               id="sandwich"
-               activeSection={activeSections.sandwich ? "sandwich" : null}
-               setActiveSection={() => toggleSection("sandwich")}
-               isUsed={state.sandwich?.isSandwichComponentUsed || false}
-               onToggleUsage={toggleSandwichUsage}
-             >
-               <Sandwich 
-                 state={state} 
-                 dispatch={dispatch} 
-                 onNext={() => {}} 
-                 onPrevious={() => {}} 
-                 singlePageMode={true}
-               />
-             </FormSection>
-           )}
-         </div>
-
-         {/* Cost Calculation & Review Section - Now Always Open but Still Collapsible */}
-         <div className="mt-6">
-           <FormSection 
-             title="COST CALCULATION" 
-             id="reviewAndSubmit"
-             activeSection={activeSections.reviewAndSubmit ? "reviewAndSubmit" : null}
-             setActiveSection={() => toggleSection("reviewAndSubmit")}
-             isUsed={true}
-             onToggleUsage={toggleReviewSection}
-             bgColor="bg-blue-50"
-           >
-             <ReviewAndSubmit 
-               state={state} 
-               calculations={calculations} 
-               isCalculating={isCalculating} 
-               onCreateEstimate={handleCreateEstimate}
-               onMarkupChange={handleMarkupChange} 
-               isEditMode={isEditMode}
-               isSaving={isSubmitting}
-               previewMode={!isSubmitting}
-             />
-           </FormSection>
-         </div>
-
-         <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">
-           {/* Right side: Cancel and Submit buttons */}
-           <div className="flex">
-             {onClose && (
-               <button
-                 type="button"
-                 onClick={onClose}
-                 className="mr-3 px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
-                 disabled={isSubmitting}
-               >
-                 Cancel
-               </button>
-             )}
-             <button
-               type="submit"
-               className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
-               disabled={isSubmitting}
-             >
-               {isSubmitting ? (
-                 <>
-                   <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                   </svg>
-                   Saving...
-                 </>
-               ) : (
-                 isEditMode ? "Save Changes" : "Submit"
-               )}
-             </button>
-           </div>
-         </div>
-       </form>
-     </div>
-   </div>
- );
+                {isSubmitting ? (
+                  <>
+                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    Saving...
+                  </>
+                ) : (
+                  isEditMode ? "Save Changes" : "Submit"
+                )}
+              </button>
+            </div>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 };
 
 export default BillingForm;

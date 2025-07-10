@@ -17,15 +17,15 @@ const ClientReadOnly = ({ client }) => {
   return (
     <div className="p-4 bg-gray-50 rounded-md border border-gray-200">
       <div className="flex items-center mb-2">
-        <span className="font-bold text-gray-800">Client:</span>
-        <span className="ml-2 text-lg">{client.name}</span>
-        <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${
+        <span className="font-bold text-gray-800 text-sm">Client:</span>
+        <span className="ml-2 text-sm">{client.name}</span>
+        <span className={`text-xs ml-2 px-2 py-0.5 text-xs rounded-full ${
           getClientType() === "B2B" ? "bg-red-100 text-red-800" : "bg-gray-100 text-gray-800"
         }`}>
           {getClientType()}
         </span>
       </div>
-      <div className="grid grid-cols-1 gap-1 text-sm">
+      <div className="grid grid-cols-1 gap-1 text-xs">
         <div>
           <strong className="text-gray-700">Code:</strong> <span className="text-gray-800">{client.clientCode || "N/A"}</span>
         </div>
