@@ -1259,7 +1259,7 @@ const EstimatesPage = () => {
                   {/* Version Selection Tabs - Only show if not in "Show All Versions" mode */}
                   {!showAllVersions && (
                     <div className="flex border-b border-gray-200 overflow-x-auto">
-                      {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
+                      {Array.from(client.versions.entries()).sort(([a], [b]) => parseInt(a) - parseInt(b)).map(([versionId, versionData]) => (
                         <button
                           key={versionId}
                           onClick={() => selectVersion(client.id, versionId)}
