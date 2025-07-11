@@ -11,6 +11,165 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
   // Check if edit functionality is enabled
   const hasEditAccess = typeof onEditDie === "function" && typeof onDeleteDie === "function";
 
+  // Enhanced search function with priority scoring and numerical sorting
+  const calculateSearchScore = (die, searchTerm) => {
+    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    const dieCode = (die.dieCode || "").toLowerCase();
+    const type = (die.type || "").toLowerCase();
+    const jobType = (die.jobType || "").toLowerCase();
+    
+    let score = 0;
+    let numericalBonus = 0;
+    
+    // Check if this is a pattern like "c-1" and extract numerical part for sorting
+    const searchPattern = lowerSearchTerm.match(/^([a-z]+)-?(\d*)$/i);
+    const diePattern = dieCode.match(/^([a-z]+)-?(\d+)$/i);
+    
+    if (searchPattern && diePattern) {
+      const searchPrefix = searchPattern[1];
+      const searchNumber = searchPattern[2] ? parseInt(searchPattern[2]) : null;
+      const diePrefix = diePattern[1];
+      const dieNumber = parseInt(diePattern[2]);
+      
+      // If prefixes match (like "c" matches "c")
+      if (diePrefix === searchPrefix) {
+        if (searchNumber !== null) {
+          // Exact match gets highest priority (1000 points)
+          if (dieNumber === searchNumber) {
+            score += 1000;
+          }
+          // Same prefix but different number (700 points base)
+          else {
+            score += 700;
+            // Add numerical proximity bonus (closer numbers get higher score)
+            const numberDifference = Math.abs(dieNumber - searchNumber);
+            numericalBonus = Math.max(0, 100 - numberDifference * 2);
+          }
+        } else {
+          // Searching just for prefix like "c" (600 points base)
+          score += 600;
+          // Smaller numbers get slightly higher priority for prefix-only searches
+          numericalBonus = Math.max(0, 50 - dieNumber);
+        }
+      }
+    }
+    
+    // Fallback to original scoring if pattern doesn't match
+    if (score === 0) {
+      // Exact match gets highest priority (1000 points)
+      if (dieCode === lowerSearchTerm) {
+        score += 1000;
+      }
+      // Starts with search term (800 points)
+      else if (dieCode.startsWith(lowerSearchTerm)) {
+        score += 800;
+      }
+      // Exact match after dash (700 points) - for cases like "c-1" matching "AC-1"
+      else if (dieCode.includes('-' + lowerSearchTerm)) {
+        score += 700;
+      }
+      // Exact match before dash (650 points) - for cases like "c-1" where "c" matches "C-19"
+      else if (dieCode.includes(lowerSearchTerm + '-')) {
+        score += 650;
+      }
+      // Starts with search term after dash (600 points)
+      else if (dieCode.includes('-') && dieCode.split('-').some(part => part.startsWith(lowerSearchTerm))) {
+        score += 600;
+      }
+      // Contains search term (500 points)
+      else if (dieCode.includes(lowerSearchTerm)) {
+        score += 500;
+      }
+      
+      // Extra bonus for exact length match (if searching for "c-1", prefer "C-1" over "C-19")
+      if (dieCode.includes(lowerSearchTerm) && dieCode.length === lowerSearchTerm.length) {
+        score += 200;
+      }
+      
+      // Bonus points for shorter die codes (closer matches)
+      if (dieCode.includes(lowerSearchTerm)) {
+        const lengthBonus = Math.max(0, 50 - Math.abs(dieCode.length - lowerSearchTerm.length) * 5);
+        score += lengthBonus;
+      }
+    }
+    
+    // Add numerical bonus to the total score
+    score += numericalBonus;
+    
+    // Secondary matches in type and job type (lower priority)
+    if (type.includes(lowerSearchTerm)) {
+      score += 100;
+    }
+    if (jobType.includes(lowerSearchTerm)) {
+      score += 50;
+    }
+    
+    return score;
+  };
+
+  // Improved search filter function
+  const filterDiesWithImprovedSearch = (dies, searchTerm) => {
+    if (!searchTerm.trim()) {
+      return dies;
+    }
+
+    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    
+    // Check for special search patterns first
+    const productLPattern = lowerSearchTerm.match(/l:([0-9.]+)/i);
+    const productBPattern = lowerSearchTerm.match(/b:([0-9.]+)/i);
+    const dieLPattern = lowerSearchTerm.match(/dl:([0-9.]+)/i);
+    const dieBPattern = lowerSearchTerm.match(/db:([0-9.]+)/i);
+    
+    // Check for temporary flag
+    if (lowerSearchTerm === "temporary") {
+      return dies.filter(die => die.isTemporary === true);
+    }
+    
+    // Handle dimension patterns (existing logic)
+    if (productLPattern || productBPattern || dieLPattern || dieBPattern) {
+      return dies.filter(die => {
+        let isProductLMatch = true;
+        let isProductBMatch = true;
+        let isDieLMatch = true;
+        let isDieBMatch = true;
+
+        if (productLPattern && productLPattern[1]) {
+          const lValue = productLPattern[1];
+          isProductLMatch = (die.productSizeL && die.productSizeL.toString().includes(lValue));
+        }
+
+        if (productBPattern && productBPattern[1]) {
+          const bValue = productBPattern[1];
+          isProductBMatch = (die.productSizeB && die.productSizeB.toString().includes(bValue));
+        }
+        
+        if (dieLPattern && dieLPattern[1]) {
+          const dlValue = dieLPattern[1];
+          isDieLMatch = (die.dieSizeL && die.dieSizeL.toString().includes(dlValue));
+        }
+
+        if (dieBPattern && dieBPattern[1]) {
+          const dbValue = dieBPattern[1];
+          isDieBMatch = (die.dieSizeB && die.dieSizeB.toString().includes(dbValue));
+        }
+
+        return isProductLMatch && isProductBMatch && isDieLMatch && isDieBMatch;
+      });
+    }
+    
+    // For regular text search, use improved scoring
+    const scoredDies = dies
+      .map(die => ({
+        ...die,
+        searchScore: calculateSearchScore(die, searchTerm)
+      }))
+      .filter(die => die.searchScore > 0)
+      .sort((a, b) => b.searchScore - a.searchScore);
+    
+    return scoredDies.map(({ searchScore, ...die }) => die);
+  };
+
   // Handle search input
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -34,119 +193,58 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
     }));
   };
 
-  // Filter dies based on search term
-  const filteredDies = dies.filter((die) => {
-    // If search is empty, return all dies
+  // Filter dies based on search term using improved search
+  const filteredDies = React.useMemo(() => {
     if (!searchTerm.trim()) {
-      return true;
+      return dies;
     }
-    
-    const lowerSearchTerm = searchTerm.toLowerCase().trim();
-    
-    // Check if search contains dimension patterns
-    const productLPattern = lowerSearchTerm.match(/l:([0-9.]+)/i);
-    const productBPattern = lowerSearchTerm.match(/b:([0-9.]+)/i);
-    const dieLPattern = lowerSearchTerm.match(/dl:([0-9.]+)/i);
-    const dieBPattern = lowerSearchTerm.match(/db:([0-9.]+)/i);
-    
-    // Check for temporary flag
-    if (lowerSearchTerm === "temporary") {
-      return die.isTemporary === true;
-    }
-    
-    // With dimension patterns - check dimensions specifically
-    if (productLPattern || productBPattern || dieLPattern || dieBPattern) {
-      let isProductLMatch = true;
-      let isProductBMatch = true;
-      let isDieLMatch = true;
-      let isDieBMatch = true;
-
-      // Product L dimension search
-      if (productLPattern && productLPattern[1]) {
-        const lValue = productLPattern[1];
-        isProductLMatch = (die.productSizeL && die.productSizeL.toString().includes(lValue));
-      }
-
-      // Product B dimension search
-      if (productBPattern && productBPattern[1]) {
-        const bValue = productBPattern[1];
-        isProductBMatch = (die.productSizeB && die.productSizeB.toString().includes(bValue));
-      }
-      
-      // Die L dimension search
-      if (dieLPattern && dieLPattern[1]) {
-        const dlValue = dieLPattern[1];
-        isDieLMatch = (die.dieSizeL && die.dieSizeL.toString().includes(dlValue));
-      }
-
-      // Die B dimension search
-      if (dieBPattern && dieBPattern[1]) {
-        const dbValue = dieBPattern[1];
-        isDieBMatch = (die.dieSizeB && die.dieSizeB.toString().includes(dbValue));
-      }
-
-      // Return true if all specified conditions are met
-      return isProductLMatch && isProductBMatch && isDieLMatch && isDieBMatch;
-    }
-    
-    // Search in all relevant fields, including product and die dimensions
-    const searchFields = [
-      die.jobType || "",
-      die.type || "",
-      die.dieCode || "",
-      die.productSizeL?.toString() || "",
-      die.productSizeB?.toString() || "",
-      // If the product size exists as a combined field (like "3.34×2.12"), check it too
-      `${die.productSizeL || ""}×${die.productSizeB || ""}`,
-      // Also check die sizes
-      die.dieSizeL?.toString() || "",
-      die.dieSizeB?.toString() || "", 
-      `${die.dieSizeL || ""}×${die.dieSizeB || ""}`,
-      // Include frags
-      die.frags?.toString() || ""
-    ];
-    
-    return searchFields.some(field => 
-      field.toLowerCase().includes(lowerSearchTerm)
-    );
-  });
+    return filterDiesWithImprovedSearch(dies, searchTerm);
+  }, [dies, searchTerm]);
 
   // Sort dies based on sort field and direction
-  const sortedDies = [...filteredDies].sort((a, b) => {
-    // For die code, use alphanumeric sorting
-    if (sortField === 'dieCode') {
-      const aValue = (a[sortField] || "").toString();
-      const bValue = (b[sortField] || "").toString();
-      
-      if (sortDirection === "asc") {
-        return aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' });
-      } else {
-        return bValue.localeCompare(aValue, undefined, { numeric: true, sensitivity: 'base' });
-      }
+  const sortedDies = React.useMemo(() => {
+    // If we have a search term, the dies are already sorted by relevance
+    if (searchTerm.trim()) {
+      return filteredDies;
     }
-    // For isTemporary field, sort booleans
-    else if (sortField === 'isTemporary') {
-      const aValue = !!a[sortField];
-      const bValue = !!b[sortField];
-      
-      if (sortDirection === "asc") {
-        return aValue === bValue ? 0 : aValue ? 1 : -1;
-      } else {
-        return aValue === bValue ? 0 : aValue ? -1 : 1;
+    
+    // Otherwise, apply the selected sorting
+    return [...filteredDies].sort((a, b) => {
+      // For die code, use alphanumeric sorting
+      if (sortField === 'dieCode') {
+        const aValue = (a[sortField] || "").toString();
+        const bValue = (b[sortField] || "").toString();
+        
+        if (sortDirection === "asc") {
+          return aValue.localeCompare(bValue, undefined, { numeric: true, sensitivity: 'base' });
+        } else {
+          return bValue.localeCompare(aValue, undefined, { numeric: true, sensitivity: 'base' });
+        }
       }
-    }
-    // For other fields, use the existing text sorting
-    else {
-      const aValue = (a[sortField] || "").toString().toLowerCase();
-      const bValue = (b[sortField] || "").toString().toLowerCase();
-      
-      if (sortDirection === "asc") {
-        return aValue.localeCompare(bValue);
-      } else {
-        return bValue.localeCompare(aValue);
+      // For isTemporary field, sort booleans
+      else if (sortField === 'isTemporary') {
+        const aValue = !!a[sortField];
+        const bValue = !!b[sortField];
+        
+        if (sortDirection === "asc") {
+          return aValue === bValue ? 0 : aValue ? 1 : -1;
+        } else {
+          return aValue === bValue ? 0 : aValue ? -1 : 1;
+        }
       }
-    }
-  });
+      // For other fields, use the existing text sorting
+      else {
+        const aValue = (a[sortField] || "").toString().toLowerCase();
+        const bValue = (b[sortField] || "").toString().toLowerCase();
+        
+        if (sortDirection === "asc") {
+          return aValue.localeCompare(bValue);
+        } else {
+          return bValue.localeCompare(aValue);
+        }
+      }
+    });
+  }, [filteredDies, sortField, sortDirection, searchTerm]);
 
   // Create a sortable table header
   const SortableHeader = ({ field, label }) => (

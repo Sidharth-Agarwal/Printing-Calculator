@@ -917,7 +917,9 @@ const EscrowDashboard = () => {
                  {/* Version Selection Tabs - Only show if not in "Show All Versions" mode */}
                  {!showAllVersions && (
                    <div className="flex border-b border-gray-200 overflow-x-auto">
-                     {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
+                     {Array.from(client.versions.entries())
+                       .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                       .map(([versionId, versionData]) => (
                        <button
                          key={versionId}
                          onClick={() => selectVersion(client.id, versionId)}
@@ -1147,7 +1149,9 @@ const EscrowDashboard = () => {
                      </div>
                      
                      {/* All versions shown with dividers between them */}
-                     {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
+                     {Array.from(client.versions.entries())
+                       .sort(([a], [b]) => parseInt(a) - parseInt(b))
+                       .map(([versionId, versionData]) => (
                        <div key={versionId} className="mb-6">
                          <div className="flex justify-between items-center mb-3">
                            <div className="flex items-center">
