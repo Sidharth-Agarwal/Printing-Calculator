@@ -1,6 +1,6 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getFirestore, enableMultiTabIndexedDbPersistence, initializeFirestore, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
+import { getFirestore, initializeFirestore, CACHE_SIZE_UNLIMITED } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getStorage } from "firebase/storage";
 
@@ -17,24 +17,14 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 
-// Initialize Firestore with settings
+// Initialize Firestore with persistence settings using the new cache API
 const db = initializeFirestore(app, {
-  cacheSizeBytes: CACHE_SIZE_UNLIMITED
+  cacheSizeBytes: CACHE_SIZE_UNLIMITED,
+  cache: {
+    kind: 'persistent',
+    synchronizeTabs: true // This replaces enableMultiTabIndexedDbPersistence
+  }
 });
-
-// Enable MULTI-TAB persistence
-enableMultiTabIndexedDbPersistence(db)
-  .catch((err) => {
-    if (err.code === 'failed-precondition') {
-      // This usually means that IndexedDB access is not available
-      console.warn('Firebase persistence failed: IndexedDB access might be restricted');
-    } else if (err.code === 'unimplemented') {
-      // The current browser doesn't support persistence
-      console.warn('Firebase persistence not available in this browser');
-    } else {
-      console.error('Unexpected error enabling persistence:', err);
-    }
-  });
 
 // Initialize Authentication and Storage
 const auth = getAuth(app);
