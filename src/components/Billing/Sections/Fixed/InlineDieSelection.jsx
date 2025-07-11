@@ -41,6 +41,140 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
   const [dieImage, setDieImage] = useState(null);
   const jobTypeOptions = ["Card", "Biz Card", "Envelope", "Seal", "Magnet", "Packaging", "Notebook", "Liner"];
 
+  // Enhanced search function with priority scoring and numerical sorting
+  const calculateSearchScore = (die, searchTerm) => {
+    const lowerSearchTerm = searchTerm.toLowerCase().trim();
+    const dieCode = (die.dieCode || "").toLowerCase();
+    const type = (die.type || "").toLowerCase();
+    const jobType = (die.jobType || "").toLowerCase();
+    
+    let score = 0;
+    let numericalBonus = 0;
+    
+    // Check if this is a pattern like "c-1" and extract numerical part for sorting
+    const searchPattern = lowerSearchTerm.match(/^([a-z]+)-?(\d*)$/i);
+    const diePattern = dieCode.match(/^([a-z]+)-?(\d+)$/i);
+    
+    if (searchPattern && diePattern) {
+      const searchPrefix = searchPattern[1];
+      const searchNumber = searchPattern[2] ? parseInt(searchPattern[2]) : null;
+      const diePrefix = diePattern[1];
+      const dieNumber = parseInt(diePattern[2]);
+      
+      // If prefixes match (like "c" matches "c")
+      if (diePrefix === searchPrefix) {
+        if (searchNumber !== null) {
+          // Exact match gets highest priority (1000 points)
+          if (dieNumber === searchNumber) {
+            score += 1000;
+          }
+          // Same prefix but different number (700 points base)
+          else {
+            score += 700;
+            // Add numerical proximity bonus (closer numbers get higher score)
+            const numberDifference = Math.abs(dieNumber - searchNumber);
+            numericalBonus = Math.max(0, 100 - numberDifference * 2);
+          }
+        } else {
+          // Searching just for prefix like "c" (600 points base)
+          score += 600;
+          // Smaller numbers get slightly higher priority for prefix-only searches
+          numericalBonus = Math.max(0, 50 - dieNumber);
+        }
+      }
+    }
+    
+    // Fallback to original scoring if pattern doesn't match
+    if (score === 0) {
+      // Exact match gets highest priority (1000 points)
+      if (dieCode === lowerSearchTerm) {
+        score += 1000;
+      }
+      // Starts with search term (800 points)
+      else if (dieCode.startsWith(lowerSearchTerm)) {
+        score += 800;
+      }
+      // Exact match after dash (700 points) - for cases like "c-1" matching "AC-1"
+      else if (dieCode.includes('-' + lowerSearchTerm)) {
+        score += 700;
+      }
+      // Exact match before dash (650 points) - for cases like "c-1" where "c" matches "C-19"
+      else if (dieCode.includes(lowerSearchTerm + '-')) {
+        score += 650;
+      }
+      // Starts with search term after dash (600 points)
+      else if (dieCode.includes('-') && dieCode.split('-').some(part => part.startsWith(lowerSearchTerm))) {
+        score += 600;
+      }
+      // Contains search term (500 points)
+      else if (dieCode.includes(lowerSearchTerm)) {
+        score += 500;
+      }
+      
+      // Extra bonus for exact length match (if searching for "c-1", prefer "C-1" over "C-19")
+      if (dieCode.includes(lowerSearchTerm) && dieCode.length === lowerSearchTerm.length) {
+        score += 200;
+      }
+      
+      // Bonus points for shorter die codes (closer matches)
+      if (dieCode.includes(lowerSearchTerm)) {
+        const lengthBonus = Math.max(0, 50 - Math.abs(dieCode.length - lowerSearchTerm.length) * 5);
+        score += lengthBonus;
+      }
+    }
+    
+    // Add numerical bonus to the total score
+    score += numericalBonus;
+    
+    // Secondary matches in type and job type (lower priority)
+    if (type.includes(lowerSearchTerm)) {
+      score += 100;
+    }
+    if (jobType.includes(lowerSearchTerm)) {
+      score += 50;
+    }
+    
+    return score;
+  };
+
+  // Enhanced filter and sort function
+  const filterAndSortDies = (diesArray, searchTerm, jobType) => {
+    if (!searchTerm.trim()) {
+      // If no search term, just filter by job type
+      return filterDiesByJobTypeArray(diesArray, jobType);
+    }
+    
+    // Get base set based on job type
+    const baseSet = getBaseSetForJobType(diesArray, jobType);
+    
+    // Calculate scores and filter
+    const scoredDies = baseSet
+      .map(die => ({
+        ...die,
+        searchScore: calculateSearchScore(die, searchTerm)
+      }))
+      .filter(die => die.searchScore > 0) // Only include dies with some relevance
+      .sort((a, b) => b.searchScore - a.searchScore); // Sort by score (highest first)
+    
+    // Remove the searchScore property before returning
+    return scoredDies.map(({ searchScore, ...die }) => die);
+  };
+
+  // Helper function to filter by job type and return array (not set state)
+  const filterDiesByJobTypeArray = (diesArray, jobType) => {
+    if (!jobType) return [];
+    
+    if (jobType === "Custom") {
+      return diesArray;
+    }
+    
+    if (jobType === "Card") {
+      return diesArray.filter(die => die.jobType === "Card" || die.jobType === "Biz Card");
+    }
+    
+    return diesArray.filter(die => die.jobType === jobType);
+  };
+
   // Log selectedDie for debugging
   useEffect(() => {
     console.log("InlineDieSelection - Selected Die:", selectedDie);
@@ -116,15 +250,15 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
   }, []);
 
   // Helper function to get base set of dies based on job type
-  const getBaseSetForJobType = (jobType) => {
+  const getBaseSetForJobType = (diesArray, jobType) => {
     if (jobType === "Custom") {
-      return dies;
+      return diesArray;
     } else if (jobType === "Card") {
       // For Card job type, include both Card and Biz Card dies
-      return dies.filter(die => die.jobType === "Card" || die.jobType === "Biz Card");
+      return diesArray.filter(die => die.jobType === "Card" || die.jobType === "Biz Card");
     } else {
       // For other job types, filter by exact match
-      return dies.filter(die => die.jobType === jobType);
+      return diesArray.filter(die => die.jobType === jobType);
     }
   };
 
@@ -188,28 +322,20 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     });
   };
 
-  // Updated handleTextSearch function
+  // Updated handleTextSearch function with improved search
   const handleTextSearch = (e) => {
-    setSearchTerm(e.target.value);
-    const term = e.target.value.toLowerCase().trim();
+    const searchValue = e.target.value;
+    setSearchTerm(searchValue);
     
-    if (!term) {
+    if (!searchValue.trim()) {
       // When search term is cleared, show all dies for the current job type
       filterDiesByJobType(dies, selectedJobType);
       return;
     }
     
-    // Get the base set of dies based on job type
-    const baseSet = getBaseSetForJobType(selectedJobType);
-    
-    // Filter based on text search within the base set
-    const matches = baseSet.filter(die => 
-      (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-      (die.type && die.type.toLowerCase().includes(term)) ||
-      (selectedJobType === "Custom" && die.jobType && die.jobType.toLowerCase().includes(term))
-    );
-    
-    setFilteredDies(matches);
+    // Use improved search with scoring
+    const results = filterAndSortDies(dies, searchValue, selectedJobType);
+    setFilteredDies(results);
   };
 
   // Modified performSearch function
@@ -223,18 +349,14 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     }
 
     // Get the base set of dies based on job type
-    const baseSet = getBaseSetForJobType(selectedJobType);
+    const baseSet = getBaseSetForJobType(dies, selectedJobType);
     
     let matches = [];
 
     // Text search takes precedence if present
     if (searchTerm) {
-      const term = searchTerm.toLowerCase().trim();
-      matches = baseSet.filter(die => 
-        (die.dieCode && die.dieCode.toLowerCase().includes(term)) ||
-        (die.type && die.type.toLowerCase().includes(term)) ||
-        (selectedJobType === "Custom" && die.jobType && die.jobType.toLowerCase().includes(term))
-      );
+      // Use improved search for text
+      matches = filterAndSortDies(dies, searchTerm, selectedJobType);
     }
     // Otherwise search by dimensions
     else {
@@ -804,7 +926,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                       <span className="flex items-center">
                         <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         Processing...
                       </span>
