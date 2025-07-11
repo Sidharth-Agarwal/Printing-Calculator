@@ -64,7 +64,7 @@ export const jobTypeConfigurations = {
     },
     "Notebook": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN", "NOTEBOOK"],
-        postProductionServices: ["PRE DC", "DC", "POST DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
         defaultActiveServices: {
             production: ["NOTEBOOK"],
             postProduction: ["QC", "PACKING"]
@@ -73,7 +73,7 @@ export const jobTypeConfigurations = {
     },
     "Custom": {
         productionServices: ["LP", "FS", "EMB", "DIGI", "SCREEN"],
-        postProductionServices: ["PRE DC", "DC", "POST DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
+        postProductionServices: ["PRE DC", "DC", "FOLD & PASTE", "QC", "PACKING", "DUPLEX", "MAGNET", "MISC"],
         defaultActiveServices: {
             production: [],
             postProduction: ["QC", "PACKING"]

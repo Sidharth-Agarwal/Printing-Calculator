@@ -44,7 +44,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     }
   }, [fsDetails.isFSUsed, fsDetails.fsType, fsDetails.foilDetails.length, dispatch]);
 
-  // Rest of existing useEffects and methods remain the same...
+  // Update dimensions when die size changes (for Auto mode)
   useEffect(() => {
     if (fsDetails.isFSUsed) {
       const updatedFoilDetails = fsDetails.foilDetails.map((foil) => {
@@ -76,7 +76,129 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     }
   }, [fsDetails.isFSUsed, dieSize, dispatch, fsDetails.foilDetails]);
 
-  // All other existing methods remain unchanged...
+  // Validate foil details against available options
+  useEffect(() => {
+    // Skip during initial render
+    if (initialRender.current) {
+      initialRender.current = false;
+      return;
+    }
+
+    // Skip if hooks are still loading or FS is not used
+    if (foilTypesLoading || blockTypesLoading || mrTypesLoading || !fsDetails.isFSUsed) {
+      return;
+    }
+
+    // Skip if no foil details or no types are loaded
+    if (fsDetails.foilDetails.length === 0 || foilTypes.length === 0 || blockTypes.length === 0 || mrTypes.length === 0) {
+      return;
+    }
+
+    // Don't override user selections if they've explicitly made a choice
+    if (selectionMade.current) {
+      return;
+    }
+
+    // Validate each foil detail against available options
+    let needsUpdate = false;
+    const updatedFoilDetails = [...fsDetails.foilDetails];
+
+    updatedFoilDetails.forEach((foil, index) => {
+      // Check if foil type exists in available options
+      if (foil.foilType) {
+        const foilTypeExists = foilTypes.some(ft => ft.materialName === foil.foilType);
+        if (!foilTypeExists) {
+          updatedFoilDetails[index].foilType = foilTypes[0].materialName;
+          needsUpdate = true;
+        }
+      }
+
+      // Check if block type exists in available options
+      if (foil.blockType) {
+        const blockTypeExists = blockTypes.some(bt => bt.materialName === foil.blockType);
+        if (!blockTypeExists) {
+          updatedFoilDetails[index].blockType = blockTypes[0].materialName;
+          needsUpdate = true;
+        }
+      }
+
+      // Check if MR type exists in available options
+      if (foil.mrType) {
+        const mrTypeExists = mrTypes.some(mt => mt.type === foil.mrType);
+        if (!mrTypeExists) {
+          updatedFoilDetails[index].mrType = mrTypes[0].type;
+          const selectedMrType = mrTypes.find(mt => mt.type === mrTypes[0].type);
+          updatedFoilDetails[index].mrTypeConcatenated = selectedMrType?.concatenated || `FS MR ${mrTypes[0].type}`;
+          needsUpdate = true;
+        }
+      }
+    });
+
+    if (needsUpdate) {
+      dispatch({
+        type: "UPDATE_FS_DETAILS",
+        payload: { foilDetails: updatedFoilDetails },
+      });
+    }
+  }, [foilTypes, blockTypes, mrTypes, foilTypesLoading, blockTypesLoading, mrTypesLoading, fsDetails.foilDetails, fsDetails.isFSUsed, dispatch]);
+
+  // RESTORED: Update foil details dynamically when FS type changes
+  useEffect(() => {
+    if (!fsDetails.isFSUsed || fsDetails.fsType === undefined) return;
+
+    // Determine how many foil details are needed based on FS type
+    const numberOfFoilOptions =
+      fsDetails.fsType === "FS1" ? 1 :
+      fsDetails.fsType === "FS2" ? 2 :
+      fsDetails.fsType === "FS3" ? 3 :
+      fsDetails.fsType === "FS4" ? 4 : 5; // For FS5
+
+    // Only update if the count doesn't match
+    if (fsDetails.foilDetails.length !== numberOfFoilOptions) {
+      // Get default values from loaded data
+      const defaultFoilType = !foilTypesLoading && foilTypes.length > 0 ? foilTypes[0].materialName : "";
+      const defaultBlockType = !blockTypesLoading && blockTypes.length > 0 ? blockTypes[0].materialName : "";
+      const defaultMrType = !mrTypesLoading && mrTypes.length > 0 ? {
+        type: mrTypes[0].type,
+        concatenated: mrTypes[0].concatenated
+      } : {
+        type: "SIMPLE",
+        concatenated: "FS MR SIMPLE"
+      };
+
+      // Create new foil details array with the correct number of items
+      const updatedFoilDetails = Array.from({ length: numberOfFoilOptions }, (_, index) => {
+        // Preserve existing details if available
+        if (index < fsDetails.foilDetails.length) {
+          return fsDetails.foilDetails[index];
+        }
+
+        // Create new detail with proper defaults
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+        
+        return {
+          blockSizeType: "Auto",
+          blockDimension: {
+            length: lengthCm,
+            breadth: breadthCm,
+            lengthInInches: dieSize.length || "",
+            breadthInInches: dieSize.breadth || ""
+          },
+          foilType: defaultFoilType,
+          blockType: defaultBlockType,
+          mrType: defaultMrType.type,
+          mrTypeConcatenated: defaultMrType.concatenated
+        };
+      });
+
+      dispatch({
+        type: "UPDATE_FS_DETAILS",
+        payload: { foilDetails: updatedFoilDetails },
+      });
+    }
+  }, [fsDetails.fsType, fsDetails.isFSUsed, fsDetails.foilDetails, dieSize, foilTypes, blockTypes, mrTypes, foilTypesLoading, blockTypesLoading, mrTypesLoading, dispatch]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     dispatch({
