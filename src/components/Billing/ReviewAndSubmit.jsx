@@ -384,33 +384,31 @@ const ReviewAndSubmit = ({
         bgColor="bg-green-50"
       >
         <div className="space-y-3">
-          {/* Notebook Section */}
-          {hasNotebook && localCalculations.notebookCostPerCard && renderNotebookSection()}
           
           {/* LP Section - UPDATED with Impression Cost */}
           {hasLP && localCalculations.lpCostPerCard && (
-          <div className="space-y-1 border-b pb-2 mb-2">
-            <CostItem label="Letter Press (LP)" value={localCalculations.lpCostPerCard} isTotal />
-            {localCalculations.lpPlateCostPerCard && (
-              <CostItem label="LP Plate Cost" value={localCalculations.lpPlateCostPerCard} isSubItem />
-            )}
-            {localCalculations.lpPositiveFilmCostPerCard && (
-              <CostItem label="LP Positive Film" value={localCalculations.lpPositiveFilmCostPerCard} isSubItem />
-            )}
-            {localCalculations.lpMRCostPerCard && (
-              <CostItem label="LP MR Cost" value={localCalculations.lpMRCostPerCard} isSubItem />
-            )}
-            {localCalculations.lpMkgCostPerCard && (
-              <CostItem label="LP Making Cost" value={localCalculations.lpMkgCostPerCard} isSubItem />
-            )}
-            {localCalculations.lpInkCostPerCard && (
-              <CostItem label="LP Ink Cost" value={localCalculations.lpInkCostPerCard} isSubItem />
-            )}
-            {localCalculations.lpImpressionCostPerCard && (
-              <CostItem label="LP Impression Cost" value={localCalculations.lpImpressionCostPerCard} isSubItem />
-            )}
-          </div>
-        )}
+            <div className="space-y-1 border-b pb-2 mb-2">
+              <CostItem label="Letter Press (LP)" value={localCalculations.lpCostPerCard} isTotal />
+              {localCalculations.lpPlateCostPerCard && (
+                <CostItem label="LP Plate Cost" value={localCalculations.lpPlateCostPerCard} isSubItem />
+              )}
+              {localCalculations.lpPositiveFilmCostPerCard && (
+                <CostItem label="LP Positive Film" value={localCalculations.lpPositiveFilmCostPerCard} isSubItem />
+              )}
+              {localCalculations.lpMRCostPerCard && (
+                <CostItem label="LP MR Cost" value={localCalculations.lpMRCostPerCard} isSubItem />
+              )}
+              {localCalculations.lpMkgCostPerCard && (
+                <CostItem label="LP Making Cost" value={localCalculations.lpMkgCostPerCard} isSubItem />
+              )}
+              {localCalculations.lpInkCostPerCard && (
+                <CostItem label="LP Ink Cost" value={localCalculations.lpInkCostPerCard} isSubItem />
+              )}
+              {localCalculations.lpImpressionCostPerCard && (
+                <CostItem label="LP Impression Cost" value={localCalculations.lpImpressionCostPerCard} isSubItem />
+              )}
+            </div>
+          )}
           
           {/* FS Section */}
           {hasFS && localCalculations.fsCostPerCard && (
@@ -508,6 +506,9 @@ const ReviewAndSubmit = ({
               )}
             </div>
           )}
+
+          {/* Notebook Section */}
+          {hasNotebook && localCalculations.notebookCostPerCard && renderNotebookSection()}
         </div>
       </CollapsibleSection>
     );
