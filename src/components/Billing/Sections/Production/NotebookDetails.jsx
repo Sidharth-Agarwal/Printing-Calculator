@@ -21,9 +21,43 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
   const [errors, setErrors] = useState({});
   const [papers, setPapers] = useState([]);
   
-  // Use the custom hook to fetch binding types
   const { bindingTypes, loading: isLoading } = useBindingTypes();
   
+  // FIXED: Clear errors when Notebook is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!notebookDetails.isNotebookUsed) {
+      setErrors({});
+    }
+  }, [notebookDetails.isNotebookUsed]);
+
+  // FIXED: Reset Notebook data when toggled off
+  useEffect(() => {
+    if (!notebookDetails.isNotebookUsed) {
+      // When Notebook is not used, ensure clean state
+      if (notebookDetails.orientation !== "" || notebookDetails.length !== "" || 
+          notebookDetails.breadth !== "" || notebookDetails.numberOfPages !== "" || 
+          notebookDetails.bindingType !== "" || notebookDetails.paperName !== "") {
+        dispatch({
+          type: "UPDATE_NOTEBOOK_DETAILS",
+          payload: {
+            isNotebookUsed: false,
+            orientation: "",
+            length: "",
+            breadth: "",
+            calculatedLength: "",
+            calculatedBreadth: "",
+            numberOfPages: "",
+            bindingType: "",
+            bindingTypeConcatenated: "",
+            paperName: ""
+          }
+        });
+      }
+    }
+  }, [notebookDetails.isNotebookUsed, notebookDetails.orientation, notebookDetails.length, 
+      notebookDetails.breadth, notebookDetails.numberOfPages, notebookDetails.bindingType, 
+      notebookDetails.paperName, dispatch]);
+
   // Fetch papers from Firestore
   useEffect(() => {
     const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
@@ -33,8 +67,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
       }));
       setPapers(paperData);
       
-      // If papers are loaded and no paper name is selected yet, set the first paper
-      if (paperData.length > 0 && !notebookDetails.paperName) {
+      if (paperData.length > 0 && !notebookDetails.paperName && notebookDetails.isNotebookUsed) {
         dispatch({
           type: "UPDATE_NOTEBOOK_DETAILS",
           payload: {
@@ -45,7 +78,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
     });
 
     return () => unsubscribe();
-  }, [dispatch, notebookDetails.paperName]);
+  }, [dispatch, notebookDetails.paperName, notebookDetails.isNotebookUsed]);
 
   // Calculate dimensions based on orientation
   useEffect(() => {
@@ -74,14 +107,9 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
   }, [notebookDetails.orientation, notebookDetails.length, notebookDetails.breadth, dispatch, notebookDetails.isNotebookUsed]);
 
   const handleChange = (e) => {
-    console.log("handleChange called with event:", e);
     const { name, value } = e.target;
-    console.log("Field name:", name, "Value:", value);
     
-    // FIXED: Handle complete paper selection data from SearchablePaperDropdown
     if (name === "paperSelection") {
-      console.log("Complete paper selection changed in NotebookDetails:", value);
-      
       dispatch({
         type: "UPDATE_NOTEBOOK_DETAILS",
         payload: {
@@ -93,15 +121,10 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
       return;
     }
     
-    // Handle legacy paperName only updates (fallback)
     if (name === "paperName") {
-      console.log("Paper name only changed in NotebookDetails:", value);
-      
-      // Find the complete paper data
       const selectedPaperObj = papers.find(paper => paper.paperName === value);
       
       if (selectedPaperObj) {
-        console.log("Found complete paper data for NotebookDetails:", value, selectedPaperObj);
         dispatch({
           type: "UPDATE_NOTEBOOK_DETAILS",
           payload: {
@@ -111,8 +134,6 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
           }
         });
       } else {
-        // Fallback if paper not found
-        console.warn("Paper not found in papers list for NotebookDetails:", value);
         dispatch({
           type: "UPDATE_NOTEBOOK_DETAILS",
           payload: { paperName: value }
@@ -121,9 +142,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
       return;
     }
     
-    // Special handling for bindingType to also set the concatenated version
     if (name === "bindingType") {
-      // Find the selected binding type's concatenated value
       const selectedBinding = bindingTypes.find(binding => binding.type === value);
       
       if (selectedBinding) {
@@ -144,8 +163,6 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
         });
       }
     } else {
-      // Handle all other fields normally
-      console.log("Dispatching update for field:", name, "with value:", value);
       dispatch({
         type: "UPDATE_NOTEBOOK_DETAILS",
         payload: { [name]: value }
@@ -188,7 +205,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
     }
   };
 
-  // If Notebook is not used, don't render any content
+  // FIXED: Same pattern as LPDetails - return null if not being used
   if (!notebookDetails.isNotebookUsed) {
     return null;
   }
@@ -196,9 +213,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        {/* First Row: Configuration Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Paper Name - FIXED: Added proper positioning for dropdown */}
           <div className="relative">
             <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
               Paper Name:
@@ -207,14 +222,13 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               papers={papers}
               selectedPaper={notebookDetails.paperName || (papers.length > 0 ? papers[0].paperName : "")}
               onChange={handleChange}
-              isDieSelected={true} // Set to true to use absolute positioning for dropdown
+              isDieSelected={true}
             />
             {errors.paperName && (
               <p className="text-red-500 text-xs mt-1">{errors.paperName}</p>
             )}
           </div>
 
-          {/* Orientation */}
           <div>
             <label htmlFor="orientation" className="block text-xs font-medium text-gray-600 mb-1">
               Orientation:
@@ -224,7 +238,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               name="orientation"
               value={notebookDetails.orientation || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.orientation ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.orientation ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
             >
               <option value="">Select Orientation</option>
               <option value="Length Wise Baby Size">Length Wise Baby Size</option>
@@ -235,7 +249,6 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
             )}
           </div>
 
-          {/* Number of Formas */}
           <div>
             <label htmlFor="numberOfPages" className="block text-xs font-medium text-gray-600 mb-1">
               Number of Formas:
@@ -247,7 +260,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               placeholder="Number of formas"
               value={notebookDetails.numberOfPages || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.numberOfPages ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.numberOfPages ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               min="1"
             />
             {errors.numberOfPages && (
@@ -255,7 +268,6 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
             )}
           </div>
 
-          {/* Binding Type */}
           <div>
             <label htmlFor="bindingType" className="block text-xs font-medium text-gray-600 mb-1">
               Binding Type:
@@ -265,7 +277,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               name="bindingType"
               value={notebookDetails.bindingType || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.bindingType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.bindingType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               disabled={isLoading}
             >
               <option value="">Select Binding Type</option>
@@ -284,15 +296,10 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
             {errors.bindingType && (
               <p className="text-red-500 text-xs mt-1">{errors.bindingType}</p>
             )}
-            {bindingTypes.length === 0 && !isLoading && (
-              <p className="text-amber-500 text-xs mt-1">Warning: No binding types were loaded from the database</p>
-            )}
           </div>
         </div>
 
-        {/* Second Row: Dimension Fields */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {/* Length */}
           <div>
             <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
               Length (inches):
@@ -304,7 +311,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               placeholder="Length"
               value={notebookDetails.length || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               step="0.01"
             />
             {errors.length && (
@@ -312,7 +319,6 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
             )}
           </div>
 
-          {/* Breadth */}
           <div>
             <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
               Breadth (inches):
@@ -324,7 +330,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               placeholder="Breadth"
               value={notebookDetails.breadth || ""}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               step="0.01"
             />
             {errors.breadth && (
@@ -332,29 +338,27 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
             )}
           </div>
 
-          {/* Final Length */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Final Length (inches):
+              Final Length:
             </label>
             <input
               type="text"
               value={notebookDetails.calculatedLength || notebookDetails.length || ""}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+              className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs"
               readOnly
               placeholder="Calculated length"
             />
           </div>
           
-          {/* Final Breadth */}
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">
-              Final Breadth (inches):
+              Final Breadth:
             </label>
             <input
               type="text"
               value={notebookDetails.calculatedBreadth || notebookDetails.breadth || ""}
-              className="w-full px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-sm"
+              className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs"
               readOnly
               placeholder="Calculated breadth"
             />

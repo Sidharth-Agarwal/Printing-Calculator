@@ -1024,9 +1024,9 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Paper Selection Section - FIXED */}
       <div className="border-b pb-4 mb-4">
-        <h3 className="text-md font-semibold mb-3">Sandwich Paper Selection</h3>
+        {/* <h3 className="text-md font-semibold mb-3">Sandwich Paper Selection</h3> */}
         <div>
-          <label className="block mb-1 text-sm">Paper Name:</label>
+          <label className="block mb-1 text-xs">Paper Name:</label>
           <SearchablePaperDropdown 
             papers={papers}
             selectedPaper={paperInfo.paperName || ""}
@@ -1048,13 +1048,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
               {lpDetailsSandwich.isLPUsed && <div className="w-3 h-3 rounded-full bg-red-500"></div>}
             </div>
-            <span className="text-gray-700 font-semibold text-sm">Use LP in Sandwich?</span>
+            <span className="text-gray-700 font-semibold text-xs">Use LP in Sandwich?</span>
           </label>
         </div>
 
         {lpDetailsSandwich.isLPUsed && (
-          <div className="pl-6 border-l-2 border-gray-200 mb-4">
-            <div className="text-sm">
+          <div className=" border-gray-200 mb-4">
+            <div className="text-xs">
               <label className="block font-medium mb-2">Number of Colors:</label>
               <input
                 type="number"
@@ -1064,13 +1064,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                 value={lpDetailsSandwich.noOfColors}
                 onChange={handleLPSandwichChange}
                 onWheel={(e) => e.target.blur()}
-                className="border rounded-md p-2 w-full text-sm"
+                className="border rounded-md p-2 w-full text-xs"
               />
-              {errors.lpNoOfColors && <p className="text-red-500 text-sm">{errors.lpNoOfColors}</p>}
+              {errors.lpNoOfColors && <p className="text-red-500 text-xs">{errors.lpNoOfColors}</p>}
             </div>
 
             {lpDetailsSandwich.noOfColors > 0 && lpDetailsSandwich.colorDetails.map((color, index) => (
-              <div key={index} className="p-3 border rounded-md bg-gray-50 mt-3">
+              <div key={index} className=" mt-3">
                 <h4 className="text-xs font-semibold mb-2">Color {index + 1}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                   {/* Plate Size Type */}
@@ -1224,13 +1224,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
               {fsDetailsSandwich.isFSUsed && <div className="w-3 h-3 rounded-full bg-red-500"></div>}
             </div>
-            <span className="text-gray-700 font-semibold text-sm">Use FS in Sandwich?</span>
+            <span className="text-gray-700 font-semibold text-xs">Use FS in Sandwich?</span>
           </label>
         </div>
 
         {fsDetailsSandwich.isFSUsed && (
-          <div className="pl-6 border-l-2 border-gray-200 mb-4">
-            <div className="text-sm">
+          <div className=" border-gray-200 mb-4">
+            <div className="text-xs">
               <label className="block font-medium mb-2">FS Type:</label>
               <select
                 name="fsType"
@@ -1245,11 +1245,11 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
                   </option>
                 ))}
               </select>
-              {errors.fsType && <p className="text-red-500 text-sm">{errors.fsType}</p>}
+              {errors.fsType && <p className="text-red-500 text-xs">{errors.fsType}</p>}
             </div>
 
             {fsDetailsSandwich.foilDetails.map((foil, index) => (
-              <div key={index} className="p-3 border rounded-md bg-gray-50 mt-3">
+              <div key={index} className=" mt-3">
                 <h4 className="text-xs font-semibold mb-2">Foil {index + 1}</h4>
                 <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
                   {/* Block Size Type */}
@@ -1411,12 +1411,12 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             <div className="w-5 h-5 flex items-center justify-center border rounded-full border-gray-300 bg-gray-200">
               {embDetailsSandwich.isEMBUsed && <div className="w-3 h-3 rounded-full bg-red-500"></div>}
             </div>
-            <span className="text-gray-700 font-semibold text-sm">Use EMB in Sandwich?</span>
+            <span className="text-gray-700 font-semibold text-xs">Use EMB in Sandwich?</span>
           </label>
         </div>
 
         {embDetailsSandwich.isEMBUsed && (
-          <div className="pl-6 border-l-2 border-gray-200 mb-4">
+          <div className=" border-gray-200 mb-4">
             {/* All fields in a single line */}
             <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
               {/* Plate Size Type */}
@@ -1564,13 +1564,13 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
           <button
             type="button"
             onClick={onPrevious}
-            className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-sm"
+            className="bg-gray-500 text-white mt-2 px-3 py-2 rounded text-xs"
           >
             Previous
           </button>
           <button
             type="submit"
-            className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
+            className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-xs"
           >
             Next
           </button>

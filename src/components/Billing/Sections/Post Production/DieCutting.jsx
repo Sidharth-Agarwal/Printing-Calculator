@@ -5,12 +5,37 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
   const dieCutting = state.dieCutting || {
     isDieCuttingUsed: false,
     dcMR: "",
+    dcMRConcatenated: ""
   };
 
   const [errors, setErrors] = useState({});
   
   // Use the custom hook to fetch DC MR types
   const { mrTypes, loading: mrTypesLoading } = useMRTypes("DC MR");
+
+  // FIXED: Clear errors when Die Cutting is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!dieCutting.isDieCuttingUsed) {
+      setErrors({});
+    }
+  }, [dieCutting.isDieCuttingUsed]);
+
+  // FIXED: Reset Die Cutting data when toggled off
+  useEffect(() => {
+    if (!dieCutting.isDieCuttingUsed) {
+      // When Die Cutting is not used, ensure clean state
+      if (dieCutting.dcMR !== "" || dieCutting.dcMRConcatenated !== "") {
+        dispatch({
+          type: "UPDATE_DIE_CUTTING",
+          payload: {
+            isDieCuttingUsed: false,
+            dcMR: "",
+            dcMRConcatenated: ""
+          }
+        });
+      }
+    }
+  }, [dieCutting.isDieCuttingUsed, dieCutting.dcMR, dieCutting.dcMRConcatenated, dispatch]);
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -69,7 +94,7 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     }
   };
 
-  // When DC is not used, we don't need to show any content
+  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
   if (!dieCutting.isDieCuttingUsed) {
     return null;
   }
@@ -86,9 +111,8 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             name="dcMR"
             value={dieCutting.dcMR}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.dcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            className={`w-full px-3 py-2 border ${errors.dcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
           >
-            <option value="">Select MR Type</option>
             {mrTypesLoading ? (
               <option value="" disabled>Loading MR Types...</option>
             ) : (
@@ -103,24 +127,6 @@ const DieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             <p className="text-red-500 text-xs mt-1">{errors.dcMR}</p>
           )}
         </div>
-        
-        {!singlePageMode && (
-          <div className="flex justify-between mt-6">
-            <button
-              type="button"
-              onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-            >
-              Previous
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
     </form>
   );

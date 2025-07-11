@@ -5,12 +5,37 @@ const PreDieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = f
   const preDieCutting = state.preDieCutting || {
     isPreDieCuttingUsed: false,
     predcMR: "",
+    predcMRConcatenated: ""
   };
 
   const [errors, setErrors] = useState({});
   
   // Use the custom hook to fetch Pre-DC MR types
   const { mrTypes, loading: mrTypesLoading } = useMRTypes("PDC MR");
+
+  // FIXED: Clear errors when Pre Die Cutting is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!preDieCutting.isPreDieCuttingUsed) {
+      setErrors({});
+    }
+  }, [preDieCutting.isPreDieCuttingUsed]);
+
+  // FIXED: Reset Pre Die Cutting data when toggled off
+  useEffect(() => {
+    if (!preDieCutting.isPreDieCuttingUsed) {
+      // When Pre Die Cutting is not used, ensure clean state
+      if (preDieCutting.predcMR !== "" || preDieCutting.predcMRConcatenated !== "") {
+        dispatch({
+          type: "UPDATE_PRE_DIE_CUTTING",
+          payload: {
+            isPreDieCuttingUsed: false,
+            predcMR: "",
+            predcMRConcatenated: ""
+          }
+        });
+      }
+    }
+  }, [preDieCutting.isPreDieCuttingUsed, preDieCutting.predcMR, preDieCutting.predcMRConcatenated, dispatch]);
 
   // Handle form field changes
   const handleChange = (e) => {
@@ -69,7 +94,7 @@ const PreDieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = f
     }
   };
 
-  // When Pre-DC is not used, we don't need to show any content
+  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
   if (!preDieCutting.isPreDieCuttingUsed) {
     return null;
   }
@@ -86,9 +111,8 @@ const PreDieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = f
             name="predcMR"
             value={preDieCutting.predcMR}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.predcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            className={`w-full px-3 py-2 border ${errors.predcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
           >
-            <option value="">Select MR Type</option>
             {mrTypesLoading ? (
               <option value="" disabled>Loading MR Types...</option>
             ) : (
@@ -103,24 +127,6 @@ const PreDieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = f
             <p className="text-red-500 text-xs mt-1">{errors.predcMR}</p>
           )}
         </div>
-        
-        {!singlePageMode && (
-          <div className="flex justify-between mt-6">
-            <button
-              type="button"
-              onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-            >
-              Previous
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
     </form>
   );

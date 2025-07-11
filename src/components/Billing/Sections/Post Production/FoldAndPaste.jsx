@@ -11,7 +11,6 @@ const useDSTMaterials = () => {
   useEffect(() => {
     const fetchDSTMaterials = async () => {
       try {
-        // Query to fetch DST materials from materials collection
         const materialsCollection = collection(db, "materials");
         const dstMaterialsQuery = query(
           materialsCollection, 
@@ -49,7 +48,6 @@ const useDSTTypes = () => {
   useEffect(() => {
     const fetchDSTTypes = async () => {
       try {
-        // Query to fetch DST types from standard rates
         const ratesCollection = collection(db, "standard_rates");
         const dstQuery = query(ratesCollection, where("group", "==", "DST"));
         
@@ -97,24 +95,48 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
     error: dstTypesError 
   } = useDSTTypes();
 
+  // FIXED: Clear errors when Fold And Paste is turned off (same pattern as LPDetails)
+  useEffect(() => {
+    if (!foldAndPaste.isFoldAndPasteUsed) {
+      setErrors({});
+    }
+  }, [foldAndPaste.isFoldAndPasteUsed]);
+
+  // FIXED: Reset Fold And Paste data when toggled off
+  useEffect(() => {
+    if (!foldAndPaste.isFoldAndPasteUsed) {
+      // When Fold And Paste is not used, ensure clean state
+      if (foldAndPaste.dstMaterial !== "" || foldAndPaste.dstType !== "") {
+        dispatch({
+          type: "UPDATE_FOLD_AND_PASTE",
+          payload: {
+            isFoldAndPasteUsed: false,
+            dstMaterial: "",
+            dstType: ""
+          }
+        });
+      }
+    }
+  }, [foldAndPaste.isFoldAndPasteUsed, foldAndPaste.dstMaterial, foldAndPaste.dstType, dispatch]);
+
   // Automatically select first option when materials/types load
   useEffect(() => {
-    if (dstMaterials.length > 0 && !foldAndPaste.dstMaterial) {
+    if (foldAndPaste.isFoldAndPasteUsed && dstMaterials.length > 0 && !foldAndPaste.dstMaterial) {
       dispatch({
         type: "UPDATE_FOLD_AND_PASTE",
         payload: { dstMaterial: dstMaterials[0].materialName }
       });
     }
-  }, [dstMaterials, dispatch, foldAndPaste.dstMaterial]);
+  }, [dstMaterials, dispatch, foldAndPaste.dstMaterial, foldAndPaste.isFoldAndPasteUsed]);
 
   useEffect(() => {
-    if (dstTypes.length > 0 && !foldAndPaste.dstType) {
+    if (foldAndPaste.isFoldAndPasteUsed && dstTypes.length > 0 && !foldAndPaste.dstType) {
       dispatch({
         type: "UPDATE_FOLD_AND_PASTE",
         payload: { dstType: dstTypes[0].type }
       });
     }
-  }, [dstTypes, dispatch, foldAndPaste.dstType]);
+  }, [dstTypes, dispatch, foldAndPaste.dstType, foldAndPaste.isFoldAndPasteUsed]);
 
   // Handle changes in the component
   const handleChange = (e) => {
@@ -152,7 +174,7 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
     }
   };
 
-  // When Fold & Paste is not used, don't render content
+  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
   if (!foldAndPaste.isFoldAndPasteUsed) {
     return null;
   }
@@ -160,7 +182,7 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-5">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
           {/* DST Material Dropdown */}
           <div>
             <label htmlFor="dstMaterial" className="block text-xs font-medium text-gray-600 mb-1">
@@ -173,12 +195,9 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
               onChange={handleChange}
               className={`w-full px-3 py-2 border ${
                 errors.dstMaterial ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               disabled={dstMaterialsLoading}
             >
-              <option value="">
-                {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
-              </option>
               {dstMaterials.map((material) => (
                 <option key={material.id} value={material.materialName}>
                   {material.materialName}
@@ -205,12 +224,9 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
               onChange={handleChange}
               className={`w-full px-3 py-2 border ${
                 errors.dstType ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               disabled={dstTypesLoading}
             >
-              <option value="">
-                {dstTypesLoading ? "Loading DST Types..." : "Select DST Type"}
-              </option>
               {dstTypes.map((type) => (
                 <option key={type.id} value={type.type}>
                   {type.type}
@@ -225,24 +241,6 @@ const FoldAndPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = fa
             )}
           </div>
         </div>
-        
-        {!singlePageMode && (
-          <div className="flex justify-between mt-6">
-            <button
-              type="button"
-              onClick={onPrevious}
-              className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700 transition-colors text-sm"
-            >
-              Previous
-            </button>
-            <button
-              type="submit"
-              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors text-sm"
-            >
-              Next
-            </button>
-          </div>
-        )}
       </div>
     </form>
   );

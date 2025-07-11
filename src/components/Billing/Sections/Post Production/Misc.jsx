@@ -12,11 +12,8 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
   const [isInitialized, setIsInitialized] = useState(false);
   const prevMiscUsed = useRef(misc.isMiscUsed);
 
-  // Fetch the default value from DB when component mounts or when isMiscUsed changes
+  // FIXED: Clear errors and reset when toggled off (this is the working pattern)
   useEffect(() => {
-    // Only fetch default when misc is used and either:
-    // 1. Component not initialized yet, OR
-    // 2. Just toggled ON and no existing value
     if (misc.isMiscUsed) {
       if (!isInitialized || (!misc.miscCharge && misc.isMiscUsed !== prevMiscUsed.current)) {
         fetchDefaultMiscCharge();
@@ -42,9 +39,6 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
       
       setDbDefaultValue(defaultValue);
       
-      // Only set the value if:
-      // 1. There's no existing value (new form), OR
-      // 2. We're in a fresh initialization and haven't set a custom value yet
       if (!misc.miscCharge && !isInitialized) {
         handleMiscChargeChange({ target: { value: defaultValue.toString() } });
       }
@@ -81,7 +75,7 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
     }
   };
 
-  // If Misc is not used, don't render any content
+  // FIXED: This is the working pattern - return null if not being used
   if (!misc.isMiscUsed) {
     return null;
   }
@@ -101,7 +95,7 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
           </label>
           <div className="relative mt-1">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">₹</span>
+              <span className="text-gray-500 sm:text-xs">₹</span>
             </div>
             <input
               type="text"
@@ -110,22 +104,15 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
               disabled={loading}
               value={misc.miscCharge}
               onChange={handleMiscChargeChange}
-              className={`w-full px-3 py-2 pl-7 pr-12 border ${loading ? "bg-gray-50" : ""} ${isCustomValue() ? "border-blue-300 bg-blue-50" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+              className={`w-full px-3 py-2 pl-7 pr-12 border ${loading ? "bg-gray-50" : ""} ${isCustomValue() ? "border-blue-300 bg-blue-50" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               placeholder={loading ? "Loading..." : "0.00"}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-              <span className="text-gray-500 sm:text-sm">per card</span>
+              <span className="text-gray-500 sm:text-xs">per card</span>
             </div>
           </div>
           
-          {/* Enhanced feedback section */}
           <div className="mt-1 space-y-1">
-            {dbDefaultValue !== null && (
-              <p className="text-xs text-gray-500">
-                Default value from database: ₹ {dbDefaultValue.toFixed(2)}
-              </p>
-            )}
-            
             {isCustomValue() && (
               <p className="text-xs text-blue-600 font-medium">
                 ✓ Using custom value: ₹ {parseFloat(misc.miscCharge).toFixed(2)}
@@ -142,10 +129,10 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
         
         <div className="p-3 mt-2 bg-green-50 border border-green-100 rounded-md">
           <div className="flex items-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-green-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
               <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
             </svg>
-            <p className="text-green-700 font-medium text-sm">
+            <p className="text-green-700 font-medium text-xs">
               Miscellaneous services charges will be added to the final pricing.
             </p>
           </div>

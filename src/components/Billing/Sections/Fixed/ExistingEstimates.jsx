@@ -20,32 +20,36 @@ const ExistingEstimates = ({ estimates }) => {
 
   return (
     <div className="border border-gray-200 rounded-md p-4 bg-white">
-      <h3 className="text-sm font-medium text-gray-700 mb-3">Existing Estimates in this Version</h3>
+      <h3 className="text-xs font-medium text-gray-700 mb-3">Existing Estimates in this Version</h3>
       
       {estimates.length > 0 ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 gap-3">
           {estimates.map(estimate => {
             return (
-              <div key={estimate.id} className="px-3 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors">
+              <div key={estimate.id} className="px-2 py-2 bg-gray-50 hover:bg-gray-100 rounded-md border border-gray-200 transition-colors">
                 <div className="flex items-start justify-between">
-                  <h4 className="font-medium text-red-700 text-sm truncate" title={estimate.projectName}>
+                  <h4 className="font-medium text-red-700 text-xs mb-1 truncate" title={estimate.projectName}>
                     {estimate.projectName}
                   </h4>
-                  <span className="px-1.5 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
+                  {/* <span className="px-1.5 py-0.5 bg-gray-200 text-gray-700 text-xs rounded-full">
                     #{estimate.id.substring(0, 4)}
-                  </span>
+                  </span> */}
                 </div>
                 
-                <div className="text-xs text-gray-600 mt-1 truncate">
-                  Job Type: {estimate.jobDetails?.jobType || "N/A"} | Qty: {(estimate.jobDetails?.quantity || 0).toLocaleString()}
+                <div className="text-[10px] text-gray-600 truncate">
+                  Job Type: {estimate.jobDetails?.jobType || "N/A"}
+                </div>
+
+                <div className="text-[10px] text-gray-600 truncate">
+                  Qty: {(estimate.jobDetails?.quantity || 0).toLocaleString()}
                 </div>
                 
-                <div className="text-xs text-gray-500 mt-1">
+                <div className="text-[10px] text-gray-500">
                   Created: {formatDate(estimate.createdAt)}
                 </div>
                 
                 {/* Processing options indicators - horizontal scrollable if needed */}
-                <div className="flex flex-wrap gap-1 mt-2 overflow-x-auto max-w-full pb-1">
+                {/* <div className="flex flex-wrap gap-1 mt-2 overflow-x-auto max-w-full pb-1">
                   {estimate.lpDetails && (
                     <span className="px-1.5 py-0.5 bg-blue-100 text-blue-800 rounded-full text-xs whitespace-nowrap">LP</span>
                   )}
@@ -67,7 +71,7 @@ const ExistingEstimates = ({ estimates }) => {
                   {estimate.pasting && (
                     <span className="px-1.5 py-0.5 bg-pink-100 text-pink-800 rounded-full text-xs whitespace-nowrap">PASTE</span>
                   )}
-                </div>
+                </div> */}
               </div>
             );
           })}
