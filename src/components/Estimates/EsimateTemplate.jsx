@@ -98,20 +98,6 @@ const SinglePageContent = ({
               <div>Estimate: {currentDate}</div>
               <div>Tentative Delivery Date: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
             </div>
-            
-            {/* Process Legend - Compact - FIXED: Show processes on separate lines */}
-            {usedProcesses.length > 0 && (
-              <div className="mb-1">
-                <div className="text-xs font-medium text-gray-700 mb-1">Processes:</div>
-                <div className="text-xs text-gray-600">
-                  {usedProcesses.map((process, index) => (
-                    <div key={index} className="leading-tight">
-                      {process.abbreviation} - {process.fullForm}
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
           </div>
           
           {/* Company Info - Compact */}
@@ -131,15 +117,6 @@ const SinglePageContent = ({
             <div className="text-xs text-gray-600">Dimapur-797112, Nagaland, India</div>
             <div className="text-xs text-gray-600">GSTIN: 13ALFPA2458Q2ZO</div>
             <div className="text-xs text-gray-600">+919233152718 | info@famousletterpress.com</div>
-            
-            <div className="mt-1">
-              <div className="text-xs">
-                <div className="font-medium">Bank Details</div>
-                <div className="text-gray-600">A/C: 912020005432066</div>
-                <div className="text-gray-600">IFSC: UTIB0000378</div>
-                <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -154,7 +131,7 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* Line Items Table - FIXED: Much better padding and spacing for PDF mode */}
+      {/* Line Items Table */}
       <div className="mb-2 overflow-x-auto">
         <table className="w-full border-collapse" style={{ fontSize: '10px' }}>
           <thead>
@@ -197,7 +174,7 @@ const SinglePageContent = ({
         </table>
       </div>
       
-      {/* Summary - Only show on last page - More Compact */}
+      {/* Summary - Only show on last page */}
       {isLastPage && (
         <div className="flex justify-end mb-2">
           <div className="w-48">
@@ -225,7 +202,36 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* HSN Summary - Only show on last page - More Compact */}
+      {/* Process Legend and Bank Details - Only show on last page after totals */}
+      {isLastPage && (
+        <div className="grid grid-cols-2 gap-4 mb-2">
+          {/* Process Legend */}
+          {usedProcesses.length > 0 && (
+            <div>
+              <div className="text-xs font-medium text-gray-700 mb-1">Processes:</div>
+              <div className="text-xs text-gray-600">
+                {usedProcesses.map((process, index) => (
+                  <div key={index} className="leading-tight">
+                    {process.abbreviation} - {process.fullForm}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Bank Details */}
+          <div>
+            <div className="text-xs font-medium text-gray-700 mb-1">Bank Details:</div>
+            <div className="text-xs text-gray-600 leading-tight">
+              <div>A/C: 912020005432066</div>
+              <div>IFSC: UTIB0000378</div>
+              <div>Axis Bank, Circular Road, Dimapur</div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* HSN Summary - Only show on last page */}
       {isLastPage && (
         <div className="mb-2">
           <div className="font-medium text-xs mb-3">HSN Summary:</div>
@@ -248,7 +254,7 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* Terms and Conditions - Only on last page - More Compact */}
+      {/* Terms and Conditions - Only on last page */}
       {isLastPage && (
         <div className="mb-2">
           <div className="font-medium text-gray-700 mb-1 text-xs">Terms and Conditions:</div>
@@ -263,7 +269,7 @@ const SinglePageContent = ({
         </div>
       )}
       
-      {/* Footer - Show on every page - More Compact */}
+      {/* Footer - Show on every page */}
       <div className="mt-2 pt-1 border-t border-gray-200">
         <div className="grid grid-cols-2">
           <div>
@@ -282,7 +288,7 @@ const SinglePageContent = ({
         </div>
       </div>
       
-      {/* Print Info - More Compact */}
+      {/* Print Info */}
       <div className="mt-1 text-center text-xs text-gray-500">
         <p>This is a computer generated estimate and does not require a signature.</p>
       </div>
@@ -344,22 +350,6 @@ const PageContent = ({
               <div className="text-sm">
                 <div className="text-gray-600">Estimate Date: {currentDate}</div>
                 <div className="text-gray-600">Tentative Delivery Date: {formatDate(estimates[0]?.deliveryDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000))}</div>
-                
-                {/* Process Legend - Show on first page only */}
-                {usedProcesses.length > 0 && (
-                  <div className="mt-3 mb-2">
-                    <div className="text-sm font-medium text-gray-700 mb-1">Processes:</div>
-                    <div className="text-xs text-gray-600 space-y-1">
-                      {usedProcesses.map((process, index) => (
-                        <div key={index} className="flex items-center">
-                          <span>
-                            {process.abbreviation} - {process.fullForm}
-                          </span>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             </div>
           </div>
@@ -382,15 +372,6 @@ const PageContent = ({
             <div className="text-gray-600 text-sm">GSTIN: 13ALFPA2458Q2ZO</div>
             <div className="text-gray-600 text-sm">Phone: +919233152718</div>
             <div className="text-gray-600 text-sm">Email: info@famousletterpress.com</div>
-            
-            <div className="my-2">
-              <div className="text-sm">
-                <div className="font-medium">Bank Details</div>
-                <div className="text-gray-600">A/C No: 912020005432066</div>
-                <div className="text-gray-600">IFSC Code: UTIB0000378</div>
-                <div className="text-gray-600">Axis Bank, Circular Road, Dimapur</div>
-              </div>
-            </div>
           </div>
         </div>
       )}
@@ -405,7 +386,7 @@ const PageContent = ({
         </div>
       )}
       
-      {/* Line Items Table - Keep original preview mode styling */}
+      {/* Line Items Table */}
       <div className="mb-4 overflow-x-auto">
         <table className="w-full border-collapse text-xs">
           <thead>
@@ -471,6 +452,37 @@ const PageContent = ({
               <div className="font-mono">
                 {formatCurrency(totals.total)}
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {/* Process Legend and Bank Details - Only show on last page after totals */}
+      {isLastPage && (
+        <div className="grid grid-cols-2 gap-4 mb-3">
+          {/* Process Legend */}
+          {usedProcesses.length > 0 && (
+            <div>
+              <div className="text-sm font-medium text-gray-700 mb-1">Processes:</div>
+              <div className="text-xs text-gray-600 space-y-1">
+                {usedProcesses.map((process, index) => (
+                  <div key={index} className="flex items-center">
+                    <span>
+                      {process.abbreviation} - {process.fullForm}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
+          {/* Bank Details */}
+          <div>
+            <div className="text-sm font-medium text-gray-700 mb-1">Bank Details:</div>
+            <div className="text-xs text-gray-600">
+              <div>A/C No: 912020005432066</div>
+              <div>IFSC Code: UTIB0000378</div>
+              <div>Axis Bank, Circular Road, Dimapur</div>
             </div>
           </div>
         </div>
@@ -562,7 +574,7 @@ const EstimateTemplate = ({
   const isPDFMode = currentPage !== null;
   const calculatedTotalPages = isPDFMode ? totalPages : Math.ceil((estimates?.length || 0) / ESTIMATES_PER_PAGE);
 
-  // UPDATED: Enhanced date formatting
+  // Enhanced date formatting
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     try {
@@ -612,7 +624,7 @@ const EstimateTemplate = ({
   const currentDate = formatDate(new Date());
   const usedProcesses = getUsedProcesses();
 
-  // Calculate total quantities and amounts for ALL estimates
+  // Calculate total quantities and amounts for ALL estimates - USING ONLY SAVED VALUES
   const totals = React.useMemo(() => {
     // In PDF mode, use allEstimates for grand total, otherwise use estimates
     const estimatesForTotal = isPDFMode && allEstimates ? allEstimates : estimates;
@@ -630,11 +642,10 @@ const EstimateTemplate = ({
       const qty = parseInt(estimate?.jobDetails?.quantity) || 0;
       const calc = estimate?.calculations || {};
       
-      const costPerCard = parseFloat(calc.totalCostPerCard || 0);
-      const amount = costPerCard * qty;
-      
+      // FIXED: Use saved values only
+      const amount = parseFloat(calc.totalCost || 0);
+      const gstAmount = parseFloat(calc.gstAmount || 0);
       const estimateGSTRate = calc.gstRate || 18;
-      const gstAmount = parseFloat(calc.gstAmount || (amount * estimateGSTRate / 100)) || 0;
       
       totalQuantity += qty;
       totalAmount += amount;
@@ -651,7 +662,7 @@ const EstimateTemplate = ({
     };
   }, [estimates, allEstimates, isPDFMode]);
 
-  // Prepare line items with global serial numbers and process details
+  // Prepare line items with global serial numbers and process details - USING ONLY SAVED VALUES
   const allLineItems = React.useMemo(() => {
     if (!estimates || estimates.length === 0) return [];
 
@@ -679,12 +690,13 @@ const EstimateTemplate = ({
       if (estimate?.screenPrint?.isScreenPrintUsed) features.push("Screen");
       
       const quantity = parseInt(jobDetails.quantity) || 0;
-      const unitCost = parseFloat(calc.totalCostPerCard || 0);
-      const totalCost = unitCost * quantity;
       
+      // FIXED: Use ONLY saved values from calculations
+      const unitCost = parseFloat(calc.totalCostPerCard || 0);
+      const totalCost = parseFloat(calc.totalCost || 0);
       const gstRate = calc.gstRate || 18;
-      const gstAmount = parseFloat(calc.gstAmount || (totalCost * gstRate / 100)) || 0;
-      const finalTotal = totalCost + gstAmount;
+      const gstAmount = parseFloat(calc.gstAmount || 0);
+      const finalTotal = parseFloat(calc.totalWithGST || 0);
       
       const productSize = dieDetails?.productSize || {};
       const productDimensions = productSize.length && productSize.breadth 
@@ -701,11 +713,11 @@ const EstimateTemplate = ({
         dieCode: dieDetails.dieCode || "",
         productDimensions: productDimensions,
         quantity: quantity,
-        price: unitCost,
-        total: totalCost,
-        gstRate: gstRate,
-        gstAmount: gstAmount,
-        finalTotal: finalTotal,
+        price: unitCost,           // From calc.totalCostPerCard (SAVED)
+        total: totalCost,          // From calc.totalCost (SAVED)
+        gstRate: gstRate,          // From calc.gstRate (SAVED)
+        gstAmount: gstAmount,      // From calc.gstAmount (SAVED)
+        finalTotal: finalTotal,    // From calc.totalWithGST (SAVED)
         hsnCode: hsnCode,
         serialNumber: index + 1
       };
@@ -804,11 +816,11 @@ const EstimateTemplate = ({
             const endIndex = Math.min(startIndex + ESTIMATES_PER_PAGE, allLineItems.length);
             const pageLineItems = allLineItems.slice(startIndex, endIndex);
             
-            // Calculate page totals
+            // Calculate page totals using saved values
             const pageTotals = pageLineItems.reduce((acc, item) => {
-              acc.amount += item.total;
-              acc.gstAmount += item.gstAmount;
-              acc.total += item.finalTotal;
+              acc.amount += item.total;      // Already from saved calc.totalCost
+              acc.gstAmount += item.gstAmount; // Already from saved calc.gstAmount
+              acc.total += item.finalTotal;   // Already from saved calc.totalWithGST
               return acc;
             }, { amount: 0, gstAmount: 0, total: 0 });
 

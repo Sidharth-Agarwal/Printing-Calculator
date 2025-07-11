@@ -178,9 +178,15 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       markupPercentage: estimate.calculations?.markupPercentage
     });
     
-    // Enhanced misc details logging
-    console.log("Form state misc details:", {
-      isMiscUsed: estimate.misc?.isMiscUsed,
+    // Enhanced logging for all service details
+    console.log("Form state service details:", {
+      lpUsed: estimate.lpDetails?.isLPUsed,
+      fsUsed: estimate.fsDetails?.isFSUsed,
+      embUsed: estimate.embDetails?.isEMBUsed,
+      digiUsed: estimate.digiDetails?.isDigiUsed,
+      notebookUsed: estimate.notebookDetails?.isNotebookUsed,
+      screenUsed: estimate.screenPrint?.isScreenPrintUsed,
+      miscUsed: estimate.misc?.isMiscUsed,
       miscCharge: estimate.misc?.miscCharge,
       miscChargeType: typeof estimate.misc?.miscCharge
     });
@@ -218,16 +224,19 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         frags: estimate.dieDetails?.frags || "",
         type: estimate.dieDetails?.type || ""
       },
+      // FIXED: Ensure proper default structure for LP Details
       lpDetails: {
         isLPUsed: estimate.lpDetails?.isLPUsed || false,
         noOfColors: estimate.lpDetails?.noOfColors || 0,
         colorDetails: colorDetails,
       },
+      // FIXED: Ensure proper default structure for FS Details
       fsDetails: {
         isFSUsed: estimate.fsDetails?.isFSUsed || false,
         fsType: estimate.fsDetails?.fsType || "",
         foilDetails: foilDetails,
       },
+      // FIXED: Ensure proper default structure for EMB Details
       embDetails: {
         isEMBUsed: estimate.embDetails?.isEMBUsed || false,
         plateSizeType: estimate.embDetails?.plateSizeType || "",
@@ -238,11 +247,13 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         embMRConcatenated: estimate.embDetails?.embMRConcatenated || "",
         dstMaterial: estimate.embDetails?.dstMaterial || ""
       },
+      // FIXED: Ensure proper default structure for Digi Details
       digiDetails: {
         isDigiUsed: estimate.digiDetails?.isDigiUsed || false,
         digiDie: estimate.digiDetails?.digiDie || "",
         digiDimensions: estimate.digiDetails?.digiDimensions || { length: "", breadth: "" },
       },
+      // FIXED: Ensure proper default structure for Notebook Details
       notebookDetails: {
         isNotebookUsed: estimate.notebookDetails?.isNotebookUsed || false,
         orientation: estimate.notebookDetails?.orientation || "",
@@ -255,51 +266,61 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         bindingTypeConcatenated: estimate.notebookDetails?.bindingTypeConcatenated || "",
         paperName: estimate.notebookDetails?.paperName || ""
       },
+      // FIXED: Ensure proper default structure for Screen Print
       screenPrint: {
         isScreenPrintUsed: estimate.screenPrint?.isScreenPrintUsed || false,
         noOfColors: estimate.screenPrint?.noOfColors || 1,
         screenMR: estimate.screenPrint?.screenMR || "",
         screenMRConcatenated: estimate.screenPrint?.screenMRConcatenated || ""
       },
+      // FIXED: Ensure proper default structure for Pre Die Cutting
       preDieCutting: {
         isPreDieCuttingUsed: estimate.preDieCutting?.isPreDieCuttingUsed || false,
         predcMR: estimate.preDieCutting?.predcMR || "",
         predcMRConcatenated: estimate.preDieCutting?.predcMRConcatenated || ""
       },
+      // FIXED: Ensure proper default structure for Die Cutting
       dieCutting: {
         isDieCuttingUsed: estimate.dieCutting?.isDieCuttingUsed || false,
         dcMR: estimate.dieCutting?.dcMR || "",
         dcMRConcatenated: estimate.dieCutting?.dcMRConcatenated || ""
       },
+      // FIXED: Ensure proper default structure for Post DC
       postDC: {
         isPostDCUsed: estimate.postDC?.isPostDCUsed || false,
         pdcMR: estimate.postDC?.pdcMR || "",
         pdcMRConcatenated: estimate.postDC?.pdcMRConcatenated || ""
       },
+      // FIXED: Ensure proper default structure for Fold And Paste
       foldAndPaste: {
         isFoldAndPasteUsed: estimate.foldAndPaste?.isFoldAndPasteUsed || false,
         dstMaterial: estimate.foldAndPaste?.dstMaterial || "",
         dstType: estimate.foldAndPaste?.dstType || "",
       },
+      // FIXED: Ensure proper default structure for DST Paste
       dstPaste: {
         isDstPasteUsed: estimate.dstPaste?.isDstPasteUsed || false,
         dstType: estimate.dstPaste?.dstType || "",
       },
+      // FIXED: Ensure proper default structure for Magnet
       magnet: {
         isMagnetUsed: estimate.magnet?.isMagnetUsed || false,
         magnetMaterial: estimate.magnet?.magnetMaterial || ""
       },
+      // FIXED: Ensure proper default structure for QC
       qc: {
         isQCUsed: estimate.qc?.isQCUsed || false,
       },
+      // FIXED: Ensure proper default structure for Packing
       packing: {
         isPackingUsed: estimate.packing?.isPackingUsed || false,
       },
-      // FIXED: Proper misc handling - the BillingForm reducer will handle state management
+      // FIXED: Proper misc handling - consistent with working pattern
       misc: {
         isMiscUsed: estimate.misc?.isMiscUsed || false,
         miscCharge: estimate.misc?.miscCharge || ""
       },
+      // FIXED: Ensure proper default structure for Sandwich
       sandwich: {
         isSandwichComponentUsed: estimate.sandwich?.isSandwichComponentUsed || false,
         paperInfo: estimate.sandwich?.paperInfo || {
@@ -354,7 +375,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     return sanitized;
   };
 
-  // UPDATED: Enhanced handleSave with proper misc handling
+  // UPDATED: Enhanced handleSave with proper service handling (following Misc pattern)
   const handleSave = async (formData) => {
     if (isClientInactive) {
       if (!window.confirm("This client is inactive. Are you sure you want to update this estimate?")) {
@@ -366,13 +387,23 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     try {
       console.log("COMPLETE FORM DATA:", formData);
       
-      // Enhanced misc logging for debugging
-      console.log("Saving misc details:", {
-        originalMiscCharge: estimate.misc?.miscCharge,
-        formDataMiscCharge: formData.misc?.miscCharge,
-        finalMiscCharge: (formData.misc || estimate.misc)?.miscCharge,
+      // Enhanced service logging for debugging
+      console.log("Saving service details:", {
+        originalLPUsed: estimate.lpDetails?.isLPUsed,
+        formDataLPUsed: formData.lpDetails?.isLPUsed,
+        originalFSUsed: estimate.fsDetails?.isFSUsed,
+        formDataFSUsed: formData.fsDetails?.isFSUsed,
+        originalEMBUsed: estimate.embDetails?.isEMBUsed,
+        formDataEMBUsed: formData.embDetails?.isEMBUsed,
+        originalDigiUsed: estimate.digiDetails?.isDigiUsed,
+        formDataDigiUsed: formData.digiDetails?.isDigiUsed,
+        originalNotebookUsed: estimate.notebookDetails?.isNotebookUsed,
+        formDataNotebookUsed: formData.notebookDetails?.isNotebookUsed,
+        originalScreenUsed: estimate.screenPrint?.isScreenPrintUsed,
+        formDataScreenUsed: formData.screenPrint?.isScreenPrintUsed,
         originalMiscUsed: estimate.misc?.isMiscUsed,
-        formDataMiscUsed: formData.misc?.isMiscUsed
+        formDataMiscUsed: formData.misc?.isMiscUsed,
+        finalMiscCharge: (formData.misc || estimate.misc)?.miscCharge
       });
       
       // Extract and prioritize form data values
@@ -512,25 +543,117 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           type: updatedType
         },
         
-        // All other processing details from form data - preserve any updates
-        lpDetails: formData.lpDetails || estimate.lpDetails,
-        fsDetails: formData.fsDetails || estimate.fsDetails,
-        embDetails: formData.embDetails || estimate.embDetails,
-        digiDetails: formData.digiDetails || estimate.digiDetails,
-        notebookDetails: formData.notebookDetails || estimate.notebookDetails,
-        screenPrint: formData.screenPrint || estimate.screenPrint,
-        preDieCutting: formData.preDieCutting || estimate.preDieCutting,
-        dieCutting: formData.dieCutting || estimate.dieCutting,
-        sandwich: formData.sandwich || estimate.sandwich,
-        magnet: formData.magnet || estimate.magnet,
-        postDC: formData.postDC || estimate.postDC,
-        foldAndPaste: formData.foldAndPaste || estimate.foldAndPaste,
-        dstPaste: formData.dstPaste || estimate.dstPaste,
-        qc: formData.qc || estimate.qc,
-        packing: formData.packing || estimate.packing,
+        lpDetails: formData.lpDetails || estimate.lpDetails || {
+          isLPUsed: false,
+          noOfColors: 0,
+          colorDetails: []
+        },
+        fsDetails: formData.fsDetails || estimate.fsDetails || {
+          isFSUsed: false,
+          fsType: "",
+          foilDetails: []
+        },
+        embDetails: formData.embDetails || estimate.embDetails || {
+          isEMBUsed: false,
+          plateSizeType: "",
+          plateDimensions: { length: "", breadth: "" },
+          plateTypeMale: "",
+          plateTypeFemale: "",
+          embMR: "",
+          embMRConcatenated: "",
+          dstMaterial: ""
+        },
+        digiDetails: formData.digiDetails || estimate.digiDetails || {
+          isDigiUsed: false,
+          digiDie: "",
+          digiDimensions: { length: "", breadth: "" }
+        },
+        notebookDetails: formData.notebookDetails || estimate.notebookDetails || {
+          isNotebookUsed: false,
+          orientation: "",
+          length: "",
+          breadth: "",
+          calculatedLength: "",
+          calculatedBreadth: "",
+          numberOfPages: "",
+          bindingType: "",
+          bindingTypeConcatenated: "",
+          paperName: ""
+        },
+        screenPrint: formData.screenPrint || estimate.screenPrint || {
+          isScreenPrintUsed: false,
+          noOfColors: 1,
+          screenMR: "",
+          screenMRConcatenated: ""
+        },
+        preDieCutting: formData.preDieCutting || estimate.preDieCutting || {
+          isPreDieCuttingUsed: false,
+          predcMR: "",
+          predcMRConcatenated: ""
+        },
+        dieCutting: formData.dieCutting || estimate.dieCutting || {
+          isDieCuttingUsed: false,
+          dcMR: "",
+          dcMRConcatenated: ""
+        },
+        sandwich: formData.sandwich || estimate.sandwich || {
+          isSandwichComponentUsed: false,
+          paperInfo: { paperName: "" },
+          lpDetailsSandwich: {
+            isLPUsed: false,
+            noOfColors: 0,
+            colorDetails: []
+          },
+          fsDetailsSandwich: {
+            isFSUsed: false,
+            fsType: "",
+            foilDetails: []
+          },
+          embDetailsSandwich: {
+            isEMBUsed: false,
+            plateSizeType: "",
+            plateDimensions: { 
+              length: "", 
+              breadth: "",
+              lengthInInches: "",
+              breadthInInches: ""
+            },
+            plateTypeMale: "",
+            plateTypeFemale: "",
+            embMR: "",
+            embMRConcatenated: ""
+          }
+        },
+        magnet: formData.magnet || estimate.magnet || {
+          isMagnetUsed: false,
+          magnetMaterial: ""
+        },
+        postDC: formData.postDC || estimate.postDC || {
+          isPostDCUsed: false,
+          pdcMR: "",
+          pdcMRConcatenated: ""
+        },
+        foldAndPaste: formData.foldAndPaste || estimate.foldAndPaste || {
+          isFoldAndPasteUsed: false,
+          dstMaterial: "",
+          dstType: ""
+        },
+        dstPaste: formData.dstPaste || estimate.dstPaste || {
+          isDstPasteUsed: false,
+          dstType: ""
+        },
+        qc: formData.qc || estimate.qc || {
+          isQCUsed: false
+        },
+        packing: formData.packing || estimate.packing || {
+          isPackingUsed: false
+        },
         
-        // FIXED: Enhanced misc handling - the fixed BillingForm reducer ensures proper state management
-        misc: formData.misc || estimate.misc,
+        // FIXED: Enhanced misc handling - consistent with working Misc pattern
+        misc: formData.misc || estimate.misc || {
+          isMiscUsed: false,
+          miscCharge: ""
+        },
         
         calculations: formData.calculations || estimate.calculations,
         
@@ -542,7 +665,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         updatedAt: currentTimestamp,
       };
       
-      console.log("FINAL VERIFICATION - Critical Values:", {
+      console.log("FINAL VERIFICATION - All Service States:", {
         projectName: updatedEstimate.projectName,
         jobType: updatedEstimate.jobDetails.jobType,
         quantity: updatedEstimate.jobDetails.quantity,
@@ -550,6 +673,12 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         dieCode: updatedEstimate.dieDetails.dieCode,
         frags: updatedEstimate.dieDetails.frags,
         type: updatedEstimate.dieDetails.type,
+        lpUsed: updatedEstimate.lpDetails?.isLPUsed,
+        fsUsed: updatedEstimate.fsDetails?.isFSUsed,
+        embUsed: updatedEstimate.embDetails?.isEMBUsed,
+        digiUsed: updatedEstimate.digiDetails?.isDigiUsed,
+        notebookUsed: updatedEstimate.notebookDetails?.isNotebookUsed,
+        screenUsed: updatedEstimate.screenPrint?.isScreenPrintUsed,
         miscUsed: updatedEstimate.misc?.isMiscUsed,
         miscCharge: updatedEstimate.misc?.miscCharge,
         createdAt: updatedEstimate.createdAt,
@@ -558,7 +687,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       
       const sanitizedEstimate = sanitizeForFirestore(updatedEstimate);
       
-      console.log("FINAL SANITIZED ESTIMATE - Critical Fields:", {
+      console.log("FINAL SANITIZED ESTIMATE - All Service States:", {
         projectName: sanitizedEstimate.projectName,
         jobType: sanitizedEstimate.jobDetails.jobType,
         quantity: sanitizedEstimate.jobDetails.quantity,
@@ -566,6 +695,12 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         dieCode: sanitizedEstimate.dieDetails.dieCode,
         frags: sanitizedEstimate.dieDetails.frags,
         type: sanitizedEstimate.dieDetails.type,
+        lpUsed: sanitizedEstimate.lpDetails?.isLPUsed,
+        fsUsed: sanitizedEstimate.fsDetails?.isFSUsed,
+        embUsed: sanitizedEstimate.embDetails?.isEMBUsed,
+        digiUsed: sanitizedEstimate.digiDetails?.isDigiUsed,
+        notebookUsed: sanitizedEstimate.notebookDetails?.isNotebookUsed,
+        screenUsed: sanitizedEstimate.screenPrint?.isScreenPrintUsed,
         miscUsed: sanitizedEstimate.misc?.isMiscUsed,
         miscCharge: sanitizedEstimate.misc?.miscCharge,
         createdAt: sanitizedEstimate.createdAt,
