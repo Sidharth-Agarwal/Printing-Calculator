@@ -1450,7 +1450,7 @@ const EstimatesPage = () => {
                       </div>
                       
                       {/* All versions shown with dividers between them */}
-                      {Array.from(client.versions.entries()).map(([versionId, versionData]) => (
+                      {Array.from(client.versions.entries()).sort(([a], [b]) => parseInt(a) - parseInt(b)).map(([versionId, versionData]) => (
                         <div key={versionId} className="mb-6">
                           <div className="flex justify-between items-center mb-3">
                             <div className="flex items-center">
