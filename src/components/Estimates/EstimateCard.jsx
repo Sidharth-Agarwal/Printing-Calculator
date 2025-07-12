@@ -9,16 +9,21 @@ const EstimateCard = ({
   onDeleteEstimate,
   onEditEstimate,
   onDuplicateEstimate,
+  onMoveToVersion, // New prop for version transfer
   isAdmin,
   // Multi-select props
   isMultiSelectActive = false,
   isSelected = false,
-  onSelectToggle = () => {}
+  onSelectToggle = () => {},
+  // Version transfer props
+  availableVersions = [],
+  currentVersion = ""
 }) => {
   const [isMoving, setIsMoving] = useState(false);
   const [isCancelling, setIsCancelling] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
   const [isDuplicating, setIsDuplicating] = useState(false);
+  const [showVersionDropdown, setShowVersionDropdown] = useState(false);
 
   const isMovedToOrders = estimate.movedToOrders;
   const isCanceled = estimate.isCanceled;
@@ -160,6 +165,19 @@ const EstimateCard = ({
     }
   };
 
+  // NEW: Handle version transfer
+  const handleVersionTransfer = (e) => {
+    e.stopPropagation();
+    if (isMovedToOrders || isCanceled || isInEscrow) {
+      alert("Estimates that have been moved to orders, escrow, or canceled cannot be moved to another version.");
+      return;
+    }
+    
+    if (onMoveToVersion) {
+      onMoveToVersion(estimate);
+    }
+  };
+
   // Generate the proper move to orders text based on client type
   const getMoveToOrdersText = () => {
     return isLoyaltyEligible ? "Move to Escrow" : "Move to Orders";
@@ -259,6 +277,19 @@ const EstimateCard = ({
         
         {/* Quick Actions - Smaller icons */}
         <div className="flex gap-0.5 flex-shrink-0">
+          {/* NEW: Version Transfer Button */}
+          {!isMovedToOrders && !isCanceled && !isInEscrow && !isMultiSelectActive && (
+            <button
+              onClick={handleVersionTransfer}
+              className="p-0.5 rounded text-gray-400 hover:text-purple-600 hover:bg-purple-50"
+              title="Move to Another Version"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+              </svg>
+            </button>
+          )}
+
           {isAdmin && (
             <button
               onClick={handleDeleteEstimate}

@@ -7,6 +7,7 @@ import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
 import EstimatePreviewModal from "./EstimatePreviewModal";
 import EstimateTemplate from "./EsimateTemplate";
 import EditEstimateModal from "./EditEstimateModal";
+import VersionTransferModal from "./VersionTransferModal";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { createRoot } from "react-dom/client";
@@ -52,6 +53,267 @@ const EstimatesPage = () => {
   const [isMultiSelectActive, setIsMultiSelectActive] = useState(false);
   const [isMovingMultiple, setIsMovingMultiple] = useState(false);
   const [showAllVersions, setShowAllVersions] = useState(false);
+
+  // NEW STATE - Version Transfer
+  const [isVersionTransferMode, setIsVersionTransferMode] = useState(false);
+  const [isTransferringVersions, setIsTransferringVersions] = useState(false);
+
+  // VERSION TRANSFER HELPER FUNCTIONS
+
+  /**
+   * Get all available versions for a specific client - OPTION 4: EXISTING ONLY
+   * New versions are handled by the modal's "Create new version" option
+   */
+  const getAllAvailableVersionsForClient = (clientGroups, clientId) => {
+    if (!clientId || !clientGroups[clientId]) return [];
+    
+    const client = clientGroups[clientId];
+    if (!client) return [];
+    
+    // Get existing versions only - no automatic additional versions
+    const existingVersions = Array.from(client.versions.keys())
+      .map(v => parseInt(v))
+      .sort((a, b) => a - b);
+    
+    if (existingVersions.length === 0) return ["1"]; // If no versions, suggest version 1
+    
+    // Return ONLY existing versions - let modal handle new version creation
+    return existingVersions.map(v => v.toString());
+  };
+
+  /**
+   * Filter selected estimates that can actually be moved to target version
+   */
+  const getMovableEstimates = (selectedEstimates, allEstimates, targetVersionId) => {
+    const movableEstimates = [];
+    
+    Object.keys(selectedEstimates).forEach(estimateId => {
+      if (selectedEstimates[estimateId]?.selected) {
+        const estimate = allEstimates.find(est => est.id === estimateId);
+        
+        // Only include if estimate exists, is not in final states, and is NOT already in target version
+        if (estimate && 
+            !estimate.movedToOrders && 
+            !estimate.isCanceled && 
+            !estimate.inEscrow &&
+            estimate.versionId !== targetVersionId) {
+          movableEstimates.push(estimate);
+        }
+      }
+    });
+    
+    return movableEstimates;
+  };
+
+  /**
+   * Get selected estimates for display purposes (including unmovable ones)
+   */
+  const getSelectedEstimatesForDisplay = (selectedEstimates, allEstimates) => {
+    const selectedEstimatesList = [];
+    
+    Object.keys(selectedEstimates).forEach(estimateId => {
+      if (selectedEstimates[estimateId]?.selected) {
+        const estimate = allEstimates.find(est => est.id === estimateId);
+        if (estimate) {
+          selectedEstimatesList.push(estimate);
+        }
+      }
+    });
+    
+    return selectedEstimatesList;
+  };
+
+  /**
+   * Handle version transfer for multiple estimates
+   */
+  const handleVersionTransferCore = async (
+    movableEstimates, 
+    targetVersionId, 
+    setAllEstimates, 
+    setSelectedEstimates, 
+    setIsVersionTransferMode
+  ) => {
+    if (movableEstimates.length === 0) {
+      alert("No estimates can be moved. Selected estimates are already in the target version or cannot be moved.");
+      return false;
+    }
+    
+    // Show confirmation with count
+    const confirmMessage = `Move ${movableEstimates.length} estimate(s) to Version ${targetVersionId}?`;
+    if (!window.confirm(confirmMessage)) return false;
+    
+    try {
+      const currentTimestamp = new Date().toISOString();
+      
+      // Update each movable estimate in Firestore
+      const updatePromises = movableEstimates.map(estimate => {
+        const estimateRef = doc(db, "estimates", estimate.id);
+        return updateDoc(estimateRef, {
+          versionId: targetVersionId,
+          updatedAt: currentTimestamp
+        });
+      });
+      
+      await Promise.all(updatePromises);
+      
+      // Update local state
+      setAllEstimates(prev => prev.map(est => {
+        const shouldMove = movableEstimates.find(movable => movable.id === est.id);
+        return shouldMove 
+          ? { ...est, versionId: targetVersionId, updatedAt: currentTimestamp } 
+          : est;
+      }));
+      
+      // Clear selections and exit transfer mode
+      setSelectedEstimates({});
+      setIsVersionTransferMode(false);
+      
+      alert(`Successfully moved ${movableEstimates.length} estimate(s) to Version ${targetVersionId}`);
+      return true;
+      
+    } catch (error) {
+      console.error("Error moving estimates:", error);
+      alert("Failed to move estimates. Please try again.");
+      return false;
+    }
+  };
+
+  /**
+   * Handle single estimate version transfer
+   */
+  const handleSingleEstimateVersionMove = (
+    estimate, 
+    setSelectedEstimates, 
+    setIsMultiSelectActive, 
+    setIsVersionTransferMode
+  ) => {
+    // Check if estimate can be moved
+    if (estimate.movedToOrders || estimate.isCanceled || estimate.inEscrow) {
+      alert("This estimate cannot be moved to another version because it has been moved to orders, canceled, or is in escrow.");
+      return;
+    }
+    
+    // Set single estimate as selected
+    setSelectedEstimates({ 
+      [estimate.id]: { 
+        selected: true, 
+        versionId: estimate.versionId || "1" 
+      } 
+    });
+    
+    // Enable multi-select mode and transfer mode
+    setIsMultiSelectActive(true);
+    setIsVersionTransferMode(true);
+  };
+
+  /**
+   * Get count of selected estimates that are actually selectable
+   */
+  const getSelectableEstimatesCount = (selectedEstimates, allEstimates) => {
+    let count = 0;
+    
+    Object.keys(selectedEstimates).forEach(estimateId => {
+      if (selectedEstimates[estimateId]?.selected) {
+        const estimate = allEstimates.find(est => est.id === estimateId);
+        if (estimate && !estimate.movedToOrders && !estimate.isCanceled && !estimate.inEscrow) {
+          count++;
+        }
+      }
+    });
+    
+    return count;
+  };
+
+  // COMPONENT HELPER FUNCTIONS
+
+  /**
+   * Get all available versions for the currently expanded client
+   */
+  const getAllAvailableVersions = () => {
+    if (!expandedClientId) return [];
+    return getAllAvailableVersionsForClient(clientGroups, expandedClientId);
+  };
+
+  /**
+   * Get count of selected valid estimates
+   */
+  const getSelectedEstimatesCount = () => {
+    return getSelectableEstimatesCount(selectedEstimates, allEstimates);
+  };
+
+  /**
+   * Get movable estimates for the current target version
+   */
+  const getMovableEstimatesForTarget = (targetVersion) => {
+    return getMovableEstimates(selectedEstimates, allEstimates, targetVersion);
+  };
+
+  /**
+   * Get selected estimates for display in modal
+   */
+  const getSelectedEstimatesForModal = () => {
+    return getSelectedEstimatesForDisplay(selectedEstimates, allEstimates);
+  };
+
+  // VERSION TRANSFER EVENT HANDLERS
+
+  /**
+   * Handle version transfer confirmation from modal
+   */
+  const handleVersionTransferConfirm = async (targetVersionId) => {
+    const movableEstimates = getMovableEstimatesForTarget(targetVersionId);
+    
+    setIsTransferringVersions(true);
+    
+    const success = await handleVersionTransferCore(
+      movableEstimates,
+      targetVersionId,
+      setAllEstimates,
+      setSelectedEstimates,
+      setIsVersionTransferMode
+    );
+
+    setIsTransferringVersions(false);
+    
+    if (success) {
+      // If we successfully moved estimates, deactivate multi-select
+      setIsMultiSelectActive(false);
+    }
+  };
+
+  /**
+   * Handle single estimate version move
+   */
+  const handleSingleEstimateVersionMoveLocal = (estimate) => {
+    handleSingleEstimateVersionMove(
+      estimate,
+      setSelectedEstimates,
+      setIsMultiSelectActive,
+      setIsVersionTransferMode
+    );
+  };
+
+  /**
+   * Handle starting version transfer mode
+   */
+  const handleStartVersionTransfer = () => {
+    const selectedCount = getSelectedEstimatesCount();
+    
+    if (selectedCount === 0) {
+      alert("Please select at least one estimate to move.");
+      return;
+    }
+    
+    setIsVersionTransferMode(true);
+  };
+
+  /**
+   * Handle canceling version transfer
+   */
+  const handleCancelVersionTransfer = () => {
+    setIsVersionTransferMode(false);
+    // Don't clear selections automatically - let user decide
+  };
 
   // Initialize order serial counter on component mount
   useEffect(() => {
@@ -136,6 +398,7 @@ const EstimatesPage = () => {
   useEffect(() => {
     if (!isMultiSelectActive) {
       setSelectedEstimates({});
+      setIsVersionTransferMode(false); // Clear version transfer mode too
     }
   }, [isMultiSelectActive]);
 
@@ -292,25 +555,12 @@ const EstimatesPage = () => {
     });
   }, [clientGroups]);
 
-  // Get a count of selected valid estimates
-  const getSelectedEstimatesCount = () => {
-    let count = 0;
-    Object.keys(selectedEstimates).forEach(estimateId => {
-      if (selectedEstimates[estimateId]?.selected) {
-        const estimate = allEstimates.find(est => est.id === estimateId);
-        if (estimate && !estimate.movedToOrders && !estimate.isCanceled && !estimate.inEscrow) {
-          count++;
-        }
-      }
-    });
-    return count;
-  };
-
   // Toggle multi-select mode
   const toggleMultiSelect = () => {
     setIsMultiSelectActive(!isMultiSelectActive);
     if (isMultiSelectActive) {
       setSelectedEstimates({});
+      setIsVersionTransferMode(false); // Clear version transfer mode too
     }
   };
 
@@ -1320,8 +1570,26 @@ const EstimatesPage = () => {
                         </div>
                         
                         <div className="flex gap-2">
-                          {/* Bulk Move Action Button */}
+                          {/* NEW: Version Transfer Button */}
                           {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
+                            <button
+                              onClick={handleStartVersionTransfer}
+                              disabled={isVersionTransferMode || isTransferringVersions}
+                              className={`px-3 py-1.5 rounded text-sm flex items-center gap-1.5 ${
+                                isVersionTransferMode || isTransferringVersions
+                                ? 'bg-purple-300 text-white cursor-wait' 
+                                : 'bg-purple-500 text-white hover:bg-purple-600'
+                              }`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Move to Version ({getSelectedEstimatesCount()})
+                            </button>
+                          )}
+                          
+                          {/* Existing Bulk Move Action Button */}
+                          {isMultiSelectActive && getSelectedEstimatesCount() > 0 && !isVersionTransferMode && (
                             <button
                               onClick={handleMoveMultipleToOrders}
                               disabled={isMovingMultiple}
@@ -1335,7 +1603,7 @@ const EstimatesPage = () => {
                                 <>
                                   <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                   </svg>
                                   Processing...
                                 </>
@@ -1364,34 +1632,39 @@ const EstimatesPage = () => {
                         </div>
                       </div>
                       
+                      {/* Enhanced EstimateCard Grid with Version Transfer Props */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
-                        <EstimateCard
-                          key={estimate.id}
-                          estimate={estimate}
-                          estimateNumber={index + 1}
-                          onViewDetails={() => handleViewEstimate(estimate)}
-                          onMoveToOrders={() => handleMoveToOrders(estimate)}
-                          onCancelEstimate={() => handleCancelEstimate(estimate)}
-                          onDeleteEstimate={() => handleDeleteEstimate(estimate)}
-                          onEditEstimate={() => handleEditEstimate(estimate)}
-                          onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
-                          isAdmin={userRole === "admin"}
-                          // Multi-select props
-                          isMultiSelectActive={isMultiSelectActive}
-                          isSelected={selectedEstimates[estimate.id]?.selected || false}
-                          onSelectToggle={(isSelected) => toggleEstimateSelection(
-                            estimate.id, 
-                            isSelected, 
-                            estimate.versionId || "1"
-                          )}
-                        />
-                      ))}
+                        {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
+                          <EstimateCard
+                            key={estimate.id}
+                            estimate={estimate}
+                            estimateNumber={index + 1}
+                            onViewDetails={() => handleViewEstimate(estimate)}
+                            onMoveToOrders={() => handleMoveToOrders(estimate)}
+                            onCancelEstimate={() => handleCancelEstimate(estimate)}
+                            onDeleteEstimate={() => handleDeleteEstimate(estimate)}
+                            onEditEstimate={() => handleEditEstimate(estimate)}
+                            onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
+                            onMoveToVersion={() => handleSingleEstimateVersionMoveLocal(estimate)} // NEW PROP
+                            isAdmin={userRole === "admin"}
+                            // Multi-select props
+                            isMultiSelectActive={isMultiSelectActive}
+                            isSelected={selectedEstimates[estimate.id]?.selected || false}
+                            onSelectToggle={(isSelected) => toggleEstimateSelection(
+                              estimate.id, 
+                              isSelected, 
+                              estimate.versionId || "1"
+                            )}
+                            // NEW: Version transfer props
+                            availableVersions={getAllAvailableVersions()}
+                            currentVersion={selectedVersions[client.id]}
+                          />
+                        ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Show all versions at once in a tabbed layout */}
+                  {/* Show all versions at once with enhanced version transfer */}
                   {showAllVersions && (
                     <div className="p-4">
                       <div className="flex justify-between items-center mb-4">
@@ -1417,39 +1690,59 @@ const EstimatesPage = () => {
                           </button>
                         </div>
                         
-                        {/* Bulk Move Action Button */}
-                        {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
-                          <button
-                            onClick={handleMoveMultipleToOrders}
-                            disabled={isMovingMultiple}
-                            className={`px-3 py-1.5 rounded text-sm ${
-                              isMovingMultiple
-                              ? 'bg-blue-300 text-white cursor-wait' 
-                              : 'bg-blue-500 text-white hover:bg-blue-600'
-                            } flex items-center gap-1.5`}
-                          >
-                            {isMovingMultiple ? (
-                              <>
-                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Processing...
-                              </>
-                            ) : (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                  <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
-                                  <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
-                                </svg>
-                                Process {getSelectedEstimatesCount()}
-                              </>
-                            )}
-                          </button>
-                        )}
+                        <div className="flex gap-2">
+                          {/* NEW: Version Transfer Button for All Versions */}
+                          {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
+                            <button
+                              onClick={handleStartVersionTransfer}
+                              disabled={isVersionTransferMode || isTransferringVersions}
+                              className={`px-3 py-1.5 rounded text-sm flex items-center gap-1.5 ${
+                                isVersionTransferMode || isTransferringVersions
+                                ? 'bg-purple-300 text-white cursor-wait' 
+                                : 'bg-purple-500 text-white hover:bg-purple-600'
+                              }`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Move to Version ({getSelectedEstimatesCount()})
+                            </button>
+                          )}
+
+                          {/* Bulk Move Action Button */}
+                          {isMultiSelectActive && getSelectedEstimatesCount() > 0 && !isVersionTransferMode && (
+                            <button
+                              onClick={handleMoveMultipleToOrders}
+                              disabled={isMovingMultiple}
+                              className={`px-3 py-1.5 rounded text-sm ${
+                                isMovingMultiple
+                                ? 'bg-blue-300 text-white cursor-wait' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                              } flex items-center gap-1.5`}
+                            >
+                              {isMovingMultiple ? (
+                                <>
+                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
+                                    <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
+                                  </svg>
+                                  Process {getSelectedEstimatesCount()}
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                       
-                      {/* All versions shown with dividers between them */}
+                      {/* All versions with enhanced estimate cards */}
                       {Array.from(client.versions.entries()).sort(([a], [b]) => parseInt(a) - parseInt(b)).map(([versionId, versionData]) => (
                         <div key={versionId} className="mb-6">
                           <div className="flex justify-between items-center mb-3">
@@ -1476,7 +1769,7 @@ const EstimatesPage = () => {
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                                     <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
-                                    </svg>
+                                  </svg>
                                   Select All
                                 </button>
                               )}
@@ -1494,6 +1787,7 @@ const EstimatesPage = () => {
                             </div>
                           </div>
                           
+                          {/* Enhanced estimate cards with version transfer */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
                             {versionData.estimates.map((estimate, index) => (
                               <EstimateCard
@@ -1506,6 +1800,7 @@ const EstimatesPage = () => {
                                 onDeleteEstimate={() => handleDeleteEstimate(estimate)}
                                 onEditEstimate={() => handleEditEstimate(estimate)}
                                 onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
+                                onMoveToVersion={() => handleSingleEstimateVersionMoveLocal(estimate)} // NEW PROP
                                 isAdmin={userRole === "admin"}
                                 // Multi-select props
                                 isMultiSelectActive={isMultiSelectActive}
@@ -1515,6 +1810,9 @@ const EstimatesPage = () => {
                                   isSelected, 
                                   estimate.versionId || "1"
                                 )}
+                                // NEW: Version transfer props
+                                availableVersions={getAllAvailableVersions()}
+                                currentVersion={versionId}
                               />
                             ))}
                           </div>
@@ -1572,6 +1870,21 @@ const EstimatesPage = () => {
             setEstimateToEdit(null);
           }}
           onSave={handleSaveEditedEstimate}
+        />
+      )}
+
+      {/* NEW: Version Transfer Modal */}
+      {isVersionTransferMode && (
+        <VersionTransferModal
+          isOpen={isVersionTransferMode}
+          onClose={handleCancelVersionTransfer}
+          onConfirm={handleVersionTransferConfirm}
+          availableVersions={getAllAvailableVersions()}
+          currentVersion={selectedVersions[expandedClientId]}
+          estimateCount={getSelectedEstimatesForModal().length}
+          movableCount={getMovableEstimatesForTarget("").length}
+          selectedEstimates={getSelectedEstimatesForModal()}
+          clientName={expandedClientId ? clientGroups[expandedClientId]?.name : ""}
         />
       )}
     </div>
