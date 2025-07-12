@@ -192,7 +192,7 @@ const SinglePageContent = ({
               </div>
             </div>
             
-            <div className="flex justify-between pt-1 pb-2 font-bold border-t border-gray-300">
+            <div className="flex justify-between pt-1 pb-2 font-bold border-t border-gray-300 text-sm">
               <div>Total:</div>
               <div className="font-mono">
                 {formatCurrency(totals.total)}
@@ -447,7 +447,7 @@ const PageContent = ({
               </div>
             </div>
             
-            <div className="flex justify-between pt-1 pb-2 font-bold border-t border-gray-300">
+            <div className="flex justify-between pt-1 pb-2 font-bold border-t border-gray-300 text-base">
               <div>Total:</div>
               <div className="font-mono">
                 {formatCurrency(totals.total)}
