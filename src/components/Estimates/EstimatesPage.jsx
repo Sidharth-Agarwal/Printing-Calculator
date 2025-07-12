@@ -1430,6 +1430,7 @@ const EstimatesPage = () => {
                             onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
                             onMoveToVersion={() => handleSingleEstimateVersionMoveLocal(estimate)}
                             isAdmin={userRole === "admin"}
+                            isStaff={userRole === "staff"}
                             // Multi-select props
                             isMultiSelectActive={isMultiSelectActive}
                             isSelected={selectedEstimates[estimate.id]?.selected || false}
@@ -1585,6 +1586,7 @@ const EstimatesPage = () => {
                                 onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
                                 onMoveToVersion={() => handleSingleEstimateVersionMoveLocal(estimate)}
                                 isAdmin={userRole === "admin"}
+                                isStaff={userRole === "staff"}
                                 // Multi-select props
                                 isMultiSelectActive={isMultiSelectActive}
                                 isSelected={selectedEstimates[estimate.id]?.selected || false}

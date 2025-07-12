@@ -11,6 +11,7 @@ const EstimateCard = ({
   onDuplicateEstimate,
   onMoveToVersion, // New prop for version transfer
   isAdmin,
+  isStaff, // NEW PROP: Add isStaff prop
   // Multi-select props
   isMultiSelectActive = false,
   isSelected = false,
@@ -290,7 +291,8 @@ const EstimateCard = ({
             </button>
           )}
 
-          {isAdmin && (
+          {/* UPDATED: Allow both admin and staff to delete */}
+          {(isAdmin || isStaff) && (
             <button
               onClick={handleDeleteEstimate}
               disabled={isDeleting || isMovedToOrders || isInEscrow}
@@ -389,7 +391,7 @@ const EstimateCard = ({
               {isMoving ? (
                 <svg className="animate-spin h-3.5 w-3.5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mx-auto" viewBox="0 0 20 20" fill="currentColor">
@@ -414,7 +416,7 @@ const EstimateCard = ({
               {isCancelling ? (
                 <svg className="animate-spin h-3.5 w-3.5 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 mx-auto" viewBox="0 0 20 20" fill="currentColor">
