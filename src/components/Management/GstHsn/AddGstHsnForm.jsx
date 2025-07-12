@@ -95,6 +95,7 @@ const AddGstHsnForm = ({ onSubmit, selectedGstHsn, onUpdate, isSubmitting, onCan
               onChange={handleChange}
               placeholder="Enter value"
               className="w-full p-2 border border-gray-300 rounded text-sm"
+              onWheel={(e) => e.target.blur()}
             />
           </div>
         </div>

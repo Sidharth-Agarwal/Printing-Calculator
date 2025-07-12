@@ -160,6 +160,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               className="w-full p-2 border border-gray-300 rounded text-sm"
               required
               min="1"
+              onWheel={(e) => e.target.blur()}
             />
             <p className="mt-1 text-xs text-gray-500">
               Minimum number of orders to reach this tier
@@ -180,6 +181,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               required
               min="0"
               max="100"
+              onWheel={(e) => e.target.blur()}
             />
             <p className="mt-1 text-xs text-gray-500">
               Percentage discount applied to orders

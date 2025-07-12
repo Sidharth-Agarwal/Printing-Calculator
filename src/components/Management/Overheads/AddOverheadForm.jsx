@@ -84,6 +84,7 @@ const AddOverheadForm = ({ onSubmit, selectedOverhead, onUpdate, isSubmitting, o
               onChange={handleChange}
               placeholder="Enter value"
               className="w-full p-2 border border-gray-300 rounded text-sm"
+              onWheel={(e) => e.target.blur()}
             />
           </div>
           <div>
@@ -97,6 +98,7 @@ const AddOverheadForm = ({ onSubmit, selectedOverhead, onUpdate, isSubmitting, o
               onChange={handleChange}
               placeholder="Enter percentage"
               className="w-full p-2 border border-gray-300 rounded text-sm"
+              onWheel={(e) => e.target.blur()}
             />
           </div>
         </div>

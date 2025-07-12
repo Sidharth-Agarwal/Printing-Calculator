@@ -136,6 +136,7 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
                 readOnly ? "bg-gray-100" : ""
               }`}
               required={required}
+              onWheel={(e) => e.target.blur()}
             />
           </div>
         );
