@@ -273,6 +273,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             className="w-full p-1.5 border border-gray-300 rounded text-sm"
             required
             disabled={isSubmitting}
+            onWheel={(e) => e.target.blur()}
           />
         </div>
       </div>
@@ -290,6 +291,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             className="w-full p-1.5 border border-gray-300 rounded text-sm"
             required
             disabled={isSubmitting}
+            onWheel={(e) => e.target.blur()}
           />
         </div>
         <div>
@@ -303,6 +305,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             className="w-full p-1.5 border border-gray-300 rounded text-sm"
             required
             disabled={isSubmitting}
+            onWheel={(e) => e.target.blur()}
           />
         </div>
         <div>
@@ -316,6 +319,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             className="w-full p-1.5 border border-gray-300 rounded text-sm"
             required
             disabled={isSubmitting}
+            onWheel={(e) => e.target.blur()}
           />
         </div>
         <div>
@@ -329,6 +333,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
             className="w-full p-1.5 border border-gray-300 rounded text-sm"
             required
             disabled={isSubmitting}
+            onWheel={(e) => e.target.blur()}
           />
         </div>
       </div>

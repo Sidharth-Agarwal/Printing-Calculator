@@ -136,6 +136,7 @@ const AddMaterialForm = ({ onSubmit, selectedMaterial, onUpdate, isSubmitting, o
                 readOnly ? "bg-gray-100" : ""
               }`}
               required={required}
+              onWheel={(e) => e.target.blur()}
             />
           </div>
         );

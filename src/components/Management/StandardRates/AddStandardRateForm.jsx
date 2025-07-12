@@ -97,6 +97,7 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, isSubmitting, o
               onChange={handleChange}
               placeholder="Enter rate"
               className="w-full p-2 border border-gray-300 rounded text-sm"
+              onWheel={(e) => e.target.blur()}
             />
           </div>
           <div>
@@ -108,6 +109,7 @@ const AddStandardRateForm = ({ onSubmit, selectedRate, onUpdate, isSubmitting, o
               onChange={handleChange}
               placeholder="Enter percentage"
               className="w-full p-2 border border-gray-300 rounded text-sm"
+              onWheel={(e) => e.target.blur()}
             />
           </div>
         </div>
