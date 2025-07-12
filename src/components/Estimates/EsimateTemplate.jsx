@@ -137,7 +137,7 @@ const SinglePageContent = ({
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="py-2 px-1 border border-gray-300 text-center">S.No</th>
-              <th className="py-2 px-1 border border-gray-300 text-left">Item</th>
+              <th className="py-2 px-1 border border-gray-300 text-left">Project Name</th>
               <th className="py-2 px-1 border border-gray-300 text-center">Job Type</th>
               <th className="py-2 px-1 border border-gray-300 text-center">Paper</th>
               <th className="py-2 px-1 border border-gray-300 text-center">Size</th>
@@ -392,7 +392,7 @@ const PageContent = ({
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="py-1 px-2 border border-gray-300 text-center">S.No</th>
-              <th className="py-1 px-2 border border-gray-300 text-left">Item</th>
+              <th className="py-1 px-2 border border-gray-300 text-left">Project Name</th>
               <th className="py-1 px-2 border border-gray-300 text-center">Job Type</th>
               <th className="py-1 px-2 border border-gray-300 text-center">Paper</th>
               <th className="py-1 px-2 border border-gray-300 text-center">Size</th>
