@@ -175,7 +175,8 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       frags: estimate.dieDetails?.frags,
       type: estimate.dieDetails?.type,
       markupType: estimate.calculations?.markupType,
-      markupPercentage: estimate.calculations?.markupPercentage
+      markupPercentage: estimate.calculations?.markupPercentage,
+      weddingDate: estimate.weddingDate || estimate.jobDetails?.weddingDate
     });
     
     // Enhanced logging for all service details
@@ -209,6 +210,8 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         projectName: estimate.projectName || "",
         date: estimate.date ? new Date(estimate.date) : null,
         deliveryDate: estimate.deliveryDate ? new Date(estimate.deliveryDate) : null,
+        weddingDate: estimate.weddingDate ? new Date(estimate.weddingDate) : 
+                     (estimate.jobDetails?.weddingDate ? new Date(estimate.jobDetails.weddingDate) : null), // ADDED WEDDING DATE
         jobType: estimate.jobDetails?.jobType || "Card",
         quantity: estimate.jobDetails?.quantity || "",
         paperProvided: estimate.jobDetails?.paperProvided || "Yes",
@@ -403,7 +406,9 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         formDataScreenUsed: formData.screenPrint?.isScreenPrintUsed,
         originalMiscUsed: estimate.misc?.isMiscUsed,
         formDataMiscUsed: formData.misc?.isMiscUsed,
-        finalMiscCharge: (formData.misc || estimate.misc)?.miscCharge
+        finalMiscCharge: (formData.misc || estimate.misc)?.miscCharge,
+        originalWeddingDate: estimate.weddingDate || estimate.jobDetails?.weddingDate,
+        formDataWeddingDate: formData.weddingDate || formData.orderAndPaper?.weddingDate
       });
       
       // Extract and prioritize form data values
@@ -493,6 +498,14 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         estimate.dieDetails?.type || 
         "";
       
+      // ADDED: Handle wedding date update
+      const updatedWeddingDate = 
+        (formData.weddingDate) || 
+        (formData.orderAndPaper?.weddingDate) || 
+        estimate.weddingDate || 
+        estimate.jobDetails?.weddingDate || 
+        null;
+      
       console.log("Extracted critical values:", {
         projectName: updatedProjectName,
         jobType: updatedJobType,
@@ -500,7 +513,8 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         paperName: updatedPaperName,
         dieCode: updatedDieCode,
         frags: updatedFrags,
-        type: updatedType
+        type: updatedType,
+        weddingDate: updatedWeddingDate
       });
       
       const clientName = formData.clientInfo?.name || 
@@ -522,6 +536,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         
         date: formData.date || estimate.date,
         deliveryDate: formData.deliveryDate || estimate.deliveryDate,
+        weddingDate: updatedWeddingDate ? (typeof updatedWeddingDate === 'string' ? updatedWeddingDate : updatedWeddingDate.toISOString()) : null, // ADDED WEDDING DATE
         
         jobDetails: {
           jobType: updatedJobType,
@@ -531,6 +546,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           paperGsm: updatedPaperGsm,
           paperCompany: updatedPaperCompany,
           hsnCode: updatedHsnCode,
+          weddingDate: updatedWeddingDate ? (typeof updatedWeddingDate === 'string' ? updatedWeddingDate : updatedWeddingDate.toISOString()) : null, // ALSO ADD TO JOB DETAILS FOR FLEXIBILITY
         },
         
         dieDetails: {
@@ -664,7 +680,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         createdAt: estimate.createdAt || currentTimestamp,
         updatedAt: currentTimestamp,
       };
-      
+
       console.log("FINAL VERIFICATION - All Service States:", {
         projectName: updatedEstimate.projectName,
         jobType: updatedEstimate.jobDetails.jobType,
@@ -673,6 +689,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         dieCode: updatedEstimate.dieDetails.dieCode,
         frags: updatedEstimate.dieDetails.frags,
         type: updatedEstimate.dieDetails.type,
+        weddingDate: updatedEstimate.weddingDate,
         lpUsed: updatedEstimate.lpDetails?.isLPUsed,
         fsUsed: updatedEstimate.fsDetails?.isFSUsed,
         embUsed: updatedEstimate.embDetails?.isEMBUsed,
@@ -695,6 +712,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         dieCode: sanitizedEstimate.dieDetails.dieCode,
         frags: sanitizedEstimate.dieDetails.frags,
         type: sanitizedEstimate.dieDetails.type,
+        weddingDate: sanitizedEstimate.weddingDate,
         lpUsed: sanitizedEstimate.lpDetails?.isLPUsed,
         fsUsed: sanitizedEstimate.fsDetails?.isFSUsed,
         embUsed: sanitizedEstimate.embDetails?.isEMBUsed,

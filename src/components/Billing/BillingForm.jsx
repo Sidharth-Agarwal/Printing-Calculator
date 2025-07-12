@@ -45,6 +45,7 @@ const initialFormState = {
    projectName: "",
    date: null,
    deliveryDate: null,
+   weddingDate: null,
    jobType: "Card", // Default job type
    quantity: "",
    paperProvided: "Yes",
@@ -282,6 +283,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     projectName: orderAndPaper.projectName || "",
     date: orderAndPaper.date?.toISOString() || null,
     deliveryDate: orderAndPaper.deliveryDate?.toISOString() || null,
+    weddingDate: orderAndPaper.weddingDate?.toISOString() || null, // ADD THIS LINE
     
     // Job details with HSN code included
     jobDetails: sanitizeForFirestore({
@@ -628,7 +630,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     paperName: state.orderAndPaper.paperName,
     dieCode: state.orderAndPaper.dieCode,
     frags: state.orderAndPaper.frags,
-    type: state.orderAndPaper.type
+    type: state.orderAndPaper.type,
+    weddingDate: state.orderAndPaper.weddingDate
    });
  }, [
    state.orderAndPaper.projectName,
@@ -637,7 +640,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
    state.orderAndPaper.paperName,
    state.orderAndPaper.dieCode,
    state.orderAndPaper.frags,
-   state.orderAndPaper.type
+   state.orderAndPaper.type,
+   state.orderAndPaper.weddingDate
  ]);
 
  // Direct initialization of default services
@@ -1840,7 +1844,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
      quantity: state.orderAndPaper.quantity,
      paperName: state.orderAndPaper.paperName,
      dieCode: state.orderAndPaper.dieCode,
-     projectName: state.orderAndPaper.projectName
+     projectName: state.orderAndPaper.projectName,
+     weddingDate: state.orderAndPaper.weddingDate
    });
    
    setIsSubmitting(true);
@@ -1862,7 +1867,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
        quantity: formattedData.jobDetails.quantity,
        paperName: formattedData.jobDetails.paperName,
        dieCode: formattedData.dieDetails.dieCode,
-       projectName: formattedData.projectName
+       projectName: formattedData.projectName,
+       weddingDate: formattedData.weddingDate // ADD THIS LINE
      });
      
      if (isEditMode && onSubmitSuccess) {

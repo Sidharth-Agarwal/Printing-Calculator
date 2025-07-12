@@ -37,6 +37,7 @@ const UnifiedDetailsModal = ({
     projectName: "Name of the Project",
     date: "Order Date",
     deliveryDate: "Expected Delivery Date",
+    weddingDate: "Wedding Date", // ADDED WEDDING DATE LABEL
     jobType: "Job Type",
     quantity: "Quantity",
     paperProvided: "Paper Provided",
@@ -436,6 +437,7 @@ const UnifiedDetailsModal = ({
                 projectName: displayData.projectName,
                 date: displayData.date,
                 deliveryDate: displayData.deliveryDate,
+                weddingDate: displayData.weddingDate, // ADDED WEDDING DATE HERE
                 jobType: displayData.jobDetails?.jobType,
                 quantity: displayData.jobDetails?.quantity,
                 paperName: displayData.jobDetails?.paperName,
