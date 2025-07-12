@@ -8,6 +8,7 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
   const [existingEstimates, setExistingEstimates] = useState([]);
   const [availableVersions, setAvailableVersions] = useState([]);
   const [showEstimates, setShowEstimates] = useState(false);
+  const [hasAutoSelected, setHasAutoSelected] = useState(false);
   
   // Initialize versions on component mount or when clientId changes
   useEffect(() => {
@@ -22,6 +23,27 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
     // If we have a clientId, check for existing estimates to find the highest version
     if (clientId) {
       checkForExistingVersions(clientId);
+    }
+  }, [clientId]);
+
+  // Auto-select Version 1 when clientId is available and no version is selected
+  useEffect(() => {
+    if (clientId && !selectedVersion && !hasAutoSelected && availableVersions.length > 0) {
+      console.log("Auto-selecting Version 1 for client:", clientId);
+      onVersionSelect("1"); // Auto-select Version 1
+      setHasAutoSelected(true);
+    }
+    
+    // Reset auto-selection flag when clientId changes
+    if (!clientId) {
+      setHasAutoSelected(false);
+    }
+  }, [clientId, selectedVersion, hasAutoSelected, availableVersions, onVersionSelect]);
+
+  // Reset auto-selection flag when client changes
+  useEffect(() => {
+    if (clientId) {
+      setHasAutoSelected(false);
     }
   }, [clientId]);
   
@@ -98,7 +120,9 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
   }, [clientId, selectedVersion]);
 
   const handleVersionChange = (e) => {
-    onVersionSelect(e.target.value);
+    const newVersion = e.target.value;
+    console.log("Version manually changed to:", newVersion);
+    onVersionSelect(newVersion);
   };
   
   // Function to add a new version
@@ -118,7 +142,7 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
         <div className="flex items-end gap-2">
           <div className="flex-grow">
             <select
-              value={selectedVersion}
+              value={selectedVersion || ""}
               onChange={handleVersionChange}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs appearance-none"
               disabled={!clientId}
