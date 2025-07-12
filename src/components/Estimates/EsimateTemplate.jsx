@@ -567,7 +567,7 @@ const EstimateTemplate = ({
   const [logoLoaded, setLogoLoaded] = useState(false);
 
   // Pagination constants
-  const ESTIMATES_PER_PAGE = 8;
+  const ESTIMATES_PER_PAGE = 6;
   
   // If currentPage is provided, we're in PDF generation mode (single page)
   // Otherwise, we're in normal preview mode (multi-page)
