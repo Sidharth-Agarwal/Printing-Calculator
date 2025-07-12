@@ -38,7 +38,8 @@ const OrderAndPaper = ({
       paperName: orderAndPaper.paperName,
       paperGsm: orderAndPaper.paperGsm,
       paperCompany: orderAndPaper.paperCompany,
-      dieCode: orderAndPaper.dieCode
+      dieCode: orderAndPaper.dieCode,
+      weddingDate: orderAndPaper.weddingDate
     });
   }, [orderAndPaper]);
 
@@ -313,146 +314,169 @@ const OrderAndPaper = ({
           <h1 className="text-lg font-bold text-gray-700 mb-4">PROJECT & PAPER DETAILS</h1>
         )}
         <form onSubmit={handleSubmit} className={compact ? "space-y-4" : "space-y-6"}>
-          {/* Form Fields Grid - Updated layout to put paper dropdown next to paper provided */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 text-sm">
-            {/* Project Name - spans 2 columns */}
-            <div className="col-span-2">
-              <label htmlFor="projectName" className="block text-xs font-medium text-gray-600 mb-1">
-                Project Name <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="projectName"
-                ref={firstInputRef}
-                type="text"
-                name="projectName"
-                placeholder="Enter the project name"
-                value={orderAndPaper.projectName || ""}
-                onChange={handleChange}
-                className={`border rounded-md p-2 w-full text-xs ${
-                  validationErrors.projectName ? "border-red-500" : ""
-                }`}
-                required
-              />
-              {validationErrors.projectName && (
-                <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.projectName}</p>
-              )}
+          {/* Form Fields Grid - Updated layout with single line for dates and paper fields */}
+          <div className="grid grid-cols-1 gap-4 text-sm">
+            {/* First Row: Project Name, Job Type, Quantity */}
+            <div className="grid grid-cols-3 gap-4">
+              {/* Project Name */}
+              <div>
+                <label htmlFor="projectName" className="block text-xs font-medium text-gray-600 mb-1">
+                  Project Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="projectName"
+                  ref={firstInputRef}
+                  type="text"
+                  name="projectName"
+                  placeholder="Enter the project name"
+                  value={orderAndPaper.projectName || ""}
+                  onChange={handleChange}
+                  className={`border rounded-md p-2 w-full text-xs ${
+                    validationErrors.projectName ? "border-red-500" : ""
+                  }`}
+                  required
+                />
+                {validationErrors.projectName && (
+                  <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.projectName}</p>
+                )}
+              </div>
+
+              {/* Job Type */}
+              <div>
+                <label htmlFor="jobType" className="block text-xs font-medium text-gray-600 mb-1">
+                  Job Type <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="jobType"
+                  name="jobType"
+                  value={orderAndPaper.jobType || "Card"}
+                  onChange={handleChange}
+                  className="border rounded-md p-2 w-full text-xs"
+                  required
+                >
+                  <option value="Card">Card</option>
+                  <option value="Biz Card">Biz Card</option>
+                  <option value="Envelope">Envelope</option>
+                  <option value="Seal">Seal</option>
+                  <option value="Magnet">Magnet</option>
+                  <option value="Packaging">Packaging</option>
+                  <option value="Notebook">Notebook</option>
+                  <option value="Liner">Liner</option>
+                  <option value="Custom">Custom</option>
+                </select>
+              </div>
+
+              {/* Quantity - Modified to prevent scroll changes and hide arrows */}
+              <div>
+                <label htmlFor="quantity" className="block text-xs font-medium text-gray-600 mb-1">
+                  Quantity <span className="text-red-500">*</span>
+                </label>
+                <input
+                  id="quantity"
+                  type="number"
+                  name="quantity"
+                  placeholder="Quantity"
+                  value={orderAndPaper.quantity || ""}
+                  onChange={handleChange}
+                  ref={quantityInputRef}
+                  onWheel={(e) => e.target.blur()}
+                  className={`text-xs border rounded-md p-2 w-full text-sm no-spinner ${
+                    validationErrors.quantity ? "border-red-500" : ""
+                  }`}
+                  required
+                />
+                {validationErrors.quantity && (
+                  <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.quantity}</p>
+                )}
+              </div>
             </div>
 
-            {/* Job Type */}
-            <div>
-              <label htmlFor="jobType" className="block text-xs font-medium text-gray-600 mb-1">
-                Job Type <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="jobType"
-                name="jobType"
-                value={orderAndPaper.jobType || "Card"}
-                onChange={handleChange}
-                className="border rounded-md p-2 w-full text-xs"
-                required
-              >
-                <option value="Card">Card</option>
-                <option value="Biz Card">Biz Card</option>
-                <option value="Envelope">Envelope</option>
-                <option value="Seal">Seal</option>
-                <option value="Magnet">Magnet</option>
-                <option value="Packaging">Packaging</option>
-                <option value="Notebook">Notebook</option>
-                <option value="Liner">Liner</option>
-                <option value="Custom">Custom</option>
-              </select>
-            </div>
+            {/* Second Row: All 5 fields in a single line - Smaller sizing */}
+            <div className="grid grid-cols-5 gap-2">
+              {/* Date */}
+              <div>
+                <label htmlFor="date" className="block text-xs font-medium text-gray-600 mb-1">
+                  Date <span className="text-red-500">*</span>
+                </label>
+                <DatePicker
+                  id="date"
+                  selected={orderAndPaper.date}
+                  onChange={(date) => handleDateChange("date", date)}
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="DD/MM/YYYY"
+                  className="border rounded-md p-1.5 w-full text-xs"
+                  required
+                  popperClassName="small-calendar"
+                  calendarClassName="small-calendar"
+                />
+              </div>
 
-            {/* Quantity - Modified to prevent scroll changes and hide arrows */}
-            <div>
-              <label htmlFor="quantity" className="block text-xs font-medium text-gray-600 mb-1">
-                Quantity <span className="text-red-500">*</span>
-              </label>
-              <input
-                id="quantity"
-                type="number"
-                name="quantity"
-                placeholder="Quantity"
-                value={orderAndPaper.quantity || ""}
-                onChange={handleChange}
-                ref={quantityInputRef}
-                onWheel={(e) => e.target.blur()}
-                className={`text-xs border rounded-md p-2 w-full text-sm no-spinner ${
-                  validationErrors.quantity ? "border-red-500" : ""
-                }`}
-                required
-              />
-              {validationErrors.quantity && (
-                <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.quantity}</p>
-              )}
-            </div>
+              {/* Delivery Date */}
+              <div>
+                <label htmlFor="deliveryDate" className="block text-xs font-medium text-gray-600 mb-1">
+                  Delivery Date <span className="text-red-500">*</span>
+                </label>
+                <DatePicker
+                  id="deliveryDate"
+                  selected={orderAndPaper.deliveryDate}
+                  onChange={(date) => handleDateChange("deliveryDate", date)}
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="DD/MM/YYYY"
+                  className="border rounded-md p-1.5 w-full text-xs"
+                  required
+                  popperClassName="small-calendar"
+                  calendarClassName="small-calendar"
+                />
+              </div>
 
-            {/* Date */}
-            <div>
-              <label htmlFor="date" className="block text-xs font-medium text-gray-600 mb-1">
-                Date <span className="text-red-500">*</span>
-              </label>
-              <DatePicker
-                id="date"
-                selected={orderAndPaper.date}
-                onChange={(date) => handleDateChange("date", date)}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full text-xs"
-                required
-                popperClassName="small-calendar"
-                calendarClassName="small-calendar"
-              />
-            </div>
+              {/* Wedding Date - NEW FIELD */}
+              <div>
+                <label htmlFor="weddingDate" className="block text-xs font-medium text-gray-600 mb-1">
+                  Wedding Date
+                </label>
+                <DatePicker
+                  id="weddingDate"
+                  selected={orderAndPaper.weddingDate}
+                  onChange={(date) => handleDateChange("weddingDate", date)}
+                  dateFormat="dd/MM/yyyy"
+                  placeholderText="DD/MM/YYYY"
+                  className="border rounded-md p-1.5 w-full text-xs"
+                  popperClassName="small-calendar"
+                  calendarClassName="small-calendar"
+                />
+              </div>
 
-            {/* Delivery Date */}
-            <div>
-              <label htmlFor="deliveryDate" className="block text-xs font-medium text-gray-600 mb-1">
-                Delivery Date <span className="text-red-500">*</span>
-              </label>
-              <DatePicker
-                id="deliveryDate"
-                selected={orderAndPaper.deliveryDate}
-                onChange={(date) => handleDateChange("deliveryDate", date)}
-                dateFormat="dd/MM/yyyy"
-                placeholderText="DD/MM/YYYY"
-                className="border rounded-md p-2 w-full text-xs"
-                required
-                popperClassName="small-calendar"
-                calendarClassName="small-calendar"
-              />
-            </div>
+              {/* Paper Provided */}
+              <div>
+                <label htmlFor="paperProvided" className="block text-xs font-medium text-gray-600 mb-1">
+                  Paper Provided <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="paperProvided"
+                  name="paperProvided"
+                  value={orderAndPaper.paperProvided || "Yes"}
+                  onChange={handleChange}
+                  className="border rounded-md p-1.5 w-full text-xs"
+                  required
+                >
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
 
-            {/* Paper Provided */}
-            <div>
-              <label htmlFor="paperProvided" className="block text-xs font-medium text-gray-600 mb-1">
-                Paper Provided <span className="text-red-500">*</span>
-              </label>
-              <select
-                id="paperProvided"
-                name="paperProvided"
-                value={orderAndPaper.paperProvided || "Yes"}
-                onChange={handleChange}
-                className="border rounded-md p-2 w-full text-xs"
-                required
-              >
-                <option value="Yes">Yes</option>
-                <option value="No">No</option>
-              </select>
-            </div>
-
-            {/* Paper Selection - Now next to Paper Provided */}
-            <div>
-              <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
-                Paper Name / Cover Name<span className="text-red-500">*</span>
-              </label>
-              <SearchablePaperDropdown 
-                papers={papers}
-                selectedPaper={orderAndPaper.paperName || ""}
-                onChange={handleChange}
-                compact={compact}
-                isDieSelected={!!(orderAndPaper.dieCode)}
-              />
+              {/* Paper Selection */}
+              <div>
+                <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
+                  Paper Name / Cover Name<span className="text-red-500">*</span>
+                </label>
+                <SearchablePaperDropdown 
+                  papers={papers}
+                  selectedPaper={orderAndPaper.paperName || ""}
+                  onChange={handleChange}
+                  compact={true}
+                  isDieSelected={!!(orderAndPaper.dieCode)}
+                />
+              </div>
             </div>
           </div>
 
