@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import PropTypes from 'prop-types';
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
-import { Calculator, Package, Settings, TrendingUp, FileText, DollarSign } from 'lucide-react';
+import { Calculator, Package, Settings, TrendingUp, FileText, DollarSign, Eye } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
 
 const ReviewAndSubmit = ({ 
@@ -10,6 +10,7 @@ const ReviewAndSubmit = ({
   calculations, 
   isCalculating, 
   onCreateEstimate, 
+  onPreviewEstimate, // New prop for preview
   onMarkupChange,
   isEditMode = false,
   previewMode = false,
@@ -27,6 +28,29 @@ const ReviewAndSubmit = ({
 
   const { userRole } = useAuth(); 
   const isB2BClient = userRole === "b2b";
+
+  // Helper function to check if required fields are filled
+  const areRequiredFieldsFilled = () => {
+    const { orderAndPaper, client } = state;
+    
+    // Check if all required fields are filled
+    const hasClient = client?.clientId;
+    const hasProjectName = orderAndPaper?.projectName?.trim();
+    const hasQuantity = orderAndPaper?.quantity;
+    const hasPaperName = orderAndPaper?.paperName?.trim();
+    const hasDieCode = orderAndPaper?.dieCode?.trim();
+    const hasDieSize = orderAndPaper?.dieSize?.length && orderAndPaper?.dieSize?.breadth;
+    
+    return hasClient && hasProjectName && hasQuantity && hasPaperName && hasDieCode && hasDieSize;
+  };
+
+  const hasValidCalculations = () => {
+    return localCalculations && !localCalculations.error && localCalculations.totalWithGST;
+  };
+
+  const shouldShowPreviewButton = () => {
+    return !isEditMode && areRequiredFieldsFilled() && hasValidCalculations() && !isCalculating;
+  };
 
   // Fetch markup rates with proper priority handling
   useEffect(() => {
@@ -529,13 +553,27 @@ const ReviewAndSubmit = ({
         )}
         <CostItem 
           label="COGS (Cost of Goods Sold)" 
-          value={localCalculations.COGS}isTotal
+          value={localCalculations.COGS}
+          isTotal
         />
       </Section>
     );
   };
 
+  // Updated handleSubmit function - now handles preview
   const handleSubmit = (e) => {
+    e.preventDefault();
+    
+    if (localCalculations) {
+      // Show preview instead of directly creating estimate
+      onPreviewEstimate(localCalculations);
+    } else {
+      onPreviewEstimate();
+    }
+  };
+
+  // Handle direct submit (for edit mode)
+  const handleDirectSubmit = (e) => {
     e.preventDefault();
     
     if (localCalculations) {
@@ -677,42 +715,79 @@ const ReviewAndSubmit = ({
         </div>
       ) : (
         <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
-          <p className="text-red-600">Please fill in the required fields to calculate costs.</p>
+          <p className="text-red-600 text-sm">Please fill in the required fields to calculate costs.</p>
         </div>
       )}
 
-      {/* Submit Button */}
+      {/* Submit Buttons */}
       {!previewMode && (
-        <div className="flex justify-end pt-3 border-t border-gray-200">
-          <button
-            onClick={handleSubmit}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2 hover:bg-blue-700 transition-colors font-medium shadow-sm hover:shadow-md"
-            disabled={isSaving || isCalculating}
-          >
-            {isSaving ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Saving...
-              </>
-            ) : (
-              <>
-                <FileText size={16} />
-                {isEditMode ? "Update Estimate" : "Submit Estimate"}
-              </>
-            )}
-          </button>
+        <div className="flex justify-end gap-3 pt-3 border-t border-gray-200">
+          {/* Preview Button - Primary action for new estimates */}
+          {shouldShowPreviewButton() && (
+            <button
+              onClick={handleSubmit}
+              className="px-3 py-2 bg-blue-600 text-white rounded-md flex items-center gap-2 hover:bg-blue-700 transition-colors font-medium shadow-sm hover:shadow-md"
+              disabled={isSaving || isCalculating}
+            >
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white text-xs"></div>
+                  Processing...
+                </>
+              ) : (
+                <>
+                  <Eye size={12} />
+                  <div className="text-sm">Preview Estimate</div>
+                </>
+              )}
+            </button>
+          )}
+          
+          {/* Direct Submit Button - For edit mode */}
+          {isEditMode && hasValidCalculations() && (
+            <button
+              onClick={handleDirectSubmit}
+              className="px-4 py-2 bg-green-600 text-white rounded-md flex items-center gap-2 hover:bg-green-700 transition-colors font-medium shadow-sm hover:shadow-md"
+              disabled={isSaving || isCalculating}
+            >
+              {isSaving ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                  Saving...
+                </>
+              ) : (
+                <>
+                  <FileText size={12} />
+                  <div className="text-sm">Update Estimate</div>
+                </>
+              )}
+            </button>
+          )}
+          
+          {/* Show helpful message when button is not available */}
+          {!shouldShowPreviewButton() && !isEditMode && (
+            <div className="text-sm text-gray-500 italic">
+              {!areRequiredFieldsFilled() ? 
+                "Please fill all required fields to preview estimate" : 
+                !hasValidCalculations() ? 
+                "Calculating costs..." : 
+                "Preview will be available once calculations are complete"
+              }
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 };
 
-// PropTypes for type checking
+// PropTypes
 ReviewAndSubmit.propTypes = {
   state: PropTypes.object.isRequired,
   calculations: PropTypes.object,
   isCalculating: PropTypes.bool,
   onCreateEstimate: PropTypes.func.isRequired,
+  onPreviewEstimate: PropTypes.func.isRequired,
   onMarkupChange: PropTypes.func,
   isEditMode: PropTypes.bool,
   previewMode: PropTypes.bool,

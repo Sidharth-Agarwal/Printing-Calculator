@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { performCompleteCalculations, recalculateTotals } from "./Services/Calculations/calculationsService";
+import { FileText } from 'lucide-react';
 import { fetchGSTRate } from "./Services/Calculations/Calculators/finalCalculator/gstCalculator";
 import { useAuth } from "../Login/AuthContext";
 
@@ -24,6 +25,7 @@ import Packing from "./Sections/Post Production/Packing";
 import Sandwich from "./Sections/Post Production/Sandwich";
 import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
+import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
 import SuccessNotification from "../Shared/SuccessNotification";
 import FormSection from "../Shared/FormSection";
 import FixedSection from "./Sections/Fixed/FixedSection";
@@ -37,7 +39,7 @@ import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
 const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
   return (
     <div className="border border-gray-200 rounded-lg p-4 flex flex-col transition-all duration-300 ease-in-out">
-      <div className="flex items-center justify-between mb-3">
+      <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
         <div className="flex items-center space-x-2">
           {isUsed && (
@@ -493,6 +495,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [calculations, setCalculations] = useState(null);
   const [isCalculating, setIsCalculating] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // NEW: Preview state management
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
   
   // UPDATED: Only ReviewAndSubmit section remains collapsible
   const [activeSections, setActiveSections] = useState({
@@ -1649,7 +1655,27 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     return Object.keys(errors).length === 0;
   };
 
-  // Handler for Review and Submit when calculations are ready
+  // NEW: Handle preview estimate
+  const handlePreviewEstimate = (enhancedCalculations) => {
+    console.log("Showing preview with calculations:", enhancedCalculations);
+    
+    // Prepare the preview data similar to how we prepare for submission
+    const calculationsWithMarkup = {
+      ...enhancedCalculations,
+      markupType: selectedMarkupType,
+      markupPercentage: markupPercentage,
+      markupAmount: enhancedCalculations?.markupAmount || "0.00"
+    };
+    
+    // Create the formatted data for preview
+    const formattedData = mapStateToFirebaseStructure(state, calculationsWithMarkup);
+    
+    // Set preview data and show preview modal
+    setPreviewData(formattedData);
+    setShowPreview(true);
+  };
+
+  // Handler for Review and Submit when calculations are ready (for edit mode)
   const handleCreateEstimate = (enhancedCalculations) => {
     // Log received calculations to verify markup values
     console.log("Enhanced calculations from ReviewAndSubmit:", {
@@ -1666,6 +1692,32 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     // Submit the form with the updated calculations
     handleSubmit(new Event('submit'));
+  };
+
+  // NEW: Handle confirm submission from preview
+  const handleConfirmSubmission = async () => {
+    setShowPreview(false);
+    setIsSubmitting(true);
+    
+    try {
+      if (isEditMode && onSubmitSuccess) {
+        await onSubmitSuccess(previewData);
+        if (onClose) onClose();
+      } else {
+        await addDoc(collection(db, "estimates"), previewData);
+        
+        // Show success notification
+        setShowSuccessNotification(true);
+        
+        // Instead of fully resetting and navigating away, only reset production and post-production sections
+        partialResetForm();
+      }
+    } catch (error) {
+      console.error("Error handling estimate:", error);
+      alert("Failed to handle estimate.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   // Function to perform a partial reset of the form, keeping client, version, and order info
@@ -2474,7 +2526,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       visibleProductionServices.includes(serviceCode) ||
       visiblePostProductionServices.includes(serviceCode)
     );
-  };  
+  };
 
   return (
     <div className="bg-white rounded-lg">
@@ -2545,6 +2597,43 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </div>
             </div>
           </div>
+        )}
+
+        {/* NEW: Preview Modal */}
+        {showPreview && previewData && (
+          <UnifiedDetailsModal
+            data={previewData}
+            dataType="estimate"
+            onClose={() => setShowPreview(false)}
+            customFooter={
+              <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
+                  disabled={isSubmitting}
+                >
+                  Back to Edit
+                </button>
+                <button
+                  onClick={handleConfirmSubmission}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Creating Estimate...
+                    </>
+                  ) : (
+                    <>
+                      <FileText size={12} />
+                      <div className="text-sm">Confirm & Create Estimate</div>
+                    </>
+                  )}
+                </button>
+              </div>
+            }
+          />
         )}
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
@@ -2856,42 +2945,22 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </div>
           </div>
 
-          {/* Cost Calculation & Review Section - Still Collapsible */}
+          {/* Cost Calculation & Review Section - Always visible now */}
           <div className="mt-6">
-            {/* <FormSection 
-              title="COST CALCULATION" 
-              id="reviewAndSubmit"
-              activeSection={activeSections.reviewAndSubmit ? "reviewAndSubmit" : null}
-              setActiveSection={() => toggleSection("reviewAndSubmit")}
-              isUsed={true}
-              onToggleUsage={toggleReviewSection}
-              bgColor="bg-blue-50"
-            >
-              <ReviewAndSubmit 
-                state={state} 
-                calculations={calculations} 
-                isCalculating={isCalculating} 
-                onCreateEstimate={handleCreateEstimate}
-                onMarkupChange={handleMarkupChange} 
-                isEditMode={isEditMode}
-                isSaving={isSubmitting}
-                previewMode={!isSubmitting}
-              />
-            </FormSection> */}
             <ReviewAndSubmit 
               state={state} 
               calculations={calculations} 
               isCalculating={isCalculating} 
               onCreateEstimate={handleCreateEstimate}
+              onPreviewEstimate={handlePreviewEstimate}
               onMarkupChange={handleMarkupChange} 
               isEditMode={isEditMode}
               isSaving={isSubmitting}
-              previewMode={!isSubmitting}
+              previewMode={false}
             />
           </div>
 
-          <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">
-            {/* Right side: Cancel and Submit buttons */}
+          {/* <div className="flex flex-row-reverse justify-between">
             <div className="flex">
               {onClose && (
                 <button
@@ -2903,25 +2972,27 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                   Cancel
                 </button>
               )}
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </>
-                ) : (
-                  isEditMode ? "Save Changes" : "Submit"
-                )}
-              </button>
+              {isEditMode && (
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              )}
             </div>
-          </div>
+          </div> */}
         </form>
       </div>
     </div>

@@ -8,7 +8,8 @@ import { normalizeDataForDisplay } from "../../utils/normalizeDataForOrders";
 const UnifiedDetailsModal = ({ 
   data, 
   dataType, // 'estimate', 'order', or 'invoice'
-  onClose
+  onClose,
+  customFooter = null // NEW: Optional custom footer
 }) => {
   // Add state to store normalized data
   const [normalizedData, setNormalizedData] = useState(null);
@@ -21,14 +22,14 @@ const UnifiedDetailsModal = ({
   const canViewDetailedCosts = userRole === "admin" || 
     (dataType === "estimate" && !isB2BClient);
 
-  // State for expandable sections - more compact defaults
+  // UPDATED: State for expandable sections - production details now open by default
   const [expandedSections, setExpandedSections] = useState({
     basicInfo: true,
     productionStatus: dataType === 'order',
     loyaltyInfo: true,
     costs: true,
-    productionDetails: false, // Start collapsed for compactness
-    postProductionDetails: false // Start collapsed for compactness
+    productionDetails: true, // CHANGED: Now open by default
+    postProductionDetails: true // CHANGED: Now open by default
   });
   
   // Common field labels across all data types
@@ -412,15 +413,15 @@ const UnifiedDetailsModal = ({
       <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl flex flex-col max-h-[90vh]">
         <div className="flex justify-between items-center p-3 border-b">
           <h2 className="text-lg font-bold text-gray-700">{getModalTitle()}</h2>
-          <button
+          {/* <button
             onClick={onClose}
             className="text-gray-600 hover:text-gray-900 text-lg"
           >
             ✖
-          </button>
+          </button> */}
         </div>
 
-        <div className="p-4 overflow-y-auto">
+        <div className="p-4 overflow-y-auto flex-1">
           <div className="space-y-3">
             {/* Basic Information - Compact */}
             <CollapsibleSection
@@ -473,6 +474,20 @@ const UnifiedDetailsModal = ({
             {renderPostProductionDetailsSection()}
           </div>
         </div>
+
+        {/* UPDATED: Footer with custom footer support */}
+        {customFooter ? (
+          customFooter
+        ) : (
+          <div className="flex justify-end p-4 border-t border-gray-200">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
+            >
+              Close
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
