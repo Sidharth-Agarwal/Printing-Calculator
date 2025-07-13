@@ -1404,7 +1404,7 @@ const EstimatesPage = () => {
                           
                           <button
                             onClick={() => handlePreviewJobTicket(client.id, selectedVersions[client.id])}
-                            className="px-3 py-1.5 rounded text-sm bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded text-xs bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1.5"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
