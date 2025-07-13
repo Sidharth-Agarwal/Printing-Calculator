@@ -352,7 +352,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             max="10"
             onChange={handleChange}
             onWheel={(e) => e.target.blur()}
-            className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
           />
           {errors.noOfColors && (
             <p className="text-red-500 text-xs mt-1">{errors.noOfColors}</p>
@@ -382,7 +382,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                   </div>
                   
                   {/* Single line layout for color fields */}
-                  <div className="grid grid-cols-6 gap-2">  
+                  <div className="grid grid-cols-3 gap-2">  
                     {/* First row with all fields in a single line */}
                     <div className="col-span-1">
                       <label className="block text-xs font-medium text-gray-600 mb-1">

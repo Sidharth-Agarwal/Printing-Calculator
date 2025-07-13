@@ -291,7 +291,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     <form onSubmit={handleSubmit}>
       <div className="space-y-5">
         {/* All Fields in a Single Line */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-2">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div>
             <label htmlFor="plateSizeType" className="block text-xs font-medium text-gray-600 mb-1">
               Plate Size:

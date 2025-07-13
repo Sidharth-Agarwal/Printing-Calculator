@@ -232,7 +232,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
         </div>
 
         {/* Row 2: Orientation, Number of Formas, Binding Type - 3 fields */}
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-2">
           <div>
             <label htmlFor="orientation" className="block text-xs font-medium text-gray-600 mb-1">
               Orientation:
@@ -304,18 +304,19 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
         </div>
 
         {/* Row 3: Length, Breadth, Calculated Length, Calculated Breadth - 4 fields */}
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-2">
           <div>
             <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
-              Length (inches):
+              Length:
             </label>
             <input
               type="number"
               id="length"
               name="length"
-              placeholder="Length"
+              placeholder="(inches)"
               value={notebookDetails.length || ""}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               step="0.01"
             />
@@ -326,15 +327,16 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
 
           <div>
             <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
-              Breadth (inches):
+              Breadth:
             </label>
             <input
               type="number"
               id="breadth"
               name="breadth"
-              placeholder="Breadth"
+              placeholder="(inches)"
               value={notebookDetails.breadth || ""}
               onChange={handleChange}
+              onWheel={(e) => e.target.blur()}
               className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
               step="0.01"
             />
@@ -352,7 +354,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               value={notebookDetails.calculatedLength || notebookDetails.length || ""}
               className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs"
               readOnly
-              placeholder="Calculated length"
+              placeholder="(inches)"
             />
           </div>
           
@@ -365,7 +367,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               value={notebookDetails.calculatedBreadth || notebookDetails.breadth || ""}
               className="w-full px-2 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs"
               readOnly
-              placeholder="Calculated breadth"
+              placeholder="(inches)"
             />
           </div>
         </div>
