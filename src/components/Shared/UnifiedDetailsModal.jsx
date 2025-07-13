@@ -161,7 +161,7 @@ const UnifiedDetailsModal = ({
       <div key={heading} className="mb-3">
         {heading && <h4 className="text-md font-medium text-gray-600 mb-2">{heading}</h4>}
         
-        <div className="grid grid-cols-2 gap-2 bg-white">
+        <div className="grid grid-cols-3 gap-2 bg-white">
           {Object.entries(filteredData)
             .filter(([key]) => !excludedFields.includes(key))
             .map(([key, value]) => (
