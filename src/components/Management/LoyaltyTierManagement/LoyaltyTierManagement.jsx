@@ -28,6 +28,8 @@ const LoyaltyTierManagement = () => {
 
   // Check if user is admin
   const isAdmin = userRole === "admin";
+  const isStaff = userRole === "staff";
+  const isAccountant = userRole === "accountant";
 
   // Loyalty tier statistics
   const [tierStats, setTierStats] = useState({
@@ -345,7 +347,7 @@ const LoyaltyTierManagement = () => {
   };
 
   // Unauthorized access
-  if (!isAdmin) {
+  if (!isAdmin && !isStaff && !isAccountant) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
@@ -389,41 +391,6 @@ const LoyaltyTierManagement = () => {
           Manage loyalty tiers, discounts, and thresholds for B2B clients
         </p>
       </div>
-      
-      {/* Loyalty Tier Statistics */}
-      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Total Tiers</h2>
-          <p className="text-2xl font-bold text-gray-800">{tierStats.totalTiers}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Active loyalty program tiers
-          </p>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">B2B Clients</h2>
-          <p className="text-2xl font-bold text-blue-600">{tierStats.totalClients}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Total clients eligible for loyalty program
-          </p>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Average Discount</h2>
-          <p className="text-2xl font-bold text-red-600">{tierStats.averageDiscount.toFixed(1)}%</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Across all loyalty tiers
-          </p>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Maximum Discount</h2>
-          <p className="text-2xl font-bold text-green-600">{tierStats.maxDiscount.toFixed(1)}%</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Highest loyalty tier discount
-          </p>
-        </div>
-      </div> */}
 
       {/* Action buttons */}
       <div className="flex justify-end mb-4">

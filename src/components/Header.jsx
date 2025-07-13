@@ -283,22 +283,6 @@ const Header = () => {
           
           {/* Right Side - Profile and Mobile Menu */}
           <div className="flex items-center space-x-2">
-            {/* User Role Badge */}
-            <div className="hidden md:flex items-center">
-              {userRole && (
-                <span className={`px-2 py-1 text-xs font-medium rounded-full ${
-                  userRole === 'admin' ? 'bg-red-600 text-white' :
-                  userRole === 'staff' ? 'bg-blue-600 text-white' :
-                  userRole === 'b2b' ? 'bg-green-600 text-white' :
-                  userRole === 'production' ? 'bg-purple-600 text-white' :
-                  userRole === 'accountant' ? 'bg-orange-600 text-white' :
-                  'bg-gray-600 text-white'
-                }`}>
-                  {userRole.toUpperCase()}
-                </span>
-              )}
-            </div>
-
             {/* Profile Dropdown */}
             <div className="relative profile-menu-container">
               <button

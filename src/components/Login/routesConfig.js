@@ -1,20 +1,20 @@
 export const ROUTE_ACCESS = {
-  '/transactions': ['admin'],
+  '/transactions': ['admin', 'accountant'],
   '/user-management': ['admin'],
   '/new-bill': ['admin', 'staff', 'b2b', 'accountant'],
-  '/orders': ['admin', 'staff', 'production', 'b2b'],
-  '/invoices': ['admin', 'staff'],
+  '/orders': ['admin', 'staff', 'production', 'b2b', 'accountant'],
+  '/invoices': ['admin', 'staff', 'accountant'],
   '/clients': ['admin', 'staff', 'accountant'],
   '/vendors': ['admin', 'staff', 'accountant'],
   '/estimates': ['admin', 'staff', 'b2b', 'accountant'],
   '/escrow': ['admin', 'staff', 'accountant'], 
-  '/material-stock/paper-db': ['admin', 'staff'],
-  '/material-stock/material-db': ['admin', 'staff'],
-  '/material-stock/dies-db': ['admin', 'staff'],
-  '/material-stock/standard-rates-db': ['admin', 'staff'],
-  '/material-stock/overheads': ['admin', 'staff'],
-  '/material-stock/loyalty-tiers': ['admin', 'staff'],
-  '/material-stock/gst-hsn-db': ['admin', 'staff'],
+  '/material-stock/paper-db': ['admin', 'staff', 'accountant'],
+  '/material-stock/material-db': ['admin', 'staff','accountant'],
+  '/material-stock/dies-db': ['admin', 'staff', 'accountant'],
+  '/material-stock/standard-rates-db': ['admin', 'staff', 'accountant'],
+  '/material-stock/overheads': ['admin', 'staff', 'accountant'],
+  '/material-stock/loyalty-tiers': ['admin', 'staff', 'accountant'],
+  '/material-stock/gst-hsn-db': ['admin', 'staff', 'accountant'],
   '/loyalty-dashboard': ['admin', 'staff'],
   '/b2b-dashboard': ['b2b'],
   '/crm/lead-registration': ['admin', 'staff'],
@@ -37,19 +37,19 @@ export const MENU_ACCESS = {
   business_escrow: ['admin', 'staff', 'accountant'],
   
   // Operations dropdown and its items
-  operations: ['admin', 'staff', 'production', 'b2b'], // Controls if the Operations dropdown appears
-  operations_orders: ['admin', 'staff', 'production', 'b2b'],
-  operations_invoices: ['admin', 'staff'],
+  operations: ['admin', 'staff', 'production', 'b2b', 'accountant'], // Controls if the Operations dropdown appears
+  operations_orders: ['admin', 'staff', 'production', 'b2b', 'accountant'],
+  operations_invoices: ['admin', 'staff', 'accountant'],
   
   // Inventory dropdown and its items
-  inventory: ['admin', 'staff'], // Controls if the Inventory dropdown appears
-  inventory_paperDb: ['admin', 'staff'],
-  inventory_materialDb: ['admin', 'staff'],
-  inventory_diesDb: ['admin', 'staff'],
-  inventory_labourDb: ['admin', 'staff'],
-  inventory_gstHsnDb: ['admin', 'staff'],
-  inventory_standardParameters: ['admin', 'staff'],
-  inventory_loyaltyProgram: ['admin', 'staff'],
+  inventory: ['admin', 'staff', 'accountant'], // Controls if the Inventory dropdown appears
+  inventory_paperDb: ['admin', 'staff', 'accountant'],
+  inventory_materialDb: ['admin', 'staff', 'accountant'],
+  inventory_diesDb: ['admin', 'staff', 'accountant'],
+  inventory_labourDb: ['admin', 'staff', 'accountant'],
+  inventory_gstHsnDb: ['admin', 'staff', 'accountant'],
+  inventory_standardParameters: ['admin', 'staff', 'accountant'],
+  inventory_loyaltyProgram: ['admin', 'staff', 'accountant'],
   
   // CRM dropdown and its items
   crm: ['admin', 'staff'], // Controls if the CRM dropdown appears
@@ -59,9 +59,9 @@ export const MENU_ACCESS = {
   crm_qualificationBadges: ['admin', 'staff'],
   
   // Analytics dropdown and its items
-  analytics: ['admin', 'staff'], // Controls if the Analytics dropdown appears
+  analytics: ['admin', 'staff', 'accountant'], // Controls if the Analytics dropdown appears
   analytics_loyaltyDashboard: ['admin', 'staff'],
-  analytics_transactions: ['admin'],
+  analytics_transactions: ['admin', 'accountant'],
   
   // Profile menu items
   profile_userManagement: ['admin'],

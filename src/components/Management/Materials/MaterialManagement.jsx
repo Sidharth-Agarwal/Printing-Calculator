@@ -30,6 +30,7 @@ const MaterialManagement = () => {
 
   // Check if user has access (admin or staff)
   const hasAccess = userRole === "admin" || userRole === "staff";
+  const canView = userRole === "accountant";
   const isAdmin = userRole === "admin";
 
   // Material statistics
@@ -247,7 +248,7 @@ const MaterialManagement = () => {
   };
 
   // Redirect non-authorized users
-  if (!hasAccess) {
+  if (!hasAccess && !canView) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
