@@ -32,52 +32,12 @@ import FixedSection from "./Sections/Fixed/FixedSection";
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
 import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
 
-// UPDATED: ServiceCard Component with fixed height to prevent layout shifts
-// const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
-//   return (
-//     <div className="border border-gray-200 rounded-lg p-4 min-h-[120px] flex flex-col">
-//       <div className="flex items-center justify-between mb-3">
-//         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
-//         <div className="flex items-center space-x-2">
-//           {isUsed && (
-//             <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
-//               Active
-//             </span>
-//           )}
-//           <label className="relative inline-flex items-center cursor-pointer">
-//             <input
-//               type="checkbox"
-//               checked={isUsed}
-//               onChange={onToggleUsage}
-//               className="sr-only peer"
-//             />
-//             <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
-//           </label>
-//         </div>
-//       </div>
-      
-//       {/* UPDATED: Content area with smooth transitions and no layout shift */}
-//       <div className="flex-1 overflow-hidden">
-//         <div className={`transition-all duration-300 ease-in-out ${
-//           isUsed 
-//             ? 'opacity-100 max-h-[2000px] transform translate-y-0' 
-//             : 'opacity-0 max-h-0 transform -translate-y-2'
-//         }`}>
-//           {isUsed && (
-//             <div className="pt-1">
-//               {children}
-//             </div>
-//           )}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// };
 // COMPACT: ServiceCard Component with no empty space when inactive
+// Updated ServiceCard Component with dynamic height and scrolling
 const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
   return (
-    <div className="border border-gray-200 rounded-lg p-4 transition-all duration-300 ease-in-out">
-      <div className="flex items-center justify-between">
+    <div className="border border-gray-200 rounded-lg p-4 flex flex-col transition-all duration-300 ease-in-out">
+      <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
         <div className="flex items-center space-x-2">
           {isUsed && (
@@ -97,13 +57,17 @@ const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
         </div>
       </div>
       
-      {/* COMPACT: Only show content when active, with smooth transition */}
-      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+      {/* FIXED: Content area with proper scrolling and dynamic height */}
+      <div className={`flex-1 transition-all duration-300 ease-in-out ${
         isUsed 
-          ? 'max-h-[500px] opacity-100 mt-3' 
-          : 'max-h-0 opacity-0 mt-0'
+          ? 'opacity-100 max-h-[600px] mt-3' 
+          : 'opacity-0 max-h-0 mt-0'
       }`}>
-        {children}
+        {isUsed && (
+          <div className="max-h-[500px] overflow-y-auto overflow-x-hidden">
+            {children}
+          </div>
+        )}
       </div>
     </div>
   );
