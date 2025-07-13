@@ -32,10 +32,51 @@ import FixedSection from "./Sections/Fixed/FixedSection";
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
 import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
 
-// ServiceCard Component - Non-collapsible service container
+// UPDATED: ServiceCard Component with fixed height to prevent layout shifts
+// const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
+//   return (
+//     <div className="border border-gray-200 rounded-lg p-4 min-h-[120px] flex flex-col">
+//       <div className="flex items-center justify-between mb-3">
+//         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+//         <div className="flex items-center space-x-2">
+//           {isUsed && (
+//             <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
+//               Active
+//             </span>
+//           )}
+//           <label className="relative inline-flex items-center cursor-pointer">
+//             <input
+//               type="checkbox"
+//               checked={isUsed}
+//               onChange={onToggleUsage}
+//               className="sr-only peer"
+//             />
+//             <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
+//           </label>
+//         </div>
+//       </div>
+      
+//       {/* UPDATED: Content area with smooth transitions and no layout shift */}
+//       <div className="flex-1 overflow-hidden">
+//         <div className={`transition-all duration-300 ease-in-out ${
+//           isUsed 
+//             ? 'opacity-100 max-h-[2000px] transform translate-y-0' 
+//             : 'opacity-0 max-h-0 transform -translate-y-2'
+//         }`}>
+//           {isUsed && (
+//             <div className="pt-1">
+//               {children}
+//             </div>
+//           )}
+//         </div>
+//       </div>
+//     </div>
+//   );
+// };
+// COMPACT: ServiceCard Component with no empty space when inactive
 const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
   return (
-    <div className="border border-gray-200 rounded-lg p-4">
+    <div className="border border-gray-200 rounded-lg p-4 transition-all duration-300 ease-in-out">
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
         <div className="flex items-center space-x-2">
@@ -56,11 +97,14 @@ const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
         </div>
       </div>
       
-      {isUsed && (
-        <div className="mt-3">
-          {children}
-        </div>
-      )}
+      {/* COMPACT: Only show content when active, with smooth transition */}
+      <div className={`overflow-hidden transition-all duration-300 ease-in-out ${
+        isUsed 
+          ? 'max-h-[500px] opacity-100 mt-3' 
+          : 'max-h-0 opacity-0 mt-0'
+      }`}>
+        {children}
+      </div>
     </div>
   );
 };
@@ -2466,7 +2510,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       visibleProductionServices.includes(serviceCode) ||
       visiblePostProductionServices.includes(serviceCode)
     );
-  };
+  };  
 
   return (
     <div className="bg-white rounded-lg">
@@ -2557,14 +2601,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             handleJobTypeChange={handleJobTypeChange}
           />
 
-          {/* UPDATED: Services Section - Vertical Layout with 3-column grids */}
+          {/* UPDATED: Services Section - Vertical Layout with 3-column grids and fixed heights */}
           <div className="mb-6 space-y-6">
             {/* Production Services Section */}
             <div className="shadow rounded-lg px-4 py-3 border-b border-gray-200">
               <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
               
-              {/* 3-column grid for production services */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* UPDATED: 3-column grid with consistent heights and no layout shifts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 {/* LP Section */}
                 {isServiceVisible("LP") && (
                   <ServiceCard 
@@ -2673,8 +2717,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             <div className="shadow rounded-lg px-4 py-3 border-b border-gray-200">
               <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
               
-              {/* 3-column grid for post-production services */}
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {/* UPDATED: 3-column grid with consistent heights and no layout shifts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 {/* Pre Die Cutting Section */}
                 {isServiceVisible("PRE DC") && (
                   <ServiceCard 
