@@ -91,10 +91,10 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        <div className="grid grid-cols-3 gap-2 items-end">
+        <div className="grid grid-cols-3 gap-2">
           <div className="col-span-1">
             <label htmlFor="digiDie" className="block text-xs font-medium text-gray-600 mb-1">
-              Digital Printing Die:
+              Digital Print Die:
             </label>
             <select
               id="digiDie"
@@ -114,13 +114,13 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
           {digiDie && (
             <>
               <div className="col-span-1">
-                <div className="text-xs text-gray-600 mb-1">Length:</div>
+                <div className="text-xs font-medium text-gray-600 mb-1">Length:</div>
                 <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs w-full">
                   {digiDimensions.length || "N/A"} inches
                 </div>
               </div>
               <div className="col-span-1">
-                <div className="text-xs text-gray-600 mb-1">Breadth:</div>
+                <div className="text-xs font-medium text-gray-600 mb-1">Breadth:</div>
                 <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs w-full">
                   {digiDimensions.breadth || "N/A"} inches
                 </div>
