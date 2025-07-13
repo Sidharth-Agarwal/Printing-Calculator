@@ -6,9 +6,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
     if (!obj) return [];
     if (Array.isArray(obj)) return obj;
     
-    // If it's an object with numeric keys, convert to array
     if (typeof obj === 'object') {
-      // Check if it has numeric keys (0, 1, 2, etc.)
       const keys = Object.keys(obj);
       const isNumericKeys = keys.every(key => !isNaN(parseInt(key)));
       
@@ -25,12 +23,10 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
     if (!dimensions) return "Not specified";
     if (typeof dimensions === "string") return dimensions;
     
-    // Prioritize inches format if available
     if (dimensions.lengthInInches && dimensions.breadthInInches) {
       return `${dimensions.lengthInInches}" × ${dimensions.breadthInInches}"`;
     }
     
-    // Fall back to standard cm format
     const length = dimensions.length || "";
     const breadth = dimensions.breadth || "";
     
@@ -38,53 +34,88 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
     return `${length} × ${breadth} cm`;
   };  
 
+  // Compact table component
+  const CompactTable = ({ headers, rows, title, subtitle }) => (
+    <div className="space-y-2">
+      <div className="bg-blue-50 p-2 rounded text-xs">
+        <h4 className="font-semibold text-sm">{title}</h4>
+        {subtitle && <p className="text-gray-600 text-xs">{subtitle}</p>}
+      </div>
+      
+      {rows.length > 0 ? (
+        <div className="overflow-x-auto">
+          <table className="min-w-full bg-white border border-gray-200 rounded text-xs">
+            <thead className="bg-gray-50">
+              <tr>
+                {headers.map((header, index) => (
+                  <th key={index} className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    {header}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-200">
+              {rows.map((row, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  {row.map((cell, cellIndex) => (
+                    <td key={cellIndex} className="py-1 px-2 text-xs text-gray-500">
+                      {cell}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      ) : (
+        <p className="text-gray-500 italic text-xs">No details available</p>
+      )}
+    </div>
+  );
+
+  // Compact key-value component
+  const CompactKeyValue = ({ title, subtitle, pairs }) => (
+    <div className="space-y-2">
+      <div className="bg-purple-50 p-2 rounded text-xs">
+        <h4 className="font-semibold text-sm">{title}</h4>
+        {subtitle && <p className="text-gray-600 text-xs">{subtitle}</p>}
+      </div>
+      
+      <div className="grid grid-cols-4 gap-1">
+        {pairs.map((pair, index) => (
+          <div key={index} className="bg-white border border-gray-200 p-1 rounded text-xs">
+            <div className="font-medium text-gray-700">{pair.label}</div>
+            <div className="text-gray-500">{pair.value}</div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+
   // Handle rendering LP details (Letterpress)
   const renderLPDetailsTable = () => {
     if (!data || !data.isLPUsed) return null;
     
-    // Convert colorDetails to array if it's an object
     const colorDetails = objectToArray(data.colorDetails);
     
+    const headers = ['Color #', 'Pantone', 'Plate Type', 'Plate Size', 'Dimensions', 'MR Type', 'DST Material'];
+    const rows = colorDetails.map((color, index) => [
+      index + 1,
+      color.pantoneType || "Not specified",
+      color.plateType || "Not specified",
+      color.plateSizeType || "Auto",
+      formatDimensions(color.plateDimensions),
+      color.mrType || "Not specified",
+      color.dstMaterial || "Not specified"
+    ]);
+
     return (
-      <div className="space-y-4">
-        <div className="bg-blue-50 p-2 rounded-md">
-          <h3 className="font-semibold">Letterpress Details (LP)</h3>
-          <p className="text-sm text-gray-600">Number of Colors: {data.noOfColors || 0}</p>
-        </div>
-        
-        {colorDetails.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200 rounded-md">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color #</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pantone</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plate Type</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plate Size</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensions</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MR Type</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">DST Material</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {colorDetails.map((color, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm font-medium text-gray-700">{index + 1}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{color.pantoneType || "Not specified"}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{color.plateType || "Not specified"}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{color.plateSizeType || "Auto"}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(color.plateDimensions)}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{color.mrType || "Not specified"}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{color.dstMaterial || "Not specified"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500 italic">No color details available</p>
-        )}
-      </div>
+      <CompactTable
+        title="Letterpress Details (LP)"
+        subtitle={`Number of Colors: ${data.noOfColors || 0}`}
+        headers={headers}
+        rows={rows}
+      />
     );
   };
 
@@ -92,48 +123,25 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderFSDetailsTable = () => {
     if (!data || !data.isFSUsed) return null;
     
-    // Convert foilDetails to array if it's an object
     const foilDetails = objectToArray(data.foilDetails);
     
+    const headers = ['Foil #', 'Foil Type', 'Block Type', 'Block Size', 'Dimensions', 'MR Type'];
+    const rows = foilDetails.map((foil, index) => [
+      index + 1,
+      foil.foilType || "Not specified",
+      foil.blockType || "Not specified",
+      foil.blockSizeType || "Auto",
+      formatDimensions(foil.blockDimension),
+      foil.mrType || "Not specified"
+    ]);
+
     return (
-      <div className="space-y-4">
-        <div className="bg-yellow-50 p-2 rounded-md">
-          <h3 className="font-semibold">Foil Stamping Details (FS)</h3>
-          <p className="text-sm text-gray-600">FS Type: {data.fsType || "Not specified"}</p>
-          <p className="text-sm text-gray-600">Number of Foils: {foilDetails.length}</p>
-        </div>
-        
-        {foilDetails.length > 0 ? (
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white border border-gray-200 rounded-md">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Foil #</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Foil Type</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Block Type</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Block Size</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensions</th>
-                  <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MR Type</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-200">
-                {foilDetails.map((foil, index) => (
-                  <tr key={index} className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm font-medium text-gray-700">{index + 1}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{foil.foilType || "Not specified"}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{foil.blockType || "Not specified"}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{foil.blockSizeType || "Auto"}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(foil.blockDimension)}</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{foil.mrType || "Not specified"}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        ) : (
-          <p className="text-gray-500 italic">No foil details available</p>
-        )}
-      </div>
+      <CompactTable
+        title="Foil Stamping Details (FS)"
+        subtitle={`FS Type: ${data.fsType || "Not specified"} | Number of Foils: ${foilDetails.length}`}
+        headers={headers}
+        rows={rows}
+      />
     );
   };
 
@@ -141,49 +149,18 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderEMBDetailsTable = () => {
     if (!data || !data.isEMBUsed) return null;
     
+    const pairs = [
+      { label: 'Plate Size Type', value: data.plateSizeType || "Auto" },
+      { label: 'Plate Dimensions', value: formatDimensions(data.plateDimensions) },
+      { label: 'MR Type', value: data.embMR || "Not specified" },
+      { label: 'DST Material', value: data.dstMaterial || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-purple-50 p-2 rounded-md">
-          <h3 className="font-semibold">Embossing Details (EMB)</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Plate Size Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.plateSizeType || "Auto"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Plate Dimensions</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(data.plateDimensions)}</td>
-              </tr>
-              {/* <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Male Plate Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.plateTypeMale || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Female Plate Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.plateTypeFemale || "Not specified"}</td>
-              </tr> */}
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.embMR || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">DST Material</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.dstMaterial || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Embossing Details (EMB)"
+        pairs={pairs}
+      />
     );
   };
 
@@ -191,33 +168,16 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderDigiDetailsTable = () => {
     if (!data || !data.isDigiUsed) return null;
     
+    const pairs = [
+      { label: 'Die Size', value: data.digiDie || "Not specified" },
+      { label: 'Dimensions', value: formatDimensions(data.digiDimensions) }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-green-50 p-2 rounded-md">
-          <h3 className="font-semibold">Digital Printing Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Die Size</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.digiDie || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Dimensions</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{formatDimensions(data.digiDimensions)}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Digital Printing Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -225,37 +185,17 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderScreenPrintTable = () => {
     if (!data || !data.isScreenPrintUsed) return null;
     
+    const pairs = [
+      { label: 'Number of Colors', value: data.noOfColors || 1 },
+      { label: 'MR Type', value: data.screenMR || "Not specified" },
+      { label: 'MR Concatenated', value: data.screenMRConcatenated || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-indigo-50 p-2 rounded-md">
-          <h3 className="font-semibold">Screen Printing Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Number of Colors</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.noOfColors || 1}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.screenMR || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Concatenated</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.screenMRConcatenated || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Screen Printing Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -263,33 +203,16 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderPreDieCuttingTable = () => {
     if (!data || !data.isPreDieCuttingUsed) return null;
     
+    const pairs = [
+      { label: 'MR Type', value: data.predcMR || "Not specified" },
+      { label: 'MR Concatenated', value: data.predcMRConcatenated || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-amber-50 p-2 rounded-md">
-          <h3 className="font-semibold">Pre Die Cutting Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.predcMR || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Concatenated</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.predcMRConcatenated || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Pre Die Cutting Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -297,33 +220,16 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderDieCuttingTable = () => {
     if (!data || !data.isDieCuttingUsed) return null;
     
+    const pairs = [
+      { label: 'MR Type', value: data.dcMR || "Not specified" },
+      { label: 'MR Concatenated', value: data.dcMRConcatenated || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-orange-50 p-2 rounded-md">
-          <h3 className="font-semibold">Die Cutting Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.dcMR || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Concatenated</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.dcMRConcatenated || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Die Cutting Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -331,33 +237,16 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderPostDCTable = () => {
     if (!data || !data.isPostDCUsed) return null;
     
+    const pairs = [
+      { label: 'MR Type', value: data.pdcMR || "Not specified" },
+      { label: 'MR Concatenated', value: data.pdcMRConcatenated || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-red-50 p-2 rounded-md">
-          <h3 className="font-semibold">Post Die Cutting Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.pdcMR || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Concatenated</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.pdcMRConcatenated || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Post Die Cutting Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -365,33 +254,16 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderFoldAndPasteTable = () => {
     if (!data || !data.isFoldAndPasteUsed) return null;
     
+    const pairs = [
+      { label: 'DST Material', value: data.dstMaterial || "Not specified" },
+      { label: 'DST Type', value: data.dstType || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-teal-50 p-2 rounded-md">
-          <h3 className="font-semibold">Fold & Paste Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">DST Material</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.dstMaterial || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">DST Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.dstType || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Fold & Paste Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -399,29 +271,15 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderDstPasteTable = () => {
     if (!data || !data.isDstPasteUsed) return null;
     
+    const pairs = [
+      { label: 'DST Type', value: data.dstType || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-pink-50 p-2 rounded-md">
-          <h3 className="font-semibold">DST Paste Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">DST Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.dstType || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="DST Paste Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -429,29 +287,15 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderMagnetTable = () => {
     if (!data || !data.isMagnetUsed) return null;
     
+    const pairs = [
+      { label: 'Magnet Material', value: data.magnetMaterial || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-gray-50 p-2 rounded-md">
-          <h3 className="font-semibold">Magnet Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Magnet Material</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.magnetMaterial || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Magnet Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -459,29 +303,15 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderQCTable = () => {
     if (!data || !data.isQCUsed) return null;
     
+    const pairs = [
+      { label: 'Quality Control Enabled', value: 'Yes' }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-blue-50 p-2 rounded-md">
-          <h3 className="font-semibold">Quality Control Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Quality Control Enabled</td>
-                <td className="py-2 px-3 text-sm text-gray-500">Yes</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Quality Control Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -489,29 +319,15 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderPackingTable = () => {
     if (!data || !data.isPackingUsed) return null;
     
+    const pairs = [
+      { label: 'Packing Enabled', value: 'Yes' }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-yellow-50 p-2 rounded-md">
-          <h3 className="font-semibold">Packing Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Packing Enabled</td>
-                <td className="py-2 px-3 text-sm text-gray-500">Yes</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Packing Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -519,29 +335,15 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderMiscTable = () => {
     if (!data || !data.isMiscUsed) return null;
     
+    const pairs = [
+      { label: 'Misc Charge', value: `₹ ${data.miscCharge || "0"}` }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-blue-50 p-2 rounded-md">
-          <h3 className="font-semibold">Miscellaneous Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Misc Charge</td>
-                <td className="py-2 px-3 text-sm text-gray-500">₹ {data.miscCharge || "0"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Miscellaneous Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -549,45 +351,19 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   const renderNotebookTable = () => {
     if (!data || !data.isNotebookUsed) return null;
     
+    const pairs = [
+      { label: 'Orientation', value: data.orientation || "Not specified" },
+      { label: 'Dimensions', value: `${data.length || "0"} × ${data.breadth || "0"}` },
+      { label: 'Number of Pages', value: data.numberOfPages || "Not specified" },
+      { label: 'Binding Type', value: data.bindingType || "Not specified" },
+      { label: 'Paper Type', value: data.paperName || "Not specified" }
+    ];
+
     return (
-      <div className="space-y-4">
-        <div className="bg-indigo-50 p-2 rounded-md">
-          <h3 className="font-semibold">Notebook Details</h3>
-        </div>
-        
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white border border-gray-200 rounded-md">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-gray-200">
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Orientation</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.orientation || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Dimensions</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.length || "0"} × {data.breadth || "0"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Number of Pages</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.numberOfPages || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Binding Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.bindingType || "Not specified"}</td>
-              </tr>
-              <tr className="hover:bg-gray-50">
-                <td className="py-2 px-3 text-sm font-medium text-gray-700">Paper Type</td>
-                <td className="py-2 px-3 text-sm text-gray-500">{data.paperName || "Not specified"}</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
+      <CompactKeyValue
+        title="Notebook Details"
+        pairs={pairs}
+      />
     );
   };
   
@@ -596,188 +372,143 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
     if (!data || !data.isSandwichComponentUsed) return null;
     
     return (
-      <div className="space-y-6">
-        <div className="bg-purple-50 p-2 rounded-md">
-          <h3 className="font-semibold">Duplex/Sandwich Details</h3>
+      <div className="space-y-3">
+        <div className="bg-purple-50 p-2 rounded text-xs">
+          <h4 className="font-semibold text-sm">Duplex/Sandwich Details</h4>
         </div>
         
         {/* Paper Information */}
         {data.paperInfo && (
-          <div className="mb-4">
-            <div className="bg-green-50 p-2 rounded-md mb-2 border-l-4 border-green-400 pl-3">
-              <h4 className="font-medium">Sandwich Paper Details</h4>
+          <div className="mb-2">
+            <div className="bg-green-50 p-1 rounded mb-1 border-l-2 border-green-400 pl-2">
+              <h5 className="font-medium text-xs">Sandwich Paper Details</h5>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200 rounded-md">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                    <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm font-medium text-gray-700">Paper Name</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{data.paperInfo.paperName || "Not specified"}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="grid grid-cols-1 gap-1">
+              <div className="bg-white border border-gray-200 p-1 rounded text-xs">
+                <div className="font-medium text-gray-700">Paper Name</div>
+                <div className="text-gray-500">{data.paperInfo.paperName || "Not specified"}</div>
+              </div>
             </div>
           </div>
         )}
         
         {/* Sandwich LP Details */}
         {data.lpDetailsSandwich && data.lpDetailsSandwich.isLPUsed && (
-          <div className="mb-4">
-            <div className="bg-blue-50 p-2 rounded-md mb-2 border-l-4 border-blue-400 pl-3">
-              <h4 className="font-medium">Sandwich LP Details</h4>
-              <p className="text-sm text-gray-600">Number of Colors: {data.lpDetailsSandwich.noOfColors || 0}</p>
+          <div className="mb-2">
+            <div className="bg-blue-50 p-1 rounded mb-1 border-l-2 border-blue-400 pl-2">
+              <h5 className="font-medium text-xs">Sandwich LP Details</h5>
+              <p className="text-gray-600 text-xs">Number of Colors: {data.lpDetailsSandwich.noOfColors || 0}</p>
             </div>
             
             {objectToArray(data.lpDetailsSandwich.colorDetails).length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border border-gray-200 rounded-md">
+                <table className="min-w-full bg-white border border-gray-200 rounded text-xs">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color #</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Pantone</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plate Type</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Plate Size</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensions</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MR Type</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">Color #</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">Pantone</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">Plate Type</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">Dimensions</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">MR Type</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {objectToArray(data.lpDetailsSandwich.colorDetails).map((color, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="py-2 px-3 text-sm font-medium text-gray-700">{index + 1}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{color.pantoneType || "Not specified"}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{color.plateType || "Not specified"}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{color.plateSizeType || "Auto"}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">
-                          {/* Display the dimensions in both inches and cm if available */}
+                        <td className="py-1 px-2 text-xs font-medium text-gray-700">{index + 1}</td>
+                        <td className="py-1 px-2 text-xs text-gray-500">{color.pantoneType || "Not specified"}</td>
+                        <td className="py-1 px-2 text-xs text-gray-500">{color.plateType || "Not specified"}</td>
+                        <td className="py-1 px-2 text-xs text-gray-500">
                           {color.plateDimensions?.lengthInInches 
                             ? `${color.plateDimensions.lengthInInches}" × ${color.plateDimensions.breadthInInches}"` 
                             : formatDimensions(color.plateDimensions)}
-                          {color.plateDimensions?.length && color.plateDimensions?.lengthInInches
-                            ? ` (${color.plateDimensions.length} × ${color.plateDimensions.breadth} cm)`
-                            : ""}
                         </td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{color.mrType || "Not specified"}</td>
+                        <td className="py-1 px-2 text-xs text-gray-500">{color.mrType || "Not specified"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-gray-500 italic">No color details available for Sandwich LP</p>
+              <p className="text-gray-500 italic text-xs">No color details available for Sandwich LP</p>
             )}
           </div>
         )}
         
         {/* Sandwich FS Details */}
         {data.fsDetailsSandwich && data.fsDetailsSandwich.isFSUsed && (
-          <div className="mb-4">
-            <div className="bg-yellow-50 p-2 rounded-md mb-2 border-l-4 border-yellow-400 pl-3">
-              <h4 className="font-medium">Sandwich FS Details</h4>
-              <p className="text-sm text-gray-600">FS Type: {data.fsDetailsSandwich.fsType || "Not specified"}</p>
-              <p className="text-sm text-gray-600">Number of Foils: {objectToArray(data.fsDetailsSandwich.foilDetails).length}</p>
+          <div className="mb-2">
+            <div className="bg-yellow-50 p-1 rounded mb-1 border-l-2 border-yellow-400 pl-2">
+              <h5 className="font-medium text-xs">Sandwich FS Details</h5>
+              <p className="text-gray-600 text-xs">FS Type: {data.fsDetailsSandwich.fsType || "Not specified"} | Foils: {objectToArray(data.fsDetailsSandwich.foilDetails).length}</p>
             </div>
             
             {objectToArray(data.fsDetailsSandwich.foilDetails).length > 0 ? (
               <div className="overflow-x-auto">
-                <table className="min-w-full bg-white border border-gray-200 rounded-md">
+                <table className="min-w-full bg-white border border-gray-200 rounded text-xs">
                   <thead className="bg-gray-50">
                     <tr>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Foil #</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Foil Type</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Block Type</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Block Size</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Dimensions</th>
-                      <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">MR Type</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">Foil #</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">Foil Type</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">Block Type</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">Dimensions</th>
+                      <th className="py-1 px-2 border-b text-left text-xs font-medium text-gray-500">MR Type</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {objectToArray(data.fsDetailsSandwich.foilDetails).map((foil, index) => (
                       <tr key={index} className="hover:bg-gray-50">
-                        <td className="py-2 px-3 text-sm font-medium text-gray-700">{index + 1}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{foil.foilType || "Not specified"}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{foil.blockType || "Not specified"}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{foil.blockSizeType || "Auto"}</td>
-                        <td className="py-2 px-3 text-sm text-gray-500">
-                          {/* Display the dimensions in both inches and cm if available */}
+                        <td className="py-1 px-2 text-xs font-medium text-gray-700">{index + 1}</td>
+                        <td className="py-1 px-2 text-xs text-gray-500">{foil.foilType || "Not specified"}</td>
+                        <td className="py-1 px-2 text-xs text-gray-500">{foil.blockType || "Not specified"}</td>
+                        <td className="py-1 px-2 text-xs text-gray-500">
                           {foil.blockDimension?.lengthInInches 
                             ? `${foil.blockDimension.lengthInInches}" × ${foil.blockDimension.breadthInInches}"` 
                             : formatDimensions(foil.blockDimension)}
-                          {foil.blockDimension?.length && foil.blockDimension?.lengthInInches
-                            ? ` (${foil.blockDimension.length} × ${foil.blockDimension.breadth} cm)`
-                            : ""}
                         </td>
-                        <td className="py-2 px-3 text-sm text-gray-500">{foil.mrType || "Not specified"}</td>
+                        <td className="py-1 px-2 text-xs text-gray-500">{foil.mrType || "Not specified"}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
             ) : (
-              <p className="text-gray-500 italic">No foil details available for Sandwich FS</p>
+              <p className="text-gray-500 italic text-xs">No foil details available for Sandwich FS</p>
             )}
           </div>
         )}
         
         {/* Sandwich EMB Details */}
         {data.embDetailsSandwich && data.embDetailsSandwich.isEMBUsed && (
-          <div className="mb-4">
-            <div className="bg-purple-50 p-2 rounded-md mb-2 border-l-4 border-purple-400 pl-3">
-              <h4 className="font-medium">Sandwich EMB Details</h4>
+          <div className="mb-2">
+            <div className="bg-purple-50 p-1 rounded mb-1 border-l-2 border-purple-400 pl-2">
+              <h5 className="font-medium text-xs">Sandwich EMB Details</h5>
             </div>
             
-            <div className="overflow-x-auto">
-              <table className="min-w-full bg-white border border-gray-200 rounded-md">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Property</th>
-                    <th className="py-2 px-3 border-b text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Value</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-200">
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm font-medium text-gray-700">Plate Size Type</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{data.embDetailsSandwich.plateSizeType || "Auto"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm font-medium text-gray-700">Plate Dimensions</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">
-                      {/* Display the dimensions in both inches and cm if available */}
-                      {data.embDetailsSandwich.plateDimensions?.lengthInInches 
-                        ? `${data.embDetailsSandwich.plateDimensions.lengthInInches}" × ${data.embDetailsSandwich.plateDimensions.breadthInInches}"` 
-                        : formatDimensions(data.embDetailsSandwich.plateDimensions)}
-                      {data.embDetailsSandwich.plateDimensions?.length && data.embDetailsSandwich.plateDimensions?.lengthInInches
-                        ? ` (${data.embDetailsSandwich.plateDimensions.length} × ${data.embDetailsSandwich.plateDimensions.breadth} cm)`
-                        : ""}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm font-medium text-gray-700">Male Plate Type</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{data.embDetailsSandwich.plateTypeMale || "Not specified"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm font-medium text-gray-700">Female Plate Type</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{data.embDetailsSandwich.plateTypeFemale || "Not specified"}</td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="py-2 px-3 text-sm font-medium text-gray-700">MR Type</td>
-                    <td className="py-2 px-3 text-sm text-gray-500">{data.embDetailsSandwich.embMR || "Not specified"}</td>
-                  </tr>
-                </tbody>
-              </table>
+            <div className="grid grid-cols-4 gap-1">
+              <div className="bg-white border border-gray-200 p-1 rounded text-xs">
+                <div className="font-medium text-gray-700">Plate Size Type</div>
+                <div className="text-gray-500">{data.embDetailsSandwich.plateSizeType || "Auto"}</div>
+              </div>
+              <div className="bg-white border border-gray-200 p-1 rounded text-xs">
+                <div className="font-medium text-gray-700">Plate Dimensions</div>
+                <div className="text-gray-500">
+                  {data.embDetailsSandwich.plateDimensions?.lengthInInches 
+                    ? `${data.embDetailsSandwich.plateDimensions.lengthInInches}" × ${data.embDetailsSandwich.plateDimensions.breadthInInches}"` 
+                    : formatDimensions(data.embDetailsSandwich.plateDimensions)}
+                </div>
+              </div>
+              <div className="bg-white border border-gray-200 p-1 rounded text-xs">
+                <div className="font-medium text-gray-700">MR Type</div>
+                <div className="text-gray-500">{data.embDetailsSandwich.embMR || "Not specified"}</div>
+              </div>
             </div>
           </div>
         )}
       </div>
     );
-  };  
+  };
 
   // Choose the correct rendering method based on section type
   const renderSectionContent = () => {
@@ -815,7 +546,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
       case 'sandwich':
         return renderSandwichTable();
       default:
-        return <p className="text-gray-500 italic">No details available for this section</p>;
+        return <p className="text-gray-500 italic text-xs">No details available for this section</p>;
     }
   };
 
@@ -868,7 +599,7 @@ const SectionDetailsPanel = ({ data, sectionType }) => {
   }
 
   return (
-    <div className="mb-4">
+    <div className="mb-2">
       {renderSectionContent()}
     </div>
   );

@@ -2894,7 +2894,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
           {/* Cost Calculation & Review Section - Still Collapsible */}
           <div className="mt-6">
-            <FormSection 
+            {/* <FormSection 
               title="COST CALCULATION" 
               id="reviewAndSubmit"
               activeSection={activeSections.reviewAndSubmit ? "reviewAndSubmit" : null}
@@ -2913,7 +2913,17 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 isSaving={isSubmitting}
                 previewMode={!isSubmitting}
               />
-            </FormSection>
+            </FormSection> */}
+            <ReviewAndSubmit 
+              state={state} 
+              calculations={calculations} 
+              isCalculating={isCalculating} 
+              onCreateEstimate={handleCreateEstimate}
+              onMarkupChange={handleMarkupChange} 
+              isEditMode={isEditMode}
+              isSaving={isSubmitting}
+              previewMode={!isSubmitting}
+            />
           </div>
 
           <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">

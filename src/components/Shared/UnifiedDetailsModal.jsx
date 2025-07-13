@@ -21,31 +21,30 @@ const UnifiedDetailsModal = ({
   const canViewDetailedCosts = userRole === "admin" || 
     (dataType === "estimate" && !isB2BClient);
 
-  // State for expandable sections
+  // State for expandable sections - more compact defaults
   const [expandedSections, setExpandedSections] = useState({
     basicInfo: true,
-    productionStatus: dataType === 'order', // Auto-expand for orders
-    loyaltyInfo: true, // Auto-expand loyalty info
+    productionStatus: dataType === 'order',
+    loyaltyInfo: true,
     costs: true,
-    productionDetails: true, // New section for production details
-    postProductionDetails: true // New section for post-production details
+    productionDetails: false, // Start collapsed for compactness
+    postProductionDetails: false // Start collapsed for compactness
   });
   
   // Common field labels across all data types
   const fieldLabels = {
-    clientName: "Name of the Client",
-    projectName: "Name of the Project",
+    clientName: "Client",
+    projectName: "Project",
     date: "Order Date",
-    deliveryDate: "Expected Delivery Date",
-    weddingDate: "Wedding Date", // ADDED WEDDING DATE LABEL
+    deliveryDate: "Delivery Date",
+    weddingDate: "Wedding Date",
     jobType: "Job Type",
     quantity: "Quantity",
     paperProvided: "Paper Provided",
     dieCode: "Die Code",
     dieSize: "Die Size",
     dieSelection: "Die Selection",
-    paperName: "Paper Name",
-    // GST fields
+    paperName: "Paper",
     gstRate: "GST Rate",
     gstAmount: "GST Amount",
     totalWithGST: "Total with GST"
@@ -55,7 +54,6 @@ const UnifiedDetailsModal = ({
   useEffect(() => {
     if (!data) return;
     
-    // Use the imported normalization function
     const normalized = normalizeDataForDisplay(data);
     setNormalizedData(normalized);
   }, [data]);
@@ -110,7 +108,7 @@ const UnifiedDetailsModal = ({
         <img
           src={value}
           alt="Die Image"
-          className="max-w-full max-h-36 object-contain border rounded-md"
+          className="max-w-full max-h-24 object-contain border rounded-md"
         />
       );
     }
@@ -118,20 +116,20 @@ const UnifiedDetailsModal = ({
     return value.toString();
   };
 
-  // Section header component
+  // Compact section header component
   const SectionHeader = ({ title, isExpanded, onToggle, bgColor = "bg-gray-50" }) => (
     <div 
-      className={`flex justify-between items-center p-3 ${bgColor} rounded-t cursor-pointer`}
+      className={`flex justify-between items-center p-2 ${bgColor} rounded-t cursor-pointer border-b`}
       onClick={onToggle}
     >
-      <h3 className="font-semibold text-gray-700">{title}</h3>
-      {isExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+      <h3 className="font-medium text-gray-700 text-sm">{title}</h3>
+      {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
     </div>
   );
 
-  // Collapsible section component
+  // Compact collapsible section component
   const CollapsibleSection = ({ title, isExpanded, onToggle, children, bgColor }) => (
-    <div className="border rounded-md mb-3 overflow-hidden">
+    <div className="border rounded-md mb-2 overflow-hidden">
       <SectionHeader 
         title={title} 
         isExpanded={isExpanded} 
@@ -139,14 +137,14 @@ const UnifiedDetailsModal = ({
         bgColor={bgColor}
       />
       {isExpanded && (
-        <div className="p-3">
+        <div className="p-2">
           {children}
         </div>
       )}
     </div>
   );
 
-  // Render section in grid layout
+  // Compact grid layout for sections
   const renderSectionInGrid = (heading, sectionData, excludedFields = []) => {
     if (!sectionData || typeof sectionData !== "object" || Object.keys(sectionData).length === 0) {
       return null;
@@ -160,24 +158,24 @@ const UnifiedDetailsModal = ({
     }
 
     return (
-      <div key={heading} className="mb-6">
-        {heading && <h3 className="text-lg font-semibold text-gray-600 mb-2">{heading}</h3>}
+      <div key={heading} className="mb-3">
+        {heading && <h4 className="text-md font-medium text-gray-600 mb-2">{heading}</h4>}
         
-        <div className="grid grid-cols-2 gap-3 bg-white">
+        <div className="grid grid-cols-2 gap-2 bg-white">
           {Object.entries(filteredData)
             .filter(([key]) => !excludedFields.includes(key))
             .map(([key, value]) => (
-              <div key={key} className="flex justify-between items-center bg-gray-100 p-2 rounded-md">
-                <span className="font-medium text-gray-600">{getLabel(key)}:</span>
-                <span className="text-gray-800">{renderValue(key, value)}</span>
+              <div key={key} className="flex justify-between items-center bg-gray-50 p-2 rounded text-sm">
+                <span className="font-medium text-gray-600 text-xs">{getLabel(key)}:</span>
+                <span className="text-gray-800 text-xs">{renderValue(key, value)}</span>
               </div>
             ))}
         </div>
         
         {/* Display die image if present */}
         {imageData && (
-          <div className="mt-4 p-4 bg-gray-100 rounded-md">
-            <h4 className="font-medium text-gray-600 mb-2">Die Image:</h4>
+          <div className="mt-2 p-2 bg-gray-50 rounded">
+            <h5 className="font-medium text-gray-600 mb-1 text-xs">Die Image:</h5>
             <div className="flex justify-center">
               {renderValue("image", imageData)}
             </div>
@@ -187,7 +185,7 @@ const UnifiedDetailsModal = ({
     );
   };
 
-  // Render production status (for order type only)
+  // Compact production status (for order type only)
   const renderProductionStatus = () => {
     if (dataType !== 'order' || !displayData.stage) return null;
     
@@ -200,13 +198,13 @@ const UnifiedDetailsModal = ({
         onToggle={() => toggleSection('productionStatus')}
         bgColor="bg-gray-50"
       >
-        <div className="flex flex-wrap gap-2 mt-2">
+        <div className="flex flex-wrap gap-1 mt-1">
           {stages.map((stage) => {
             const isCurrentStage = stage === displayData.stage;
             return (
               <div 
                 key={stage}
-                className={`px-3 py-1.5 rounded-md text-sm ${
+                className={`px-2 py-1 rounded text-xs ${
                   isCurrentStage 
                     ? 'bg-blue-500 text-white' 
                     : 'bg-gray-100 text-gray-700'
@@ -214,8 +212,8 @@ const UnifiedDetailsModal = ({
               >
                 {stage}
                 {isCurrentStage && (
-                  <span className="ml-2 inline-block">
-                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                  <span className="ml-1 inline-block">
+                    <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
                   </span>
@@ -228,9 +226,8 @@ const UnifiedDetailsModal = ({
     );
   };
 
-  // Render loyalty information section
+  // Compact loyalty information section
   const renderLoyaltySection = () => {
-    // Only show for B2B clients that have loyalty info
     if (!displayData.isLoyaltyEligible && !displayData.loyaltyInfo) return null;
     
     const loyaltyInfo = displayData.loyaltyInfo || {};
@@ -238,33 +235,33 @@ const UnifiedDetailsModal = ({
     
     return (
       <CollapsibleSection
-        title="Loyalty Program Information"
+        title="Loyalty Program"
         isExpanded={expandedSections.loyaltyInfo}
         onToggle={() => toggleSection('loyaltyInfo')}
         bgColor="bg-purple-50"
       >
         {loyaltyInfo.tierName ? (
-          <div className="space-y-3">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-full flex items-center justify-center" 
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 mb-1">
+              <div className="w-6 h-6 rounded-full flex items-center justify-center text-xs" 
                    style={{ backgroundColor: loyaltyInfo.tierColor || '#9f7aea' }}>
-                <span className="text-white text-sm font-semibold">B2B</span>
+                <span className="text-white font-semibold">B2B</span>
               </div>
               <div>
-                <h4 className="text-lg font-semibold text-purple-800">{loyaltyInfo.tierName}</h4>
-                <p className="text-sm text-gray-600">Order #{loyaltyInfo.clientOrderCount || '?'}</p>
+                <h5 className="text-sm font-semibold text-purple-800">{loyaltyInfo.tierName}</h5>
+                <p className="text-xs text-gray-600">Order #{loyaltyInfo.clientOrderCount || '?'}</p>
               </div>
             </div>
             
-            <div className="bg-white p-3 rounded-md border border-purple-100">
-              <div className="grid grid-cols-2 gap-3">
+            <div className="bg-white p-2 rounded border border-purple-100">
+              <div className="grid grid-cols-2 gap-2">
                 <div className="flex flex-col">
-                  <span className="text-sm text-gray-600">Discount Rate</span>
-                  <span className="text-lg font-bold text-green-600">{loyaltyInfo.discount}%</span>
+                  <span className="text-xs text-gray-600">Discount Rate</span>
+                  <span className="text-sm font-bold text-green-600">{loyaltyInfo.discount}%</span>
                 </div>
                 <div className="flex flex-col">
-                  <span className="text-sm text-gray-600">Discount Amount</span>
-                  <span className="text-lg font-bold text-green-600">
+                  <span className="text-xs text-gray-600">Discount Amount</span>
+                  <span className="text-sm font-bold text-green-600">
                     ₹ {parseFloat(loyaltyInfo.discountAmount || calculations.loyaltyDiscountAmount || 0).toFixed(2)}
                   </span>
                 </div>
@@ -272,24 +269,24 @@ const UnifiedDetailsModal = ({
             </div>
             
             {loyaltyInfo.tierChanged && (
-              <div className="mt-2 bg-green-50 text-green-800 p-2 rounded-md text-sm">
+              <div className="mt-1 bg-green-50 text-green-800 p-2 rounded text-xs">
                 <div className="flex items-center">
-                  <svg className="w-4 h-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                  <svg className="w-3 h-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                     <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
                   </svg>
                   <span className="font-medium">Tier Upgraded!</span>
                 </div>
-                <p className="mt-1 ml-5">
-                  Client has reached a new loyalty tier with this order.
+                <p className="mt-1 ml-4 text-xs">
+                  Client reached a new loyalty tier with this order.
                 </p>
               </div>
             )}
           </div>
         ) : (
-          <div className="p-4 bg-gray-50 rounded-md text-center">
-            <p className="text-purple-700 mb-2">B2B Client - Eligible for Loyalty Program</p>
-            <p className="text-sm text-gray-600">
-              This client is eligible for the B2B loyalty program but hasn't reached any tier yet.
+          <div className="p-2 bg-gray-50 rounded text-center">
+            <p className="text-purple-700 mb-1 text-xs">B2B Client - Eligible for Loyalty Program</p>
+            <p className="text-xs text-gray-600">
+              This client is eligible but hasn't reached any tier yet.
             </p>
           </div>
         )}
@@ -329,7 +326,7 @@ const UnifiedDetailsModal = ({
     return processes;
   };
 
-  // Render production details section
+  // Compact production details section
   const renderProductionDetailsSection = () => {
     const usedProcesses = getUsedProductionProcesses();
     
@@ -337,12 +334,12 @@ const UnifiedDetailsModal = ({
     
     return (
       <CollapsibleSection
-        title="Production Details"
+        title={`Production Details (${usedProcesses.length})`}
         isExpanded={expandedSections.productionDetails}
         onToggle={() => toggleSection('productionDetails')}
         bgColor="bg-blue-50"
       >
-        <div className="space-y-4">
+        <div className="space-y-2">
           {usedProcesses.map(process => (
             <SectionDetailsPanel 
               key={process}
@@ -355,7 +352,7 @@ const UnifiedDetailsModal = ({
     );
   };
   
-  // Render post-production details section
+  // Compact post-production details section
   const renderPostProductionDetailsSection = () => {
     const usedProcesses = getUsedPostProductionProcesses();
     
@@ -363,12 +360,12 @@ const UnifiedDetailsModal = ({
     
     return (
       <CollapsibleSection
-        title="Post-Production Details"
+        title={`Post-Production Details (${usedProcesses.length})`}
         isExpanded={expandedSections.postProductionDetails}
         onToggle={() => toggleSection('postProductionDetails')}
         bgColor="bg-purple-50"
       >
-        <div className="space-y-4">
+        <div className="space-y-2">
           {usedProcesses.map(process => (
             <SectionDetailsPanel 
               key={process}
@@ -402,9 +399,9 @@ const UnifiedDetailsModal = ({
   if (!data) {
     return (
       <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-8">
-          <div className="animate-spin w-8 h-8 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
-          <p className="text-center mt-4">Loading data...</p>
+        <div className="bg-white rounded-lg p-6">
+          <div className="animate-spin w-6 h-6 border-4 border-blue-500 rounded-full border-t-transparent mx-auto"></div>
+          <p className="text-center mt-3 text-sm">Loading data...</p>
         </div>
       </div>
     );
@@ -412,20 +409,20 @@ const UnifiedDetailsModal = ({
 
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-6xl flex flex-col max-h-[90vh]">
-        <div className="flex justify-between items-center p-4 border-b">
-          <h2 className="text-xl font-bold text-gray-700">{getModalTitle()}</h2>
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-5xl flex flex-col max-h-[90vh]">
+        <div className="flex justify-between items-center p-3 border-b">
+          <h2 className="text-lg font-bold text-gray-700">{getModalTitle()}</h2>
           <button
             onClick={onClose}
-            className="text-gray-600 hover:text-gray-900 text-xl"
+            className="text-gray-600 hover:text-gray-900 text-lg"
           >
             ✖
           </button>
         </div>
 
-        <div className="p-6 overflow-y-auto">
-          <div className="space-y-4">
-            {/* Basic Information - Always visible */}
+        <div className="p-4 overflow-y-auto">
+          <div className="space-y-3">
+            {/* Basic Information - Compact */}
             <CollapsibleSection
               title="Client and Project Information"
               isExpanded={expandedSections.basicInfo}
@@ -437,7 +434,7 @@ const UnifiedDetailsModal = ({
                 projectName: displayData.projectName,
                 date: displayData.date,
                 deliveryDate: displayData.deliveryDate,
-                weddingDate: displayData.weddingDate, // ADDED WEDDING DATE HERE
+                weddingDate: displayData.weddingDate,
                 jobType: displayData.jobDetails?.jobType,
                 quantity: displayData.jobDetails?.quantity,
                 paperName: displayData.jobDetails?.paperName,
@@ -454,7 +451,7 @@ const UnifiedDetailsModal = ({
             {/* Loyalty Information - Only for applicable orders */}
             {renderLoyaltySection()}
 
-            {/* Cost Information */}
+            {/* Cost Information - Using updated CostDisplaySection */}
             <CollapsibleSection
               title="Cost Information"
               isExpanded={expandedSections.costs}
@@ -465,7 +462,7 @@ const UnifiedDetailsModal = ({
                 data={displayData} 
                 calculations={displayData.calculations} 
                 canViewDetailedCosts={canViewDetailedCosts}
-                dataType={dataType} // Pass dataType to display correct format
+                dataType={dataType}
               />
             </CollapsibleSection>
             
