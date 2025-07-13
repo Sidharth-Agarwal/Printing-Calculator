@@ -17,7 +17,8 @@ export const ROUTE_ACCESS = {
   '/b2b-dashboard': ['b2b'],
   '/crm/lead-registration': ['admin', 'staff'],
   '/crm/lead-management': ['admin', 'staff'],
-  '/crm/badges': ['admin', 'staff']
+  '/crm/badges': ['admin', 'staff'],
+  '/vendors': ['admin', 'staff']
 };
 
 export const MENU_ACCESS = {
