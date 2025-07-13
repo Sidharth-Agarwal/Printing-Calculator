@@ -13,6 +13,7 @@ export const ROUTE_ACCESS = {
   '/material-stock/standard-rates-db': ['admin', 'staff'],
   '/material-stock/overheads': ['admin', 'staff'],
   '/material-stock/loyalty-tiers': ['admin', 'staff'],
+  '/material-stock/gst-hsn-db': ['admin', 'staff'],
   '/loyalty-dashboard': ['admin', 'staff'],
   '/b2b-dashboard': ['b2b'],
   '/crm/lead-registration': ['admin', 'staff'],

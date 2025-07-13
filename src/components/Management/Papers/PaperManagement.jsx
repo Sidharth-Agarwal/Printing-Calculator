@@ -28,7 +28,8 @@ const PaperManagement = () => {
     status: "success"
   });
 
-  // Check if user is admin
+  // Check if user has access (admin or staff)
+  const hasAccess = userRole === "admin" || userRole === "staff";
   const isAdmin = userRole === "admin";
 
   // Paper statistics
@@ -91,6 +92,8 @@ const PaperManagement = () => {
 
   // Add paper to Firestore
   const addPaper = async (newPaper) => {
+    if (!hasAccess) return;
+    
     setIsSubmitting(true);
     try {
       const papersCollection = collection(db, "papers");
@@ -124,6 +127,8 @@ const PaperManagement = () => {
 
   // Update paper in Firestore
   const updatePaper = async (id, updatedData) => {
+    if (!hasAccess) return;
+    
     setIsSubmitting(true);
     try {
       const paperDoc = doc(db, "papers", id);
@@ -155,14 +160,14 @@ const PaperManagement = () => {
   };
 
   const handleAddClick = () => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     
     setEditingPaper(null); // Ensure we're not in edit mode
     setIsFormModalOpen(true);
   };
 
   const handleEditClick = (paper) => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     
     setEditingPaper({...paper}); // Make a copy to ensure we don't modify the original
     setIsFormModalOpen(true);
@@ -174,7 +179,7 @@ const PaperManagement = () => {
   };
 
   const confirmDelete = (id) => {
-    if (!isAdmin) return;
+    if (!isAdmin) return; // Only admin can delete
     
     setDeleteConfirmation({
       isOpen: true,
@@ -244,7 +249,7 @@ const PaperManagement = () => {
   };
 
   // Redirect non-authorized users
-  if (!isAdmin && userRole !== "staff") {
+  if (!hasAccess) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
@@ -305,7 +310,7 @@ const PaperManagement = () => {
         </div>
         
         <div>
-          {isAdmin && (
+          {hasAccess && (
             <button 
               onClick={handleAddClick}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
@@ -323,13 +328,13 @@ const PaperManagement = () => {
       <div className="overflow-hidden">
         <DisplayPaperTable
           papers={papers}
-          onEditPaper={isAdmin ? handleEditClick : null}
+          onEditPaper={hasAccess ? handleEditClick : null}
           onDeletePaper={isAdmin ? confirmDelete : null}
         />
       </div>
 
-      {/* Modal for adding/editing paper - now with lg size */}
-      {isAdmin && (
+      {/* Modal for adding/editing paper - only for users with access */}
+      {hasAccess && (
         <>
           <Modal
             isOpen={isFormModalOpen}
@@ -350,12 +355,15 @@ const PaperManagement = () => {
           </Modal>
 
           {/* Confirmation modals */}
-          <DeleteConfirmationModal
-            isOpen={deleteConfirmation.isOpen}
-            onClose={closeDeleteModal}
-            onConfirm={handleDeleteConfirm}
-            itemName="paper"
-          />
+          {/* Delete confirmation modal - only for admins */}
+          {isAdmin && (
+            <DeleteConfirmationModal
+              isOpen={deleteConfirmation.isOpen}
+              onClose={closeDeleteModal}
+              onConfirm={handleDeleteConfirm}
+              itemName="paper"
+            />
+          )}
           
           <ConfirmationModal
             isOpen={notification.isOpen}

@@ -28,7 +28,8 @@ const MaterialManagement = () => {
     status: "success"
   });
 
-  // Check if user is admin
+  // Check if user has access (admin or staff)
+  const hasAccess = userRole === "admin" || userRole === "staff";
   const isAdmin = userRole === "admin";
 
   // Material statistics
@@ -90,7 +91,7 @@ const MaterialManagement = () => {
   }, []);
 
   const addMaterial = async (materialData) => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     
     setIsSubmitting(true);
     try {
@@ -124,7 +125,7 @@ const MaterialManagement = () => {
   };
 
   const updateMaterial = async (id, updatedData) => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     
     setIsSubmitting(true);
     try {
@@ -157,14 +158,14 @@ const MaterialManagement = () => {
   };
 
   const handleAddClick = () => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     
     setSelectedMaterial(null); // Ensure we're not in edit mode
     setIsFormModalOpen(true);
   };
 
   const handleEditClick = (material) => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     
     setSelectedMaterial({...material}); // Make a copy to ensure we don't modify the original
     setIsFormModalOpen(true);
@@ -176,7 +177,7 @@ const MaterialManagement = () => {
   };
 
   const confirmDelete = (id) => {
-    if (!isAdmin) return;
+    if (!isAdmin) return; // Only admin can delete
     
     setDeleteConfirmation({
       isOpen: true,
@@ -246,7 +247,7 @@ const MaterialManagement = () => {
   };
 
   // Redirect non-authorized users
-  if (!isAdmin && userRole !== "staff") {
+  if (!hasAccess) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
@@ -307,7 +308,7 @@ const MaterialManagement = () => {
         </div>
         
         <div>
-          {isAdmin && (
+          {hasAccess && (
             <button 
               onClick={handleAddClick}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
@@ -321,17 +322,17 @@ const MaterialManagement = () => {
         </div>
       </div>
 
-      {/* Table component - visible to all users */}
+      {/* Table component - visible to all users with access */}
       <div className="overflow-hidden">
         <DisplayMaterialTable
           materials={materials}
           onDelete={isAdmin ? confirmDelete : null}
-          onEdit={isAdmin ? handleEditClick : null}
+          onEdit={hasAccess ? handleEditClick : null}
         />
       </div>
 
-      {/* Modals - only rendered for admins */}
-      {isAdmin && (
+      {/* Modals - only rendered for users with access */}
+      {hasAccess && (
         <>
           {/* Modal for adding/editing material */}
           <Modal
@@ -350,12 +351,15 @@ const MaterialManagement = () => {
             />
           </Modal>
 
-          <DeleteConfirmationModal
-            isOpen={deleteConfirmation.isOpen}
-            onClose={closeDeleteModal}
-            onConfirm={handleDeleteConfirm}
-            itemName="material"
-          />
+          {/* Delete confirmation modal - only for admins */}
+          {isAdmin && (
+            <DeleteConfirmationModal
+              isOpen={deleteConfirmation.isOpen}
+              onClose={closeDeleteModal}
+              onConfirm={handleDeleteConfirm}
+              itemName="material"
+            />
+          )}
           
           <ConfirmationModal
             isOpen={notification.isOpen}
