@@ -45,6 +45,13 @@ const VendorManagement = () => {
     activeVendors: 0
   });
 
+  // Permission checks
+  const isAdmin = userRole === "admin";
+  const isAccountant = userRole === "accountant";
+  const isStaff = userRole === "staff";
+  const hasFullAccess = isAdmin || isAccountant; // Admin and Accountant have full access
+  const hasViewAccess = hasFullAccess || isStaff; // Staff can view but with limited actions
+
   useEffect(() => {
     const vendorsCollection = collection(db, "vendors");
     const unsubscribe = onSnapshot(vendorsCollection, (snapshot) => {
@@ -132,12 +139,16 @@ const VendorManagement = () => {
   };
 
   const handleAddClick = () => {
+    if (!hasFullAccess) return; // Only admin and accountant can add
+    
     setSelectedVendor(null); // Ensure we're not in edit mode
     setIsFormModalOpen(true);
   };
 
-  // UPDATED: Enhanced addVendor function with validation
+  // Enhanced addVendor function with validation
   const addVendor = async (vendorData) => {
+    if (!hasFullAccess) return false; // Only admin and accountant can add
+    
     setIsSubmitting(true);
     try {
       // Validate vendor data including uniqueness checks
@@ -222,12 +233,16 @@ const VendorManagement = () => {
   };
 
   const handleEditClick = (vendor) => {
+    if (!hasFullAccess) return; // Only admin and accountant can edit
+    
     setSelectedVendor({...vendor}); // Make a copy to ensure we don't modify the original
     setIsFormModalOpen(true);
   };
 
-  // UPDATED: Enhanced updateVendor function with validation
+  // Enhanced updateVendor function with validation
   const updateVendor = async (id, updatedData) => {
+    if (!hasFullAccess) return false; // Only admin and accountant can update
+    
     setIsSubmitting(true);
     try {
       // Validate vendor data including uniqueness checks (excluding current vendor)
@@ -304,6 +319,8 @@ const VendorManagement = () => {
   };
 
   const toggleVendorStatus = async (vendorId, newStatus) => {
+    if (!hasFullAccess) return false; // Only admin and accountant can toggle status
+    
     try {
       const vendorDoc = doc(db, "vendors", vendorId);
       await updateDoc(vendorDoc, {
@@ -332,6 +349,8 @@ const VendorManagement = () => {
   };
 
   const confirmDelete = (id, name) => {
+    if (!hasFullAccess) return; // Only admin and accountant can delete
+    
     setDeleteConfirmation({
       isOpen: true,
       itemId: id,
@@ -362,6 +381,8 @@ const VendorManagement = () => {
   };
 
   const handleDeleteConfirm = async () => {
+    if (!hasFullAccess) return; // Only admin and accountant can delete
+    
     try {
       // Now delete the vendor
       await deleteDoc(doc(db, "vendors", deleteConfirmation.itemId));
@@ -387,11 +408,8 @@ const VendorManagement = () => {
     }
   };
 
-  // Check if user is admin or staff - only they should access this page
-  const isAdmin = userRole === "admin";
-
   // Redirect non-authorized users
-  if (!isAdmin && userRole !== "staff") {
+  if (!hasViewAccess) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
@@ -411,7 +429,10 @@ const VendorManagement = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Vendor Management</h1>
         <p className="text-gray-600 mt-1">
-          Add, edit, and manage your suppliers and service providers
+          {hasFullAccess 
+            ? "Add, edit, and manage your suppliers and service providers"
+            : "View suppliers and service providers information"
+          }
         </p>
       </div>
 
@@ -434,18 +455,20 @@ const VendorManagement = () => {
         </div>
       </div>
 
-      {/* Action buttons */}
-      <div className="flex justify-end mb-4">
-        <button 
-          onClick={handleAddClick}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Add New Vendor
-        </button>
-      </div>
+      {/* Action buttons - Only show for admin and accountant */}
+      {hasFullAccess && (
+        <div className="flex justify-end mb-4">
+          <button 
+            onClick={handleAddClick}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+            </svg>
+            Add New Vendor
+          </button>
+        </div>
+      )}
       
       {/* Table component */}
       <div className="bg-white overflow-hidden">
@@ -456,32 +479,34 @@ const VendorManagement = () => {
         ) : (
           <DisplayVendorTable
             vendors={vendors}
-            onDelete={(id) => {
+            onDelete={hasFullAccess ? (id) => {
               const vendor = vendors.find(v => v.id === id);
               confirmDelete(id, vendor?.name || "this vendor");
-            }}
-            onEdit={handleEditClick}
-            onToggleStatus={toggleVendorStatus}
-            isAdmin={isAdmin}
+            } : null}
+            onEdit={hasFullAccess ? handleEditClick : null}
+            onToggleStatus={hasFullAccess ? toggleVendorStatus : null}
+            hasFullAccess={hasFullAccess}
           />
         )}
       </div>
 
-      {/* Add/Edit Vendor Modal */}
-      <Modal
-        isOpen={isFormModalOpen}
-        onClose={handleCloseFormModal}
-        title={selectedVendor ? "Edit Vendor" : "Add New Vendor"}
-        size="lg"
-      >
-        <AddVendorForm
-          onSubmit={addVendor}
-          selectedVendor={selectedVendor}
-          onUpdate={updateVendor}
-          setSelectedVendor={setSelectedVendor}
-          generateVendorCode={generateVendorCode}
-        />
-      </Modal>
+      {/* Add/Edit Vendor Modal - Only for admin and accountant */}
+      {hasFullAccess && (
+        <Modal
+          isOpen={isFormModalOpen}
+          onClose={handleCloseFormModal}
+          title={selectedVendor ? "Edit Vendor" : "Add New Vendor"}
+          size="lg"
+        >
+          <AddVendorForm
+            onSubmit={addVendor}
+            selectedVendor={selectedVendor}
+            onUpdate={updateVendor}
+            setSelectedVendor={setSelectedVendor}
+            generateVendorCode={generateVendorCode}
+          />
+        </Modal>
+      )}
 
       {/* Confirmation Modals */}
       <ConfirmationModal
@@ -492,13 +517,15 @@ const VendorManagement = () => {
         status={notification.status}
       />
       
-      {/* Delete Confirmation Modal */}
-      <DeleteConfirmationModal
-        isOpen={deleteConfirmation.isOpen}
-        onClose={closeDeleteModal}
-        onConfirm={handleDeleteConfirm}
-        itemName={deleteConfirmation.itemName}
-      />
+      {/* Delete Confirmation Modal - Only for admin and accountant */}
+      {hasFullAccess && (
+        <DeleteConfirmationModal
+          isOpen={deleteConfirmation.isOpen}
+          onClose={closeDeleteModal}
+          onConfirm={handleDeleteConfirm}
+          itemName={deleteConfirmation.itemName}
+        />
+      )}
     </div>
   );
 };

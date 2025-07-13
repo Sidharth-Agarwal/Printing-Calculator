@@ -19,7 +19,7 @@ export const ROUTE_ACCESS = {
   '/crm/lead-registration': ['admin', 'staff'],
   '/crm/lead-management': ['admin', 'staff'],
   '/crm/badges': ['admin', 'staff'],
-  '/vendors': ['admin', 'staff']
+  '/vendors': ['admin', 'staff', 'accountant']
 };
 
 export const MENU_ACCESS = {
