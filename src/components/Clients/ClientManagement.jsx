@@ -660,7 +660,7 @@ const ClientManagement = () => {
   const isAdmin = userRole === "admin";
 
   // Redirect non-authorized users
-  if (!isAdmin && userRole !== "staff") {
+  if (!isAdmin && userRole !== "staff" && userRole !== "accountant") {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">

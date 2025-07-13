@@ -3,7 +3,12 @@ import { useNavigate, useLocation, Link } from "react-router-dom";
 import { useAuth } from "./Login/AuthContext";
 import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import { MENU_ACCESS } from "../components/Login/routesConfig"; 
+import { 
+  MENU_STRUCTURE, 
+  PROFILE_MENU_STRUCTURE, 
+  isMenuItemVisible, 
+  isDropdownVisible 
+} from "../components/Login/routesConfig"; 
 import logo from "../assets/logo.png";
 
 const Header = () => {
@@ -128,115 +133,30 @@ const Header = () => {
     userDisplayText = `${clientData.name}`;
   }
 
-  // Helper function to check menu item visibility
-  const isMenuItemVisible = (menuKey) => 
-    userRole && MENU_ACCESS[menuKey] && MENU_ACCESS[menuKey].includes(userRole);
+  // Generate navigation items from MENU_STRUCTURE
+  const navItems = Object.values(MENU_STRUCTURE).map(item => ({
+    ...item,
+    visible: item.isDropdown 
+      ? isDropdownVisible(item.key, userRole)
+      : isMenuItemVisible(item.accessKey, userRole),
+    dropdownItems: item.dropdownItems?.map(subItem => ({
+      ...subItem,
+      visible: isMenuItemVisible(subItem.accessKey, userRole)
+    })).filter(subItem => subItem.visible) || []
+  })).filter(item => item.visible).sort((a, b) => a.priority - b.priority);
 
-  // Enhanced navigation items with better organization and grouping
-  const navItems = [
-    { 
-      key: 'dashboard', 
-      label: 'Dashboard', 
-      icon: '📊',
-      path: '/b2b-dashboard', 
-      visible: userRole === "b2b",
-      priority: 0
-    },
-    { 
-      key: 'newBill', 
-      label: 'New Bill', 
-      icon: '📄',
-      path: '/new-bill', 
-      visible: isMenuItemVisible('newBill'),
-      priority: 1
-    },
-    { 
-      key: 'business', 
-      label: 'Business', 
-      icon: '🏢',
-      path: '/business', 
-      visible: isMenuItemVisible('clients'), 
-      isDropdown: true,
-      priority: 2,
-      dropdownItems: [
-        { label: 'Clients', path: '/clients', icon: '🏢' },
-        { label: 'Vendors', path: '/vendors', icon: '🤝' },
-        { label: 'Estimates', path: '/estimates', icon: '💰', visible: isMenuItemVisible('estimates') },
-        { label: 'B2B Escrow', path: '/escrow', icon: '🔒', visible: userRole && (userRole === "admin" || userRole === "staff") }
-      ]
-    },
-    { 
-      key: 'orders', 
-      label: 'Operations', 
-      icon: '⚙️',
-      path: '/operations', 
-      visible: isMenuItemVisible('orders'), 
-      isDropdown: true,
-      priority: 3,
-      dropdownItems: [
-        { label: 'Job Dashboard', path: '/orders', icon: '📋' },
-        { label: 'Invoices', path: '/invoices', icon: '🧾', visible: isMenuItemVisible('invoices') }
-      ]
-    },
-    { 
-      key: 'materials', 
-      label: 'Inventory', 
-      icon: '📦',
-      path: '/material-stock', 
-      visible: isMenuItemVisible('materials'), 
-      isDropdown: true,
-      priority: 4,
-      dropdownItems: [
-        { label: 'Papers DB', path: '/material-stock/paper-db', icon: '📄' },
-        { label: 'Materials DB', path: '/material-stock/material-db', icon: '🔧' },
-        { label: 'Dies DB', path: '/material-stock/dies-db', icon: '⚙️' },
-        { label: 'Labours DB', path: '/material-stock/standard-rates-db', icon: '💰' },
-        { label: 'GST & HSN DB', path: '/material-stock/gst-hsn-db', icon: '📋' },
-        { label: 'Standard Parameters', path: '/material-stock/overheads', icon: '⚖️' },
-        { label: 'Loyalty Program', path: '/material-stock/loyalty-tiers', icon: '⭐', visible: isMenuItemVisible('loyaltyProgram') }
-      ]
-    },
-    { 
-      key: 'crm', 
-      label: 'CRM', 
-      icon: '👥',
-      path: '/crm', 
-      visible: isMenuItemVisible('crm'), 
-      isDropdown: true,
-      priority: 5,
-      dropdownItems: [
-        { label: 'Public Lead Form', path: '/request-kit', icon: '🌐' },
-        { label: 'Lead Pool', path: '/crm/lead-registration', icon: '✏️' },
-        { label: 'Qualified Leads', path: '/crm/lead-management', icon: '🔄' },
-        { label: 'Qualification Badges', path: '/crm/badges', icon: '🏆' }
-      ]
-    },
-    { 
-      key: 'analytics', 
-      label: 'Analytics', 
-      icon: '📈',
-      path: '/analytics', 
-      visible: isMenuItemVisible('loyaltyProgram') || isMenuItemVisible('transactions'), 
-      isDropdown: true,
-      priority: 6,
-      dropdownItems: [
-        { label: 'Loyalty Dashboard', path: '/loyalty-dashboard', icon: '⭐', visible: isMenuItemVisible('loyaltyProgram') },
-        { label: 'Transactions', path: '/transactions', icon: '💳', visible: isMenuItemVisible('transactions') }
-      ]
-    }
-  ];
-
-  // Filter and sort navigation items
-  const visibleNavItems = navItems
-    .filter(item => item.visible)
-    .sort((a, b) => a.priority - b.priority);
+  // Generate profile menu items
+  const profileMenuItems = PROFILE_MENU_STRUCTURE.map(item => ({
+    ...item,
+    visible: isMenuItemVisible(item.accessKey, userRole)
+  })).filter(item => item.visible);
 
   // Mobile Menu Component
   const MobileMenu = () => (
     <div className={`lg:hidden mobile-menu-container ${showMobileMenu ? 'block' : 'hidden'}`}>
       <div className="absolute top-full left-0 right-0 bg-white shadow-lg border-t border-gray-200 max-h-screen overflow-y-auto">
         <div className="py-1">
-          {visibleNavItems.map((item) => (
+          {navItems.map((item) => (
             <div key={item.key}>
               {item.isDropdown ? (
                 <div>
@@ -244,7 +164,7 @@ const Header = () => {
                     <span className="mr-2 text-xs">{item.icon}</span>
                     {item.label}
                   </div>
-                  {item.dropdownItems.filter(subItem => subItem.visible !== false).map(subItem => (
+                  {item.dropdownItems.map(subItem => (
                     <Link
                       key={subItem.path}
                       to={subItem.path}
@@ -295,7 +215,7 @@ const Header = () => {
           
           {/* Desktop Navigation */}
           <nav className="hidden lg:flex items-center space-x-1 flex-1 justify-center">
-            {visibleNavItems.map((item) => (
+            {navItems.map((item) => (
               item.isDropdown ? (
                 <div 
                   key={item.key} 
@@ -329,7 +249,7 @@ const Header = () => {
                     activeDropdown === item.key ? "opacity-100 visible translate-y-0" : "opacity-0 invisible -translate-y-2"
                   }`}>
                     <div className="py-1">
-                      {item.dropdownItems.filter(subItem => subItem.visible !== false).map(subItem => (
+                      {item.dropdownItems.map(subItem => (
                         <Link
                           key={subItem.path}
                           to={subItem.path}
@@ -370,6 +290,8 @@ const Header = () => {
                   userRole === 'admin' ? 'bg-red-600 text-white' :
                   userRole === 'staff' ? 'bg-blue-600 text-white' :
                   userRole === 'b2b' ? 'bg-green-600 text-white' :
+                  userRole === 'production' ? 'bg-purple-600 text-white' :
+                  userRole === 'accountant' ? 'bg-orange-600 text-white' :
                   'bg-gray-600 text-white'
                 }`}>
                   {userRole.toUpperCase()}
@@ -415,6 +337,8 @@ const Header = () => {
                             userRole === 'admin' ? 'bg-red-100 text-red-700' :
                             userRole === 'staff' ? 'bg-blue-100 text-blue-700' :
                             userRole === 'b2b' ? 'bg-green-100 text-green-700' :
+                            userRole === 'production' ? 'bg-purple-100 text-purple-700' :
+                            userRole === 'accountant' ? 'bg-orange-100 text-orange-700' :
                             'bg-gray-100 text-gray-700'
                           }`}>
                             {userRole.toUpperCase()}
@@ -425,27 +349,18 @@ const Header = () => {
                   </div>
 
                   <div className="py-1">
-                    {/* User Management - Only for Admin */}
-                    {userRole && isMenuItemVisible('userManagement') && (
+                    {/* Dynamic Profile Menu Items */}
+                    {profileMenuItems.map(item => (
                       <Link
-                        to="/user-management"
+                        key={item.path}
+                        to={item.path}
                         className="flex items-center px-3 py-2 text-sm transition-colors hover:bg-gray-50"
                         onClick={() => setShowProfileMenu(false)}
                       >
-                        <span className="mr-2 text-xs">👥</span>
-                        User Management
+                        <span className="mr-2 text-xs">{item.icon}</span>
+                        {item.label}
                       </Link>
-                    )}
-                   
-                    {/* Change Password - Always Visible */}
-                    {/* <Link
-                      to="/change-password"
-                      className="flex items-center px-3 py-2 text-sm transition-colors hover:bg-gray-50"
-                      onClick={() => setShowProfileMenu(false)}
-                    >
-                      <span className="mr-2 text-xs">🔑</span>
-                      Change Password
-                    </Link> */}
+                    ))}
                    
                     {/* Logout - Always Visible */}
                     <button
