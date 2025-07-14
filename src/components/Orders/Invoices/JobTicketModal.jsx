@@ -1,5 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import JobTicket from './JobTicket';
@@ -13,18 +15,69 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
   // Add state for notes
   const [ticketNotes, setTicketNotes] = useState({});
   
+  // Add state for refreshed orders with production assignments
+  const [refreshedOrders, setRefreshedOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  
+  // Fetch complete order data including production assignments
+  useEffect(() => {
+    const fetchCompleteOrderData = async () => {
+      if (!Array.isArray(orders) || orders.length === 0) {
+        setLoadingOrders(false);
+        return;
+      }
+      
+      console.log('Fetching complete order data for', orders.length, 'orders');
+      
+      try {
+        const completeOrders = await Promise.all(
+          orders.map(async (order) => {
+            if (!order.id) return order;
+            
+            try {
+              const orderDoc = await getDoc(doc(db, "orders", order.id));
+              if (orderDoc.exists()) {
+                const completeOrderData = orderDoc.data();
+                console.log(`Order ${order.id} production assignments:`, completeOrderData.productionAssignments);
+                return {
+                  id: order.id,
+                  ...completeOrderData
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching order ${order.id}:`, error);
+            }
+            
+            return order; // Return original order if fetch fails
+          })
+        );
+        
+        setRefreshedOrders(completeOrders);
+        console.log('Refreshed orders with production assignments:', completeOrders);
+        
+      } catch (error) {
+        console.error('Error fetching complete order data:', error);
+        setRefreshedOrders(orders); // Fall back to original orders
+      } finally {
+        setLoadingOrders(false);
+      }
+    };
+    
+    fetchCompleteOrderData();
+  }, [orders]);
+  
   // Initialize notes for each order
   useEffect(() => {
-    if (!Array.isArray(orders)) return;
+    if (!Array.isArray(refreshedOrders)) return;
     
     const initialNotes = {};
-    orders.forEach(order => {
+    refreshedOrders.forEach(order => {
       if (order && order.id) {
         initialNotes[order.id] = order.notes || '';
       }
     });
     setTicketNotes(initialNotes);
-  }, [orders]);
+  }, [refreshedOrders]);
   
   // Handle notes change
   const handleNotesChange = (orderId, value) => {
@@ -36,8 +89,8 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }));
     
     // If onUpdateOrders is provided, call it to persist notes to the database
-    if (onUpdateOrders && Array.isArray(orders)) {
-      const updatedOrder = orders.find(order => order.id === orderId);
+    if (onUpdateOrders && Array.isArray(refreshedOrders)) {
+      const updatedOrder = refreshedOrders.find(order => order.id === orderId);
       if (updatedOrder) {
         onUpdateOrders({
           ...updatedOrder,
@@ -47,19 +100,22 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }
   };
   
+  // Use refreshed orders instead of original orders
+  const ordersToUse = refreshedOrders.length > 0 ? refreshedOrders : orders;
+  
   // Get the left order being displayed (first in the pair)
-  const leftOrder = Array.isArray(orders) && orders.length > currentPairIndex * 2 ? 
-    orders[currentPairIndex * 2] : null;
+  const leftOrder = Array.isArray(ordersToUse) && ordersToUse.length > currentPairIndex * 2 ? 
+    ordersToUse[currentPairIndex * 2] : null;
   
   // Get the right order if available (second in the pair)
-  const rightOrder = Array.isArray(orders) && orders.length > currentPairIndex * 2 + 1 ? 
-    orders[currentPairIndex * 2 + 1] : null;
+  const rightOrder = Array.isArray(ordersToUse) && ordersToUse.length > currentPairIndex * 2 + 1 ? 
+    ordersToUse[currentPairIndex * 2 + 1] : null;
   
   // Navigate between job ticket pairs
   const goToNextPair = () => {
-    if (!Array.isArray(orders)) return;
+    if (!Array.isArray(ordersToUse)) return;
     
-    const maxPairIndex = Math.ceil(orders.length / 2) - 1;
+    const maxPairIndex = Math.ceil(ordersToUse.length / 2) - 1;
     if (currentPairIndex < maxPairIndex) {
       setCurrentPairIndex(currentPairIndex + 1);
     }
@@ -165,7 +221,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
   
   // Generate PDF for all selected job tickets
   const generateAllPDFs = async () => {
-    if (!Array.isArray(orders) || orders.length === 0) return;
+    if (!Array.isArray(ordersToUse) || ordersToUse.length === 0) return;
     
     setIsGeneratingPDF(true);
     try {
@@ -183,9 +239,9 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
       let isFirstPage = true;
       
       // Process each pair of orders
-      for (let i = 0; i < orders.length; i += 2) {
-        const leftOrder = orders[i];
-        const rightOrder = i + 1 < orders.length ? orders[i + 1] : null;
+      for (let i = 0; i < ordersToUse.length; i += 2) {
+        const leftOrder = ordersToUse[i];
+        const rightOrder = i + 1 < ordersToUse.length ? ordersToUse[i + 1] : null;
         
         if (!leftOrder) continue;
         
@@ -298,6 +354,23 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }
   };
   
+  // Show loading state while fetching complete order data
+  if (loadingOrders) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <div className="flex items-center gap-3">
+            <svg className="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-gray-700">Loading complete order data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
+  
   if (!leftOrder) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -321,8 +394,8 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
         {/* Modal Header */}
         <div className="px-6 py-4 border-b border-gray-200 flex justify-between items-center">
           <h2 className="text-xl font-bold text-gray-800">
-            Generate Job Ticket {Array.isArray(orders) && orders.length > 1 ? 
-              `(Pair ${currentPairIndex + 1}/${Math.ceil(orders.length/2)})` : ''}
+            Generate Job Ticket {Array.isArray(ordersToUse) && ordersToUse.length > 1 ? 
+              `(Pair ${currentPairIndex + 1}/${Math.ceil(ordersToUse.length/2)})` : ''}
           </h2>
           <div className="flex items-center gap-4">
             <button
@@ -343,7 +416,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
               )}
             </button>
             
-            {Array.isArray(orders) && orders.length > 2 && (
+            {Array.isArray(ordersToUse) && ordersToUse.length > 2 && (
               <button
                 onClick={generateAllPDFs}
                 disabled={isGeneratingPDF}
@@ -433,7 +506,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
           </div>
           
           {/* Pagination Controls - Updated for pairs */}
-          {Array.isArray(orders) && orders.length > 2 && (
+          {Array.isArray(ordersToUse) && ordersToUse.length > 2 && (
             <div className="flex justify-between p-4 border-t">
               <button
                 onClick={goToPreviousPair}
@@ -443,11 +516,11 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
                 Previous Pair
               </button>
               <span className="text-gray-600">
-                Pair {currentPairIndex + 1} of {Math.ceil(orders.length/2)}
+                Pair {currentPairIndex + 1} of {Math.ceil(ordersToUse.length/2)}
               </span>
               <button
                 onClick={goToNextPair}
-                disabled={currentPairIndex >= Math.ceil(orders.length/2) - 1 || isGeneratingPDF}
+                disabled={currentPairIndex >= Math.ceil(ordersToUse.length/2) - 1 || isGeneratingPDF}
                 className="px-3 py-1 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 disabled:opacity-50"
               >
                 Next Pair

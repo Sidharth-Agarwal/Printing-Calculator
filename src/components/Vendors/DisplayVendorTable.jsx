@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import VendorDetailsModal from "./VendorDetailsModal";
 import VendorDuplicateIndicator from "./VendorDuplicateIndicator";
 
-const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin }) => {
+const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, hasFullAccess }) => {
   // State for search term, filter, sorting, and view type
   const [searchTerm, setSearchTerm] = useState("");
   const [filterActiveStatus, setFilterActiveStatus] = useState("");
@@ -125,7 +125,9 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
   // Toggle vendor active status
   const handleToggleStatus = (e, vendor) => {
     e.stopPropagation();
-    onToggleStatus(vendor.id, !vendor.isActive);
+    if (onToggleStatus) {
+      onToggleStatus(vendor.id, !vendor.isActive);
+    }
   };
 
   // Get field value from vendor object with duplicate indicators
@@ -180,6 +182,68 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
     return value;
   };
 
+  // Renders the action buttons with permissions
+  const renderActionButtons = (vendor) => (
+    <div className="flex items-center space-x-1">
+      {/* Edit Button - only for users with full access */}
+      {hasFullAccess && onEdit && (
+        <button
+          onClick={() => onEdit(vendor)}
+          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+          title="Edit Vendor"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+          </svg>
+        </button>
+      )}
+      
+      {/* Delete Button - only for users with full access */}
+      {hasFullAccess && onDelete && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(vendor.id);
+          }}
+          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+          title="Delete Vendor"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        </button>
+      )}
+      
+      {/* Toggle Status Button - only for users with full access */}
+      {hasFullAccess && onToggleStatus && (
+        <button
+          onClick={(e) => handleToggleStatus(e, vendor)}
+          className={`p-1.5 rounded transition-colors ${
+            vendor.isActive 
+              ? "text-yellow-600 hover:bg-yellow-100" 
+              : "text-green-600 hover:bg-green-100"
+          }`}
+          title={vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+          </svg>
+        </button>
+      )}
+      
+      {/* More/Expand Button - always available */}
+      <button
+        onClick={(e) => toggleRowExpand(e, vendor.id)}
+        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+        title={expandedRows[vendor.id] ? "Show Less" : "Show More"}
+      >
+        <svg className={`w-4 h-4 transition-transform ${expandedRows[vendor.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+    </div>
+  );
+
   // Compact view - shows essential information
   const renderCompactView = () => {
     return (
@@ -194,7 +258,10 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               <SortableHeader field="gstin" label="GSTIN" />
               <SortableHeader field="paymentTerms.creditDays" label="Credit Days" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+              {/* Only show actions column if user has permissions or if expand is needed */}
+              {(hasFullAccess || true) && (
+                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -220,55 +287,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                     </span>
                   </td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center space-x-1">
-                      {/* Edit Button */}
-                      <button
-                        onClick={() => onEdit(vendor)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                        title="Edit Vendor"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                      </button>
-                      
-                      {/* Delete Button */}
-                      <button
-                        onClick={(e) => onDelete(vendor.id)}
-                        className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
-                        title="Delete Vendor"
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                      </button>
-                      
-                      {/* Toggle Status Button */}
-                      <button
-                        onClick={(e) => handleToggleStatus(e, vendor)}
-                        className={`p-1.5 rounded transition-colors ${
-                          vendor.isActive 
-                            ? "text-yellow-600 hover:bg-yellow-100" 
-                            : "text-green-600 hover:bg-green-100"
-                        }`}
-                        title={vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
-                      >
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                        </svg>
-                      </button>
-                      
-                      {/* More/Expand Button */}
-                      <button
-                        onClick={(e) => toggleRowExpand(e, vendor.id)}
-                        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                        title={expandedRows[vendor.id] ? "Show Less" : "Show More"}
-                      >
-                        <svg className={`w-4 h-4 transition-transform ${expandedRows[vendor.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
-                        </svg>
-                      </button>
-                    </div>
+                    {renderActionButtons(vendor)}
                   </td>
                 </tr>
                 {expandedRows[vendor.id] && (
@@ -326,7 +345,10 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Account</th>
               <SortableHeader field="paymentTerms.creditDays" label="Credit Days" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+              {/* Only show actions column if user has permissions or if expand is needed */}
+              {(hasFullAccess || true) && (
+                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -368,44 +390,7 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                   </span>
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center space-x-1">
-                    {/* Edit Button */}
-                    <button
-                      onClick={() => onEdit(vendor)}
-                      className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                      title="Edit Vendor"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                      </svg>
-                    </button>
-                    
-                    {/* Delete Button */}
-                    <button
-                      onClick={() => onDelete(vendor.id)}
-                      className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
-                      title="Delete Vendor"
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                      </svg>
-                    </button>
-                    
-                    {/* Toggle Status Button */}
-                    <button
-                      onClick={(e) => handleToggleStatus(e, vendor)}
-                      className={`p-1.5 rounded transition-colors ${
-                        vendor.isActive 
-                          ? "text-yellow-600 hover:bg-yellow-100" 
-                          : "text-green-600 hover:bg-green-100"
-                      }`}
-                      title={vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
-                    >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                      </svg>
-                    </button>
-                  </div>
+                  {renderActionButtons(vendor)}
                 </td>
               </tr>
             ))}
@@ -513,17 +498,20 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                   )}
                 </button>
                 
-                <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={() => onEdit(vendor)}
-                    className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
-                  >
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                    </svg>
-                    Edit
-                  </button>
-                </div>
+                {/* Only show edit button for users with full access */}
+                {hasFullAccess && (
+                  <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                    <button
+                      onClick={() => onEdit && onEdit(vendor)}
+                      className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                      </svg>
+                      Edit
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -557,31 +545,38 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
                   </div>
                 </div>
                 
-                <div className="mt-3 flex justify-between" onClick={(e) => e.stopPropagation()}>
-                  <button
-                    onClick={(e) => handleToggleStatus(e, vendor)}
-                    className={`px-2 py-1 text-xs ${
-                      vendor.isActive 
-                        ? "bg-yellow-100 text-yellow-800" 
-                        : "bg-green-100 text-green-800"
-                    } rounded hover:bg-opacity-80 transition-colors flex items-center`}
-                  >
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
-                    </svg>
-                    {vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
-                  </button>
-                  
-                  <button
-                    onClick={() => onDelete(vendor.id)}
-                    className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-                  >
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    Delete Vendor
-                  </button>
-                </div>
+                {/* Only show action buttons for users with full access */}
+                {hasFullAccess && (
+                  <div className="mt-3 flex justify-between" onClick={(e) => e.stopPropagation()}>
+                    {onToggleStatus && (
+                      <button
+                        onClick={(e) => handleToggleStatus(e, vendor)}
+                        className={`px-2 py-1 text-xs ${
+                          vendor.isActive 
+                            ? "bg-yellow-100 text-yellow-800" 
+                            : "bg-green-100 text-green-800"
+                        } rounded hover:bg-opacity-80 transition-colors flex items-center`}
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"></path>
+                        </svg>
+                        {vendor.isActive ? "Deactivate Vendor" : "Activate Vendor"}
+                      </button>
+                    )}
+                    
+                    {onDelete && (
+                      <button
+                        onClick={() => onDelete(vendor.id)}
+                        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Delete Vendor
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -708,15 +703,15 @@ const DisplayVendorTable = ({ vendors, onDelete, onEdit, onToggleStatus, isAdmin
         <VendorDetailsModal 
           vendor={selectedVendor} 
           onClose={handleCloseModal}
-          onEdit={() => {
+          onEdit={hasFullAccess && onEdit ? () => {
             handleCloseModal();
             onEdit(selectedVendor);
-          }}
-          onToggleStatus={() => {
+          } : null}
+          onToggleStatus={hasFullAccess && onToggleStatus ? () => {
             handleToggleStatus(new Event('click'), selectedVendor);
             handleCloseModal();
-          }}
-          isAdmin={isAdmin}
+          } : null}
+          hasFullAccess={hasFullAccess}
         />
       )}
     </div>

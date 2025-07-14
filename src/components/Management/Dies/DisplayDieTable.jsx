@@ -8,8 +8,9 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
   const [viewType, setViewType] = useState('compact');
   const [expandedRows, setExpandedRows] = useState({});
 
-  // Check if edit functionality is enabled
-  const hasEditAccess = typeof onEditDie === "function" && typeof onDeleteDie === "function";
+  // Check if edit/delete functionality is enabled
+  const hasEditAccess = typeof onEditDie === "function";
+  const hasDeleteAccess = typeof onDeleteDie === "function";
 
   // Enhanced search function with priority scoring and numerical sorting
   const calculateSearchScore = (die, searchTerm) => {
@@ -186,7 +187,8 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
   };
 
   // Toggle expanded state for a row
-  const toggleRowExpand = (id) => {
+  const toggleRowExpand = (e, id) => {
+    e.stopPropagation();
     setExpandedRows(prev => ({
       ...prev,
       [id]: !prev[id]
@@ -263,32 +265,45 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
     </th>
   );
 
-  // Renders the action buttons with the correct styling
+  // Renders the action buttons with minimal styling like vendor management
   const renderActionButtons = (die) => (
-    <div className="flex space-x-2">
+    <div className="flex items-center space-x-1">
+      {hasEditAccess && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEditDie(calculateDieValues(die));
+          }}
+          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+          title="Edit Die"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+          </svg>
+        </button>
+      )}
+      {hasDeleteAccess && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeleteDie(die.id);
+          }}
+          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+          title="Delete Die"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        </button>
+      )}
       <button
-        onClick={() => onEditDie(calculateDieValues(die))}
-        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center"
+        onClick={(e) => toggleRowExpand(e, die.id)}
+        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+        title={expandedRows[die.id] ? "Show Less" : "Show More"}
       >
-        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+        <svg className={`w-4 h-4 transition-transform ${expandedRows[die.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
         </svg>
-        Edit
-      </button>
-      <button
-        onClick={() => onDeleteDie(die.id)}
-        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-      >
-        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-        </svg>
-        Delete
-      </button>
-      <button
-        onClick={() => toggleRowExpand(die.id)}
-        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-      >
-        {expandedRows[die.id] ? '▲' : '▼'}
       </button>
     </div>
   );
@@ -319,8 +334,8 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Die Size (L×B)</th>
               <SortableHeader field="isTemporary" label="Status" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Image</th>
-              {hasEditAccess && (
-                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+              {(hasEditAccess || hasDeleteAccess) && (
+                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
               )}
             </tr>
           </thead>
@@ -363,7 +378,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                       <span className="text-gray-400">No Image</span>
                     )}
                   </td>
-                  {hasEditAccess && (
+                  {(hasEditAccess || hasDeleteAccess) && (
                     <td className="px-3 py-3">
                       {renderActionButtons(die)}
                     </td>
@@ -371,7 +386,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                 </tr>
                 {expandedRows[die.id] && (
                   <tr className={`${die.isTemporary ? 'bg-yellow-50' : 'bg-gray-50'}`}>
-                    <td colSpan={hasEditAccess ? 9 : 8} className="px-4 py-3 border-b border-gray-200">
+                    <td colSpan={(hasEditAccess || hasDeleteAccess) ? 9 : 8} className="px-4 py-3 border-b border-gray-200">
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                         <div>
                           <p className="font-medium text-gray-700">Converted Sizes:</p>
@@ -426,8 +441,8 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
               <SortableHeader field="clsdPrntSizeB_CM" label="CLSD PRNT B (CM)" />
               <SortableHeader field="isTemporary" label="Status" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Image</th>
-              {hasEditAccess && (
-                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+              {(hasEditAccess || hasDeleteAccess) && (
+                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
               )}
             </tr>
           </thead>
@@ -472,28 +487,9 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                       <span className="text-gray-400">No Image</span>
                     )}
                   </td>
-                  {hasEditAccess && (
+                  {(hasEditAccess || hasDeleteAccess) && (
                     <td className="px-3 py-3">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={() => onEditDie(calculatedDie)}
-                          className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center"
-                        >
-                          <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                          </svg>
-                          Edit
-                        </button>
-                        <button
-                          onClick={() => onDeleteDie(die.id)}
-                          className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-                        >
-                          <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                          </svg>
-                          Delete
-                        </button>
-                      </div>
+                      {renderActionButtons(die)}
                     </td>
                   )}
                 </tr>
@@ -558,7 +554,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                 
                 <div className="mt-3 flex justify-between items-center">
                   <button
-                    onClick={() => toggleRowExpand(die.id)}
+                    onClick={(e) => toggleRowExpand(e, die.id)}
                     className="text-xs text-gray-600 flex items-center"
                   >
                     {expandedRows[die.id] ? (
@@ -578,26 +574,30 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
                     )}
                   </button>
                   
-                  {hasEditAccess && (
+                  {(hasEditAccess || hasDeleteAccess) && (
                     <div className="flex space-x-2">
-                      <button
-                        onClick={() => onEditDie(calculatedDie)}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center"
-                      >
-                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => onDeleteDie(die.id)}
-                        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-                      >
-                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        Delete
-                      </button>
+                      {hasEditAccess && (
+                        <button
+                          onClick={() => onEditDie(calculatedDie)}
+                          className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                          </svg>
+                          Edit
+                        </button>
+                      )}
+                      {hasDeleteAccess && (
+                        <button
+                          onClick={() => onDeleteDie(die.id)}
+                          className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
+                        >
+                          <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                          </svg>
+                          Delete
+                        </button>
+                      )}
                     </div>
                   )}
                 </div>
@@ -650,7 +650,7 @@ const DisplayDieTable = ({ dies, onEditDie, onDeleteDie }) => {
           </div>
           <input
             type="text"
-            placeholder="Search dies... (type 'temporary' to filter)"
+            placeholder="Search dies..."
             value={searchTerm}
             onChange={handleSearch}
             className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"

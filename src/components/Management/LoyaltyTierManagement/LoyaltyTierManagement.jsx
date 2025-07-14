@@ -7,6 +7,7 @@ import Modal from "../../Shared/Modal";
 import ConfirmationModal from "../../Shared/ConfirmationModal";
 import DeleteConfirmationModal from "../../Shared/DeleteConfirmationModal";
 import { useAuth } from "../../Login/AuthContext";
+import DBExportImport from "../../Shared/DBExportImport";
 
 const LoyaltyTierManagement = () => {
   const { userRole } = useAuth();
@@ -26,8 +27,14 @@ const LoyaltyTierManagement = () => {
     status: "success"
   });
 
-  // Check if user is admin
+  // Check user permissions
   const isAdmin = userRole === "admin";
+  const isStaff = userRole === "staff";
+  const isAccountant = userRole === "accountant";
+  const canView = isAdmin || isStaff || isAccountant;
+  const canEdit = isAdmin || isStaff;
+  const canAdd = isAdmin;
+  const canDelete = isAdmin;
 
   // Loyalty tier statistics
   const [tierStats, setTierStats] = useState({
@@ -106,7 +113,7 @@ const LoyaltyTierManagement = () => {
 
   // Add new loyalty tier
   const addLoyaltyTier = async (tierData) => {
-    if (!isAdmin) return;
+    if (!canAdd) return;
     
     setIsSubmitting(true);
     
@@ -155,7 +162,7 @@ const LoyaltyTierManagement = () => {
 
   // Update existing loyalty tier
   const updateLoyaltyTier = async (dbId, updatedData) => {
-    if (!isAdmin) return;
+    if (!canEdit) return;
     
     setIsSubmitting(true);
     
@@ -247,14 +254,14 @@ const LoyaltyTierManagement = () => {
   };
 
   const handleAddClick = () => {
-    if (!isAdmin) return;
+    if (!canAdd) return;
     
     setSelectedTier(null); // Ensure we're not in edit mode
     setIsFormModalOpen(true);
   };
 
   const handleEditClick = (tier) => {
-    if (!isAdmin) return;
+    if (!canEdit) return;
     
     console.log("Editing tier:", tier);
     if (tier && tier.dbId) {
@@ -278,7 +285,7 @@ const LoyaltyTierManagement = () => {
 
   // Show delete confirmation
   const confirmDelete = (id) => {
-    if (!isAdmin) return;
+    if (!canDelete) return;
     
     // First try to find the tier by dbId
     let tier = loyaltyTiers.find(t => t.dbId === id);
@@ -317,9 +324,28 @@ const LoyaltyTierManagement = () => {
     });
   };
 
+  // Handle notification from export/import operations
+  const handleExportImportSuccess = (message) => {
+    setNotification({
+      isOpen: true,
+      message: message,
+      title: "Success",
+      status: "success"
+    });
+  };
+
+  const handleExportImportError = (message) => {
+    setNotification({
+      isOpen: true,
+      message: message,
+      title: "Error",
+      status: "error"
+    });
+  };
+
   // Delete loyalty tier
   const handleDeleteConfirm = async () => {
-    if (!isAdmin) return;
+    if (!canDelete) return;
     
     try {
       await deleteDoc(doc(db, "loyaltyTiers", deleteConfirmation.itemId));
@@ -345,7 +371,7 @@ const LoyaltyTierManagement = () => {
   };
 
   // Unauthorized access
-  if (!isAdmin) {
+  if (!canView) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
@@ -389,92 +415,78 @@ const LoyaltyTierManagement = () => {
           Manage loyalty tiers, discounts, and thresholds for B2B clients
         </p>
       </div>
-      
-      {/* Loyalty Tier Statistics */}
-      {/* <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Total Tiers</h2>
-          <p className="text-2xl font-bold text-gray-800">{tierStats.totalTiers}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Active loyalty program tiers
-          </p>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">B2B Clients</h2>
-          <p className="text-2xl font-bold text-blue-600">{tierStats.totalClients}</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Total clients eligible for loyalty program
-          </p>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Average Discount</h2>
-          <p className="text-2xl font-bold text-red-600">{tierStats.averageDiscount.toFixed(1)}%</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Across all loyalty tiers
-          </p>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Maximum Discount</h2>
-          <p className="text-2xl font-bold text-green-600">{tierStats.maxDiscount.toFixed(1)}%</p>
-          <p className="text-xs text-gray-500 mt-1">
-            Highest loyalty tier discount
-          </p>
-        </div>
-      </div> */}
 
-      {/* Action buttons */}
-      <div className="flex justify-end mb-4">
-        <button 
-          onClick={handleAddClick}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
-        >
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
-            <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
-          </svg>
-          Add New Loyalty Tier
-        </button>
+      {/* Action buttons with Export/Import options */}
+      <div className="flex flex-col md:flex-row justify-between mb-4">
+        <div className="mb-2 md:mb-0">
+          {/* Only show import/export to admins */}
+          {isAdmin && (
+            <DBExportImport 
+              db={db}
+              collectionName="loyaltyTiers"
+              onSuccess={handleExportImportSuccess}
+              onError={handleExportImportError}
+              dateFields={['createdAt', 'updatedAt']}
+            />
+          )}
+        </div>
+        
+        <div>
+          {canAdd && (
+            <button 
+              onClick={handleAddClick}
+              className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 5a1 1 0 011 1v3h3a1 1 0 110 2h-3v3a1 1 0 11-2 0v-3H6a1 1 0 110-2h3V6a1 1 0 011-1z" clipRule="evenodd" />
+              </svg>
+              Add New Loyalty Tier
+            </button>
+          )}
+        </div>
       </div>
     
       {/* Loyalty tier table */}
       <div className="overflow-hidden">
         <DisplayLoyaltyTierTable
           tiers={loyaltyTiers}
-          onDelete={confirmDelete}
-          onEdit={handleEditClick}
+          onDelete={canDelete ? confirmDelete : null}
+          onEdit={canEdit ? handleEditClick : null}
         />
       </div>
       
-      {/* Modals */}
-      <Modal
-        isOpen={isFormModalOpen}
-        onClose={handleCloseModal}
-        title={selectedTier ? "Edit Loyalty Tier" : "Add New Loyalty Tier"}
-        size="lg"
-      >
-        <AddLoyaltyTierForm
-          onSubmit={addLoyaltyTier}
-          selectedTier={selectedTier}
-          onUpdate={(id, data) => {
-            // Ensure we're using the document ID (dbId) for the update operation
-            const docId = selectedTier?.dbId || id;
-            console.log("Updating tier with document ID:", docId);
-            updateLoyaltyTier(docId, data);
-          }}
-          setSelectedTier={setSelectedTier}
-          isSubmitting={isSubmitting}
-          onCancel={handleCloseModal}
-        />
-      </Modal>
+      {/* Modals - only rendered based on permissions */}
+      {(canAdd || canEdit) && (
+        <Modal
+          isOpen={isFormModalOpen}
+          onClose={handleCloseModal}
+          title={selectedTier ? "Edit Loyalty Tier" : "Add New Loyalty Tier"}
+          size="lg"
+        >
+          <AddLoyaltyTierForm
+            onSubmit={addLoyaltyTier}
+            selectedTier={selectedTier}
+            onUpdate={(id, data) => {
+              // Ensure we're using the document ID (dbId) for the update operation
+              const docId = selectedTier?.dbId || id;
+              console.log("Updating tier with document ID:", docId);
+              updateLoyaltyTier(docId, data);
+            }}
+            setSelectedTier={setSelectedTier}
+            isSubmitting={isSubmitting}
+            onCancel={handleCloseModal}
+          />
+        </Modal>
+      )}
       
-      <DeleteConfirmationModal
-        isOpen={deleteConfirmation.isOpen}
-        onClose={closeDeleteModal}
-        onConfirm={handleDeleteConfirm}
-        itemName="loyalty tier"
-      />
+      {canDelete && (
+        <DeleteConfirmationModal
+          isOpen={deleteConfirmation.isOpen}
+          onClose={closeDeleteModal}
+          onConfirm={handleDeleteConfirm}
+          itemName="loyalty tier"
+        />
+      )}
       
       <ConfirmationModal
         isOpen={notification.isOpen}

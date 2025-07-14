@@ -328,7 +328,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             name="fsType"
             value={fsDetails.fsType || ""}
             onChange={handleChange}
-            className={`w-full px-2 py-2 border ${errors.fsType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-sm`}
+            className={`w-full px-2 py-2 border ${errors.fsType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
           >
             {["FS1", "FS2", "FS3", "FS4", "FS5"].map((type) => (
               <option key={type} value={type}>
@@ -355,7 +355,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                     <h4 className="text-sm font-medium text-gray-700">Foil {index + 1}</h4>
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
                     <div>
                       <label className="block text-xs font-medium text-gray-600 mb-1">
                         Block Size:

@@ -125,7 +125,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               value={formData.id || ""}
               onChange={handleChange}
               placeholder="E.g., welcome_circle, trusted_circle"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
+              className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
               required
             />
             <p className="mt-1 text-xs text-gray-500">Unique identifier for this tier</p>
@@ -141,7 +141,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               value={formData.name || ""}
               onChange={handleChange}
               placeholder="E.g., Welcome Circle, Trusted Circle"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
+              className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
               required
             />
             <p className="mt-1 text-xs text-gray-500">Display name shown to clients</p>
@@ -157,7 +157,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               value={formData.orderThreshold || ""}
               onChange={handleChange}
               placeholder="E.g., 1, 2, 3, 4"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
+              className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
               required
               min="1"
               onWheel={(e) => e.target.blur()}
@@ -177,7 +177,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               value={formData.discount === 0 ? 0 : formData.discount || ""}
               onChange={handleChange}
               placeholder="E.g., 0, 5, 10, 20"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
+              className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
               required
               min="0"
               max="100"
@@ -196,7 +196,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
                 name="color"
                 value={formData.color || "#CCCCCC"}
                 onChange={handleChange}
-                className="h-8 w-8 p-0 border-0 rounded"
+                className="h-8 w-8 p-0 border-0 rounded cursor-pointer"
               />
               <input
                 type="text"
@@ -204,7 +204,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
                 value={formData.color || "#CCCCCC"}
                 onChange={handleChange}
                 placeholder="#CCCCCC"
-                className="ml-2 flex-1 p-2 border border-gray-300 rounded text-sm"
+                className="ml-2 flex-1 p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
               />
             </div>
             <p className="mt-1 text-xs text-gray-500">Color for badges and visual elements</p>
@@ -218,7 +218,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               value={formData.description || ""}
               onChange={handleChange}
               placeholder="Brief description of this tier"
-              className="w-full p-2 border border-gray-300 rounded text-sm"
+              className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
             />
           </div>
         </div>
@@ -233,12 +233,12 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
                 value={benefit}
                 onChange={(e) => handleBenefitChange(index, e.target.value)}
                 placeholder={`Benefit ${index + 1}`}
-                className="flex-1 p-2 border border-gray-300 rounded text-sm"
+                className="flex-1 p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
               />
               <button
                 type="button"
                 onClick={() => removeBenefitField(index)}
-                className="ml-2 px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm"
+                className="ml-2 px-2 py-1 bg-red-100 text-red-600 rounded hover:bg-red-200 text-sm transition-colors"
                 disabled={formData.benefits.length <= 1}
               >
                 Remove
@@ -249,7 +249,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
           <button
             type="button"
             onClick={addBenefitField}
-            className="mt-2 px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 text-sm"
+            className="mt-2 px-3 py-1 bg-gray-100 text-gray-600 rounded hover:bg-gray-200 text-sm transition-colors"
           >
             + Add Benefit
           </button>
@@ -260,14 +260,14 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
         <button
           type="button"
           onClick={onCancel}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50"
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm text-gray-700 bg-white hover:bg-gray-50 transition-colors"
           disabled={isSubmitting}
         >
           Cancel
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
+          className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700 transition-colors"
           disabled={isSubmitting}
         >
           {isSubmitting ? (

@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { collection, addDoc, query, where, getDocs, doc, getDoc, onSnapshot } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { performCompleteCalculations, recalculateTotals } from "./Services/Calculations/calculationsService";
+import { FileText } from 'lucide-react';
 import { fetchGSTRate } from "./Services/Calculations/Calculators/finalCalculator/gstCalculator";
 import { useAuth } from "../Login/AuthContext";
 
@@ -24,209 +25,249 @@ import Packing from "./Sections/Post Production/Packing";
 import Sandwich from "./Sections/Post Production/Sandwich";
 import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
+import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
 import SuccessNotification from "../Shared/SuccessNotification";
-import FormSection from "../Shared/FormSection";
 import FixedSection from "./Sections/Fixed/FixedSection";
 
 // Import service and job type configurations
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
 import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
 
+// Updated ServiceCard Component with dynamic height and scrolling
+const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
+  return (
+    <div className="border border-gray-200 rounded-lg p-4 flex flex-col transition-all duration-300 ease-in-out">
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-medium text-gray-700">{title}</h3>
+        <div className="flex items-center space-x-2">
+          {isUsed && (
+            <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
+              Active
+            </span>
+          )}
+          <label className="relative inline-flex items-center cursor-pointer">
+            <input
+              type="checkbox"
+              checked={isUsed}
+              onChange={onToggleUsage}
+              className="sr-only peer"
+            />
+            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
+          </label>
+        </div>
+      </div>
+      
+      {/* FIXED: Content area with proper scrolling and dynamic height */}
+      <div className={`flex-1 transition-all duration-300 ease-in-out ${
+        isUsed 
+          ? 'opacity-100 max-h-[600px] mt-3' 
+          : 'opacity-0 max-h-0 mt-0'
+      }`}>
+        {isUsed && (
+          <div className="max-h-[500px] overflow-y-auto overflow-x-hidden">
+            {children}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
 // Original initialFormState
 const initialFormState = {
- // Client information
- client: {
-   clientId: null,
-   clientInfo: null
- },
- // Version information
- versionId: "",
- orderAndPaper: {
-   projectName: "",
-   date: null,
-   deliveryDate: null,
-   weddingDate: null,
-   jobType: "Card", // Default job type
-   quantity: "",
-   paperProvided: "Yes",
-   paperName: "",
-   paperGsm: "",
-   paperCompany: "",
-   dieSelection: "",
-   dieCode: "",
-   dieSize: { length: "", breadth: "" },
-   productSize: { length: "", breadth: "" },
-   image: "",
-   hsnCode: "",
-   frags: "",
-   type: "" 
- },
- lpDetails: {
-   isLPUsed: false,
-   noOfColors: 0,
-   colorDetails: [],
- },
- fsDetails: {
-   isFSUsed: false,
-   fsType: "",
-   foilDetails: [],
- },
- embDetails: {
-   isEMBUsed: false,
-   plateSizeType: "",
-   plateDimensions: { length: "", breadth: "" },
-   plateTypeMale: "",
-   plateTypeFemale: "",
-   embMR: "",
-   embMRConcatenated: "",
-   dstMaterial: ""
- },
- digiDetails: {
-   isDigiUsed: false,
-   digiDie: "",
-   digiDimensions: { length: "", breadth: "" },
- },
- notebookDetails: {
-   isNotebookUsed: false,
-   orientation: "",
-   length: "",
-   breadth: "",
-   calculatedLength: "",
-   calculatedBreadth: "",
-   numberOfPages: "",
-   bindingType: "",
-   bindingTypeConcatenated: "",
-   paperName: ""
- },
- screenPrint: {
-   isScreenPrintUsed: false,
-   noOfColors: 1,
-   screenMR: "",
-   screenMRConcatenated: ""
- },
- preDieCutting: {
-   isPreDieCuttingUsed: false,
-   predcMR: "",
-   predcMRConcatenated: ""
- },
- dieCutting: {
-   isDieCuttingUsed: false,
-   dcMR: "",
-   dcMRConcatenated: ""
- },
- postDC: {
-   isPostDCUsed: false,
-   pdcMR: "",
-   pdcMRConcatenated: ""
- },
- foldAndPaste: {
-   isFoldAndPasteUsed: false,
-   dstMaterial: "",
-   dstType: "",
- },  
- dstPaste: {
-   isDstPasteUsed: false,
-   dstType: "",
- },
- magnet: {
-   isMagnetUsed: false,
-   magnetMaterial: ""
- },
- qc: {
-   isQCUsed: false,
- },
- packing: {
-   isPackingUsed: false,
- },
- // FIXED: Proper misc initial state
- misc: {
-   isMiscUsed: false,
-   miscCharge: ""
- },
- sandwich: {
-   isSandwichComponentUsed: false,
-   paperInfo: {
-     paperName: ""
-   },
-   lpDetailsSandwich: {
-     isLPUsed: false,
-     noOfColors: 0,
-     colorDetails: [],
-   },
-   fsDetailsSandwich: {
-     isFSUsed: false,
-     fsType: "",
-     foilDetails: [],
-   },
-   embDetailsSandwich: {
-     isEMBUsed: false,
-     plateSizeType: "",
-     plateDimensions: { 
-       length: "", 
-       breadth: "",
-       lengthInInches: "",
-       breadthInInches: ""
-     },
-     plateTypeMale: "",
-     plateTypeFemale: "",
-     embMR: "",
-     embMRConcatenated: ""
-   }
- }
+  // Client information
+  client: {
+    clientId: null,
+    clientInfo: null
+  },
+  // Version information
+  versionId: "",
+  orderAndPaper: {
+    projectName: "",
+    date: null,
+    deliveryDate: null,
+    weddingDate: null,
+    jobType: "Card", // Default job type
+    quantity: "",
+    paperProvided: "Yes",
+    paperName: "",
+    paperGsm: "",
+    paperCompany: "",
+    dieSelection: "",
+    dieCode: "",
+    dieSize: { length: "", breadth: "" },
+    productSize: { length: "", breadth: "" },
+    image: "",
+    hsnCode: "",
+    frags: "",
+    type: "" 
+  },
+  lpDetails: {
+    isLPUsed: false,
+    noOfColors: 0,
+    colorDetails: [],
+  },
+  fsDetails: {
+    isFSUsed: false,
+    fsType: "",
+    foilDetails: [],
+  },
+  embDetails: {
+    isEMBUsed: false,
+    plateSizeType: "",
+    plateDimensions: { length: "", breadth: "" },
+    plateTypeMale: "",
+    plateTypeFemale: "",
+    embMR: "",
+    embMRConcatenated: "",
+    dstMaterial: ""
+  },
+  digiDetails: {
+    isDigiUsed: false,
+    digiDie: "",
+    digiDimensions: { length: "", breadth: "" },
+  },
+  notebookDetails: {
+    isNotebookUsed: false,
+    orientation: "",
+    length: "",
+    breadth: "",
+    calculatedLength: "",
+    calculatedBreadth: "",
+    numberOfPages: "",
+    bindingType: "",
+    bindingTypeConcatenated: "",
+    paperName: ""
+  },
+  screenPrint: {
+    isScreenPrintUsed: false,
+    noOfColors: 1,
+    screenMR: "",
+    screenMRConcatenated: ""
+  },
+  preDieCutting: {
+    isPreDieCuttingUsed: false,
+    predcMR: "",
+    predcMRConcatenated: ""
+  },
+  dieCutting: {
+    isDieCuttingUsed: false,
+    dcMR: "",
+    dcMRConcatenated: ""
+  },
+  postDC: {
+    isPostDCUsed: false,
+    pdcMR: "",
+    pdcMRConcatenated: ""
+  },
+  foldAndPaste: {
+    isFoldAndPasteUsed: false,
+    dstMaterial: "",
+    dstType: "",
+  },  
+  dstPaste: {
+    isDstPasteUsed: false,
+    dstType: "",
+  },
+  magnet: {
+    isMagnetUsed: false,
+    magnetMaterial: ""
+  },
+  qc: {
+    isQCUsed: false,
+  },
+  packing: {
+    isPackingUsed: false,
+  },
+  // FIXED: Proper misc initial state
+  misc: {
+    isMiscUsed: false,
+    miscCharge: ""
+  },
+  sandwich: {
+    isSandwichComponentUsed: false,
+    paperInfo: {
+      paperName: ""
+    },
+    lpDetailsSandwich: {
+      isLPUsed: false,
+      noOfColors: 0,
+      colorDetails: [],
+    },
+    fsDetailsSandwich: {
+      isFSUsed: false,
+      fsType: "",
+      foilDetails: [],
+    },
+    embDetailsSandwich: {
+      isEMBUsed: false,
+      plateSizeType: "",
+      plateDimensions: { 
+        length: "", 
+        breadth: "",
+        lengthInInches: "",
+        breadthInInches: ""
+      },
+      plateTypeMale: "",
+      plateTypeFemale: "",
+      embMR: "",
+      embMRConcatenated: ""
+    }
+  }
 };
 
 // UPDATED: Reducer function with fixed misc handling
 const reducer = (state, action) => {
- switch (action.type) {
-   case "UPDATE_CLIENT":
-     return { ...state, client: { ...state.client, ...action.payload } };
-   case "UPDATE_VERSION":
-     return { ...state, versionId: action.payload };
-   case "UPDATE_ORDER_AND_PAPER":
-     console.log("UPDATE_ORDER_AND_PAPER:", action.payload);
-     return { ...state, orderAndPaper: { ...state.orderAndPaper, ...action.payload } };
-   case "UPDATE_LP_DETAILS":
-     return { ...state, lpDetails: { ...state.lpDetails, ...action.payload } };
-   case "UPDATE_FS_DETAILS":
-     return { ...state, fsDetails: { ...state.fsDetails, ...action.payload } };
-   case "UPDATE_EMB_DETAILS":
-     return { ...state, embDetails: { ...state.embDetails, ...action.payload } };
-   case "UPDATE_DIGI_DETAILS":
-     return { ...state, digiDetails: { ...state.digiDetails, ...action.payload } };
-   case "UPDATE_NOTEBOOK_DETAILS":
-     return { ...state, notebookDetails: { ...state.notebookDetails, ...action.payload } };
-   case "UPDATE_SCREEN_PRINT":
-     return { ...state, screenPrint: { ...state.screenPrint, ...action.payload } };
-   case "UPDATE_PRE_DIE_CUTTING":
-     return { ...state, preDieCutting: { ...state.preDieCutting, ...action.payload } };
-   case "UPDATE_DIE_CUTTING":
-     return { ...state, dieCutting: { ...state.dieCutting, ...action.payload } };
-   case "UPDATE_POST_DC":
-     return { ...state, postDC: { ...state.postDC, ...action.payload } };
-   case "UPDATE_FOLD_AND_PASTE":
-     return { ...state, foldAndPaste: { ...state.foldAndPaste, ...action.payload } };
-   case "UPDATE_DST_PASTE":
-     return { ...state, dstPaste: { ...state.dstPaste, ...action.payload } };
-   case "UPDATE_MAGNET":
-     return { ...state, magnet: { ...state.magnet, ...action.payload } };
-   case "UPDATE_QC":
-     return { ...state, qc: { ...state.qc, ...action.payload } };
-   case "UPDATE_PACKING":
-     return { ...state, packing: { ...state.packing, ...action.payload } };
-   case "UPDATE_MISC":
-     return { ...state, misc: { ...state.misc, ...action.payload } };
-   case "UPDATE_SANDWICH":
-     return { ...state, sandwich: { ...state.sandwich, ...action.payload } };
-   case "UPDATE_HSN_CODE":
-     return { ...state, orderAndPaper: { ...state.orderAndPaper, hsnCode: action.payload } };
-   case "RESET_FORM":
-     return initialFormState;
-   case "INITIALIZE_FORM":
-     console.log("INITIALIZING FORM with data:", action.payload);
-     return { ...action.payload };
-   default:
-     return state;
- }
+  switch (action.type) {
+    case "UPDATE_CLIENT":
+      return { ...state, client: { ...state.client, ...action.payload } };
+    case "UPDATE_VERSION":
+      return { ...state, versionId: action.payload };
+    case "UPDATE_ORDER_AND_PAPER":
+      console.log("UPDATE_ORDER_AND_PAPER:", action.payload);
+      return { ...state, orderAndPaper: { ...state.orderAndPaper, ...action.payload } };
+    case "UPDATE_LP_DETAILS":
+      return { ...state, lpDetails: { ...state.lpDetails, ...action.payload } };
+    case "UPDATE_FS_DETAILS":
+      return { ...state, fsDetails: { ...state.fsDetails, ...action.payload } };
+    case "UPDATE_EMB_DETAILS":
+      return { ...state, embDetails: { ...state.embDetails, ...action.payload } };
+    case "UPDATE_DIGI_DETAILS":
+      return { ...state, digiDetails: { ...state.digiDetails, ...action.payload } };
+    case "UPDATE_NOTEBOOK_DETAILS":
+      return { ...state, notebookDetails: { ...state.notebookDetails, ...action.payload } };
+    case "UPDATE_SCREEN_PRINT":
+      return { ...state, screenPrint: { ...state.screenPrint, ...action.payload } };
+    case "UPDATE_PRE_DIE_CUTTING":
+      return { ...state, preDieCutting: { ...state.preDieCutting, ...action.payload } };
+    case "UPDATE_DIE_CUTTING":
+      return { ...state, dieCutting: { ...state.dieCutting, ...action.payload } };
+    case "UPDATE_POST_DC":
+      return { ...state, postDC: { ...state.postDC, ...action.payload } };
+    case "UPDATE_FOLD_AND_PASTE":
+      return { ...state, foldAndPaste: { ...state.foldAndPaste, ...action.payload } };
+    case "UPDATE_DST_PASTE":
+      return { ...state, dstPaste: { ...state.dstPaste, ...action.payload } };
+    case "UPDATE_MAGNET":
+      return { ...state, magnet: { ...state.magnet, ...action.payload } };
+    case "UPDATE_QC":
+      return { ...state, qc: { ...state.qc, ...action.payload } };
+    case "UPDATE_PACKING":
+      return { ...state, packing: { ...state.packing, ...action.payload } };
+    case "UPDATE_MISC":
+      return { ...state, misc: { ...state.misc, ...action.payload } };
+    case "UPDATE_SANDWICH":
+      return { ...state, sandwich: { ...state.sandwich, ...action.payload } };
+    case "UPDATE_HSN_CODE":
+      return { ...state, orderAndPaper: { ...state.orderAndPaper, hsnCode: action.payload } };
+    case "RESET_FORM":
+      return initialFormState;
+    case "INITIALIZE_FORM":
+      console.log("INITIALIZING FORM with data:", action.payload);
+      return { ...action.payload };
+    default:
+      return state;
+  }
 };
 
 // Map state to Firebase structure with sanitization for undefined values
@@ -447,475 +488,442 @@ const mapStateToFirebaseStructure = (state, calculations) => {
 };
 
 const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess = null, onClose = null }) => {
- const navigate = useNavigate();
- const [state, dispatch] = useReducer(reducer, initialState || initialFormState);
- const [calculations, setCalculations] = useState(null);
- const [isCalculating, setIsCalculating] = useState(false);
- const [isSubmitting, setIsSubmitting] = useState(false);
- 
- // UPDATED: Multiple sections can be open simultaneously
- const [activeSections, setActiveSections] = useState({
-   reviewAndSubmit: true, // Cost calculations always open
-   lp: false,
-   fs: false,
-   emb: false,
-   digi: false,
-   notebook: false,
-   screenPrint: false,
-   preDieCutting: false,
-   dieCutting: false,
-   postDC: false,
-   foldAndPaste: false,
-   dstPaste: false,
-   magnet: false,
-   qc: false,
-   packing: false,
-   misc: false,
-   sandwich: false
- });
- 
- const [validationErrors, setValidationErrors] = useState({});
- const [showResetConfirmation, setShowResetConfirmation] = useState(false);
- const [selectedClient, setSelectedClient] = useState(null);
- const [selectedVersion, setSelectedVersion] = useState("");
- const [defaultMarkup, setDefaultMarkup] = useState({ type: "MARKUP TIMELESS", percentage: 50 });
- const [selectedMarkupType, setSelectedMarkupType] = useState("MARKUP TIMELESS");
- const [markupPercentage, setMarkupPercentage] = useState(50);
- const [papers, setPapers] = useState([]);
- const [hsnRates, setHsnRates] = useState([]); // Store HSN rates from standard_rates
- const [formChangeDebug, setFormChangeDebug] = useState({}); // Track form changes for debugging
- 
- // ⭐ NEW: Updated GST Rate Caching States
- const [cachedGSTRates, setCachedGSTRates] = useState({}); // Cache by job type
- const [gstError, setGstError] = useState(null);
- const previousJobType = useRef(state.orderAndPaper.jobType || "Card");
- 
- // Success notification state
- const [showSuccessNotification, setShowSuccessNotification] = useState(false);
- 
- // Define visible services based on the selected job type
- const [visibleProductionServices, setVisibleProductionServices] = useState([]);
- const [visiblePostProductionServices, setVisiblePostProductionServices] = useState([]);
+  const navigate = useNavigate();
+  const [state, dispatch] = useReducer(reducer, initialState || initialFormState);
+  const [calculations, setCalculations] = useState(null);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  
+  // NEW: Preview state management
+  const [showPreview, setShowPreview] = useState(false);
+  const [previewData, setPreviewData] = useState(null);
+  
+  // UPDATED: Only ReviewAndSubmit section remains collapsible
+  const [activeSections, setActiveSections] = useState({
+    reviewAndSubmit: true, // Cost calculations always open
+  });
 
- // Add B2B client detection using Auth context
- const { userRole, currentUser } = useAuth();
- const [isB2BClient, setIsB2BClient] = useState(false);
- const [linkedClientData, setLinkedClientData] = useState(null);
+  const markupInitializedRef = useRef(false);
+  
+  const [validationErrors, setValidationErrors] = useState({});
+  const [showResetConfirmation, setShowResetConfirmation] = useState(false);
+  const [selectedClient, setSelectedClient] = useState(null);
+  const [selectedVersion, setSelectedVersion] = useState("");
+  const [defaultMarkup, setDefaultMarkup] = useState({ type: "MARKUP TIMELESS", percentage: 50 });
+  const [selectedMarkupType, setSelectedMarkupType] = useState("MARKUP TIMELESS");
+  const [markupPercentage, setMarkupPercentage] = useState(50);
+  const [papers, setPapers] = useState([]);
+  const [hsnRates, setHsnRates] = useState([]); // Store HSN rates from standard_rates
+  const [formChangeDebug, setFormChangeDebug] = useState({}); // Track form changes for debugging
+  
+  // ⭐ NEW: Updated GST Rate Caching States
+  const [cachedGSTRates, setCachedGSTRates] = useState({}); // Cache by job type
+  const [gstError, setGstError] = useState(null);
+  const previousJobType = useRef(state.orderAndPaper.jobType || "Card");
+  
+  // Success notification state
+  const [showSuccessNotification, setShowSuccessNotification] = useState(false);
+  
+  // Define visible services based on the selected job type
+  const [visibleProductionServices, setVisibleProductionServices] = useState([]);
+  const [visiblePostProductionServices, setVisiblePostProductionServices] = useState([]);
 
- // State to track direct initialization
- const [directInitializationDone, setDirectInitializationDone] = useState(false);
+  // Add B2B client detection using Auth context
+  const { userRole, currentUser } = useAuth();
+  const [isB2BClient, setIsB2BClient] = useState(false);
+  const [linkedClientData, setLinkedClientData] = useState(null);
 
- const formRef = useRef(null);
- 
- // UPDATED: Helper functions for multiple sections
- const toggleSection = (sectionId) => {
-   setActiveSections(prev => ({
-     ...prev,
-     [sectionId]: !prev[sectionId]
-   }));
- };
+  // State to track direct initialization
+  const [directInitializationDone, setDirectInitializationDone] = useState(false);
 
- const expandSection = (sectionId) => {
-   setActiveSections(prev => ({
-     ...prev,
-     [sectionId]: true
-   }));
- };
- 
- // ⭐ NEW: GST Rate Caching with job type change detection
- useEffect(() => {
-   const currentJobType = state.orderAndPaper.jobType || "Card";
-   
-   // Clear cache when job type changes
-   if (currentJobType !== previousJobType.current) {
-     console.log(`Job type changed: ${previousJobType.current} → ${currentJobType}, clearing GST cache`);
-     setCachedGSTRates({}); // Clear cache for fresh fetch
-     previousJobType.current = currentJobType;
-     setGstError(null); // Clear any previous errors
-   }
- }, [state.orderAndPaper.jobType]);
+  const formRef = useRef(null);
+  
+  // UPDATED: Helper functions for ReviewAndSubmit section only
+  const toggleSection = (sectionId) => {
+    setActiveSections(prev => ({
+      ...prev,
+      [sectionId]: !prev[sectionId]
+    }));
+  };
 
- // ⭐ NEW: Function to get GST rate for a job type (with caching)
- const getGSTRateForJobType = async (jobType) => {
-   // Check if we have this job type cached
-   if (cachedGSTRates[jobType]) {
-     console.log(`Using cached GST rate for ${jobType}: ${cachedGSTRates[jobType]}%`);
-     return cachedGSTRates[jobType];
-   }
-   
-   try {
-     console.log(`Fetching fresh GST rate for ${jobType}`);
-     const gstRate = await fetchGSTRate(jobType);
-     
-     // Cache this rate for this job type
-     setCachedGSTRates({ [jobType]: gstRate });
-     console.log(`Cached GST rate for ${jobType}: ${gstRate}%`);
-     return gstRate;
-   } catch (error) {
-     console.error("Error fetching GST rate:", error);
-     setGstError(`Failed to fetch GST rate for ${jobType}: ${error.message}`);
-     throw error;
-   }
- };
- 
- // Fetch HSN codes from standard_rates collection
- useEffect(() => {
-   const fetchHsnCodes = async () => {
-     try {
-       console.log("Fetching HSN codes from gst_and_hsn collection...");
-       const gstHsnCollection = collection(db, "gst_and_hsn");
-       
-       const unsubscribe = onSnapshot(gstHsnCollection, (snapshot) => {
-         const hsnData = snapshot.docs.map((doc) => ({
-           id: doc.id,
-           ...doc.data(),
-         }));
-         
-         // Filter only for HSN records - group should be "HSN"
-         const hsnCodesData = hsnData.filter(item => item.group === "HSN");
-         console.log(`Fetched ${hsnCodesData.length} HSN codes from gst_and_hsn`);
-         
-         setHsnRates(hsnCodesData);
-         
-         // If job type is already selected, update HSN code immediately
-         if (state.orderAndPaper.jobType && hsnCodesData.length > 0) {
-           updateHsnCodeForJobType(state.orderAndPaper.jobType, hsnCodesData);
-         }
-       });
-       
-       return () => unsubscribe();
-     } catch (error) {
-       console.error("Error fetching HSN codes:", error);
-     }
-   };
-   
-   fetchHsnCodes();
- }, []);  
- 
- // Fetch papers from Firestore
- useEffect(() => {
-   const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
-     const paperData = snapshot.docs.map((doc) => ({
-       id: doc.id,
-       ...doc.data(),
-     }));
-     setPapers(paperData);
-   });
+  // ⭐ NEW: GST Rate Caching with job type change detection
+  useEffect(() => {
+    const currentJobType = state.orderAndPaper.jobType || "Card";
+    
+    // Clear cache when job type changes
+    if (currentJobType !== previousJobType.current) {
+      console.log(`Job type changed: ${previousJobType.current} → ${currentJobType}, clearing GST cache`);
+      setCachedGSTRates({}); // Clear cache for fresh fetch
+      previousJobType.current = currentJobType;
+      setGstError(null); // Clear any previous errors
+    }
+  }, [state.orderAndPaper.jobType]);
 
-   return () => unsubscribe();
- }, []);
- 
- // Update visible services when job type changes
- useEffect(() => {
-   const jobType = state.orderAndPaper.jobType || "Card";
-   const config = jobTypeConfigurations[jobType] || jobTypeConfigurations["Card"];
-   
-   // Set visible services based on job type
-   setVisibleProductionServices(config.productionServices || []);
-   setVisiblePostProductionServices(config.postProductionServices || []);
-   
-   // Update HSN code when job type changes
-   if (hsnRates.length > 0) {
-     updateHsnCodeForJobType(jobType);
-   }
- }, [state.orderAndPaper.jobType, hsnRates]);
+  // ⭐ NEW: Function to get GST rate for a job type (with caching)
+  const getGSTRateForJobType = async (jobType) => {
+    // Check if we have this job type cached
+    if (cachedGSTRates[jobType]) {
+      console.log(`Using cached GST rate for ${jobType}: ${cachedGSTRates[jobType]}%`);
+      return cachedGSTRates[jobType];
+    }
+    
+    try {
+      console.log(`Fetching fresh GST rate for ${jobType}`);
+      const gstRate = await fetchGSTRate(jobType);
+      
+      // Cache this rate for this job type
+      setCachedGSTRates({ [jobType]: gstRate });
+      console.log(`Cached GST rate for ${jobType}: ${gstRate}%`);
+      return gstRate;
+    } catch (error) {
+      console.error("Error fetching GST rate:", error);
+      setGstError(`Failed to fetch GST rate for ${jobType}: ${error.message}`);
+      throw error;
+    }
+  };
+  
+  // Fetch HSN codes from standard_rates collection
+  useEffect(() => {
+    const fetchHsnCodes = async () => {
+      try {
+        console.log("Fetching HSN codes from gst_and_hsn collection...");
+        const gstHsnCollection = collection(db, "gst_and_hsn");
+        
+        const unsubscribe = onSnapshot(gstHsnCollection, (snapshot) => {
+          const hsnData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          
+          // Filter only for HSN records - group should be "HSN"
+          const hsnCodesData = hsnData.filter(item => item.group === "HSN");
+          console.log(`Fetched ${hsnCodesData.length} HSN codes from gst_and_hsn`);
+          
+          setHsnRates(hsnCodesData);
+          
+          // If job type is already selected, update HSN code immediately
+          if (state.orderAndPaper.jobType && hsnCodesData.length > 0) {
+            updateHsnCodeForJobType(state.orderAndPaper.jobType, hsnCodesData);
+          }
+        });
+        
+        return () => unsubscribe();
+      } catch (error) {
+        console.error("Error fetching HSN codes:", error);
+      }
+    };
+    
+    fetchHsnCodes();
+  }, []);  
+  
+  // Fetch papers from Firestore
+  useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "papers"), (snapshot) => {
+      const paperData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setPapers(paperData);
+    });
 
- // Log form state changes for debugging critical fields
- useEffect(() => {
-   // Log critical fields when they change
-   console.log("BillingForm - Current critical field values:", {
-    projectName: state.orderAndPaper.projectName,
-    jobType: state.orderAndPaper.jobType,
-    quantity: state.orderAndPaper.quantity,
-    paperName: state.orderAndPaper.paperName,
-    dieCode: state.orderAndPaper.dieCode,
-    frags: state.orderAndPaper.frags,
-    type: state.orderAndPaper.type,
-    weddingDate: state.orderAndPaper.weddingDate
-   });
- }, [
-   state.orderAndPaper.projectName,
-   state.orderAndPaper.jobType,
-   state.orderAndPaper.quantity,
-   state.orderAndPaper.paperName,
-   state.orderAndPaper.dieCode,
-   state.orderAndPaper.frags,
-   state.orderAndPaper.type,
-   state.orderAndPaper.weddingDate
- ]);
+    return () => unsubscribe();
+  }, []);
+  
+  // Update visible services when job type changes
+  useEffect(() => {
+    const jobType = state.orderAndPaper.jobType || "Card";
+    const config = jobTypeConfigurations[jobType] || jobTypeConfigurations["Card"];
+    
+    // Set visible services based on job type
+    setVisibleProductionServices(config.productionServices || []);
+    setVisiblePostProductionServices(config.postProductionServices || []);
+    
+    // Update HSN code when job type changes
+    if (hsnRates.length > 0) {
+      updateHsnCodeForJobType(jobType);
+    }
+  }, [state.orderAndPaper.jobType, hsnRates]);
 
- // Direct initialization of default services
- useEffect(() => {
-   // Only run this once at the beginning and only for new forms
-   if (!directInitializationDone && !isEditMode) {
-     console.log("Performing direct initialization of default services");
-     
-     // Get the current job type
-     const jobType = state.orderAndPaper.jobType || "Card";
-     
-     // Get the services that should be active by default
-     const defaultActiveProductionServices = 
-       jobTypeConfigurations[jobType]?.defaultActiveServices?.production || [];
-     const defaultActivePostProductionServices = 
-       jobTypeConfigurations[jobType]?.defaultActiveServices?.postProduction || [];
-     
-     console.log("Default active services:", {
-       production: defaultActiveProductionServices,
-       postProduction: defaultActivePostProductionServices
-     });
-     
-     // DIRECT SERVICE ACTIVATION - Production Services
-     if (defaultActiveProductionServices.includes("LP")) {
-       console.log("Activating LP service");
-       dispatch({
-         type: "UPDATE_LP_DETAILS",
-         payload: { 
-           isLPUsed: true,
-           noOfColors: 1,
-           colorDetails: [
-             {
-               plateSizeType: "Auto",
-               plateDimensions: { 
-                 length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-                 breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-               },
-               pantoneType: "",
-               plateType: "Polymer Plate",
-               mrType: "SIMPLE",
-               mrTypeConcatenated: "LP MR SIMPLE",
-               dstMaterial: ""
-             }
-           ]
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("DIGI")) {
-       console.log("Activating DIGI service");
-       dispatch({
-         type: "UPDATE_DIGI_DETAILS",
-         payload: { 
-           isDigiUsed: true,
-           digiDie: "12x18",
-           digiDimensions: { length: "12", breadth: "18" }
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("FS")) {
-       console.log("Activating FS service");
-       dispatch({
-         type: "UPDATE_FS_DETAILS",
-         payload: { 
-           isFSUsed: true,
-           fsType: "FS1",
-           foilDetails: [
-             {
-               blockSizeType: "Auto",
-               blockDimension: { 
-                 length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-                 breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-               },
-               foilType: "Gold MTS 220",
-               blockType: "Magnesium Block 3MM",
-               mrType: "SIMPLE",
-               mrTypeConcatenated: "FS MR SIMPLE"
-             }
-           ]
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("EMB")) {
-       console.log("Activating EMB service");
-       dispatch({
-         type: "UPDATE_EMB_DETAILS",
-         payload: { 
-           isEMBUsed: true,
-           plateSizeType: "Auto",
-           plateDimensions: { 
-             length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-             breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-           },
-           plateTypeMale: "Polymer Plate",
-           plateTypeFemale: "Polymer Plate",
-           embMR: "SIMPLE",
-           embMRConcatenated: "EMB MR SIMPLE",
-           dstMaterial: ""
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("SCREEN")) {
-       console.log("Activating SCREEN service");
-       dispatch({
-         type: "UPDATE_SCREEN_PRINT",
-         payload: { 
-           isScreenPrintUsed: true,
-           noOfColors: 1,
-           screenMR: "SIMPLE",
-           screenMRConcatenated: "SCREEN MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActiveProductionServices.includes("NOTEBOOK")) {
-       console.log("Activating NOTEBOOK service");
-       dispatch({
-         type: "UPDATE_NOTEBOOK_DETAILS",
-         payload: { 
-           isNotebookUsed: true,
-           orientation: "",
-           length: "",
-           breadth: "",
-           calculatedLength: "",
-           calculatedBreadth: "",
-           numberOfPages: "",
-           bindingType: "",
-           bindingTypeConcatenated: "",
-           paperName: papers.length > 0 ? papers[0].paperName : ""
-         }
-       });
-     }
-     
-     // DIRECT SERVICE ACTIVATION - Post-Production Services
-     if (defaultActivePostProductionServices.includes("PRE DC")) {
-       console.log("Activating PRE DC service");
-       dispatch({
-         type: "UPDATE_PRE_DIE_CUTTING",
-         payload: { 
-           isPreDieCuttingUsed: true,
-           predcMR: "SIMPLE",
-           predcMRConcatenated: "PREDC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("DC")) {
-       console.log("Activating DC service");
-       dispatch({
-         type: "UPDATE_DIE_CUTTING",
-         payload: { 
-           isDieCuttingUsed: true,
-           dcMR: "SIMPLE",
-           dcMRConcatenated: "DC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("POST DC")) {
-       console.log("Activating POST DC service");
-       dispatch({
-         type: "UPDATE_POST_DC",
-         payload: { 
-           isPostDCUsed: true,
-           pdcMR: "SIMPLE",
-           pdcMRConcatenated: "PDC MR SIMPLE"
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
-       console.log("Activating FOLD & PASTE service");
-       dispatch({
-         type: "UPDATE_FOLD_AND_PASTE",
-         payload: { 
-           isFoldAndPasteUsed: true,
-           dstMaterial: "",
-           dstType: ""
-         }
-       });
-     }
+  // Log form state changes for debugging critical fields
+  useEffect(() => {
+    // Log critical fields when they change
+    console.log("BillingForm - Current critical field values:", {
+      projectName: state.orderAndPaper.projectName,
+      jobType: state.orderAndPaper.jobType,
+      quantity: state.orderAndPaper.quantity,
+      paperName: state.orderAndPaper.paperName,
+      dieCode: state.orderAndPaper.dieCode,
+      frags: state.orderAndPaper.frags,
+      type: state.orderAndPaper.type,
+      weddingDate: state.orderAndPaper.weddingDate
+    });
+  }, [
+    state.orderAndPaper.projectName,
+    state.orderAndPaper.jobType,
+    state.orderAndPaper.quantity,
+    state.orderAndPaper.paperName,
+    state.orderAndPaper.dieCode,
+    state.orderAndPaper.frags,
+    state.orderAndPaper.type,
+    state.orderAndPaper.weddingDate
+  ]);
 
-     if (defaultActivePostProductionServices.includes("DST PASTE")) {
-       console.log("Activating DST PASTE service");
-       dispatch({
-         type: "UPDATE_DST_PASTE",
-         payload: { 
-           isDstPasteUsed: true,
-           dstType: ""
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("MAGNET")) {
-       console.log("Activating MAGNET service");
-       dispatch({
-         type: "UPDATE_MAGNET",
-         payload: { 
-           isMagnetUsed: true,
-           magnetMaterial: ""
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("QC")) {
-       console.log("Activating QC service");
-       dispatch({
-         type: "UPDATE_QC",
-         payload: { 
-           isQCUsed: true
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("PACKING")) {
-       console.log("Activating PACKING service");
-       dispatch({
-         type: "UPDATE_PACKING",
-         payload: { 
-           isPackingUsed: true
-         }
-       });
-     }
-     
-     if (defaultActivePostProductionServices.includes("DUPLEX")) {
-       console.log("Activating DUPLEX service");
-       dispatch({
-         type: "UPDATE_SANDWICH",
-         payload: { 
-           isSandwichComponentUsed: true,
-           paperInfo: {
-             paperName: papers.length > 0 ? papers[0].paperName : ""
-           }
-         }
-       });
-     }
-     
-     // FIXED: Updated MISC activation with consistent pattern
-     if (defaultActivePostProductionServices.includes("MISC")) {
-       console.log("Activating MISC service");
-       dispatch({
-         type: "UPDATE_MISC",
-         payload: { 
-           isMiscUsed: true,
-           miscCharge: "" // Start empty, let component fetch default
-         }
-       });
-     }
-     
-     // Expand one of the active services (preferably a production service)
-     let sectionToExpand = null;
-     
-     if (defaultActiveProductionServices.length > 0) {
-       const firstActiveService = defaultActiveProductionServices[0];
-       sectionToExpand = serviceRegistry[firstActiveService]?.id;
-     } else if (defaultActivePostProductionServices.length > 0) {
-       const firstActiveService = defaultActivePostProductionServices[0];
-       sectionToExpand = serviceRegistry[firstActiveService]?.id;
-     }
-     
-     if (sectionToExpand) {
-       console.log(`Expanding section: ${sectionToExpand}`);
-       expandSection(sectionToExpand);
-     }
-     
-     // Mark initialization as done
-     setDirectInitializationDone(true);
-   }
- }, [directInitializationDone, isEditMode, state.orderAndPaper.jobType, papers]);
+  // Direct initialization of default services
+  useEffect(() => {
+    // Only run this once at the beginning and only for new forms
+    if (!directInitializationDone && !isEditMode) {
+      console.log("Performing direct initialization of default services");
+      
+      // Get the current job type
+      const jobType = state.orderAndPaper.jobType || "Card";
+      
+      // Get the services that should be active by default
+      const defaultActiveProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.production || [];
+      const defaultActivePostProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.postProduction || [];
+      
+      console.log("Default active services:", {
+        production: defaultActiveProductionServices,
+        postProduction: defaultActivePostProductionServices
+      });
+      
+      // DIRECT SERVICE ACTIVATION - Production Services
+      if (defaultActiveProductionServices.includes("LP")) {
+        console.log("Activating LP service");
+        dispatch({
+          type: "UPDATE_LP_DETAILS",
+          payload: { 
+            isLPUsed: true,
+            noOfColors: 1,
+            colorDetails: [
+              {
+                plateSizeType: "Auto",
+                plateDimensions: { 
+                  length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                  breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                },
+                pantoneType: "",
+                plateType: "Polymer Plate",
+                mrType: "SIMPLE",
+                mrTypeConcatenated: "LP MR SIMPLE",
+                dstMaterial: ""
+              }
+            ]
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("DIGI")) {
+        console.log("Activating DIGI service");
+        dispatch({
+          type: "UPDATE_DIGI_DETAILS",
+          payload: { 
+            isDigiUsed: true,
+            digiDie: "12x18",
+            digiDimensions: { length: "12", breadth: "18" }
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("FS")) {
+        console.log("Activating FS service");
+        dispatch({
+          type: "UPDATE_FS_DETAILS",
+          payload: { 
+            isFSUsed: true,
+            fsType: "FS1",
+            foilDetails: [
+              {
+                blockSizeType: "Auto",
+                blockDimension: { 
+                  length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                  breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                },
+                foilType: "Gold MTS 220",
+                blockType: "Magnesium Block 3MM",
+                mrType: "SIMPLE",
+                mrTypeConcatenated: "FS MR SIMPLE"
+              }
+            ]
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("EMB")) {
+        console.log("Activating EMB service");
+        dispatch({
+          type: "UPDATE_EMB_DETAILS",
+          payload: { 
+            isEMBUsed: true,
+            plateSizeType: "Auto",
+            plateDimensions: { 
+              length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+              breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+            },
+            plateTypeMale: "Polymer Plate",
+            plateTypeFemale: "Polymer Plate",
+            embMR: "SIMPLE",
+            embMRConcatenated: "EMB MR SIMPLE",
+            dstMaterial: ""
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("SCREEN")) {
+        console.log("Activating SCREEN service");
+        dispatch({
+          type: "UPDATE_SCREEN_PRINT",
+          payload: { 
+            isScreenPrintUsed: true,
+            noOfColors: 1,
+            screenMR: "SIMPLE",
+            screenMRConcatenated: "SCREEN MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActiveProductionServices.includes("NOTEBOOK")) {
+        console.log("Activating NOTEBOOK service");
+        dispatch({
+          type: "UPDATE_NOTEBOOK_DETAILS",
+          payload: { 
+            isNotebookUsed: true,
+            orientation: "",
+            length: "",
+            breadth: "",
+            calculatedLength: "",
+            calculatedBreadth: "",
+            numberOfPages: "",
+            bindingType: "",
+            bindingTypeConcatenated: "",
+            paperName: papers.length > 0 ? papers[0].paperName : ""
+          }
+        });
+      }
+      
+      // DIRECT SERVICE ACTIVATION - Post-Production Services
+      if (defaultActivePostProductionServices.includes("PRE DC")) {
+        console.log("Activating PRE DC service");
+        dispatch({
+          type: "UPDATE_PRE_DIE_CUTTING",
+          payload: { 
+            isPreDieCuttingUsed: true,
+            predcMR: "SIMPLE",
+            predcMRConcatenated: "PREDC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DC")) {
+        console.log("Activating DC service");
+        dispatch({
+          type: "UPDATE_DIE_CUTTING",
+          payload: { 
+            isDieCuttingUsed: true,
+            dcMR: "SIMPLE",
+            dcMRConcatenated: "DC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("POST DC")) {
+        console.log("Activating POST DC service");
+        dispatch({
+          type: "UPDATE_POST_DC",
+          payload: { 
+            isPostDCUsed: true,
+            pdcMR: "SIMPLE",
+            pdcMRConcatenated: "PDC MR SIMPLE"
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
+        console.log("Activating FOLD & PASTE service");
+        dispatch({
+          type: "UPDATE_FOLD_AND_PASTE",
+          payload: { 
+            isFoldAndPasteUsed: true,
+            dstMaterial: "",
+            dstType: ""
+          }
+        });
+      }
 
- // Initialize form with data if in edit mode
+      if (defaultActivePostProductionServices.includes("DST PASTE")) {
+        console.log("Activating DST PASTE service");
+        dispatch({
+          type: "UPDATE_DST_PASTE",
+          payload: { 
+            isDstPasteUsed: true,
+            dstType: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("MAGNET")) {
+        console.log("Activating MAGNET service");
+        dispatch({
+          type: "UPDATE_MAGNET",
+          payload: { 
+            isMagnetUsed: true,
+            magnetMaterial: ""
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("QC")) {
+        console.log("Activating QC service");
+        dispatch({
+          type: "UPDATE_QC",
+          payload: { 
+            isQCUsed: true
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("PACKING")) {
+        console.log("Activating PACKING service");
+        dispatch({
+          type: "UPDATE_PACKING",
+          payload: { 
+            isPackingUsed: true
+          }
+        });
+      }
+      
+      if (defaultActivePostProductionServices.includes("DUPLEX")) {
+        console.log("Activating DUPLEX service");
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: { 
+            isSandwichComponentUsed: true,
+            paperInfo: {
+              paperName: papers.length > 0 ? papers[0].paperName : ""
+            }
+          }
+        });
+      }
+      
+      // FIXED: Updated MISC activation with consistent pattern
+      if (defaultActivePostProductionServices.includes("MISC")) {
+        console.log("Activating MISC service");
+        dispatch({
+          type: "UPDATE_MISC",
+          payload: { 
+            isMiscUsed: true,
+            miscCharge: "" // Start empty, let component fetch default
+          }
+        });
+      }
+      
+      // Mark initialization as done
+      setDirectInitializationDone(true);
+    }
+  }, [directInitializationDone, isEditMode, state.orderAndPaper.jobType, papers]);
+
+  // Initialize form with data if in edit mode
   useEffect(() => {
     if (initialState && isEditMode) {
       // Initialize form state with the provided data
@@ -956,19 +964,22 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         setSelectedVersion(initialState.versionId);
       }
       
-      // CRITICAL FIX: Set markup BEFORE triggering calculations
+      // CRITICAL FIX: In edit mode, LOCK markup values from saved calculations
       if (initialState.calculations?.markupType && initialState.calculations?.markupPercentage) {
-        console.log("BillingForm - Setting markup from initialState:", {
+        console.log("🔒 EDIT MODE - BillingForm: LOCKING markup from saved calculations:", {
           type: initialState.calculations.markupType,
           percentage: initialState.calculations.markupPercentage
         });
         
+        // Set markup values and mark them as locked for edit mode
         setSelectedMarkupType(initialState.calculations.markupType);
         setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
         
-        // Set the calculations immediately to avoid the ReviewAndSubmit component
-        // from overriding with defaults
+        // Set the calculations immediately and prevent further overrides
         setCalculations(initialState.calculations);
+        
+        // CRITICAL: Mark that edit mode markup has been set to prevent further changes
+        markupInitializedRef.current = true;
       }
       
       // Mark initialization as done for edit mode
@@ -976,475 +987,484 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   }, [initialState, isEditMode]);
 
- // Add useEffect to fetch B2B client data when component mounts
- useEffect(() => {
-   const fetchB2BClientData = async () => {
-     if (userRole === "b2b" && currentUser) {
-       try {
-         setIsB2BClient(true);
-         
-         // First get the user doc to find the linked client ID
-         const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-         
-         if (userDoc.exists()) {
-           const userData = userDoc.data();
-           
-           // Check if this user has a linked client ID
-           if (userData.clientId) {
-             // Fetch the client data
-             const clientDoc = await getDoc(doc(db, "clients", userData.clientId));
-             
-             if (clientDoc.exists()) {
-               const clientData = {
-                 id: clientDoc.id,
-                 clientId: clientDoc.id,
-                 clientInfo: clientDoc.data(),
-                 ...clientDoc.data()
-               };
-               
-               setLinkedClientData(clientData);
-               
-               // Auto-select this client
-               handleClientSelect({
-                 clientId: clientData.id,
-                 clientInfo: clientData
-               });
-               
-               // Also set the selectedClient for props passed to ClientSelection
-               setSelectedClient(clientData);
-             }
-           }
-         }
-       } catch (error) {
-         console.error("Error fetching B2B client data:", error);
-       }
-     }
-   };
-   
-   fetchB2BClientData();
- }, [userRole, currentUser]);
- 
- // Fetch default markup rates once when component mounts
- useEffect(() => {
-   const fetchDefaultMarkup = async () => {
-     try {
-       // Query the overheads collection for markup entries
-       const overheadsCollection = collection(db, "overheads");
-       const markupQuery = query(overheadsCollection, where("name", ">=", "MARKUP "), where("name", "<=", "MARKUP" + "\uf8ff"));
-       const querySnapshot = await getDocs(markupQuery);
-       
-       const fetchedMarkups = [];
-       querySnapshot.forEach(doc => {
-         const data = doc.data();
-         fetchedMarkups.push({
-           id: doc.id,
-           name: data.name,
-           percentage: parseFloat(data.percentage) || 0
-         });
-       });
-       
-       if (fetchedMarkups.length > 0) {
-         // For B2B clients, automatically select MARKUP B2B MERCH
-         if (isB2BClient) {
-           const b2bMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP B2B MERCH");
-           if (b2bMarkup) {
-             setDefaultMarkup({
-               type: b2bMarkup.name,
-               percentage: b2bMarkup.percentage
-             });
-             setSelectedMarkupType(b2bMarkup.name);
-             setMarkupPercentage(b2bMarkup.percentage);
-           } else {
-             // Fallback to default if B2B MERCH not found
-             setDefaultMarkup({
-               type: fetchedMarkups[0].name,
-               percentage: fetchedMarkups[0].percentage
-             });
-             setSelectedMarkupType(fetchedMarkups[0].name);
-             setMarkupPercentage(fetchedMarkups[0].percentage);
-           }
-         } else {
-           // For admin users, set default markup to MARKUP TIMELESS or first available
-           const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
-           setDefaultMarkup({
-             type: timelessMarkup.name,
-             percentage: timelessMarkup.percentage
-           });
-           setSelectedMarkupType(timelessMarkup.name);
-           setMarkupPercentage(timelessMarkup.percentage);
-         }
-         
-         console.log("Fetched markup rates:", fetchedMarkups);
-       }
-     } catch (error) {
-       console.error("Error fetching markup rates:", error);
-     }
-   };
-   
-   fetchDefaultMarkup();
- }, [isB2BClient]);
+  // Add useEffect to fetch B2B client data when component mounts
+  useEffect(() => {
+    const fetchB2BClientData = async () => {
+      if (userRole === "b2b" && currentUser) {
+        try {
+          setIsB2BClient(true);
+          
+          // First get the user doc to find the linked client ID
+          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
+          
+          if (userDoc.exists()) {
+            const userData = userDoc.data();
+            
+            // Check if this user has a linked client ID
+            if (userData.clientId) {
+              // Fetch the client data
+              const clientDoc = await getDoc(doc(db, "clients", userData.clientId));
+              
+              if (clientDoc.exists()) {
+                const clientData = {
+                  id: clientDoc.id,
+                  clientId: clientDoc.id,
+                  clientInfo: clientDoc.data(),
+                  ...clientDoc.data()
+                };
+                
+                setLinkedClientData(clientData);
+                
+                // Auto-select this client
+                handleClientSelect({
+                  clientId: clientData.id,
+                  clientInfo: clientData
+                });
+                
+                // Also set the selectedClient for props passed to ClientSelection
+                setSelectedClient(clientData);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error fetching B2B client data:", error);
+        }
+      }
+    };
+    
+    fetchB2BClientData();
+  }, [userRole, currentUser]);
+  
+  // Fetch default markup rates once when component mounts
+  useEffect(() => {
+    const fetchDefaultMarkup = async () => {
+      // CRITICAL: Skip in edit mode to prevent overriding saved markup
+      if (isEditMode) {
+        console.log("🚫 EDIT MODE: Skipping default markup fetch");
+        return;
+      }
+      
+      // CRITICAL: Skip if markup already initialized from saved data
+      if (markupInitializedRef.current) {
+        console.log("🚫 Markup already initialized, skipping default fetch");
+        return;
+      }
+      
+      try {
+        // Query the overheads collection for markup entries
+        const overheadsCollection = collection(db, "overheads");
+        const markupQuery = query(overheadsCollection, where("name", ">=", "MARKUP "), where("name", "<=", "MARKUP" + "\uf8ff"));
+        const querySnapshot = await getDocs(markupQuery);
+        
+        const fetchedMarkups = [];
+        querySnapshot.forEach(doc => {
+          const data = doc.data();
+          fetchedMarkups.push({
+            id: doc.id,
+            name: data.name,
+            percentage: parseFloat(data.percentage) || 0
+          });
+        });
+        
+        if (fetchedMarkups.length > 0) {
+          // For B2B clients, automatically select MARKUP B2B MERCH
+          if (isB2BClient) {
+            const b2bMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP B2B MERCH");
+            if (b2bMarkup) {
+              setDefaultMarkup({
+                type: b2bMarkup.name,
+                percentage: b2bMarkup.percentage
+              });
+              setSelectedMarkupType(b2bMarkup.name);
+              setMarkupPercentage(b2bMarkup.percentage);
+            } else {
+              // Fallback to default if B2B MERCH not found
+              setDefaultMarkup({
+                type: fetchedMarkups[0].name,
+                percentage: fetchedMarkups[0].percentage
+              });
+              setSelectedMarkupType(fetchedMarkups[0].name);
+              setMarkupPercentage(fetchedMarkups[0].percentage);
+            }
+          } else {
+            // For admin users, set default markup to MARKUP TIMELESS or first available
+            const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
+            setDefaultMarkup({
+              type: timelessMarkup.name,
+              percentage: timelessMarkup.percentage
+            });
+            setSelectedMarkupType(timelessMarkup.name);
+            setMarkupPercentage(timelessMarkup.percentage);
+          }
+          
+          console.log("Fetched markup rates:", fetchedMarkups);
+          markupInitializedRef.current = true;
+        }
+      } catch (error) {
+        console.error("Error fetching markup rates:", error);
+      }
+    };
+    
+    fetchDefaultMarkup();
+  }, [isB2BClient, isEditMode]);
 
- // Function to update HSN code when job type changes
- const updateHsnCodeForJobType = (jobType, ratesArray = null) => {
-   // Use passed rates array or state's hsnRates
-   const ratesToUse = ratesArray || hsnRates;
-   
-   if (!ratesToUse || ratesToUse.length === 0) {
-     console.log("No HSN rates available");
-     return;
-   }
-   
-   // Find matching HSN code - match on 'type' field which contains the job type
-   const matchingHsn = ratesToUse.find(rate => 
-     rate.type.toUpperCase() === jobType.toUpperCase()
-   );
-   
-   if (matchingHsn) {
-     // Use 'value' instead of 'finalRate' for the new database structure
-     const hsnCode = matchingHsn.value || "";
-     console.log(`Found HSN code ${hsnCode} for job type ${jobType}`);
-     
-     // Update HSN code in state
-     dispatch({
-       type: "UPDATE_HSN_CODE",
-       payload: hsnCode
-     });
-   } else {
-     console.log(`No HSN code found for job type ${jobType}`);
-     
-     // Reset HSN code if no matching code found
-     dispatch({
-       type: "UPDATE_HSN_CODE",
-       payload: ""
-     });
-   }
- };  
+  useEffect(() => {
+    return () => {
+      markupInitializedRef.current = false;
+    };
+  }, []);
 
- // Calculate costs when form data changes
- useEffect(() => {
-   const debounceTimer = setTimeout(() => {
-     performCalculations();
-   }, 1000); // 1 second debounce
-   
-   return () => clearTimeout(debounceTimer);
- }, [state]);
+  // Function to update HSN code when job type changes
+  const updateHsnCodeForJobType = (jobType, ratesArray = null) => {
+    // Use passed rates array or state's hsnRates
+    const ratesToUse = ratesArray || hsnRates;
+    
+    if (!ratesToUse || ratesToUse.length === 0) {
+      console.log("No HSN rates available");
+      return;
+    }
+    
+    // Find matching HSN code - match on 'type' field which contains the job type
+    const matchingHsn = ratesToUse.find(rate => 
+      rate.type.toUpperCase() === jobType.toUpperCase()
+    );
+    
+    if (matchingHsn) {
+      // Use 'value' instead of 'finalRate' for the new database structure
+      const hsnCode = matchingHsn.value || "";
+      console.log(`Found HSN code ${hsnCode} for job type ${jobType}`);
+      
+      // Update HSN code in state
+      dispatch({
+        type: "UPDATE_HSN_CODE",
+        payload: hsnCode
+      });
+    } else {
+      console.log(`No HSN code found for job type ${jobType}`);
+      
+      // Reset HSN code if no matching code found
+      dispatch({
+        type: "UPDATE_HSN_CODE",
+        payload: ""
+      });
+    }
+  };  
 
- // Enhanced job type change handler - direct activation approach
- const handleJobTypeChange = (e) => {
-   const { value } = e.target;
-   
-   console.log(`Job type changed to: ${value}`);
-   
-   // Track the change for debugging
-   setFormChangeDebug(prev => ({
-     ...prev,
-     jobType: value
-   }));
-   
-   // First update the job type in state
-   dispatch({
-     type: "UPDATE_ORDER_AND_PAPER",
-     payload: { jobType: value }
-   });
-   
-   // Only if not in edit mode, directly activate services
-   if (!isEditMode) {
-     // First reset all services
-     Object.entries(serviceRegistry).forEach(([serviceCode, serviceInfo]) => {
-       dispatch({
-         type: `UPDATE_${serviceInfo.stateKey.toUpperCase()}`,
-         payload: { [serviceInfo.toggleField]: false }
-       });
-     });
-     
-     // Get default active services for the new job type
-     const defaultActiveProductionServices = 
-       jobTypeConfigurations[value]?.defaultActiveServices?.production || [];
-     const defaultActivePostProductionServices = 
-       jobTypeConfigurations[value]?.defaultActiveServices?.postProduction || [];
-     
-     console.log("Default active services for new job type:", {
-       production: defaultActiveProductionServices,
-       postProduction: defaultActivePostProductionServices
-     });
-     
-     // Set a timeout to ensure state updates have processed
-     setTimeout(() => {
-       // DIRECT SERVICE ACTIVATION - Production Services
-       if (defaultActiveProductionServices.includes("LP")) {
-         console.log("Activating LP service");
-         dispatch({
-           type: "UPDATE_LP_DETAILS",
-           payload: { 
-             isLPUsed: true,
-             noOfColors: 1,
-             colorDetails: [
-               {
-                 plateSizeType: "Auto",
-                 plateDimensions: { 
-                   length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-                   breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-                 },
-                 pantoneType: "",
-                 plateType: "Polymer Plate",
-                 mrType: "SIMPLE",
-                 mrTypeConcatenated: "LP MR SIMPLE"
-               }
-             ]
-           }
-         });
-       }
-       
-       if (defaultActiveProductionServices.includes("DIGI")) {
-         console.log("Activating DIGI service");
-         dispatch({
-           type: "UPDATE_DIGI_DETAILS",
-           payload: { 
-             isDigiUsed: true,
-             digiDie: "12x18",
-             digiDimensions: { length: "12", breadth: "18" }
-           }
-         });
-       }
-       
-       if (defaultActiveProductionServices.includes("FS")) {
-         console.log("Activating FS service");
-         dispatch({
-           type: "UPDATE_FS_DETAILS",
-           payload: { 
-             isFSUsed: true,
-             fsType: "FS1",
-             foilDetails: [
-               {
-                 blockSizeType: "Auto",
-                 blockDimension: { 
-                   length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-                   breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-                 },
-                 foilType: "Gold MTS 220",
-                 blockType: "Magnesium Block 3MM",
-                 mrType: "SIMPLE",
-                 mrTypeConcatenated: "FS MR SIMPLE"
-               }
-             ]
-           }
-         });
-       }
-       
-       if (defaultActiveProductionServices.includes("EMB")) {
-         console.log("Activating EMB service");
-         dispatch({
-           type: "UPDATE_EMB_DETAILS",
-           payload: { 
-             isEMBUsed: true,
-             plateSizeType: "Auto",
-             plateDimensions: { 
-               length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
-               breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
-             },
-             plateTypeMale: "Polymer Plate",
-             plateTypeFemale: "Polymer Plate",
-             embMR: "SIMPLE",
-             embMRConcatenated: "EMB MR SIMPLE"
-           }
-         });
-       }
-       
-       if (defaultActiveProductionServices.includes("SCREEN")) {
-         console.log("Activating SCREEN service");
-         dispatch({
-           type: "UPDATE_SCREEN_PRINT",
-           payload: { 
-             isScreenPrintUsed: true,
-             noOfColors: 1,
-             screenMR: "SIMPLE",
-             screenMRConcatenated: "SCREEN MR SIMPLE"
-           }
-         });
-       }
-       
-       if (defaultActiveProductionServices.includes("NOTEBOOK")) {
-         console.log("Activating NOTEBOOK service");
-         dispatch({
-           type: "UPDATE_NOTEBOOK_DETAILS",
-           payload: { 
-             isNotebookUsed: true,
-             orientation: "",
-             length: "",
-             breadth: "",
-             calculatedLength: "",
-             calculatedBreadth: "",
-             numberOfPages: "",
-             bindingType: "",
-             bindingTypeConcatenated: "",
-             paperName: papers.length > 0 ? papers[0].paperName : ""
-           }
-         });
-       }
-       
-       // DIRECT SERVICE ACTIVATION - Post-Production Services
-       if (defaultActivePostProductionServices.includes("PRE DC")) {
-         console.log("Activating PRE DC service");
-         dispatch({
-           type: "UPDATE_PRE_DIE_CUTTING",
-           payload: { 
-             isPreDieCuttingUsed: true,
-             predcMR: "SIMPLE",
-             predcMRConcatenated: "PREDC MR SIMPLE"
-           }
-         });
-       }
-       
-       if (defaultActivePostProductionServices.includes("DC")) {
-         console.log("Activating DC service");
-         dispatch({
-           type: "UPDATE_DIE_CUTTING",
-           payload: { 
-             isDieCuttingUsed: true,
-             dcMR: "SIMPLE",
-             dcMRConcatenated: "DC MR SIMPLE"
-           }
-         });
-       }
-       
-       if (defaultActivePostProductionServices.includes("POST DC")) {
-         console.log("Activating POST DC service");
-         dispatch({
-           type: "UPDATE_POST_DC",
-           payload: { 
-             isPostDCUsed: true,
-             pdcMR: "SIMPLE",
-             pdcMRConcatenated: "PDC MR SIMPLE"
-           }
-         });
-       }
-       
-       if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
-         console.log("Activating FOLD & PASTE service");
-         dispatch({
-           type: "UPDATE_FOLD_AND_PASTE",
-           payload: { 
-             isFoldAndPasteUsed: true,
-             dstMaterial: "",
-             dstType: ""
-           }
-         });
-       }
-       
-       if (defaultActivePostProductionServices.includes("DST PASTE")) {
-         console.log("Activating DST PASTE service");
-         dispatch({
-           type: "UPDATE_DST_PASTE",
-           payload: { 
-             isDstPasteUsed: true,
-             dstType: ""
-           }
-         });
-       }
-       
-       if (defaultActivePostProductionServices.includes("MAGNET")) {
-         console.log("Activating MAGNET service");
-         dispatch({
-           type: "UPDATE_MAGNET",
-           payload: { 
-             isMagnetUsed: true,
-             magnetMaterial: ""
-           }
-         });
-       }
-       
-       if (defaultActivePostProductionServices.includes("QC")) {
-         console.log("Activating QC service");
-         dispatch({
-           type: "UPDATE_QC",
-           payload: { 
-             isQCUsed: true
-           }
-         });
-       }
-       
-       if (defaultActivePostProductionServices.includes("PACKING")) {
-         console.log("Activating PACKING service");
-         dispatch({
-           type: "UPDATE_PACKING",
-           payload: { 
-             isPackingUsed: true
-           }
-         });
-       }
-       
-       if (defaultActivePostProductionServices.includes("DUPLEX")) {
-         console.log("Activating DUPLEX service");
-         dispatch({
-           type: "UPDATE_SANDWICH",
-           payload: { 
-             isSandwichComponentUsed: true,
-             paperInfo: {
-               paperName: papers.length > 0 ? papers[0].paperName : ""
-             }
-           }
-         });
-       }
-       
-       // FIXED: Updated MISC activation with consistent pattern
-       if (defaultActivePostProductionServices.includes("MISC")) {
-         console.log("Activating MISC service");
-         dispatch({
-           type: "UPDATE_MISC",
-           payload: { 
-             isMiscUsed: true,
-             miscCharge: "" // Start empty, let component fetch default
-           }
-         });
-       }
-       
-       // Open first activated section if available
-       let sectionToExpand = null;
-       
-       if (defaultActiveProductionServices.length > 0) {
-         const firstActiveService = defaultActiveProductionServices[0];
-         sectionToExpand = serviceRegistry[firstActiveService]?.id;
-       } else if (defaultActivePostProductionServices.length > 0) {
-         const firstActiveService = defaultActivePostProductionServices[0];
-         sectionToExpand = serviceRegistry[firstActiveService]?.id;
-       }
-       
-       if (sectionToExpand) {
-         console.log(`Expanding section: ${sectionToExpand}`);
-         expandSection(sectionToExpand);
-       }
-     }, 0);
-   }
-   
-   // Update HSN code when job type changes
-   if (hsnRates.length > 0) {
-     updateHsnCodeForJobType(value);
-   }
- };
+  // Calculate costs when form data changes
+  useEffect(() => {
+    const debounceTimer = setTimeout(() => {
+      performCalculations();
+    }, 1000); // 1 second debounce
+    
+    return () => clearTimeout(debounceTimer);
+  }, [state]);
 
- // ⭐ UPDATED: Function to handle markup changes from ReviewAndSubmit component
- const handleMarkupChange = async (markupType, markupPercentage) => {
-   // For B2B clients, only allow MARKUP B2B MERCH to be selected
-   if (isB2BClient && markupType !== "MARKUP B2B MERCH") {
-     const b2bMarkup = markupRates.find(rate => rate.name === "MARKUP B2B MERCH");
-     if (b2bMarkup) {
-       markupType = b2bMarkup.name;
-       markupPercentage = b2bMarkup.percentage;
-     }
-   }
-   
-   setSelectedMarkupType(markupType);
-   setMarkupPercentage(markupPercentage);
-   
-   await recalculateWithMarkup(markupType, markupPercentage);
- };
+  // Enhanced job type change handler - direct activation approach
+  const handleJobTypeChange = (e) => {
+    const { value } = e.target;
+    
+    console.log(`Job type changed to: ${value}`);
+    
+    // Track the change for debugging
+    setFormChangeDebug(prev => ({
+      ...prev,
+      jobType: value
+    }));
+    
+    // First update the job type in state
+    dispatch({
+      type: "UPDATE_ORDER_AND_PAPER",
+      payload: { jobType: value }
+    });
+    
+    // Only if not in edit mode, directly activate services
+    if (!isEditMode) {
+      // First reset all services
+      Object.entries(serviceRegistry).forEach(([serviceCode, serviceInfo]) => {
+        dispatch({
+          type: `UPDATE_${serviceInfo.stateKey.toUpperCase()}`,
+          payload: { [serviceInfo.toggleField]: false }
+        });
+      });
+      
+      // Get default active services for the new job type
+      const defaultActiveProductionServices = 
+        jobTypeConfigurations[value]?.defaultActiveServices?.production || [];
+      const defaultActivePostProductionServices = 
+        jobTypeConfigurations[value]?.defaultActiveServices?.postProduction || [];
+      
+      console.log("Default active services for new job type:", {
+        production: defaultActiveProductionServices,
+        postProduction: defaultActivePostProductionServices
+      });
+      
+      // Set a timeout to ensure state updates have processed
+      setTimeout(() => {
+        // DIRECT SERVICE ACTIVATION - Production Services
+        if (defaultActiveProductionServices.includes("LP")) {
+          console.log("Activating LP service");
+          dispatch({
+            type: "UPDATE_LP_DETAILS",
+            payload: { 
+              isLPUsed: true,
+              noOfColors: 1,
+              colorDetails: [
+                {
+                  plateSizeType: "Auto",
+                  plateDimensions: { 
+                    length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                    breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                  },
+                  pantoneType: "",
+                  plateType: "Polymer Plate",
+                  mrType: "SIMPLE",
+                  mrTypeConcatenated: "LP MR SIMPLE"
+                }
+              ]
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("DIGI")) {
+          console.log("Activating DIGI service");
+          dispatch({
+            type: "UPDATE_DIGI_DETAILS",
+            payload: { 
+              isDigiUsed: true,
+              digiDie: "12x18",
+              digiDimensions: { length: "12", breadth: "18" }
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("FS")) {
+          console.log("Activating FS service");
+          dispatch({
+            type: "UPDATE_FS_DETAILS",
+            payload: { 
+              isFSUsed: true,
+              fsType: "FS1",
+              foilDetails: [
+                {
+                  blockSizeType: "Auto",
+                  blockDimension: { 
+                    length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                    breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+                  },
+                  foilType: "Gold MTS 220",
+                  blockType: "Magnesium Block 3MM",
+                  mrType: "SIMPLE",
+                  mrTypeConcatenated: "FS MR SIMPLE"
+                }
+              ]
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("EMB")) {
+          console.log("Activating EMB service");
+          dispatch({
+            type: "UPDATE_EMB_DETAILS",
+            payload: { 
+              isEMBUsed: true,
+              plateSizeType: "Auto",
+              plateDimensions: { 
+                length: state.orderAndPaper.dieSize.length ? (parseFloat(state.orderAndPaper.dieSize.length) * 2.54).toFixed(2) : "", 
+                breadth: state.orderAndPaper.dieSize.breadth ? (parseFloat(state.orderAndPaper.dieSize.breadth) * 2.54).toFixed(2) : "" 
+              },
+              plateTypeMale: "Polymer Plate",
+              plateTypeFemale: "Polymer Plate",
+              embMR: "SIMPLE",
+              embMRConcatenated: "EMB MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("SCREEN")) {
+          console.log("Activating SCREEN service");
+          dispatch({
+            type: "UPDATE_SCREEN_PRINT",
+            payload: { 
+              isScreenPrintUsed: true,
+              noOfColors: 1,
+              screenMR: "SIMPLE",
+              screenMRConcatenated: "SCREEN MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActiveProductionServices.includes("NOTEBOOK")) {
+          console.log("Activating NOTEBOOK service");
+          dispatch({
+            type: "UPDATE_NOTEBOOK_DETAILS",
+            payload: { 
+              isNotebookUsed: true,
+              orientation: "",
+              length: "",
+              breadth: "",
+              calculatedLength: "",
+              calculatedBreadth: "",
+              numberOfPages: "",
+              bindingType: "",
+              bindingTypeConcatenated: "",
+              paperName: papers.length > 0 ? papers[0].paperName : ""
+            }
+          });
+        }
+        
+        // DIRECT SERVICE ACTIVATION - Post-Production Services
+        if (defaultActivePostProductionServices.includes("PRE DC")) {
+          console.log("Activating PRE DC service");
+          dispatch({
+            type: "UPDATE_PRE_DIE_CUTTING",
+            payload: { 
+              isPreDieCuttingUsed: true,
+              predcMR: "SIMPLE",
+              predcMRConcatenated: "PREDC MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("DC")) {
+          console.log("Activating DC service");
+          dispatch({
+            type: "UPDATE_DIE_CUTTING",
+            payload: { 
+              isDieCuttingUsed: true,
+              dcMR: "SIMPLE",
+              dcMRConcatenated: "DC MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("POST DC")) {
+          console.log("Activating POST DC service");
+          dispatch({
+            type: "UPDATE_POST_DC",
+            payload: { 
+              isPostDCUsed: true,
+              pdcMR: "SIMPLE",
+              pdcMRConcatenated: "PDC MR SIMPLE"
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("FOLD & PASTE")) {
+          console.log("Activating FOLD & PASTE service");
+          dispatch({
+            type: "UPDATE_FOLD_AND_PASTE",
+            payload: { 
+              isFoldAndPasteUsed: true,
+              dstMaterial: "",
+              dstType: ""
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("DST PASTE")) {
+          console.log("Activating DST PASTE service");
+          dispatch({
+            type: "UPDATE_DST_PASTE",
+            payload: { 
+              isDstPasteUsed: true,
+              dstType: ""
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("MAGNET")) {
+          console.log("Activating MAGNET service");
+          dispatch({
+            type: "UPDATE_MAGNET",
+            payload: { 
+              isMagnetUsed: true,
+              magnetMaterial: ""
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("QC")) {
+          console.log("Activating QC service");
+          dispatch({
+            type: "UPDATE_QC",
+            payload: { 
+              isQCUsed: true
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("PACKING")) {
+          console.log("Activating PACKING service");
+          dispatch({
+            type: "UPDATE_PACKING",
+            payload: { 
+              isPackingUsed: true
+            }
+          });
+        }
+        
+        if (defaultActivePostProductionServices.includes("DUPLEX")) {
+          console.log("Activating DUPLEX service");
+          dispatch({
+            type: "UPDATE_SANDWICH",
+            payload: { 
+              isSandwichComponentUsed: true,
+              paperInfo: {
+                paperName: papers.length > 0 ? papers[0].paperName : ""
+              }
+            }
+          });
+        }
+        
+        // FIXED: Updated MISC activation with consistent pattern
+        if (defaultActivePostProductionServices.includes("MISC")) {
+          console.log("Activating MISC service");
+          dispatch({
+            type: "UPDATE_MISC",
+            payload: { 
+              isMiscUsed: true,
+              miscCharge: "" // Start empty, let component fetch default
+            }
+          });
+        }
+      }, 0);
+    }
+    
+    // Update HSN code when job type changes
+    if (hsnRates.length > 0) {
+      updateHsnCodeForJobType(value);
+    }
+  };
 
- // Function to close success notification
- const closeSuccessNotification = () => {
-   setShowSuccessNotification(false);
- };
+  // ⭐ UPDATED: Function to handle markup changes from ReviewAndSubmit component
+  const handleMarkupChange = async (markupType, markupPercentage) => {
+    // In edit mode, only allow changes if explicitly triggered by user action
+    if (isEditMode) {
+      console.log("⚠️ EDIT MODE: Markup change requested - this should only happen from user action in ReviewAndSubmit");
+      // Don't prevent the change, just log it for debugging
+    }
+    
+    // For B2B clients, only allow MARKUP B2B MERCH to be selected (in new mode only)
+    if (isB2BClient && !isEditMode && markupType !== "MARKUP B2B MERCH") {
+      const b2bMarkup = markupRates.find(rate => rate.name === "MARKUP B2B MERCH");
+      if (b2bMarkup) {
+        markupType = b2bMarkup.name;
+        markupPercentage = b2bMarkup.percentage;
+      }
+    }
+    
+    setSelectedMarkupType(markupType);
+    setMarkupPercentage(markupPercentage);
+    
+    await recalculateWithMarkup(markupType, markupPercentage);
+  };
 
- // ⭐ UPDATED: Function to recalculate totals when markup changes (with fresh GST)
+  // Function to close success notification
+  const closeSuccessNotification = () => {
+    setShowSuccessNotification(false);
+  };
+
+  // ⭐ UPDATED: Function to recalculate totals when markup changes (with fresh GST)
   const recalculateWithMarkup = async (markupType, markupPercentage) => {
     console.log("Recalculating with new markup:", markupType, markupPercentage);
     setIsCalculating(true);
@@ -1589,404 +1609,395 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
- // ⭐ UPDATED: Enhanced calculation function using the centralized calculation service (with fresh GST)
- const performCalculations = async () => {
-   // Check if client and essential fields are filled
-   const { projectName, quantity, paperName, dieCode, dieSize } = state.orderAndPaper;
-   const { clientId } = state.client;
-   
-   if (!clientId || !projectName || !quantity || !paperName || !dieCode || 
-       !dieSize.length || !dieSize.breadth) {
-     return; // Don't calculate if essential fields are missing
-   }
-   
-   setIsCalculating(true);
-   try {
-     const jobType = state.orderAndPaper?.jobType || "Card";
-     
-     // Get GST rate (cached or fresh) for this job type
-     const gstRate = await getGSTRateForJobType(jobType);
-     
-     // Get the misc charge from the form state if available and misc is enabled
-     const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
-       ? parseFloat(state.misc.miscCharge) 
-       : null; // Pass null to let the calculator fetch from DB
-     
-     // Pass the current markup values, misc charge, and fresh GST rate to the calculation service
-     const result = await performCompleteCalculations(
-       state,
-       miscCharge, // Use the custom misc charge if available
-       markupPercentage,
-       selectedMarkupType,
-       gstRate // ⭐ Pass fresh GST rate
-     );
-     
-     if (result.error) {
-       console.error("Error during calculations:", result.error);
-     } else {
-       // Verify markup values are included
-       console.log("Calculation results with markup:", {
-         markupType: result.markupType,
-         markupPercentage: result.markupPercentage,
-         markupAmount: result.markupAmount,
-         gstRate: result.gstRate,
-         miscCharge: miscCharge ? `Custom: ${miscCharge}` : "From DB"
-       });
-       
-       setCalculations(result);
-     }
-   } catch (error) {
-     console.error("Unexpected error during calculations:", error);
-   } finally {
-     setIsCalculating(false);
-   }
- };
+  // ⭐ UPDATED: Enhanced calculation function using the centralized calculation service (with fresh GST)
+  const performCalculations = async () => {
+    // Check if client and essential fields are filled
+    const { projectName, quantity, paperName, dieCode, dieSize } = state.orderAndPaper;
+    const { clientId } = state.client;
+    
+    if (!clientId || !projectName || !quantity || !paperName || !dieCode || 
+        !dieSize.length || !dieSize.breadth) {
+      return; // Don't calculate if essential fields are missing
+    }
+    
+    setIsCalculating(true);
+    try {
+      const jobType = state.orderAndPaper?.jobType || "Card";
+      
+      // Get GST rate (cached or fresh) for this job type
+      const gstRate = await getGSTRateForJobType(jobType);
+      
+      // Get the misc charge from the form state if available and misc is enabled
+      const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
+        ? parseFloat(state.misc.miscCharge) 
+        : null; // Pass null to let the calculator fetch from DB
+      
+      // Pass the current markup values, misc charge, and fresh GST rate to the calculation service
+      const result = await performCompleteCalculations(
+        state,
+        miscCharge, // Use the custom misc charge if available
+        markupPercentage,
+        selectedMarkupType,
+        gstRate // ⭐ Pass fresh GST rate
+      );
+      
+      if (result.error) {
+        console.error("Error during calculations:", result.error);
+      } else {
+        // Verify markup values are included
+        console.log("Calculation results with markup:", {
+          markupType: result.markupType,
+          markupPercentage: result.markupPercentage,
+          markupAmount: result.markupAmount,
+          gstRate: result.gstRate,
+          miscCharge: miscCharge ? `Custom: ${miscCharge}` : "From DB"
+        });
+        
+        setCalculations(result);
+      }
+    } catch (error) {
+      console.error("Unexpected error during calculations:", error);
+    } finally {
+      setIsCalculating(false);
+    }
+  };
 
- const validateForm = () => {
-   const errors = {};
-   const { orderAndPaper, client, versionId } = state;
-   
-   // Validate Client selection - skip in edit mode
-   if (!isEditMode && !client.clientId) {
-     errors.clientId = "Client selection is required";
-   }
-   
-   // Validate Version selection
-   if (!versionId) errors.versionId = "Version selection is required";
-   
-   // Validate Order & Paper section
-   if (!orderAndPaper.projectName) errors.projectName = "Project name is required";
-   if (!orderAndPaper.quantity) errors.quantity = "Quantity is required";
-   if (!orderAndPaper.dieCode) errors.dieCode = "Please select a die";
-   
-   setValidationErrors(errors);
-   return Object.keys(errors).length === 0;
- };
+  const validateForm = () => {
+    const errors = {};
+    const { orderAndPaper, client, versionId } = state;
+    
+    // Validate Client selection - skip in edit mode
+    if (!isEditMode && !client.clientId) {
+      errors.clientId = "Client selection is required";
+    }
+    
+    // Validate Version selection
+    if (!versionId) errors.versionId = "Version selection is required";
+    
+    // Validate Order & Paper section
+    if (!orderAndPaper.projectName) errors.projectName = "Project name is required";
+    if (!orderAndPaper.quantity) errors.quantity = "Quantity is required";
+    if (!orderAndPaper.dieCode) errors.dieCode = "Please select a die";
+    
+    setValidationErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
 
- // Handler for Review and Submit when calculations are ready
- const handleCreateEstimate = (enhancedCalculations) => {
-   // Log received calculations to verify markup values
-   console.log("Enhanced calculations from ReviewAndSubmit:", {
-     markupType: enhancedCalculations?.markupType,
-     markupPercentage: enhancedCalculations?.markupPercentage,
-     markupAmount: enhancedCalculations?.markupAmount,
-     gstRate: enhancedCalculations?.gstRate
-   });
-   
-   // Store the enhanced calculations to use in handleSubmit
-   if (enhancedCalculations) {
-     setCalculations(enhancedCalculations);
-   }
-   
-   // Submit the form with the updated calculations
-   handleSubmit(new Event('submit'));
- };
+  // NEW: Handle preview estimate
+  const handlePreviewEstimate = (enhancedCalculations) => {
+    console.log("Showing preview with calculations:", enhancedCalculations);
+    
+    // Prepare the preview data similar to how we prepare for submission
+    const calculationsWithMarkup = {
+      ...enhancedCalculations,
+      markupType: selectedMarkupType,
+      markupPercentage: markupPercentage,
+      markupAmount: enhancedCalculations?.markupAmount || "0.00"
+    };
+    
+    // Create the formatted data for preview
+    const formattedData = mapStateToFirebaseStructure(state, calculationsWithMarkup);
+    
+    // Set preview data and show preview modal
+    setPreviewData(formattedData);
+    setShowPreview(true);
+  };
 
- // Function to perform a partial reset of the form, keeping client, version, and order info
- const partialResetForm = () => {
-   const partialReset = {
-     ...initialFormState,
-     // Keep client information
-     client: { ...state.client },
-     // Keep version information
-     versionId: state.versionId,
-     // Keep order and paper information
-     orderAndPaper: { ...state.orderAndPaper }
-   };
-   
-   dispatch({ type: "INITIALIZE_FORM", payload: partialReset });
-   setCalculations(null);
-   setActiveSections(prev => ({
-     ...prev,
-     reviewAndSubmit: true // Keep cost calculations open
-   }));
-   
-   // Reset direct initialization flag to reapply default services
-   setDirectInitializationDone(false);
-   
-   // Set default active services for current job type
-   const jobType = state.orderAndPaper.jobType || "Card";
-   
-   // Wait for state to be updated
-   setTimeout(() => {
-     // Get default active services for the job type
-     const defaultActiveProductionServices = 
-       jobTypeConfigurations[jobType]?.defaultActiveServices?.production || [];
-     const defaultActivePostProductionServices = 
-       jobTypeConfigurations[jobType]?.defaultActiveServices?.postProduction || [];
-     
-     console.log("Re-activating default services after partial reset:", {
-       production: defaultActiveProductionServices,
-       postProduction: defaultActivePostProductionServices
-     });
-     
-     // Re-activate default services and expand their sections
-     defaultActiveProductionServices.forEach(serviceCode => {
-       const sectionId = serviceRegistry[serviceCode]?.id;
-       if (sectionId) {
-         expandSection(sectionId);
-       }
-     });
-     
-     defaultActivePostProductionServices.forEach(serviceCode => {
-       const sectionId = serviceRegistry[serviceCode]?.id;
-       if (sectionId) {
-         expandSection(sectionId);
-       }
-     });
-     
-     // Mark initialization as done
-     setDirectInitializationDone(true);
-   }, 0);
- };
+  // Handler for Review and Submit when calculations are ready (for edit mode)
+  const handleCreateEstimate = (enhancedCalculations) => {
+    // Log received calculations to verify markup values
+    console.log("Enhanced calculations from ReviewAndSubmit:", {
+      markupType: enhancedCalculations?.markupType,
+      markupPercentage: enhancedCalculations?.markupPercentage,
+      markupAmount: enhancedCalculations?.markupAmount,
+      gstRate: enhancedCalculations?.gstRate
+    });
+    
+    // Store the enhanced calculations to use in handleSubmit
+    if (enhancedCalculations) {
+      setCalculations(enhancedCalculations);
+    }
+    
+    // Submit the form with the updated calculations
+    handleSubmit(new Event('submit'));
+  };
 
- // Function for full reset (used by the reset button)
- const fullResetForm = () => {
-   dispatch({ type: "RESET_FORM" });
-   setActiveSections({
-     reviewAndSubmit: true, // Keep cost calculations open
-     lp: false,
-     fs: false,
-     emb: false,
-     digi: false,
-     notebook: false,
-     screenPrint: false,
-     preDieCutting: false,
-     dieCutting: false,
-     postDC: false,
-     foldAndPaste: false,
-     dstPaste: false,
-     magnet: false,
-     qc: false,
-     packing: false,
-     misc: false,
-     sandwich: false
-   });
-   setValidationErrors({});
-   setCalculations(null);
-   
-   // Don't reset client for B2B users, they should always use their own client
-   if (!isB2BClient) {
-     setSelectedClient(null);
-   }
-   
-   setSelectedVersion("");
-   
-   // Reset markup to defaults
-   setSelectedMarkupType(defaultMarkup.type);
-   setMarkupPercentage(defaultMarkup.percentage);
-   
-   // Reset GST cache
-   setCachedGSTRates({});
-   setGstError(null);
-   previousJobType.current = "Card"; // Reset to default job type
-   
-   // Reset direct initialization flag
-   setDirectInitializationDone(false);
-   
-   // Set default active services for the default job type after reset
-   const jobType = "Card"; // Default job type
-   
-   // Using a timeout to ensure state is reset before setting default services
-   setTimeout(() => {
-     // Get default active services for the job type
-     const defaultActiveProductionServices = 
-       jobTypeConfigurations[jobType]?.defaultActiveServices?.production || [];
-     const defaultActivePostProductionServices = 
-       jobTypeConfigurations[jobType]?.defaultActiveServices?.postProduction || [];
-     
-     console.log("Re-activating default services after full reset:", {
-       production: defaultActiveProductionServices,
-       postProduction: defaultActivePostProductionServices
-     });
-     
-     // Mark as initialized
-     setDirectInitializationDone(true);
-     
-     // Expand default sections
-     defaultActiveProductionServices.forEach(serviceCode => {
-       const sectionId = serviceRegistry[serviceCode]?.id;
-       if (sectionId) {
-         expandSection(sectionId);
-       }
-     });
-     
-     defaultActivePostProductionServices.forEach(serviceCode => {
-       const sectionId = serviceRegistry[serviceCode]?.id;
-       if (sectionId) {
-         expandSection(sectionId);
-       }
-     });
-   }, 0);
-   
-   // Scroll to top of form
-   if (formRef.current) {
-     formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
-   }
- };
+  // NEW: Handle confirm submission from preview
+  const handleConfirmSubmission = async () => {
+    setShowPreview(false);
+    setIsSubmitting(true);
+    
+    try {
+      if (isEditMode && onSubmitSuccess) {
+        await onSubmitSuccess(previewData);
+        if (onClose) onClose();
+      } else {
+        await addDoc(collection(db, "estimates"), previewData);
+        
+        // Show success notification
+        setShowSuccessNotification(true);
+        
+        // Instead of fully resetting and navigating away, only reset production and post-production sections
+        partialResetForm();
+      }
+    } catch (error) {
+      console.error("Error handling estimate:", error);
+      alert("Failed to handle estimate.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
- // Updated handleSubmit function with better debugging and explicit field handling
- const handleSubmit = async (e) => {
-   e.preventDefault();
-   
-   if (!validateForm()) {
-     // Scroll to the first error
-     const firstError = document.querySelector(".error-message");
-     if (firstError) {
-       firstError.scrollIntoView({ behavior: "smooth", block: "center" });
-     }
-     return;
-   }
-   
-   // Log critical form state before submission for debugging
-   console.log("Form state before submission:", {
-     jobType: state.orderAndPaper.jobType,
-     quantity: state.orderAndPaper.quantity,
-     paperName: state.orderAndPaper.paperName,
-     dieCode: state.orderAndPaper.dieCode,
-     projectName: state.orderAndPaper.projectName,
-     weddingDate: state.orderAndPaper.weddingDate
-   });
-   
-   setIsSubmitting(true);
-   try {
-     // Double-check that markup values exist before saving
-     const calculationsWithMarkup = {
-       ...calculations,
-       markupType: selectedMarkupType,
-       markupPercentage: markupPercentage,
-       markupAmount: calculations?.markupAmount || "0.00"
-     };
-     
-     // Create the formatted data for Firebase using the enhanced calculations
-     const formattedData = mapStateToFirebaseStructure(state, calculationsWithMarkup);
-     
-     // Log the data before saving to verify critical fields
-     console.log("Saving to Firebase - critical fields:", {
-       jobType: formattedData.jobDetails.jobType,
-       quantity: formattedData.jobDetails.quantity,
-       paperName: formattedData.jobDetails.paperName,
-       dieCode: formattedData.dieDetails.dieCode,
-       projectName: formattedData.projectName,
-       weddingDate: formattedData.weddingDate // ADD THIS LINE
-     });
-     
-     if (isEditMode && onSubmitSuccess) {
-       await onSubmitSuccess(formattedData);
-       if (onClose) onClose();
-     } else {
-       await addDoc(collection(db, "estimates"), formattedData);
-       
-       // Show success notification
-       setShowSuccessNotification(true);
-       
-       // Instead of fully resetting and navigating away, only reset production and post-production sections
-       partialResetForm();
-     }
-   } catch (error) {
-     console.error("Error handling estimate:", error);
-     alert("Failed to handle estimate.");
-   } finally {
-     setIsSubmitting(false);
-   }
- };
+  // Function to perform a partial reset of the form, keeping client, version, and order info
+  const partialResetForm = () => {
+    const partialReset = {
+      ...initialFormState,
+      // Keep client information
+      client: { ...state.client },
+      // Keep version information
+      versionId: state.versionId,
+      // Keep order and paper information
+      orderAndPaper: { ...state.orderAndPaper }
+    };
+    
+    dispatch({ type: "INITIALIZE_FORM", payload: partialReset });
+    setCalculations(null);
+    setActiveSections(prev => ({
+      ...prev,
+      reviewAndSubmit: true // Keep cost calculations open
+    }));
+    
+    // Reset direct initialization flag to reapply default services
+    setDirectInitializationDone(false);
+    
+    // Set default active services for current job type
+    const jobType = state.orderAndPaper.jobType || "Card";
+    
+    // Wait for state to be updated
+    setTimeout(() => {
+      // Get default active services for the job type
+      const defaultActiveProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.production || [];
+      const defaultActivePostProductionServices = 
+        jobTypeConfigurations[jobType]?.defaultActiveServices?.postProduction || [];
+      
+      console.log("Re-activating default services after partial reset:", {
+        production: defaultActiveProductionServices,
+        postProduction: defaultActivePostProductionServices
+      });
+      
+      // Mark initialization as done
+      setDirectInitializationDone(true);
+    }, 0);
+  };
 
- // Handle client selection from ClientSelection component
- const handleClientSelect = (clientData) => {
-   // Don't allow client selection changes in edit mode
-   if (isEditMode) return;
- 
-   if (clientData) {
-     // Ensure clientInfo has a category property to avoid undefined values
-     const sanitizedClientInfo = clientData.clientInfo || {};
-     if (sanitizedClientInfo.category === undefined) {
-       sanitizedClientInfo.category = null;
-     }
-     
-     dispatch({
-       type: "UPDATE_CLIENT",
-       payload: {
-         clientId: clientData.clientId,
-         clientInfo: sanitizedClientInfo
-       }
-     });
-   } else {
-     dispatch({
-       type: "UPDATE_CLIENT",
-       payload: {
-         clientId: null,
-         clientInfo: null
-       }
-     });
-     
-     // Reset version when client is cleared
-     setSelectedVersion("");
-     dispatch({
-       type: "UPDATE_VERSION",
-       payload: ""
-     });
-   }
- };
- 
- // Handle version selection
- const handleVersionSelect = (versionId) => {
-   setSelectedVersion(versionId);
-   dispatch({
-     type: "UPDATE_VERSION",
-     payload: versionId
-   });
- };
- 
- // Generate client code function - needed for when creating new clients
- const generateClientCode = async (clientName) => {
-   try {
-     // Clean the name: remove spaces, special characters, and take first 4 letters
-     const prefix = clientName
-       .replace(/[^a-zA-Z0-9]/g, '')
-       .substring(0, 4)
-       .toUpperCase();
-     
-     // Get all clients with this prefix to find the highest number
-     const clientsCollection = collection(db, "clients");
-     const querySnapshot = await getDocs(clientsCollection);
-     
-     let highestNum = 0;
-     const pattern = new RegExp(`^${prefix}(\\d+)$`);
-     
-     // Look for existing codes with the same prefix
-     querySnapshot.forEach(doc => {
-       const clientData = doc.data();
-       if (clientData.clientCode) {
-         const match = clientData.clientCode.match(pattern);
-         if (match && match[1]) {
-           const num = parseInt(match[1]);
-           if (!isNaN(num) && num > highestNum) {
-             highestNum = num;
-           }
-         }
-       }
-     });
-     
-     // Generate new code with incremented number
-     const nextNum = highestNum + 1;
-     // Pad to ensure at least 3 digits
-     const paddedNum = nextNum.toString().padStart(3, '0');
-     
-     return `${prefix}${paddedNum}`;
-   } catch (error) {
-     console.error("Error generating client code:", error);
-     // Fallback to a simple random code if there's an error
-     const randomNum = Math.floor(Math.random() * 900) + 100;
-     return `${clientName.substring(0, 4).toUpperCase()}${randomNum}`;
-   }
- };
+  // Function for full reset (used by the reset button)
+  const fullResetForm = () => {
+    dispatch({ type: "RESET_FORM" });
+    setActiveSections({
+      reviewAndSubmit: true, // Keep cost calculations open
+    });
+    setValidationErrors({});
+    setCalculations(null);
+    
+    // Don't reset client for B2B users, they should always use their own client
+    if (!isB2BClient) {
+      setSelectedClient(null);
+    }
+    
+    setSelectedVersion("");
+    
+    // Reset markup to defaults
+    setSelectedMarkupType(defaultMarkup.type);
+    setMarkupPercentage(defaultMarkup.percentage);
+    
+    // Reset GST cache
+    setCachedGSTRates({});
+    setGstError(null);
+    previousJobType.current = "Card"; // Reset to default job type
+    
+    // Reset direct initialization flag
+    setDirectInitializationDone(false);
+    
+    // Set default active services for the default job type after reset
+    const jobType = "Card"; // Default job type
+    
+    // Using a timeout to ensure state is reset before setting default services
+    setTimeout(() => {
+      // Mark as initialized
+      setDirectInitializationDone(true);
+    }, 0);
+    
+    // Scroll to top of form
+    if (formRef.current) {
+      formRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  };
 
-  // 1. UPDATED toggleLPUsage function (already working)
+  // Updated handleSubmit function with better debugging and explicit field handling
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    if (!validateForm()) {
+      // Scroll to the first error
+      const firstError = document.querySelector(".error-message");
+      if (firstError) {
+        firstError.scrollIntoView({ behavior: "smooth", block: "center" });
+      }
+      return;
+    }
+    
+    // Log critical form state before submission for debugging
+    console.log("Form state before submission:", {
+      jobType: state.orderAndPaper.jobType,
+      quantity: state.orderAndPaper.quantity,
+      paperName: state.orderAndPaper.paperName,
+      dieCode: state.orderAndPaper.dieCode,
+      projectName: state.orderAndPaper.projectName,
+      weddingDate: state.orderAndPaper.weddingDate
+    });
+    
+    setIsSubmitting(true);
+    try {
+      // Double-check that markup values exist before saving
+      const calculationsWithMarkup = {
+        ...calculations,
+        markupType: selectedMarkupType,
+        markupPercentage: markupPercentage,
+        markupAmount: calculations?.markupAmount || "0.00"
+      };
+      
+      // Create the formatted data for Firebase using the enhanced calculations
+      const formattedData = mapStateToFirebaseStructure(state, calculationsWithMarkup);
+      
+      // Log the data before saving to verify critical fields
+      console.log("Saving to Firebase - critical fields:", {
+        jobType: formattedData.jobDetails.jobType,
+        quantity: formattedData.jobDetails.quantity,
+        paperName: formattedData.jobDetails.paperName,
+        dieCode: formattedData.dieDetails.dieCode,
+        projectName: formattedData.projectName,
+        weddingDate: formattedData.weddingDate // ADD THIS LINE
+      });
+      
+      if (isEditMode && onSubmitSuccess) {
+        await onSubmitSuccess(formattedData);
+        if (onClose) onClose();
+      } else {
+        await addDoc(collection(db, "estimates"), formattedData);
+        
+        // Show success notification
+        setShowSuccessNotification(true);
+        
+        // Instead of fully resetting and navigating away, only reset production and post-production sections
+        partialResetForm();
+      }
+    } catch (error) {
+      console.error("Error handling estimate:", error);
+      alert("Failed to handle estimate.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Handle client selection from ClientSelection component
+  const handleClientSelect = (clientData) => {
+    // Don't allow client selection changes in edit mode
+    if (isEditMode) return;
+
+    if (clientData) {
+      // Ensure clientInfo has a category property to avoid undefined values
+      const sanitizedClientInfo = clientData.clientInfo || {};
+      if (sanitizedClientInfo.category === undefined) {
+        sanitizedClientInfo.category = null;
+      }
+      
+      dispatch({
+        type: "UPDATE_CLIENT",
+        payload: {
+          clientId: clientData.clientId,
+          clientInfo: sanitizedClientInfo
+        }
+      });
+    } else {
+      dispatch({
+        type: "UPDATE_CLIENT",
+        payload: {
+          clientId: null,
+          clientInfo: null
+        }
+      });
+      
+      // Reset version when client is cleared
+      setSelectedVersion("");
+      dispatch({
+        type: "UPDATE_VERSION",
+        payload: ""
+      });
+    }
+  };
+  
+  // Handle version selection
+  const handleVersionSelect = (versionId) => {
+    setSelectedVersion(versionId);
+    dispatch({
+      type: "UPDATE_VERSION",
+      payload: versionId
+    });
+  };
+  
+  // Generate client code function - needed for when creating new clients
+  const generateClientCode = async (clientName) => {
+    try {
+      // Clean the name: remove spaces, special characters, and take first 4 letters
+      const prefix = clientName
+        .replace(/[^a-zA-Z0-9]/g, '')
+        .substring(0, 4)
+        .toUpperCase();
+      
+      // Get all clients with this prefix to find the highest number
+      const clientsCollection = collection(db, "clients");
+      const querySnapshot = await getDocs(clientsCollection);
+      
+      let highestNum = 0;
+      const pattern = new RegExp(`^${prefix}(\\d+)$`);
+      
+      // Look for existing codes with the same prefix
+      querySnapshot.forEach(doc => {
+        const clientData = doc.data();
+        if (clientData.clientCode) {
+          const match = clientData.clientCode.match(pattern);
+          if (match && match[1]) {
+            const num = parseInt(match[1]);
+            if (!isNaN(num) && num > highestNum) {
+              highestNum = num;
+            }
+          }
+        }
+      });
+      
+      // Generate new code with incremented number
+      const nextNum = highestNum + 1;
+      // Pad to ensure at least 3 digits
+      const paddedNum = nextNum.toString().padStart(3, '0');
+      
+      return `${prefix}${paddedNum}`;
+    } catch (error) {
+      console.error("Error generating client code:", error);
+      // Fallback to a simple random code if there's an error
+      const randomNum = Math.floor(Math.random() * 900) + 100;
+      return `${clientName.substring(0, 4).toUpperCase()}${randomNum}`;
+    }
+  };
+
+  // UPDATED Toggle Functions - Simplified (no expandSection calls)
+
+  // 1. UPDATED toggleLPUsage function
   const toggleLPUsage = () => {
     const isCurrentlyUsed = state.lpDetails.isLPUsed;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data (same pattern as Misc)
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_LP_DETAILS",
         payload: { 
@@ -2018,9 +2029,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           ]
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("lp");
     }
   };
 
@@ -2029,7 +2037,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.fsDetails.isFSUsed;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_FS_DETAILS",
         payload: { 
@@ -2060,9 +2068,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           ]
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("fs");
     }
   };
 
@@ -2071,7 +2076,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.embDetails.isEMBUsed;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_EMB_DETAILS",
         payload: { 
@@ -2103,9 +2108,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           dstMaterial: ""
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("emb");
     }
   };
 
@@ -2114,7 +2116,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.digiDetails.isDigiUsed;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_DIGI_DETAILS",
         payload: { 
@@ -2141,9 +2143,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           digiDimensions: defaultDimensions
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("digi");
     }
   };
 
@@ -2152,7 +2151,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.notebookDetails?.isNotebookUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_NOTEBOOK_DETAILS",
         payload: { 
@@ -2185,9 +2184,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           paperName: papers.length > 0 ? papers[0].paperName : ""
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("notebook");
     }
   };
 
@@ -2196,7 +2192,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.screenPrint?.isScreenPrintUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_SCREEN_PRINT",
         payload: { 
@@ -2217,9 +2213,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           screenMRConcatenated: "SCREEN MR SIMPLE"
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("screenPrint");
     }
   };
 
@@ -2228,7 +2221,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.preDieCutting?.isPreDieCuttingUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_PRE_DIE_CUTTING",
         payload: { 
@@ -2247,9 +2240,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           predcMRConcatenated: "PREDC MR SIMPLE"
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("preDieCutting");
     }
   };
 
@@ -2258,7 +2248,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.dieCutting.isDieCuttingUsed;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_DIE_CUTTING",
         payload: { 
@@ -2277,9 +2267,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           dcMRConcatenated: "DC MR SIMPLE"
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("dieCutting");
     }
   };
 
@@ -2288,7 +2275,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.postDC?.isPostDCUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_POST_DC",
         payload: { 
@@ -2307,9 +2294,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           pdcMRConcatenated: "PDC MR SIMPLE"
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("postDC");
     }
   };
 
@@ -2318,7 +2302,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.foldAndPaste?.isFoldAndPasteUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_FOLD_AND_PASTE",
         payload: { 
@@ -2337,9 +2321,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           dstType: ""
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("foldAndPaste");
     }
   };
 
@@ -2348,7 +2329,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.dstPaste?.isDstPasteUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_DST_PASTE",
         payload: { 
@@ -2365,9 +2346,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           dstType: ""
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("dstPaste");
     }
   };
 
@@ -2376,7 +2354,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.magnet?.isMagnetUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_MAGNET",
         payload: { 
@@ -2393,9 +2371,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           magnetMaterial: ""
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("magnet");
     }
   };
 
@@ -2404,7 +2379,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.qc?.isQCUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_QC",
         payload: { 
@@ -2419,9 +2394,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           isQCUsed: true
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("qc");
     }
   };
 
@@ -2430,7 +2402,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.packing?.isPackingUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_PACKING",
         payload: { 
@@ -2445,18 +2417,15 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           isPackingUsed: true
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("packing");
     }
   };
 
-  // 15. UPDATED toggleMiscUsage function (already working correctly)
+  // 15. UPDATED toggleMiscUsage function
   const toggleMiscUsage = () => {
     const isCurrentlyUsed = state.misc?.isMiscUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_MISC",
         payload: { 
@@ -2473,9 +2442,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           miscCharge: ""
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("misc");
     }
   };
 
@@ -2484,7 +2450,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     const isCurrentlyUsed = state.sandwich?.isSandwichComponentUsed || false;
     
     if (isCurrentlyUsed) {
-      // FIXED: When toggling OFF, clear all data
+      // When toggling OFF, clear all data
       dispatch({
         type: "UPDATE_SANDWICH",
         payload: { 
@@ -2555,44 +2521,40 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           }
         }
       });
-      
-      // Auto expand when toggled on
-      expandSection("sandwich");
     }
   };
 
- 
- // UPDATED: Special function for ReviewAndSubmit section
- const toggleReviewSection = () => {
-   toggleSection("reviewAndSubmit");
- };
+  // UPDATED: Special function for ReviewAndSubmit section
+  const toggleReviewSection = () => {
+    toggleSection("reviewAndSubmit");
+  };
 
- // Handle reset form
- const handleResetForm = () => {
-   setShowResetConfirmation(true);
- };
+  // Handle reset form
+  const handleResetForm = () => {
+    setShowResetConfirmation(true);
+  };
 
- const confirmResetForm = () => {
-   // Close the confirmation modal
-   setShowResetConfirmation(false);
-   
-   // Show a brief loading message (optional)
-   setIsSubmitting(true);
-   
-   // Short timeout to allow the UI to update before refreshing
-   setTimeout(() => {
-     // Refresh the page
-     window.location.reload();
-   }, 100);
- };  
+  const confirmResetForm = () => {
+    // Close the confirmation modal
+    setShowResetConfirmation(false);
+    
+    // Show a brief loading message (optional)
+    setIsSubmitting(true);
+    
+    // Short timeout to allow the UI to update before refreshing
+    setTimeout(() => {
+      // Refresh the page
+      window.location.reload();
+    }, 100);
+  };  
 
- // Check if a service is visible for the current job type
- const isServiceVisible = (serviceCode) => {
-   return (
-     visibleProductionServices.includes(serviceCode) ||
-     visiblePostProductionServices.includes(serviceCode)
-   );
- };
+  // Check if a service is visible for the current job type
+  const isServiceVisible = (serviceCode) => {
+    return (
+      visibleProductionServices.includes(serviceCode) ||
+      visiblePostProductionServices.includes(serviceCode)
+    );
+  };
 
   return (
     <div className="bg-white rounded-lg">
@@ -2646,7 +2608,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               <h2 className="text-xl font-bold mb-4">Confirm Reset</h2>
               <p className="mb-6">Are you sure you want to reset the form? All entered data will be lost.</p>
               <div className="flex justify-end space-x-4">
-              <button 
+                <button 
                   type="button"
                   onClick={() => setShowResetConfirmation(false)}
                   className="px-4 py-2 bg-gray-300 rounded-md hover:bg-gray-400 transition-colors"
@@ -2663,6 +2625,43 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               </div>
             </div>
           </div>
+        )}
+
+        {/* NEW: Preview Modal */}
+        {showPreview && previewData && (
+          <UnifiedDetailsModal
+            data={previewData}
+            dataType="estimate"
+            onClose={() => setShowPreview(false)}
+            customFooter={
+              <div className="flex justify-end gap-3 p-4 border-t border-gray-200 bg-gray-50">
+                <button
+                  onClick={() => setShowPreview(false)}
+                  className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors text-sm"
+                  disabled={isSubmitting}
+                >
+                  Back to Edit
+                </button>
+                <button
+                  onClick={handleConfirmSubmission}
+                  className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center gap-2"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      Creating Estimate...
+                    </>
+                  ) : (
+                    <>
+                      <FileText size={12} />
+                      <div className="text-sm">Confirm & Create Estimate</div>
+                    </>
+                  )}
+                </button>
+              </div>
+            }
+          />
         )}
 
         <form ref={formRef} onSubmit={handleSubmit} className="space-y-6">
@@ -2683,19 +2682,18 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             handleJobTypeChange={handleJobTypeChange}
           />
 
-            {/* Services Section - Side by Side Layout */}
-            <div className="mb-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {/* Production Services Section */}
-              <div className="shadow rounded-lg px-4 py-3 border-b border-gray-200">
-                <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
-                
+          {/* UPDATED: Services Section - Vertical Layout with 3-column grids and fixed heights */}
+          <div className="mb-6 space-y-6">
+            {/* Production Services Section */}
+            <div className="shadow rounded-lg px-4 py-3 border-b border-gray-200">
+              <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Production Services</h2>
+              
+              {/* UPDATED: 3-column grid with consistent heights and no layout shifts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 {/* LP Section */}
                 {isServiceVisible("LP") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Letter Press (LP)" 
-                    id="lp"
-                    activeSection={activeSections.lp ? "lp" : null}
-                    setActiveSection={() => toggleSection("lp")}
                     isUsed={state.lpDetails.isLPUsed}
                     onToggleUsage={toggleLPUsage}
                   >
@@ -2706,16 +2704,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
 
                 {/* FS Section */}
                 {isServiceVisible("FS") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Foil Stamping (FS)" 
-                    id="fs"
-                    activeSection={activeSections.fs ? "fs" : null}
-                    setActiveSection={() => toggleSection("fs")}
                     isUsed={state.fsDetails.isFSUsed}
                     onToggleUsage={toggleFSUsage}
                   >
@@ -2726,16 +2721,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
                 
                 {/* EMB Section */}
                 {isServiceVisible("EMB") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Embossing (EMB)" 
-                    id="emb"
-                    activeSection={activeSections.emb ? "emb" : null}
-                    setActiveSection={() => toggleSection("emb")}
                     isUsed={state.embDetails.isEMBUsed}
                     onToggleUsage={toggleEMBUsage}
                   >
@@ -2746,16 +2738,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
                 
                 {/* DIGI Section */}
                 {isServiceVisible("DIGI") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Digital Printing" 
-                    id="digi"
-                    activeSection={activeSections.digi ? "digi" : null}
-                    setActiveSection={() => toggleSection("digi")}
                     isUsed={state.digiDetails.isDigiUsed}
                     onToggleUsage={toggleDigiUsage}
                   >
@@ -2766,16 +2755,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
                 
                 {/* NOTEBOOK Section */}
                 {isServiceVisible("NOTEBOOK") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Notebook Details" 
-                    id="notebook"
-                    activeSection={activeSections.notebook ? "notebook" : null}
-                    setActiveSection={() => toggleSection("notebook")}
                     isUsed={state.notebookDetails?.isNotebookUsed || false}
                     onToggleUsage={toggleNotebookUsage}
                   >
@@ -2786,16 +2772,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
                 
                 {/* SCREEN Section */}
                 {isServiceVisible("SCREEN") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Screen Printing" 
-                    id="screenPrint"
-                    activeSection={activeSections.screenPrint ? "screenPrint" : null}
-                    setActiveSection={() => toggleSection("screenPrint")}
                     isUsed={state.screenPrint?.isScreenPrintUsed || false}
                     onToggleUsage={toggleScreenPrintUsage}
                   >
@@ -2806,21 +2789,21 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
               </div>
+            </div>
 
-              {/* Post-Production Services Section */}
-              <div className="shadow rounded-lg px-4 py-3 border-b border-gray-200">
-                <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
-                
+            {/* Post-Production Services Section */}
+            <div className="shadow rounded-lg px-4 py-3 border-b border-gray-200">
+              <h2 className="mb-4 border-b border-gray-200 pb-2 text-lg font-medium text-gray-800">Post-Production Services</h2>
+              
+              {/* UPDATED: 3-column grid with consistent heights and no layout shifts */}
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 items-start">
                 {/* Pre Die Cutting Section */}
                 {isServiceVisible("PRE DC") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Pre Die Cutting" 
-                    id="preDieCutting"
-                    activeSection={activeSections.preDieCutting ? "preDieCutting" : null}
-                    setActiveSection={() => toggleSection("preDieCutting")}
                     isUsed={state.preDieCutting?.isPreDieCuttingUsed || false}
                     onToggleUsage={togglePreDieCuttingUsage}
                   >
@@ -2831,16 +2814,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
                 
                 {/* Die Cutting Section */}
                 {isServiceVisible("DC") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Die Cutting" 
-                    id="dieCutting"
-                    activeSection={activeSections.dieCutting ? "dieCutting" : null}
-                    setActiveSection={() => toggleSection("dieCutting")}
                     isUsed={state.dieCutting.isDieCuttingUsed}
                     onToggleUsage={toggleDieCuttingUsage}
                   >
@@ -2851,16 +2831,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
 
                 {/* Post DC Section */}
                 {isServiceVisible("POST DC") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Post Die Cutting" 
-                    id="postDC"
-                    activeSection={activeSections.postDC ? "postDC" : null}
-                    setActiveSection={() => toggleSection("postDC")}
                     isUsed={state.postDC?.isPostDCUsed || false}
                     onToggleUsage={togglePostDCUsage}
                   >
@@ -2871,16 +2848,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
 
                 {/* DST Paste Section */}
                 {isServiceVisible("DST PASTE") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="DST Paste" 
-                    id="dstPaste"
-                    activeSection={activeSections.dstPaste ? "dstPaste" : null}
-                    setActiveSection={() => toggleSection("dstPaste")}
                     isUsed={state.dstPaste?.isDstPasteUsed || false}
                     onToggleUsage={toggleDstPasteUsage}
                   >
@@ -2891,16 +2865,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
 
                 {/* Fold & Paste Section */}
                 {isServiceVisible("FOLD & PASTE") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Fold & Paste" 
-                    id="foldAndPaste"
-                    activeSection={activeSections.foldAndPaste ? "foldAndPaste" : null}
-                    setActiveSection={() => toggleSection("foldAndPaste")}
                     isUsed={state.foldAndPaste?.isFoldAndPasteUsed || false}
                     onToggleUsage={toggleFoldAndPasteUsage}
                   >
@@ -2911,16 +2882,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
 
                 {/* Magnet Section */}
                 {isServiceVisible("MAGNET") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Magnet" 
-                    id="magnet"
-                    activeSection={activeSections.magnet ? "magnet" : null}
-                    setActiveSection={() => toggleSection("magnet")}
                     isUsed={state.magnet?.isMagnetUsed || false}
                     onToggleUsage={toggleMagnetUsage}
                   >
@@ -2931,16 +2899,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
 
                 {/* QC Section */}
                 {isServiceVisible("QC") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Quality Check" 
-                    id="qc"
-                    activeSection={activeSections.qc ? "qc" : null}
-                    setActiveSection={() => toggleSection("qc")}
                     isUsed={state.qc?.isQCUsed || false}
                     onToggleUsage={toggleQCUsage}
                   >
@@ -2951,16 +2916,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
 
                 {/* Packing Section */}
                 {isServiceVisible("PACKING") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Packing" 
-                    id="packing"
-                    activeSection={activeSections.packing ? "packing" : null}
-                    setActiveSection={() => toggleSection("packing")}
                     isUsed={state.packing?.isPackingUsed || false}
                     onToggleUsage={togglePackingUsage}
                   >
@@ -2971,16 +2933,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
                 
                 {/* Misc Section */}
                 {isServiceVisible("MISC") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Miscellaneous" 
-                    id="misc"
-                    activeSection={activeSections.misc ? "misc" : null}
-                    setActiveSection={() => toggleSection("misc")}
                     isUsed={state.misc?.isMiscUsed || false}
                     onToggleUsage={toggleMiscUsage}
                   >
@@ -2991,16 +2950,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
 
                 {/* Sandwich Section */}
                 {isServiceVisible("DUPLEX") && (
-                  <FormSection 
+                  <ServiceCard 
                     title="Duplex/Sandwich" 
-                    id="sandwich"
-                    activeSection={activeSections.sandwich ? "sandwich" : null}
-                    setActiveSection={() => toggleSection("sandwich")}
                     isUsed={state.sandwich?.isSandwichComponentUsed || false}
                     onToggleUsage={toggleSandwichUsage}
                   >
@@ -3011,37 +2967,28 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                       onPrevious={() => {}} 
                       singlePageMode={true}
                     />
-                  </FormSection>
+                  </ServiceCard>
                 )}
               </div>
             </div>
-
-          {/* Cost Calculation & Review Section - Now Always Open but Still Collapsible */}
-          <div className="mt-6">
-            <FormSection 
-              title="COST CALCULATION" 
-              id="reviewAndSubmit"
-              activeSection={activeSections.reviewAndSubmit ? "reviewAndSubmit" : null}
-              setActiveSection={() => toggleSection("reviewAndSubmit")}
-              isUsed={true}
-              onToggleUsage={toggleReviewSection}
-              bgColor="bg-blue-50"
-            >
-              <ReviewAndSubmit 
-                state={state} 
-                calculations={calculations} 
-                isCalculating={isCalculating} 
-                onCreateEstimate={handleCreateEstimate}
-                onMarkupChange={handleMarkupChange} 
-                isEditMode={isEditMode}
-                isSaving={isSubmitting}
-                previewMode={!isSubmitting}
-              />
-            </FormSection>
           </div>
 
-          <div className="flex flex-row-reverse justify-between mt-8 border-t pt-6">
-            {/* Right side: Cancel and Submit buttons */}
+          {/* Cost Calculation & Review Section - Always visible now */}
+          <div className="mt-6">
+            <ReviewAndSubmit 
+              state={state} 
+              calculations={calculations} 
+              isCalculating={isCalculating} 
+              onCreateEstimate={handleCreateEstimate}
+              onPreviewEstimate={handlePreviewEstimate}
+              onMarkupChange={handleMarkupChange} 
+              isEditMode={isEditMode}
+              isSaving={isSubmitting}
+              previewMode={false}
+            />
+          </div>
+
+          {/* <div className="flex flex-row-reverse justify-between">
             <div className="flex">
               {onClose && (
                 <button
@@ -3053,25 +3000,27 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                   Cancel
                 </button>
               )}
-              <button
-                type="submit"
-                className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? (
-                  <>
-                    <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                    </svg>
-                    Saving...
-                  </>
-                ) : (
-                  isEditMode ? "Save Changes" : "Submit"
-                )}
-              </button>
+              {isEditMode && (
+                <button
+                  type="submit"
+                  className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? (
+                    <>
+                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                      Saving...
+                    </>
+                  ) : (
+                    "Save Changes"
+                  )}
+                </button>
+              )}
             </div>
-          </div>
+          </div> */}
         </form>
       </div>
     </div>

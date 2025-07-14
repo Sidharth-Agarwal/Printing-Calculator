@@ -96,6 +96,12 @@ const Login = () => {
           navigate("/transactions");
         } else if (userData.role === "b2b") {
           navigate("/b2b-dashboard");
+        } else if (userData.role === "staff") {
+          navigate("/new-bill");
+        } else if (userData.role === "accountant") {
+          navigate("/new-bill");
+        } else if (userData.role === "production") {
+          navigate("/orders");
         } else {
           navigate("/new-bill");
         }

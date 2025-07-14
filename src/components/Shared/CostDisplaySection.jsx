@@ -10,8 +10,8 @@ const CostDisplaySection = ({
   
   // Function to format number values consistently
   const formatCurrency = (value) => {
-    if (value === null || value === undefined || value === "") return "₹ 0.00";
-    return `₹ ${parseFloat(value).toFixed(2)}`;
+    if (value === null || value === undefined || value === "") return "₹0.00";
+    return `₹${parseFloat(value).toFixed(2)}`;
   };
 
   // Function to check if a section should be displayed
@@ -19,283 +19,28 @@ const CostDisplaySection = ({
     return data[serviceKey]?.[toggleField] === true;
   };
 
-  // Order of sections to ensure consistent display
-  const productionSections = [
-    { 
-      key: 'LP', 
-      label: 'Letter Press (LP)', 
-      serviceKey: 'lpDetails', 
-      toggleField: 'isLPUsed',
-      bgColor: 'bg-blue-50',
-      items: [
-        { key: 'lpPlateCostPerCard', label: 'LP Plate Cost' },
-        { key: 'lpPositiveFilmCostPerCard', label: 'LP Positive Film' },
-        { key: 'lpMRCostPerCard', label: 'LP MR Cost' },
-        { key: 'lpMkgCostPerCard', label: 'LP Making Cost' },
-        { key: 'lpInkCostPerCard', label: 'LP Ink Cost' },
-        { key: 'lpImpressionCostPerCard', label: 'LP Impression Cost' },
-        // { key: 'lpDstMaterialCostPerCard', label: 'LP DST Material Cost' }
-      ],
-      totalKey: 'lpCostPerCard',
-      totalLabel: 'Letter Press (LP)'
-    },
-    { 
-      key: 'FS', 
-      label: 'Foil Stamping (FS)', 
-      serviceKey: 'fsDetails', 
-      toggleField: 'isFSUsed',
-      bgColor: 'bg-blue-50',
-      items: [
-        { key: 'fsBlockCostPerCard', label: 'FS Block Cost' },
-        { key: 'fsFoilCostPerCard', label: 'FS Foil Cost' },
-        { key: 'fsMRCostPerCard', label: 'FS MR Cost' },
-        { key: 'fsImpressionCostPerCard', label: 'FS Impression Cost' },
-        // { key: 'fsFreightCostPerCard', label: 'FS Freight Cost' }
-      ],
-      totalKey: 'fsCostPerCard',
-      totalLabel: 'Foil Stamping (FS)'
-    },
-    { 
-      key: 'EMB', 
-      label: 'Embossing (EMB)', 
-      serviceKey: 'embDetails', 
-      toggleField: 'isEMBUsed',
-      bgColor: 'bg-blue-50',
-      items: [
-        // { key: 'embPlateCostPerCard', label: 'EMB Plate Cost' },
-        { key: 'embMRCostPerCard', label: 'EMB MR Cost' },
-        { key: 'embMkgPlateCostPerCard', label: 'EMB Making Plate' },
-        { key: 'embPositiveFilmCostPerCard', label: 'EMB Positive Film' },
-        { key: 'embImpressionCostPerCard', label: 'EMB Impression Cost' },
-        { key: 'embDstMaterialCostPerCard', label: 'EMB DST Material Cost' }
-      ],
-      totalKey: 'embCostPerCard',
-      totalLabel: 'Embossing (EMB)'
-    },
-    { 
-      key: 'SCREEN', 
-      label: 'Screen Printing', 
-      serviceKey: 'screenPrint', 
-      toggleField: 'isScreenPrintUsed',
-      bgColor: 'bg-blue-50',
-      items: [
-        { key: 'screenPrintPerPieceCost', label: 'Screen Print Per Piece' },
-        { key: 'screenPrintBaseCostPerCard', label: 'Screen Print Base Cost' },
-        { key: 'screenPrintMRCostPerCard', label: 'Screen Print MR Cost' }  // Add the new MR cost field
-      ],
-      metaItems: [
-        { key: 'noOfColors', label: 'Number of Colors:' }
-      ],
-      totalKey: 'screenPrintCostPerCard',
-      totalLabel: 'Screen Printing'
-    },
-    { 
-      key: 'DIGI', 
-      label: 'Digital Printing', 
-      serviceKey: 'digiDetails', 
-      toggleField: 'isDigiUsed',
-      bgColor: 'bg-blue-50',
-      items: [
-        { key: 'digiPrintCostPerCard', label: 'Digital Print Cost' },
-        { key: 'digiPaperCostPerCard', label: 'Digital Paper Cost' },
-        { key: 'digiGilCutCostPerCard', label: 'Digital Gil Cut Cost' }
-      ],
-      metaItems: [
-        { key: 'totalFragsPerSheet', label: 'Fragments per sheet:' },
-        { key: 'totalSheets', label: 'Total sheets:' }
-      ],
-      totalKey: 'digiCostPerCard',
-      totalLabel: 'Digital Printing'
-    },
-    { 
-      key: 'NOTEBOOK', 
-      label: 'Notebook', 
-      serviceKey: 'notebookDetails', 
-      toggleField: 'isNotebookUsed',
-      bgColor: 'bg-blue-50',
-      items: [
-        { key: 'notebookPagesCostPerCard', label: 'Notebook Pages Cost' },
-        { key: 'notebookBindingCostPerCard', label: 'Notebook Binding Cost' },
-        { key: 'notebookGilCutCostPerCard', label: 'Notebook GIL Cut Cost' }
-      ],
-      metaItems: [
-        { key: 'possibleNumberOfForma', label: 'Forma per notebook:' },
-        { key: 'totalPages', label: 'Total pages:' },
-        { key: 'totalFormaRequired', label: 'Total forma required:' },
-        { key: 'totalSheets', label: 'Total sheets:' }
-      ],
-      totalKey: 'notebookCostPerCard',
-      totalLabel: 'Notebook'
-    }
-  ];
-
-  const postProductionSections = [
-    { 
-      key: 'PRE_DC', 
-      label: 'Pre Die Cutting', 
-      serviceKey: 'preDieCutting', 
-      toggleField: 'isPreDieCuttingUsed',
-      bgColor: 'bg-purple-50',
-      items: [
-        { key: 'preDieCuttingMRCostPerCard', label: 'Pre Die Cutting MR Cost' },
-        { key: 'preDieCuttingImpressionCostPerCard', label: 'Pre Die Cutting Impression' }
-      ],
-      totalKey: 'preDieCuttingCostPerCard',
-      totalLabel: 'Pre Die Cutting'
-    },
-    { 
-      key: 'DC', 
-      label: 'Die Cutting', 
-      serviceKey: 'dieCutting', 
-      toggleField: 'isDieCuttingUsed',
-      bgColor: 'bg-purple-50',
-      items: [
-        { key: 'dieCuttingMRCostPerCard', label: 'Die Cutting MR Cost' },
-        { key: 'dieCuttingImpressionCostPerCard', label: 'Die Cutting Impression' }
-      ],
-      totalKey: 'dieCuttingCostPerCard',
-      totalLabel: 'Die Cutting'
-    },
-    { 
-      key: 'POST_DC', 
-      label: 'Post Die Cutting', 
-      serviceKey: 'postDC', 
-      toggleField: 'isPostDCUsed',
-      bgColor: 'bg-purple-50',
-      items: [
-        { key: 'postDCMRCostPerCard', label: 'Post DC MR Cost' },
-        { key: 'postDCImpressionCostPerCard', label: 'Post DC Impression' }
-      ],
-      totalKey: 'postDCCostPerCard',
-      totalLabel: 'Post Die Cutting'
-    },
-    { 
-      key: 'FOLD_PASTE', 
-      label: 'Fold and Paste', 
-      serviceKey: 'foldAndPaste', 
-      toggleField: 'isFoldAndPasteUsed',
-      bgColor: 'bg-purple-50',
-      totalKey: 'foldAndPasteCostPerCard',
-      totalLabel: 'Fold and Paste'
-    },
-    { 
-      key: 'DST_PASTE', 
-      label: 'DST Paste', 
-      serviceKey: 'dstPaste', 
-      toggleField: 'isDstPasteUsed',
-      bgColor: 'bg-purple-50',
-      totalKey: 'dstPasteCostPerCard',
-      totalLabel: 'DST Paste'
-    },
-    { 
-      key: 'QC', 
-      label: 'Quality Check', 
-      serviceKey: 'qc', 
-      toggleField: 'isQCUsed',
-      bgColor: 'bg-purple-50',
-      totalKey: 'qcCostPerCard',
-      totalLabel: 'Quality Check'
-    },
-    { 
-      key: 'PACKING', 
-      label: 'Packing', 
-      serviceKey: 'packing', 
-      toggleField: 'isPackingUsed',
-      bgColor: 'bg-purple-50',
-      totalKey: 'packingCostPerCard',
-      totalLabel: 'Packing',
-      meta: 'packingPercentage',
-      metaLabel: 'Packing: {}% of COGS'
-    },
-    { 
-      key: 'MISC', 
-      label: 'Miscellaneous', 
-      serviceKey: 'misc', 
-      toggleField: 'isMiscUsed',
-      bgColor: 'bg-purple-50',
-      totalKey: 'miscCostPerCard',
-      totalLabel: 'Miscellaneous'
-    },
-    { 
-      key: 'SANDWICH', 
-      label: 'Duplex/Sandwich', 
-      serviceKey: 'sandwich', 
-      toggleField: 'isSandwichComponentUsed',
-      bgColor: 'bg-purple-50',
-      items: [
-        { key: 'sandwichPaperCostPerCard', label: 'Sandwich Paper Cost' },
-        { key: 'lpCostPerCardSandwich', label: 'Sandwich LP Cost' },
-        { key: 'fsCostPerCardSandwich', label: 'Sandwich FS Cost' },
-        { key: 'embCostPerCardSandwich', label: 'Sandwich EMB Cost' }
-      ],
-      // Add a new metaItems array to display paper info
-      metaItems: [
-        { key: 'sandwichPaperName', label: 'Paper: ' }
-      ],
-      totalKey: 'sandwichCostPerCard',
-      totalLabel: 'Duplex/Sandwich'
-    }
-  ];
-
-  // Render a cost item row
-  const CostItem = ({ label, value, isSubItem = false, isTotal = false }) => {
+  // Compact cost item component
+  const CostItem = ({ label, value, isSubItem = false, isTotal = false, isHighlight = false }) => {
+    const formattedValue = parseFloat(value || 0).toFixed(2);
+    
     return (
       <div className={`
-        flex justify-between items-center py-1.5 px-2 rounded 
-        ${isTotal ? 'font-bold bg-blue-50' : isSubItem ? 'pl-6 text-sm' : 'bg-white'}
+        flex justify-between items-center py-1 px-2 text-sm rounded
+        ${isTotal ? 'font-semibold bg-blue-50 border-l-2 border-blue-400' : 
+          isHighlight ? 'font-medium bg-green-50 border-l-2 border-green-400' :
+          isSubItem ? 'pl-4 text-gray-600 bg-gray-25' : 'bg-white'}
       `}>
-        <span>{label}</span>
-        <span>{formatCurrency(value)}</span>
+        <span className="truncate pr-2">{label}</span>
+        <span className="font-mono whitespace-nowrap text-right">₹{formattedValue}</span>
       </div>
     );
   };
 
-  // Render a meta item (non-currency)
+  // Meta item for non-currency values
   const MetaItem = ({ label, value }) => {
     return (
-      <div className="pl-6 text-sm text-gray-600">
+      <div className="pl-4 text-xs text-gray-600">
         {label} {value}
-      </div>
-    );
-  };
-
-  // Render a section of costs
-  const renderCostSection = (section) => {
-    if (!shouldDisplaySection(section.serviceKey, section.toggleField)) {
-      return null;
-    }
-
-    return (
-      <div key={section.key} className="space-y-1 border-b pb-2 mb-2">
-        <CostItem 
-          label={section.totalLabel} 
-          value={calculations[section.totalKey]} 
-          isTotal 
-        />
-        
-        {section.items?.map(item => (
-          <CostItem 
-            key={item.key} 
-            label={item.label} 
-            value={calculations[item.key]} 
-            isSubItem 
-          />
-        ))}
-        
-        {section.metaItems?.map(item => (
-          <MetaItem 
-            key={item.key} 
-            label={item.label} 
-            value={calculations[item.key]} 
-          />
-        ))}
-        
-        {section.meta && calculations[section.meta] && (
-          <MetaItem 
-            label={section.metaLabel.replace('{}', calculations[section.meta])} 
-            value="" 
-          />
-        )}
       </div>
     );
   };
@@ -305,8 +50,8 @@ const CostDisplaySection = ({
     if (!calculations.paperAndCuttingCostPerCard) return null;
     
     return (
-      <div className="mb-4">
-        <h3 className="font-semibold text-gray-700 mb-2 pb-1 border-b">Paper and Cutting</h3>
+      <div className="mb-3">
+        <h4 className="font-medium text-gray-700 mb-1 text-sm border-b pb-1">Paper & Cutting</h4>
         <div className="space-y-1">
           {calculations.paperCostPerCard && (
             <CostItem label="Paper Cost" value={calculations.paperCostPerCard} isSubItem />
@@ -326,43 +71,301 @@ const CostDisplaySection = ({
     );
   };
 
-  // Render production services section
+  // Render production services section - ALL FIELDS COMPACT
   const renderProductionServices = () => {
-    // Check if any production services are enabled
-    const hasAnyProductionService = productionSections.some(section => 
-      shouldDisplaySection(section.serviceKey, section.toggleField)
-    );
-    
-    if (!hasAnyProductionService) {
-      return null;
+    let hasAnyProductionService = false;
+    const services = [];
+
+    // LP Section
+    if (shouldDisplaySection('lpDetails', 'isLPUsed') && calculations.lpCostPerCard) {
+      hasAnyProductionService = true;
+      services.push(
+        <div key="lp" className="space-y-1 mb-2">
+          <CostItem label="Letter Press (LP)" value={calculations.lpCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.lpPlateCostPerCard && <CostItem label="Plate" value={calculations.lpPlateCostPerCard} isSubItem />}
+            {calculations.lpImpressionCostPerCard && <CostItem label="Impression" value={calculations.lpImpressionCostPerCard} isSubItem />}
+            {calculations.lpPositiveFilmCostPerCard && <CostItem label="Positive Film" value={calculations.lpPositiveFilmCostPerCard} isSubItem />}
+            {calculations.lpMRCostPerCard && <CostItem label="MR Cost" value={calculations.lpMRCostPerCard} isSubItem />}
+            {calculations.lpMkgCostPerCard && <CostItem label="Making Cost" value={calculations.lpMkgCostPerCard} isSubItem />}
+            {calculations.lpInkCostPerCard && <CostItem label="Ink" value={calculations.lpInkCostPerCard} isSubItem />}
+          </div>
+        </div>
+      );
+    }
+
+    // FS Section
+    if (shouldDisplaySection('fsDetails', 'isFSUsed') && calculations.fsCostPerCard) {
+      hasAnyProductionService = true;
+      services.push(
+        <div key="fs" className="space-y-1 mb-2">
+          <CostItem label="Foil Stamping (FS)" value={calculations.fsCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.fsBlockCostPerCard && <CostItem label="Block" value={calculations.fsBlockCostPerCard} isSubItem />}
+            {calculations.fsFoilCostPerCard && <CostItem label="Foil" value={calculations.fsFoilCostPerCard} isSubItem />}
+            {calculations.fsMRCostPerCard && <CostItem label="MR Cost" value={calculations.fsMRCostPerCard} isSubItem />}
+            {calculations.fsImpressionCostPerCard && <CostItem label="Impression" value={calculations.fsImpressionCostPerCard} isSubItem />}
+            {calculations.fsFreightCostPerCard && <CostItem label="Freight" value={calculations.fsFreightCostPerCard} isSubItem />}
+          </div>
+        </div>
+      );
+    }
+
+    // EMB Section
+    if (shouldDisplaySection('embDetails', 'isEMBUsed') && calculations.embCostPerCard) {
+      hasAnyProductionService = true;
+      services.push(
+        <div key="emb" className="space-y-1 mb-2">
+          <CostItem label="Embossing (EMB)" value={calculations.embCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.embPlateCostPerCard && <CostItem label="Plate" value={calculations.embPlateCostPerCard} isSubItem />}
+            {calculations.embImpressionCostPerCard && <CostItem label="Impression" value={calculations.embImpressionCostPerCard} isSubItem />}
+            {calculations.embMRCostPerCard && <CostItem label="MR Cost" value={calculations.embMRCostPerCard} isSubItem />}
+            {calculations.embMkgPlateCostPerCard && <CostItem label="Making Plate" value={calculations.embMkgPlateCostPerCard} isSubItem />}
+            {calculations.embPositiveFilmCostPerCard && <CostItem label="Positive Film" value={calculations.embPositiveFilmCostPerCard} isSubItem />}
+            {calculations.embDstMaterialCostPerCard && parseFloat(calculations.embDstMaterialCostPerCard) > 0 && (
+              <CostItem label="DST Material" value={calculations.embDstMaterialCostPerCard} isSubItem />
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // Screen Print Section
+    if (shouldDisplaySection('screenPrint', 'isScreenPrintUsed') && calculations.screenPrintCostPerCard) {
+      hasAnyProductionService = true;
+      services.push(
+        <div key="screen" className="space-y-1 mb-2">
+          <CostItem label="Screen Printing" value={calculations.screenPrintCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.screenPrintPerPieceCost && <CostItem label="Per Piece" value={calculations.screenPrintPerPieceCost} isSubItem />}
+            {calculations.screenPrintBaseCostPerCard && <CostItem label="Base Cost" value={calculations.screenPrintBaseCostPerCard} isSubItem />}
+            {calculations.screenPrintMRCostPerCard && <CostItem label="MR Cost" value={calculations.screenPrintMRCostPerCard} isSubItem />}
+          </div>
+          {calculations.noOfColors && (
+            <MetaItem label="Colors:" value={calculations.noOfColors} />
+          )}
+        </div>
+      );
+    }
+
+    // Digital Printing Section
+    if (shouldDisplaySection('digiDetails', 'isDigiUsed') && calculations.digiCostPerCard) {
+      hasAnyProductionService = true;
+      services.push(
+        <div key="digi" className="space-y-1 mb-2">
+          <CostItem label="Digital Printing" value={calculations.digiCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.digiPrintCostPerCard && <CostItem label="Print Cost" value={calculations.digiPrintCostPerCard} isSubItem />}
+            {calculations.digiPaperCostPerCard && <CostItem label="Paper Cost" value={calculations.digiPaperCostPerCard} isSubItem />}
+            {calculations.digiGilCutCostPerCard && <CostItem label="Gil Cut" value={calculations.digiGilCutCostPerCard} isSubItem />}
+          </div>
+          {calculations.totalFragsPerSheet && (
+            <MetaItem label="Fragments per sheet:" value={calculations.totalFragsPerSheet} />
+          )}
+          {calculations.totalSheets && (
+            <MetaItem label="Total sheets:" value={calculations.totalSheets} />
+          )}
+        </div>
+      );
+    }
+
+    // Notebook Section
+    if (shouldDisplaySection('notebookDetails', 'isNotebookUsed') && calculations.notebookCostPerCard) {
+      hasAnyProductionService = true;
+      services.push(
+        <div key="notebook" className="space-y-1">
+          <CostItem label="Notebook" value={calculations.notebookCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.notebookPagesCostPerCard && <CostItem label="Pages" value={calculations.notebookPagesCostPerCard} isSubItem />}
+            {calculations.notebookBindingCostPerCard && <CostItem label="Binding" value={calculations.notebookBindingCostPerCard} isSubItem />}
+            {calculations.notebookGilCutCostPerCard && <CostItem label="Gil Cut" value={calculations.notebookGilCutCostPerCard} isSubItem />}
+          </div>
+          {calculations.possibleNumberOfForma && (
+            <MetaItem label="Forma per notebook:" value={calculations.possibleNumberOfForma} />
+          )}
+          {calculations.totalPages && (
+            <MetaItem label="Total pages:" value={calculations.totalPages} />
+          )}
+          {calculations.totalFormaRequired && (
+            <MetaItem label="Total forma required:" value={calculations.totalFormaRequired} />
+          )}
+          {calculations.totalSheets && (
+            <MetaItem label="Total sheets:" value={calculations.totalSheets} />
+          )}
+        </div>
+      );
     }
     
+    if (!hasAnyProductionService) return null;
+    
     return (
-      <div className="mb-4">
-        <h3 className="font-semibold text-gray-700 mb-2 pb-1 border-b">Production Services</h3>
-        <div className="space-y-3">
-          {productionSections.map(section => renderCostSection(section))}
+      <div className="mb-3">
+        <h4 className="font-medium text-gray-700 mb-1 text-sm border-b pb-1">Production Services</h4>
+        <div className="space-y-2">
+          {services}
         </div>
       </div>
     );
   };
 
-  // Render post-production services section
+  // Render post-production services section - ALL FIELDS COMPACT
   const renderPostProductionServices = () => {
-    // Check if any post-production services are enabled
-    const hasAnyPostProductionService = postProductionSections.some(section => 
-      shouldDisplaySection(section.serviceKey, section.toggleField)
-    );
-    
-    if (!hasAnyPostProductionService) {
-      return null;
+    let hasAnyPostProductionService = false;
+    const services = [];
+
+    // Pre Die Cutting
+    if (shouldDisplaySection('preDieCutting', 'isPreDieCuttingUsed') && calculations.preDieCuttingCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="predc" className="space-y-1 mb-2">
+          <CostItem label="Pre Die Cutting" value={calculations.preDieCuttingCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.preDieCuttingMRCostPerCard && <CostItem label="MR Cost" value={calculations.preDieCuttingMRCostPerCard} isSubItem />}
+            {calculations.preDieCuttingImpressionCostPerCard && <CostItem label="Impression" value={calculations.preDieCuttingImpressionCostPerCard} isSubItem />}
+          </div>
+        </div>
+      );
+    }
+
+    // Die Cutting
+    if (shouldDisplaySection('dieCutting', 'isDieCuttingUsed') && calculations.dieCuttingCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="dc" className="space-y-1 mb-2">
+          <CostItem label="Die Cutting" value={calculations.dieCuttingCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.dieCuttingMRCostPerCard && <CostItem label="MR Cost" value={calculations.dieCuttingMRCostPerCard} isSubItem />}
+            {calculations.dieCuttingImpressionCostPerCard && <CostItem label="Impression" value={calculations.dieCuttingImpressionCostPerCard} isSubItem />}
+          </div>
+        </div>
+      );
+    }
+
+    // Post Die Cutting
+    if (shouldDisplaySection('postDC', 'isPostDCUsed') && calculations.postDCCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="postdc" className="space-y-1 mb-2">
+          <CostItem label="Post Die Cutting" value={calculations.postDCCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.postDCMRCostPerCard && <CostItem label="MR Cost" value={calculations.postDCMRCostPerCard} isSubItem />}
+            {calculations.postDCImpressionCostPerCard && <CostItem label="Impression" value={calculations.postDCImpressionCostPerCard} isSubItem />}
+          </div>
+        </div>
+      );
+    }
+
+    // Fold and Paste
+    if (shouldDisplaySection('foldAndPaste', 'isFoldAndPasteUsed') && calculations.foldAndPasteCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="foldpaste" className="space-y-1 mb-2">
+          <CostItem label="Fold and Paste" value={calculations.foldAndPasteCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.dstMaterialCostPerCard && <CostItem label="DST Material" value={calculations.dstMaterialCostPerCard} isSubItem />}
+            {calculations.foldAndPasteOperationCostPerCard && <CostItem label="Operation" value={calculations.foldAndPasteOperationCostPerCard} isSubItem />}
+          </div>
+          {calculations.fragsPerDie && (
+            <MetaItem label="Fragments per die:" value={calculations.fragsPerDie} />
+          )}
+        </div>
+      );
+    }
+
+    // DST Paste
+    if (shouldDisplaySection('dstPaste', 'isDstPasteUsed') && calculations.dstPasteCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="dstpaste" className="space-y-1 mb-2">
+          <CostItem label="DST Paste" value={calculations.dstPasteCostPerCard} isTotal />
+          {calculations.dstType && (
+            <MetaItem label="DST Type:" value={calculations.dstType} />
+          )}
+          {calculations.fragsPerDie && (
+            <MetaItem label="Fragments per die:" value={calculations.fragsPerDie} />
+          )}
+        </div>
+      );
+    }
+
+    // Magnet
+    if (shouldDisplaySection('magnet', 'isMagnetUsed') && calculations.magnetCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="magnet" className="space-y-1 mb-2">
+          <CostItem label="Magnet" value={calculations.magnetCostPerCard} isTotal />
+          {calculations.plateArea && (
+            <MetaItem label="Plate Area:" value={`${calculations.plateArea} cm²`} />
+          )}
+          {calculations.fragsPerDie && (
+            <MetaItem label="Fragments per die:" value={calculations.fragsPerDie} />
+          )}
+        </div>
+      );
+    }
+
+    // QC
+    if (shouldDisplaySection('qc', 'isQCUsed') && calculations.qcCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <CostItem key="qc" label="Quality Check" value={calculations.qcCostPerCard} isTotal />
+      );
+    }
+
+    // Packing
+    if (shouldDisplaySection('packing', 'isPackingUsed') && calculations.packingCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="packing" className="space-y-1 mb-2">
+          <CostItem label="Packing" value={calculations.packingCostPerCard} isTotal />
+          {calculations.packingPercentage && (
+            <MetaItem label={`Packing: ${calculations.packingPercentage}% of COGS`} value="" />
+          )}
+        </div>
+      );
+    }
+
+    // Misc
+    if (shouldDisplaySection('misc', 'isMiscUsed') && calculations.miscCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="misc" className="space-y-1 mb-2">
+          <CostItem label="Miscellaneous" value={calculations.miscCostPerCard} isTotal />
+          {calculations.miscChargeSource === "user" && (
+            <MetaItem label="Custom charge" value="" />
+          )}
+          {calculations.miscChargeSource === "database" && (
+            <MetaItem label="Standard charge" value="" />
+          )}
+        </div>
+      );
+    }
+
+    // Sandwich/Duplex
+    if (shouldDisplaySection('sandwich', 'isSandwichComponentUsed') && calculations.sandwichCostPerCard) {
+      hasAnyPostProductionService = true;
+      services.push(
+        <div key="sandwich" className="space-y-1">
+          <CostItem label="Duplex/Sandwich" value={calculations.sandwichCostPerCard} isTotal />
+          <div className="grid grid-cols-3 gap-1">
+            {calculations.sandwichPaperCostPerCard && <CostItem label="Paper" value={calculations.sandwichPaperCostPerCard} isSubItem />}
+            {calculations.sandwichGilCutCostPerCard && <CostItem label="Gil Cut" value={calculations.sandwichGilCutCostPerCard} isSubItem />}
+            {calculations.lpCostPerCardSandwich && <CostItem label="LP" value={calculations.lpCostPerCardSandwich} isSubItem />}
+            {calculations.fsCostPerCardSandwich && <CostItem label="FS" value={calculations.fsCostPerCardSandwich} isSubItem />}
+            {calculations.embCostPerCardSandwich && <CostItem label="EMB" value={calculations.embCostPerCardSandwich} isSubItem />}
+          </div>
+        </div>
+      );
     }
     
+    if (!hasAnyPostProductionService) return null;
+    
     return (
-      <div className="mb-4">
-        <h3 className="font-semibold text-gray-700 mb-2 pb-1 border-b">Post-Production Services</h3>
-        <div className="space-y-3">
-          {postProductionSections.map(section => renderCostSection(section))}
+      <div className="mb-3">
+        <h4 className="font-medium text-gray-700 mb-1 text-sm border-b pb-1">Post-Production</h4>
+        <div className="space-y-2">
+          {services}
         </div>
       </div>
     );
@@ -373,23 +376,23 @@ const CostDisplaySection = ({
     if (!calculations.baseCost) return null;
     
     return (
-      <div className="mb-4">
-        <h3 className="font-semibold text-gray-700 mb-2 pb-1 border-b">Wastage and Overhead</h3>
+      <div className="mb-3">
+        <h4 className="font-medium text-gray-700 mb-1 text-sm border-b pb-1">Wastage & Overhead</h4>
         <div className="space-y-1">
           <CostItem label="Base Cost" value={calculations.baseCost} />
           
           {calculations.wastagePercentage && (
-            <div className="flex justify-between items-center py-1.5 px-2">
-              <span>Wastage ({calculations.wastagePercentage}%)</span>
-              <span>{formatCurrency(calculations.wastageAmount)}</span>
-            </div>
+            <CostItem 
+              label={`Wastage (${calculations.wastagePercentage}%)`} 
+              value={calculations.wastageAmount || 0} 
+            />
           )}
           
           {calculations.overheadPercentage && (
-            <div className="flex justify-between items-center py-1.5 px-2">
-              <span>Overhead ({calculations.overheadPercentage}%)</span>
-              <span>{formatCurrency(calculations.overheadAmount)}</span>
-            </div>
+            <CostItem 
+              label={`Overhead (${calculations.overheadPercentage}%)`} 
+              value={calculations.overheadAmount || 0} 
+            />
           )}
           
           <CostItem 
@@ -402,7 +405,7 @@ const CostDisplaySection = ({
     );
   };
 
-  // NEW: Render loyalty discount section
+  // Render loyalty discount section
   const renderLoyaltyDiscount = () => {
     if (!calculations.loyaltyDiscount || !calculations.loyaltyDiscountAmount) {
       return null;
@@ -410,7 +413,7 @@ const CostDisplaySection = ({
     
     return (
       <div className="mt-2 border-t border-blue-100 pt-2">
-        <div className="flex justify-between items-center text-blue-700">
+        <div className="flex justify-between items-center text-blue-700 text-sm">
           <span className="font-medium">
             B2B Loyalty Discount ({calculations.loyaltyTierName || 'Member'}: {calculations.loyaltyDiscount}%):
           </span>
@@ -421,8 +424,8 @@ const CostDisplaySection = ({
         
         {calculations.discountedTotalCost && (
           <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-            <span className="text-lg font-bold text-gray-700">Discounted Total:</span>
-            <span className="text-lg font-bold text-blue-700">
+            <span className="font-bold text-gray-700">Discounted Total:</span>
+            <span className="font-bold text-blue-700">
               {formatCurrency(calculations.discountedTotalCost)}
             </span>
           </div>
@@ -431,175 +434,112 @@ const CostDisplaySection = ({
     );
   };
 
-  // Render cost summary
+  // Compact cost summary for admin view
   const renderCostSummary = () => {
-    const calculations = data.calculations;
     if (!calculations) return null;
     
     return (
-      <div className="mt-6 bg-gray-50 p-4 rounded-md border">
-        <h3 className="text-md font-semibold text-gray-700 mb-2">Cost Summary</h3>
+      <div className="mt-4 bg-gradient-to-r from-gray-50 to-gray-100 p-3 rounded border border-gray-200">
+        <h4 className="text-sm font-semibold text-gray-700 mb-2">Summary</h4>
         
-        <div className="space-y-2">
-          <div className="flex justify-between items-center">
-            <span className="font-medium text-gray-700">Subtotal per Item:</span>
-            <span className="text-gray-900">
-              {formatCurrency(calculations.subtotalPerCard)}
-            </span>
+        <div className="space-y-1">
+          <div className="flex justify-between text-sm">
+            <span>Subtotal per Item:</span>
+            <span className="font-mono">{formatCurrency(calculations.subtotalPerCard)}</span>
           </div>
           
-          <div className="flex justify-between items-center text-blue-700 border-t border-gray-300 pt-2 mt-2">
-            <span className="font-medium">
-              Markup ({calculations.markupType?.replace('MARKUP ', '') || 'Standard'}: {calculations.markupPercentage || 0}%):
-            </span>
-            <span className="font-medium">
-              {formatCurrency(calculations.markupAmount)}
-            </span>
+          <div className="flex justify-between text-sm text-blue-600">
+            <span>Markup ({calculations.markupPercentage || 0}%):</span>
+            <span className="font-mono">{formatCurrency(calculations.markupAmount)}</span>
           </div>
           
-          <div className="flex justify-between items-center border-t border-gray-300 pt-2 mt-2">
-            <span className="text-lg font-bold text-gray-700">Total Cost per Item:</span>
-            <span className="text-lg font-bold text-gray-900">
-              {formatCurrency(calculations.totalCostPerCard)}
-            </span>
+          <div className="flex justify-between font-semibold border-t pt-1">
+            <span>Cost per Item:</span>
+            <span className="font-mono">{formatCurrency(calculations.totalCostPerCard)}</span>
+          </div>
+          
+          <div className="flex justify-between font-semibold text-lg border-t pt-1 mt-1">
+            <span>Total ({data.jobDetails?.quantity || 0} pcs):</span>
+            <span className="font-mono text-blue-600">{formatCurrency(calculations.totalCost)}</span>
+          </div>
+          
+          {renderLoyaltyDiscount()}
+          
+          <div className="flex justify-between text-green-600">
+            <span>GST ({calculations.gstRate || 18}%):</span>
+            <span className="font-mono">{formatCurrency(calculations.gstAmount)}</span>
+          </div>
+          
+          <div className="flex justify-between font-bold border-t pt-1 text-green-700">
+            <span>Total with GST:</span>
+            <span className="font-mono">{formatCurrency(calculations.totalWithGST)}</span>
           </div>
         </div>
-        
-        <div className="flex justify-between items-center pt-3 border-t border-gray-300 mt-2">
-          <span className="text-lg font-bold text-gray-700">
-            Total Cost ({data.jobDetails?.quantity || 0} pcs):
-          </span>
-          <span className="text-xl font-bold text-blue-600">
-            {formatCurrency(calculations.totalCost)}
-          </span>
-        </div>
-        
-        {/* NEW: Loyalty Discount Section */}
-        {renderLoyaltyDiscount()}
-        
-        {/* GST Section */}
-        {calculations.gstRate && (
-          <div className="flex justify-between items-center text-green-700 border-t border-gray-300 pt-2 mt-2">
-            <span className="font-medium">
-              GST ({calculations.gstRate || 18}%):
-            </span>
-            <span className="font-medium">
-              {formatCurrency(calculations.gstAmount)}
-            </span>
-          </div>
-        )}
-        
-        {/* Final Total with GST */}
-        {calculations.totalWithGST && (
-          <div className="flex justify-between items-center border-t-2 border-gray-300 pt-3 mt-3">
-            <span className="text-xl font-bold text-gray-700">
-              Total with GST:
-            </span>
-            <span className="text-xl font-bold text-green-600">
-              {formatCurrency(calculations.totalWithGST)}
-            </span>
-          </div>
-        )}
       </div>
     );
   };
 
-  // Simplified B2B cost view
+  // Compact B2B cost summary
   const renderSimplifiedCostSummary = () => {
-    const calculations = data.calculations;
     if (!calculations) return null;
     
     const totalCostPerCard = parseFloat(calculations.totalCostPerCard || 0);
     const quantity = parseInt(data.jobDetails?.quantity || 0);
     const totalCost = parseFloat(calculations.totalCost || 0);
-    
-    // Get GST info if available
     const gstRate = calculations.gstRate || 18;
     const gstAmount = parseFloat(calculations.gstAmount || 0);
     const totalWithGST = parseFloat(calculations.totalWithGST || totalCost + gstAmount);
     
-    // Get markup info if available
-    const markupPercentage = calculations.markupPercentage || 0;
-    const markupType = calculations.markupType || 'Standard';
-    
-    // NEW: Get loyalty discount info
     const hasLoyaltyDiscount = calculations.loyaltyDiscount && calculations.loyaltyDiscountAmount;
     const loyaltyDiscount = hasLoyaltyDiscount ? parseFloat(calculations.loyaltyDiscount) : 0;
     const loyaltyDiscountAmount = hasLoyaltyDiscount ? parseFloat(calculations.loyaltyDiscountAmount) : 0;
     const discountedTotal = hasLoyaltyDiscount ? parseFloat(calculations.discountedTotalCost) : totalCost;
     
     return (
-      <div className="mt-6 bg-blue-50 p-4 rounded-md border border-blue-200">
-        <h3 className="text-lg font-bold text-gray-800 mb-4">Cost Summary</h3>
+      <div className="mt-4 bg-gradient-to-r from-blue-50 to-indigo-50 p-3 rounded border border-blue-200">
+        <h4 className="text-md font-semibold text-gray-800 mb-2">Cost Summary</h4>
         
-        <div className="space-y-4">
-          <div className="flex justify-between items-center text-lg">
-            <span className="font-medium">Unit Cost:</span>
-            <span className="font-bold">
-              {formatCurrency(totalCostPerCard)}
-            </span>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+          <div className="bg-white p-2 rounded">
+            <div className="text-xs text-gray-600">Cost per Item</div>
+            <div className="text-lg font-bold text-gray-800">{formatCurrency(totalCostPerCard)}</div>
           </div>
           
-          <div className="flex justify-between items-center pt-3 border-t border-blue-300 text-xl">
-            <span className="font-bold text-gray-700">
-              Total ({quantity} pcs):
-            </span>
-            <span className="font-bold text-blue-700">
-              {formatCurrency(totalCost)}
-            </span>
+          <div className="bg-white p-2 rounded">
+            <div className="text-xs text-gray-600">Total ({quantity} pcs)</div>
+            <div className="text-lg font-bold text-blue-700">{formatCurrency(totalCost)}</div>
           </div>
           
-          {/* NEW: B2B Loyalty Discount Section */}
           {hasLoyaltyDiscount && (
             <>
-              <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-3">
-                <span className="font-medium text-green-700">
-                  Your Loyalty Discount ({loyaltyDiscount}%):
-                </span>
-                <span className="font-bold text-green-700">
-                  -{formatCurrency(loyaltyDiscountAmount)}
-                </span>
+              <div className="bg-green-50 p-2 rounded border border-green-200">
+                <div className="text-xs text-green-700">Loyalty Discount ({loyaltyDiscount}%)</div>
+                <div className="text-md font-bold text-green-700">-{formatCurrency(loyaltyDiscountAmount)}</div>
               </div>
               
-              <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-2">
-                <span className="font-medium">Discounted Total:</span>
-                <span className="font-bold text-blue-700">
-                  {formatCurrency(discountedTotal)}
-                </span>
+              <div className="bg-white p-2 rounded">
+                <div className="text-xs text-gray-600">Discounted Total</div>
+                <div className="text-lg font-bold text-blue-700">{formatCurrency(discountedTotal)}</div>
               </div>
             </>
           )}
           
-          {/* GST Section for B2B View */}
-          <div className="flex justify-between items-center text-lg border-t border-blue-300 pt-3 mt-2">
-            <span className="font-medium">GST ({gstRate}%):</span>
-            <span className="font-bold">
-              {formatCurrency(gstAmount)}
-            </span>
+          <div className="bg-white p-2 rounded">
+            <div className="text-xs text-gray-600">GST ({gstRate}%)</div>
+            <div className="text-md font-semibold text-green-600">{formatCurrency(gstAmount)}</div>
           </div>
-
-          <div className="flex justify-between items-center pt-2 text-xl">
-            <span className="font-bold text-gray-800">
-              Total with GST:
-            </span>
-            <span className="font-bold text-green-700">
-              {formatCurrency(totalWithGST)}
-            </span>
+          
+          <div className="bg-gradient-to-r from-green-100 to-green-50 p-2 rounded border border-green-200">
+            <div className="text-xs text-gray-700 font-medium">Total with GST</div>
+            <div className="text-lg font-bold text-green-700">{formatCurrency(totalWithGST)}</div>
           </div>
         </div>
-        
-        {/* Hidden markup info - display read-only for transparency */}
-        {markupType && markupType.includes('B2B') && (
-          <div className="mt-4 pt-3 border-t border-blue-200 text-sm text-gray-600">
-            <p>Using B2B pricing ({markupPercentage}% markup)</p>
-          </div>
-        )}
       </div>
     );
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-2">
       {/* For detailed costs view */}
       {canViewDetailedCosts && (
         <>

@@ -28,7 +28,7 @@ export const AuthProvider = ({ children }) => {
   const [userDisplayName, setUserDisplayName] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Register a new user
+  // Register a new user (keeping for compatibility, but not used in new flow)
   const register = async (email, password, displayName, role = "staff") => {
     try {
       const userCredential = await createUserWithEmailAndPassword(auth, email, password);
@@ -38,7 +38,8 @@ export const AuthProvider = ({ children }) => {
         displayName: displayName || email.split('@')[0], // Use part of email as display name if none provided
         role,
         createdAt: new Date().toISOString(),
-        isActive: true
+        isActive: true,
+        hasAccount: true
       });
       return userCredential;
     } catch (error) {
@@ -47,82 +48,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // NEW: Create user without affecting admin session
-  const createUserWithoutSignIn = async (userData, adminCredentials) => {
-    try {
-      console.log("Creating user without signing in...");
-      
-      // Generate a temporary password
-      const tempPassword = generateTempPassword();
-      
-      // Store current admin auth state
-      const currentAuth = getAuth();
-      const adminUser = currentAuth.currentUser;
-      
-      if (!adminUser) {
-        throw new Error("Admin user not authenticated");
-      }
-      
-      // Create secondary auth instance for user creation
-      const secondaryAuth = getAuth();
-      
-      // Create the user account
-      const userCredential = await createUserWithEmailAndPassword(
-        secondaryAuth, 
-        userData.email, 
-        tempPassword
-      );
-      
-      // Create user document in Firestore
-      await setDoc(doc(db, "users", userCredential.user.uid), {
-        email: userData.email,
-        displayName: userData.displayName,
-        role: userData.role,
-        phoneNumber: userData.phoneNumber || null,
-        isActive: true,
-        createdAt: new Date().toISOString(),
-        createdBy: adminUser.uid,
-        updatedAt: new Date().toISOString(),
-        
-        // Credential management
-        temporaryPassword: tempPassword,
-        passwordCreatedAt: new Date().toISOString(),
-        
-        // Stats
-        loginCount: 0,
-        lastLoginAt: null
-      });
-      
-      // Re-authenticate admin to ensure session is maintained
-      await signInWithEmailAndPassword(currentAuth, adminCredentials.email, adminCredentials.password);
-      
-      return {
-        user: userCredential.user,
-        temporaryPassword: tempPassword,
-        userData: userData
-      };
-      
-    } catch (error) {
-      console.error("Error creating user without sign in:", error);
-      throw error;
-    }
-  };
-
-  // NEW: Generate temporary password
-  const generateTempPassword = () => {
-    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
-    let password = "";
-    
-    // Generate an 8-character password
-    for (let i = 0; i < 8; i++) {
-      const randomIndex = Math.floor(Math.random() * chars.length);
-      password += chars[randomIndex];
-    }
-    
-    return password;
-  };
-
-  // NEW: Send password reset email for users
+  // Send password reset email for users
   const sendUserPasswordReset = async (email) => {
     try {
       await sendPasswordResetEmail(auth, email);
@@ -133,7 +59,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // NEW: Update user status (activate/deactivate)
+  // Update user status (activate/deactivate)
   const updateUserStatus = async (userId, isActive, reason = null) => {
     try {
       const updateData = {
@@ -155,7 +81,7 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // NEW: Update user profile
+  // Update user profile
   const updateUserProfile = async (userId, profileData) => {
     try {
       await updateDoc(doc(db, "users", userId), {
@@ -170,34 +96,15 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // NEW: Generate new temporary password for existing user
-  const generateNewTempPassword = async (userId, adminCredentials) => {
-    try {
-      // Verify admin credentials first
-      await signInWithEmailAndPassword(auth, adminCredentials.email, adminCredentials.password);
-      
-      const newTempPassword = generateTempPassword();
-      
-      await updateDoc(doc(db, "users", userId), {
-        temporaryPassword: newTempPassword,
-        passwordCreatedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        updatedBy: currentUser?.uid
-      });
-      
-      return newTempPassword;
-    } catch (error) {
-      console.error("Error generating new temp password:", error);
-      throw error;
-    }
-  };
-
-  // NEW: Record user login (call this from login success)
+  // Record user login (call this from login success)
   const recordUserLogin = async (userId) => {
     try {
+      const userDoc = await getDoc(doc(db, "users", userId));
+      const currentLoginCount = userDoc.exists() ? (userDoc.data()?.loginCount || 0) : 0;
+      
       await updateDoc(doc(db, "users", userId), {
         lastLoginAt: new Date().toISOString(),
-        loginCount: (await getDoc(doc(db, "users", userId))).data()?.loginCount + 1 || 1
+        loginCount: currentLoginCount + 1
       });
     } catch (error) {
       console.error("Error recording user login:", error);
@@ -278,7 +185,7 @@ export const AuthProvider = ({ children }) => {
       // Change password
       await updatePassword(currentUser, newPassword);
       
-      // Clear temporary password if it exists - THIS IS THE KEY FIX
+      // Clear temporary password if it exists
       await updateDoc(doc(db, "users", currentUser.uid), {
         temporaryPassword: null,
         passwordCreatedAt: null,
@@ -366,12 +273,10 @@ export const AuthProvider = ({ children }) => {
     hasRole,
     updateUserDisplayName,
     
-    // NEW: User management methods
-    createUserWithoutSignIn,
+    // User management methods
     sendUserPasswordReset,
     updateUserStatus,
     updateUserProfile,
-    generateNewTempPassword,
     recordUserLogin
   };
 

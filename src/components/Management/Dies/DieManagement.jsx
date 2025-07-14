@@ -27,7 +27,9 @@ const DieManagement = () => {
     status: "success"
   });
 
-  // Check if user is admin
+  // Check if user has access (admin or staff)
+  const hasAccess = userRole === "admin" || userRole === "staff";
+  const canView = userRole === "accountant";
   const isAdmin = userRole === "admin";
 
   // Die statistics
@@ -85,7 +87,7 @@ const DieManagement = () => {
   };
 
   const addDie = async (newDie) => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     if (!newDie.dieCode) {
       throw new Error("Die code is required.");
     }
@@ -138,7 +140,7 @@ const DieManagement = () => {
   };
 
   const updateDie = async (id, updatedData) => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     if (!updatedData.dieCode) {
       throw new Error("Die code is required.");
     }
@@ -196,14 +198,14 @@ const DieManagement = () => {
   };
 
   const handleAddClick = () => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     
     setSelectedDie(null); // Ensure we're not in edit mode
     setIsFormModalOpen(true);
   };
 
   const handleEditClick = (die) => {
-    if (!isAdmin) return;
+    if (!hasAccess) return;
     
     const { price, ...dieData } = die; // Remove price field if it exists
     setSelectedDie({...dieData}); // Make a copy to ensure we don't modify the original
@@ -216,7 +218,7 @@ const DieManagement = () => {
   };
 
   const confirmDelete = (id) => {
-    if (!isAdmin) return;
+    if (!isAdmin) return; // Only admin can delete
     
     setDeleteConfirmation({
       isOpen: true,
@@ -286,7 +288,7 @@ const DieManagement = () => {
   };
 
   // Redirect non-authorized users
-  if (!isAdmin && userRole !== "staff") {
+  if (!hasAccess && !canView) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
@@ -348,7 +350,7 @@ const DieManagement = () => {
         </div>
         
         <div>
-          {isAdmin && (
+          {hasAccess && (
             <button 
               onClick={handleAddClick}
               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors flex items-center"
@@ -362,17 +364,17 @@ const DieManagement = () => {
         </div>
       </div>
 
-      {/* Table component - visible to all users */}
+      {/* Table component - visible to all users with access */}
       <div className="overflow-hidden">
         <DisplayDieTable
           dies={dies}
-          onEditDie={isAdmin ? handleEditClick : null}
+          onEditDie={hasAccess ? handleEditClick : null}
           onDeleteDie={isAdmin ? confirmDelete : null}
         />
       </div>
 
-      {/* Modals - only rendered for admins */}
-      {isAdmin && (
+      {/* Modals - only rendered for users with access */}
+      {hasAccess && (
         <>
           {/* Modal for adding/editing die */}
           <Modal
@@ -392,12 +394,15 @@ const DieManagement = () => {
             />
           </Modal>
 
-          <DeleteConfirmationModal
-            isOpen={deleteConfirmation.isOpen}
-            onClose={closeDeleteModal}
-            onConfirm={handleDeleteConfirm}
-            itemName="die"
-          />
+          {/* Delete confirmation modal - only for admins */}
+          {isAdmin && (
+            <DeleteConfirmationModal
+              isOpen={deleteConfirmation.isOpen}
+              onClose={closeDeleteModal}
+              onConfirm={handleDeleteConfirm}
+              itemName="die"
+            />
+          )}
           
           <ConfirmationModal
             isOpen={notification.isOpen}

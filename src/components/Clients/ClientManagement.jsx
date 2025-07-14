@@ -8,7 +8,6 @@ import ClientImportantDatesModal from "./ClientImportantDatesModal";
 import ImportantDatesWidget from "./ImportantDatesWidget";
 import { useAuth } from "../Login/AuthContext";
 import B2BCredentialsManager from "./B2BCredentialsManager";
-import AdminPasswordModal from "./AdminPasswordModal";
 import ActivateClientModal from "./ActivateClientModal";
 import Modal from "../Shared/Modal";
 import ConfirmationModal from "../Shared/ConfirmationModal";
@@ -41,11 +40,6 @@ const ClientManagement = () => {
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { userRole, currentUser } = useAuth();
-  const [adminCredentials, setAdminCredentials] = useState(null);
-  
-  // Modal state for admin password
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [pendingClient, setPendingClient] = useState(null);
   const [clientToActivate, setClientToActivate] = useState(null);
 
   // State for notifications/confirmation modals
@@ -154,25 +148,6 @@ const ClientManagement = () => {
 
     return () => unsubscribe();
   }, []);
-
-  // Store admin credentials for re-authentication
-  const handleAdminPasswordConfirm = (password) => {
-    if (currentUser && currentUser.email && password) {
-      setAdminCredentials({
-        email: currentUser.email,
-        password: password
-      });
-      setShowPasswordModal(false);
-      
-      // Now that we have the credentials, open the B2B credentials modal
-      setSelectedClientForAuth(pendingClient);
-    }
-  };
-
-  const handleAdminPasswordCancel = () => {
-    setShowPasswordModal(false);
-    setPendingClient(null);
-  };
 
   const handleAddClick = () => {
     setSelectedClient(null); // Ensure we're not in edit mode
@@ -522,16 +497,14 @@ const ClientManagement = () => {
     // The page will be reloaded by the ActivateClientModal
   };
 
+  // UPDATED: Direct credentials management without password requirement
   const handleManageCredentials = (client) => {
-    // Store the client and show the password modal
-    setPendingClient(client);
-    setShowPasswordModal(true);
+    // Directly open credentials manager without password verification
+    setSelectedClientForAuth(client);
   };
 
   const handleCredentialManagerClose = () => {
     setSelectedClientForAuth(null);
-    // Clear admin credentials for security
-    setAdminCredentials(null);
     
     // Make sure we stay on the clients page
     window.history.pushState({}, "", "/clients");
@@ -660,7 +633,7 @@ const ClientManagement = () => {
   const isAdmin = userRole === "admin";
 
   // Redirect non-authorized users
-  if (!isAdmin && userRole !== "staff") {
+  if (!isAdmin && userRole !== "staff" && userRole !== "accountant") {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
@@ -807,23 +780,18 @@ const ClientManagement = () => {
         />
       )}
 
-      {/* B2B Client Credentials Manager Modal */}
+      {/* B2B Client Credentials Manager Modal - UPDATED: No password required */}
       {selectedClientForAuth && (
         <B2BCredentialsManager
           client={selectedClientForAuth}
           onClose={handleCredentialManagerClose}
           onSuccess={handleClientUpdateAfterAuth}
-          adminCredentials={adminCredentials}
+          adminCredentials={{ 
+            email: currentUser?.email || "", 
+            password: "auto-approved" // Bypass password verification
+          }}
         />
       )}
-
-      {/* Admin Password Modal */}
-      <AdminPasswordModal
-        isOpen={showPasswordModal}
-        onConfirm={handleAdminPasswordConfirm}
-        onCancel={handleAdminPasswordCancel}
-        adminEmail={currentUser?.email || ""}
-      />
 
       {/* Activate Client Modal */}
       {clientToActivate && (
