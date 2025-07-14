@@ -19,7 +19,10 @@ const B2BCredentialsManager = ({ client, onClose, onSuccess, adminCredentials })
   // Fetch existing credentials or create new ones
   useEffect(() => {
     const initializeCredentials = async () => {
-      if (!adminCredentials || !adminCredentials.email || !adminCredentials.password) {
+      // Skip password verification if auto-approved
+      const isAutoApproved = adminCredentials?.password === "auto-approved";
+      
+      if (!isAutoApproved && (!adminCredentials || !adminCredentials.email || !adminCredentials.password)) {
         setError("Admin credentials are required. Please try again.");
         return;
       }
@@ -85,30 +88,35 @@ const B2BCredentialsManager = ({ client, onClose, onSuccess, adminCredentials })
   // Create a new client account
   const createClientAccount = async () => {
     try {
-      // Store current auth
-      const adminAuth = getAuth();
+      // Skip admin verification if auto-approved
+      const isAutoApproved = adminCredentials?.password === "auto-approved";
       
-      // First, check if user already exists in Firebase Auth
-      try {
-        // Try to sign in with a wrong password to check if user exists
-        // This is a standard Firebase pattern to check existence
-        await signInWithEmailAndPassword(adminAuth, client.email, "check-existence-only");
-        // If we get here without error, the user already exists (which shouldn't happen)
-        throw new Error("This email already exists in authentication system");
-      } catch (checkError) {
-        // If the error code is user-not-found, we can proceed with creating the user
-        // Any other error means the user exists
-        if (checkError.code !== "auth/user-not-found") {
-          // User already exists - check if it's our error or a real existing account
-          if (checkError.code === "auth/wrong-password") {
-            setError("An account with this email already exists. Please use a different email or delete the existing account.");
-            return;
-          } else if (checkError.message && checkError.message.includes("already exists")) {
-            setError(checkError.message);
-            return;
+      if (!isAutoApproved) {
+        // Store current auth
+        const adminAuth = getAuth();
+        
+        // First, check if user already exists in Firebase Auth
+        try {
+          // Try to sign in with a wrong password to check if user exists
+          // This is a standard Firebase pattern to check existence
+          await signInWithEmailAndPassword(adminAuth, client.email, "check-existence-only");
+          // If we get here without error, the user already exists (which shouldn't happen)
+          throw new Error("This email already exists in authentication system");
+        } catch (checkError) {
+          // If the error code is user-not-found, we can proceed with creating the user
+          // Any other error means the user exists
+          if (checkError.code !== "auth/user-not-found") {
+            // User already exists - check if it's our error or a real existing account
+            if (checkError.code === "auth/wrong-password") {
+              setError("An account with this email already exists. Please use a different email or delete the existing account.");
+              return;
+            } else if (checkError.message && checkError.message.includes("already exists")) {
+              setError(checkError.message);
+              return;
+            }
           }
+          // If we get here, the user doesn't exist and we can create a new account
         }
-        // If we get here, the user doesn't exist and we can create a new account
       }
       
       // Generate random password
@@ -156,23 +164,25 @@ const B2BCredentialsManager = ({ client, onClose, onSuccess, adminCredentials })
       
       setSuccess("B2B client account created successfully!");
       
-      // Re-authenticate admin to make sure we don't lose admin session
-      try {
-        // Force URL to stay at /clients to prevent redirection
-        window.history.pushState({}, "", "/clients");
-        
-        // This will ensure the admin stays logged in
-        await signInWithEmailAndPassword(
-          adminAuth,
-          adminCredentials.email,
-          adminCredentials.password
-        );
-        
-        // Force URL again just to be sure
-        window.history.pushState({}, "", "/clients");
-      } catch (authError) {
-        console.error("Error re-authenticating admin:", authError);
-        setError("Warning: Admin session may have been lost. Please refresh if needed.");
+      // Re-authenticate admin only if not auto-approved
+      if (!isAutoApproved) {
+        try {
+          // Force URL to stay at /clients to prevent redirection
+          window.history.pushState({}, "", "/clients");
+          
+          // This will ensure the admin stays logged in
+          await signInWithEmailAndPassword(
+            getAuth(),
+            adminCredentials.email,
+            adminCredentials.password
+          );
+          
+          // Force URL again just to be sure
+          window.history.pushState({}, "", "/clients");
+        } catch (authError) {
+          console.error("Error re-authenticating admin:", authError);
+          setError("Warning: Admin session may have been lost. Please refresh if needed.");
+        }
       }
       
       // Update parent with new client state
@@ -194,23 +204,26 @@ const B2BCredentialsManager = ({ client, onClose, onSuccess, adminCredentials })
         setError(`Failed to create account: ${error.message}`);
       }
       
-      // Make sure admin stays logged in even on error
-      try {
-        const adminAuth = getAuth();
-        
-        // Force URL to stay at /clients to prevent redirection
-        window.history.pushState({}, "", "/clients");
-        
-        await signInWithEmailAndPassword(
-          adminAuth,
-          adminCredentials.email,
-          adminCredentials.password
-        );
-        
-        // Force URL again just to be sure
-        window.history.pushState({}, "", "/clients");
-      } catch (e) {
-        console.error("Error re-authenticating admin after error:", e);
+      // Make sure admin stays logged in even on error (only if not auto-approved)
+      const isAutoApproved = adminCredentials?.password === "auto-approved";
+      if (!isAutoApproved) {
+        try {
+          const adminAuth = getAuth();
+          
+          // Force URL to stay at /clients to prevent redirection
+          window.history.pushState({}, "", "/clients");
+          
+          await signInWithEmailAndPassword(
+            adminAuth,
+            adminCredentials.email,
+            adminCredentials.password
+          );
+          
+          // Force URL again just to be sure
+          window.history.pushState({}, "", "/clients");
+        } catch (e) {
+          console.error("Error re-authenticating admin after error:", e);
+        }
       }
     }
   };
