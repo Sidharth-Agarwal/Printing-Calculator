@@ -11,7 +11,8 @@ const UserFormModal = ({
   onClose, 
   onSubmit, 
   selectedUser = null,
-  isSubmitting = false
+  isSubmitting = false,
+  showPasswordFields = false // New prop to control password fields
 }) => {
   const [formData, setFormData] = useState(getDefaultUserData());
   const [errors, setErrors] = useState({});
@@ -88,8 +89,11 @@ const UserFormModal = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validate form data
-    const validation = validateUserData(formData);
+    // Create validation data object (exclude password validation if not needed)
+    const validationData = { ...formData };
+    
+    // Validate form data (simplified validation without password requirements)
+    const validation = validateUserData(validationData, !showPasswordFields);
     
     if (!validation.isValid) {
       setErrors(validation.errors);
@@ -141,6 +145,21 @@ const UserFormModal = ({
         
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-4">
+          {/* Information notice for new users */}
+          {!selectedUser && !showPasswordFields && (
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
+              <div className="flex items-center">
+                <svg className="w-5 h-5 text-blue-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                </svg>
+                <div>
+                  <p className="text-sm text-blue-800 font-medium">Creating User Record</p>
+                  <p className="text-xs text-blue-700">You can set up the login account later using the "Setup Account" button.</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Full Name and Email - Side by Side */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             <div>
@@ -255,11 +274,11 @@ const UserFormModal = ({
                 disabled={isSubmitting}
               />
               <label htmlFor="isActive" className="ml-2 text-sm text-gray-700">
-                User is active and can login
+                User is active and can login (when account is set up)
               </label>
             </div>
             <p className="mt-1 text-xs text-gray-500">
-              Inactive users cannot login to the system
+              Inactive users cannot login to the system even if they have an account
             </p>
           </div>
           
@@ -289,7 +308,7 @@ const UserFormModal = ({
               {isSubmitting && (
                 <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
               )}
-              {selectedUser ? "Update User" : "Create User"}
+              {selectedUser ? "Update User" : "Create User Record"}
             </button>
           </div>
         </form>

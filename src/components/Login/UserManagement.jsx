@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, deleteDoc, doc, query, where } from "firebase/firestore";
+import { collection, onSnapshot, deleteDoc, doc, query, where, addDoc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { useAuth } from "./AuthContext";
 import UserDetailsModal from "./UserDetailsModal";
 import UserCredentialsModal from "./UserCredentialsModal";
 import UserFormModal from "./UserFormModal";
+import SetupUserAccountModal from "./SetupUserAccountModal"; // New component
 import Modal from "../Shared/Modal";
 import ConfirmationModal from "../Shared/ConfirmationModal";
 import DeleteConfirmationModal from "../Shared/DeleteConfirmationModal";
@@ -21,16 +22,14 @@ const UserManagement = () => {
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { userRole, currentUser, createUserWithoutSignIn, updateUserStatus, updateUserProfile } = useAuth();
+  const { userRole, currentUser, updateUserStatus, updateUserProfile } = useAuth();
 
   // Modal states
   const [selectedUser, setSelectedUser] = useState(null);
   const [userForCredentials, setUserForCredentials] = useState(null);
   const [userForEdit, setUserForEdit] = useState(null);
+  const [userForSetup, setUserForSetup] = useState(null); // New state for account setup
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [adminCredentials, setAdminCredentials] = useState(null);
-  const [pendingUser, setPendingUser] = useState(null);
 
   // Search and filter states
   const [searchTerm, setSearchTerm] = useState("");
@@ -63,7 +62,9 @@ const UserManagement = () => {
     staff: 0,
     production: 0,
     accountant: 0,
-    recentLogins: 0
+    recentLogins: 0,
+    withAccounts: 0,
+    withoutAccounts: 0
   });
 
   // Fetch users with real-time updates
@@ -81,91 +82,74 @@ const UserManagement = () => {
       }));
       
       setUsers(usersData);
-      setUserStats(getUserStatistics(usersData));
+      
+      // Calculate enhanced statistics
+      const stats = getUserStatistics(usersData);
+      const withAccounts = usersData.filter(user => user.hasAccount === true).length;
+      const withoutAccounts = usersData.filter(user => user.hasAccount !== true).length;
+      
+      setUserStats({
+        ...stats,
+        withAccounts,
+        withoutAccounts
+      });
+      
       setLoading(false);
     });
 
     return () => unsubscribe();
   }, [userRole]);
 
-  // Handle admin password confirmation
-  const handleAdminPasswordConfirm = (password) => {
-    if (currentUser && currentUser.email && password) {
-      setAdminCredentials({
-        email: currentUser.email,
-        password: password
-      });
-      setShowPasswordModal(false);
-      
-      // Process pending user creation or credential management
-      if (pendingUser) {
-        if (pendingUser.action === "create") {
-          handleCreateUser(pendingUser.data);
-        } else if (pendingUser.action === "credentials") {
-          setUserForCredentials(pendingUser.data);
-        }
-        setPendingUser(null);
-      }
-    }
-  };
-
-  const handleAdminPasswordCancel = () => {
-    setShowPasswordModal(false);
-    setPendingUser(null);
-  };
-
-  // Handle add new user
+  // Handle add new user (create user record only)
   const handleAddUser = () => {
     setUserForEdit(null);
     setIsFormModalOpen(true);
   };
 
-  // Handle form submission (create or update)
+  // Handle form submission (create or update user record)
   const handleFormSubmit = async (userData) => {
     if (userForEdit) {
       // Update existing user
       await handleUpdateUser(userData);
     } else {
-      // Create new user - require admin password
-      setPendingUser({ action: "create", data: userData });
-      setShowPasswordModal(true);
+      // Create new user record (without authentication)
+      await handleCreateUserRecord(userData);
     }
   };
 
-  // Create new user
-  const handleCreateUser = async (userData) => {
-    if (!adminCredentials) {
-      setNotification({
-        isOpen: true,
-        message: "Admin credentials required",
-        title: "Error",
-        status: "error"
-      });
-      return;
-    }
-
+  // Create new user record (similar to adding a client)
+  const handleCreateUserRecord = async (userData) => {
     setIsSubmitting(true);
     
     try {
-      const result = await createUserWithoutSignIn(userData, adminCredentials);
+      // Add the user record to Firestore (without Firebase Auth)
+      const usersCollection = collection(db, "users");
+      await addDoc(usersCollection, {
+        ...userData,
+        hasAccount: false, // Flag indicating no auth account yet
+        userId: null, // Will be set when account is created
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        isActive: userData.isActive !== undefined ? userData.isActive : true,
+        // Initialize stats
+        loginCount: 0,
+        lastLoginAt: null
+      });
       
       setNotification({
         isOpen: true,
-        message: `User ${userData.displayName} created successfully!`,
+        message: `User record for ${userData.displayName} created successfully! You can now set up their account.`,
         title: "Success",
         status: "success"
       });
       
       setIsFormModalOpen(false);
       
-      // Clear admin credentials for security
-      setAdminCredentials(null);
-      
     } catch (error) {
-      console.error("Error creating user:", error);
+      console.error("Error creating user record:", error);
       setNotification({
         isOpen: true,
-        message: `Failed to create user: ${error.message}`,
+        message: `Failed to create user record: ${error.message}`,
         title: "Error",
         status: "error"
       });
@@ -174,13 +158,16 @@ const UserManagement = () => {
     }
   };
 
-  // Update existing user
+  // Update existing user record
   const handleUpdateUser = async (userData) => {
     setIsSubmitting(true);
     
     try {
-      // Update user profile using the auth context method
-      await updateUserProfile(userForEdit.id, userData);
+      // Update user profile using the firestore document
+      await updateDoc(doc(db, "users", userForEdit.id), {
+        ...userData,
+        updatedAt: new Date().toISOString()
+      });
       
       setNotification({
         isOpen: true,
@@ -216,10 +203,20 @@ const UserManagement = () => {
     setSelectedUser(user);
   };
 
-  // Handle manage credentials
+  // Handle setup account (similar to client B2B activation)
+  const handleSetupAccount = (user) => {
+    setUserForSetup(user);
+  };
+
+  // Handle account setup success
+  const handleAccountSetupSuccess = (updatedUser) => {
+    setUserForSetup(null);
+    // The onSnapshot listener will automatically update the user list
+  };
+
+  // Handle manage credentials (only for users with accounts)
   const handleManageCredentials = (user) => {
-    setPendingUser({ action: "credentials", data: user });
-    setShowPasswordModal(true);
+    setUserForCredentials(user);
   };
 
   // Handle toggle user status
@@ -342,7 +339,7 @@ const UserManagement = () => {
         </p>
       </div>
 
-      {/* User Statistics */}
+      {/* Enhanced User Statistics */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-sm font-medium text-gray-500 mb-2">Total Users</h2>
@@ -350,6 +347,18 @@ const UserManagement = () => {
           <p className="text-xs text-gray-500 mt-1">
             {userStats.active} active users
           </p>
+        </div>
+        
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Account Status</h2>
+          <div className="text-xs space-y-1">
+            <div className="flex justify-between">
+              <span>With Accounts:</span> <span className="font-medium text-green-600">{userStats.withAccounts}</span>
+            </div>
+            <div className="flex justify-between">
+              <span>Setup Pending:</span> <span className="font-medium text-yellow-600">{userStats.withoutAccounts}</span>
+            </div>
+          </div>
         </div>
         
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
@@ -366,18 +375,6 @@ const UserManagement = () => {
             </div>
             <div className="flex justify-between">
               <span>Accountant:</span> <span className="font-medium">{userStats.accountant}</span>
-            </div>
-          </div>
-        </div>
-        
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Status</h2>
-          <div className="text-xs space-y-1">
-            <div className="flex justify-between">
-              <span>Active:</span> <span className="font-medium text-green-600">{userStats.active}</span>
-            </div>
-            <div className="flex justify-between">
-              <span>Inactive:</span> <span className="font-medium text-red-600">{userStats.inactive}</span>
             </div>
           </div>
         </div>
@@ -470,8 +467,9 @@ const UserManagement = () => {
                   <SortableHeader field="phoneNumber" label="Phone" />
                   <SortableHeader field="lastLoginAt" label="Last Login" />
                   <SortableHeader field="createdAt" label="Created" />
+                  <th className="px-4 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Account Status</th>
                   <th className="px-4 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
-                  <th className="px-4 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+                  <th className="px-4 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-40">Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -500,6 +498,15 @@ const UserManagement = () => {
                     <td className="px-4 py-3">{formatDate(user.createdAt)}</td>
                     <td className="px-4 py-3">
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        user.hasAccount
+                          ? "bg-green-100 text-green-800" 
+                          : "bg-yellow-100 text-yellow-800"
+                      }`}>
+                        {user.hasAccount ? "Account Setup" : "Setup Pending"}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         user.isActive
                           ? "bg-green-100 text-green-800" 
                           : "bg-red-100 text-red-800"
@@ -520,16 +527,28 @@ const UserManagement = () => {
                           </svg>
                         </button>
                         
-                        {/* Credentials Button */}
-                        <button
-                          onClick={() => handleManageCredentials(user)}
-                          className="p-1.5 text-purple-600 hover:bg-purple-100 rounded transition-colors"
-                          title="Manage Credentials"
-                        >
-                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"></path>
-                          </svg>
-                        </button>
+                        {/* Setup Account or Manage Credentials Button */}
+                        {user.hasAccount ? (
+                          <button
+                            onClick={() => handleManageCredentials(user)}
+                            className="p-1.5 text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                            title="Manage Credentials"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1721 9z"></path>
+                            </svg>
+                          </button>
+                        ) : (
+                          <button
+                            onClick={() => handleSetupAccount(user)}
+                            className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"
+                            title="Setup Account"
+                          >
+                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                            </svg>
+                          </button>
+                        )}
                         
                         {/* Toggle Status Button */}
                         <button
@@ -608,10 +627,14 @@ const UserManagement = () => {
             handleToggleStatus(selectedUser.id, !selectedUser.isActive);
             setSelectedUser(null);
           }}
-          onManageCredentials={() => {
+          onManageCredentials={selectedUser.hasAccount ? () => {
             setSelectedUser(null);
             handleManageCredentials(selectedUser);
-          }}
+          } : undefined}
+          onSetupAccount={!selectedUser.hasAccount ? () => {
+            setSelectedUser(null);
+            handleSetupAccount(selectedUser);
+          } : undefined}
           isAdmin={true}
         />
       )}
@@ -620,16 +643,21 @@ const UserManagement = () => {
       {userForCredentials && (
         <UserCredentialsModal
           user={userForCredentials}
-          onClose={() => {
-            setUserForCredentials(null);
-            setAdminCredentials(null);
-          }}
+          onClose={() => setUserForCredentials(null)}
           onSuccess={(updatedUser) => {
-            // The real-time listener will handle the update
             setUserForCredentials(null);
-            setAdminCredentials(null);
           }}
-          adminCredentials={adminCredentials}
+          adminCredentials={{ email: currentUser?.email, password: "" }}
+        />
+      )}
+
+      {/* Setup User Account Modal */}
+      {userForSetup && (
+        <SetupUserAccountModal
+          user={userForSetup}
+          onClose={() => setUserForSetup(null)}
+          onSuccess={handleAccountSetupSuccess}
+          adminEmail={currentUser?.email || ""}
         />
       )}
 
@@ -643,67 +671,8 @@ const UserManagement = () => {
         onSubmit={handleFormSubmit}
         selectedUser={userForEdit}
         isSubmitting={isSubmitting}
+        showPasswordFields={false} // Don't show password fields in user creation
       />
-
-      {/* Admin Password Modal */}
-      {showPasswordModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded shadow-lg max-w-md w-full">
-            <h3 className="text-lg font-semibold mb-4">Admin Authentication Required</h3>
-            
-            <p className="mb-4 text-gray-600">
-              Please enter your admin password to proceed with this operation.
-            </p>
-            
-            <form onSubmit={(e) => {
-              e.preventDefault();
-              const password = e.target.password.value;
-              handleAdminPasswordConfirm(password);
-            }}>
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-medium mb-2">
-                  Admin Email
-                </label>
-                <input
-                  type="email"
-                  value={currentUser?.email || ""}
-                  disabled
-                  className="w-full px-3 py-2 border rounded bg-gray-100"
-                />
-              </div>
-              
-              <div className="mb-4">
-                <label className="block text-gray-700 text-sm font-medium mb-2">
-                  Admin Password
-                </label>
-                <input
-                  type="password"
-                  name="password"
-                  required
-                  className="w-full px-3 py-2 border rounded"
-                  autoFocus
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-3">
-                <button
-                  type="button"
-                  onClick={handleAdminPasswordCancel}
-                  className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
-                >
-                  Confirm
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Confirmation Modals */}
       <ConfirmationModal
