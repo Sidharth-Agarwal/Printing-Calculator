@@ -27,7 +27,6 @@ import Misc from "./Sections/Post Production/Misc";
 import ReviewAndSubmit from "./ReviewAndSubmit";
 import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
 import SuccessNotification from "../Shared/SuccessNotification";
-import FormSection from "../Shared/FormSection";
 import FixedSection from "./Sections/Fixed/FixedSection";
 
 // Import service and job type configurations
