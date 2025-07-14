@@ -33,7 +33,6 @@ import FixedSection from "./Sections/Fixed/FixedSection";
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
 import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
 
-// COMPACT: ServiceCard Component with no empty space when inactive
 // Updated ServiceCard Component with dynamic height and scrolling
 const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
   return (
@@ -503,6 +502,8 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [activeSections, setActiveSections] = useState({
     reviewAndSubmit: true, // Cost calculations always open
   });
+
+  const markupInitializedRef = useRef(false);
   
   const [validationErrors, setValidationErrors] = useState({});
   const [showResetConfirmation, setShowResetConfirmation] = useState(false);
@@ -963,19 +964,22 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         setSelectedVersion(initialState.versionId);
       }
       
-      // CRITICAL FIX: Set markup BEFORE triggering calculations
+      // CRITICAL FIX: In edit mode, LOCK markup values from saved calculations
       if (initialState.calculations?.markupType && initialState.calculations?.markupPercentage) {
-        console.log("BillingForm - Setting markup from initialState:", {
+        console.log("🔒 EDIT MODE - BillingForm: LOCKING markup from saved calculations:", {
           type: initialState.calculations.markupType,
           percentage: initialState.calculations.markupPercentage
         });
         
+        // Set markup values and mark them as locked for edit mode
         setSelectedMarkupType(initialState.calculations.markupType);
         setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
         
-        // Set the calculations immediately to avoid the ReviewAndSubmit component
-        // from overriding with defaults
+        // Set the calculations immediately and prevent further overrides
         setCalculations(initialState.calculations);
+        
+        // CRITICAL: Mark that edit mode markup has been set to prevent further changes
+        markupInitializedRef.current = true;
       }
       
       // Mark initialization as done for edit mode
@@ -1034,6 +1038,18 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   // Fetch default markup rates once when component mounts
   useEffect(() => {
     const fetchDefaultMarkup = async () => {
+      // CRITICAL: Skip in edit mode to prevent overriding saved markup
+      if (isEditMode) {
+        console.log("🚫 EDIT MODE: Skipping default markup fetch");
+        return;
+      }
+      
+      // CRITICAL: Skip if markup already initialized from saved data
+      if (markupInitializedRef.current) {
+        console.log("🚫 Markup already initialized, skipping default fetch");
+        return;
+      }
+      
       try {
         // Query the overheads collection for markup entries
         const overheadsCollection = collection(db, "overheads");
@@ -1082,6 +1098,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           }
           
           console.log("Fetched markup rates:", fetchedMarkups);
+          markupInitializedRef.current = true;
         }
       } catch (error) {
         console.error("Error fetching markup rates:", error);
@@ -1089,7 +1106,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     };
     
     fetchDefaultMarkup();
-  }, [isB2BClient]);
+  }, [isB2BClient, isEditMode]);
+
+  useEffect(() => {
+    return () => {
+      markupInitializedRef.current = false;
+    };
+  }, []);
 
   // Function to update HSN code when job type changes
   const updateHsnCodeForJobType = (jobType, ratesArray = null) => {
@@ -1415,8 +1438,14 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
   // ⭐ UPDATED: Function to handle markup changes from ReviewAndSubmit component
   const handleMarkupChange = async (markupType, markupPercentage) => {
-    // For B2B clients, only allow MARKUP B2B MERCH to be selected
-    if (isB2BClient && markupType !== "MARKUP B2B MERCH") {
+    // In edit mode, only allow changes if explicitly triggered by user action
+    if (isEditMode) {
+      console.log("⚠️ EDIT MODE: Markup change requested - this should only happen from user action in ReviewAndSubmit");
+      // Don't prevent the change, just log it for debugging
+    }
+    
+    // For B2B clients, only allow MARKUP B2B MERCH to be selected (in new mode only)
+    if (isB2BClient && !isEditMode && markupType !== "MARKUP B2B MERCH") {
       const b2bMarkup = markupRates.find(rate => rate.name === "MARKUP B2B MERCH");
       if (b2bMarkup) {
         markupType = b2bMarkup.name;

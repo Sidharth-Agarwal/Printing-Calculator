@@ -10,7 +10,7 @@ const ReviewAndSubmit = ({
   calculations, 
   isCalculating, 
   onCreateEstimate, 
-  onPreviewEstimate, // New prop for preview
+  onPreviewEstimate,
   onMarkupChange,
   isEditMode = false,
   previewMode = false,
@@ -25,6 +25,9 @@ const ReviewAndSubmit = ({
   const [hasAppliedB2BMarkup, setHasAppliedB2BMarkup] = useState(false);
   const calculationsRef = useRef(null);
   const markupInitializedRef = useRef(false);
+  const editModeInitializedRef = useRef(false);
+  const editModeMarkupRef = useRef(null);
+  const userChangedMarkupRef = useRef(false);
 
   const { userRole } = useAuth(); 
   const isB2BClient = userRole === "b2b";
@@ -33,7 +36,6 @@ const ReviewAndSubmit = ({
   const areRequiredFieldsFilled = () => {
     const { orderAndPaper, client } = state;
     
-    // Check if all required fields are filled
     const hasClient = client?.clientId;
     const hasProjectName = orderAndPaper?.projectName?.trim();
     const hasQuantity = orderAndPaper?.quantity;
@@ -52,7 +54,7 @@ const ReviewAndSubmit = ({
     return !isEditMode && areRequiredFieldsFilled() && hasValidCalculations() && !isCalculating;
   };
 
-  // Fetch markup rates with proper priority handling
+  // Markup initialization with edit mode handling
   useEffect(() => {
     const fetchMarkupRates = async () => {
       setIsLoadingMarkups(true);
@@ -76,31 +78,48 @@ const ReviewAndSubmit = ({
         if (fetchedMarkups.length > 0) {
           setMarkupRates(fetchedMarkups);
           
-          if (calculations?.markupType && calculations?.markupPercentage && !markupInitializedRef.current) {
+          // In edit mode, lock saved values
+          if (isEditMode && calculations?.markupType && calculations?.markupPercentage && !editModeInitializedRef.current) {
+            editModeMarkupRef.current = {
+              markupType: calculations.markupType,
+              markupPercentage: parseFloat(calculations.markupPercentage)
+            };
+            
             setSelectedMarkupType(calculations.markupType);
             setMarkupPercentage(parseFloat(calculations.markupPercentage));
+            editModeInitializedRef.current = true;
             markupInitializedRef.current = true;
             return;
           }
           
-          if (isB2BClient && !hasAppliedB2BMarkup) {
-            const b2bMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP B2B MERCH");
-            if (b2bMarkup) {
-              setSelectedMarkupType(b2bMarkup.name);
-              setMarkupPercentage(b2bMarkup.percentage);
-              setHasAppliedB2BMarkup(true);
-              
-              if (!calculations?.markupType || calculations.markupType !== b2bMarkup.name) {
+          // For new estimates
+          if (!isEditMode && !markupInitializedRef.current) {
+            if (calculations?.markupType && calculations?.markupPercentage) {
+              setSelectedMarkupType(calculations.markupType);
+              setMarkupPercentage(parseFloat(calculations.markupPercentage));
+              markupInitializedRef.current = true;
+              return;
+            }
+            
+            // B2B client defaults
+            if (isB2BClient && !hasAppliedB2BMarkup) {
+              const b2bMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP B2B MERCH");
+              if (b2bMarkup) {
+                setSelectedMarkupType(b2bMarkup.name);
+                setMarkupPercentage(b2bMarkup.percentage);
+                setHasAppliedB2BMarkup(true);
+                markupInitializedRef.current = true;
+                
                 if (onMarkupChange) {
                   onMarkupChange(b2bMarkup.name, b2bMarkup.percentage);
                 }
               }
+            } else if (!isB2BClient) {
+              const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
+              setSelectedMarkupType(timelessMarkup.name);
+              setMarkupPercentage(timelessMarkup.percentage);
+              markupInitializedRef.current = true;
             }
-          } else if (!isB2BClient && !markupInitializedRef.current) {
-            const timelessMarkup = fetchedMarkups.find(rate => rate.name === "MARKUP TIMELESS") || fetchedMarkups[0];
-            setSelectedMarkupType(timelessMarkup.name);
-            setMarkupPercentage(timelessMarkup.percentage);
-            markupInitializedRef.current = true;
           }
         }
       } catch (error) {
@@ -111,9 +130,9 @@ const ReviewAndSubmit = ({
     };
     
     fetchMarkupRates();
-  }, [isB2BClient, hasAppliedB2BMarkup, onMarkupChange]);
+  }, [isB2BClient, hasAppliedB2BMarkup, onMarkupChange, isEditMode, calculations?.markupType, calculations?.markupPercentage]);
 
-  // Handle calculations updates with edit mode preservation
+  // Calculations update handling
   useEffect(() => {
     if (calculationsRef.current === calculations) {
       return;
@@ -122,38 +141,71 @@ const ReviewAndSubmit = ({
     calculationsRef.current = calculations;
     
     if (calculations && !calculations.error) {
-      if (isEditMode && localCalculations && 
-          localCalculations.markupType && 
-          localCalculations.markupPercentage &&
-          (localCalculations.markupType !== calculations.markupType || 
-           localCalculations.markupPercentage !== calculations.markupPercentage)) {
+      // Edit mode: Use locked markup values
+      if (isEditMode && editModeMarkupRef.current && editModeInitializedRef.current && !userChangedMarkupRef.current) {
+        const lockedMarkup = editModeMarkupRef.current;
+        
+        const preservedCalculations = {
+          ...calculations,
+          markupType: lockedMarkup.markupType,
+          markupPercentage: lockedMarkup.markupPercentage,
+          markupAmount: (parseFloat(calculations.subtotalPerCard || 0) * (lockedMarkup.markupPercentage / 100)).toFixed(2),
+        };
+        
+        // Recalculate totals with locked markup
+        const quantity = parseInt(state.orderAndPaper?.quantity || 1);
+        const subtotalPerCard = parseFloat(calculations.subtotalPerCard || 0);
+        const markupAmount = subtotalPerCard * (lockedMarkup.markupPercentage / 100);
+        const totalCostPerCard = subtotalPerCard + markupAmount;
+        const totalCost = totalCostPerCard * quantity;
+        const gstRate = parseFloat(calculations.gstRate || 18);
+        const gstAmount = totalCost * (gstRate / 100);
+        const totalWithGST = totalCost + gstAmount;
+        
+        preservedCalculations.markupAmount = markupAmount.toFixed(2);
+        preservedCalculations.totalCostPerCard = totalCostPerCard.toFixed(2);
+        preservedCalculations.totalCost = totalCost.toFixed(2);
+        preservedCalculations.gstAmount = gstAmount.toFixed(2);
+        preservedCalculations.totalWithGST = totalWithGST.toFixed(2);
+        
+        setLocalCalculations(preservedCalculations);
         return;
       }
       
+      // New mode: Use calculations as they come
       setLocalCalculations(calculations);
       
+      // Set markup from calculations if not already initialized
       if (calculations.markupType && calculations.markupPercentage && !markupInitializedRef.current) {
         setSelectedMarkupType(calculations.markupType);
         setMarkupPercentage(parseFloat(calculations.markupPercentage));
         markupInitializedRef.current = true;
       }
     }
-  }, [calculations, isEditMode, localCalculations]);
+  }, [calculations, isEditMode, state.orderAndPaper?.quantity]);
 
   // Markup selection handler
   const handleMarkupSelection = (e) => {
-    if (isB2BClient) return;
-    
     const selectedValue = e.target.value;
     const selectedRate = markupRates.find(rate => rate.name === selectedValue);
     
     if (selectedRate) {
+      userChangedMarkupRef.current = true;
+      
+      // Update edit mode locked values if in edit mode
+      if (isEditMode) {
+        editModeMarkupRef.current = {
+          markupType: selectedValue,
+          markupPercentage: selectedRate.percentage
+        };
+      }
+      
       setSelectedMarkupType(selectedValue);
       setMarkupPercentage(selectedRate.percentage);
       
       const hasValidCalculations = localCalculations && !localCalculations.error;
       
-      if (isEditMode && hasValidCalculations) {
+      if (hasValidCalculations) {
         const currentSubtotal = parseFloat(localCalculations.subtotalPerCard || localCalculations.costWithMisc || 0);
         const newMarkupPercentage = selectedRate.percentage;
         const quantity = parseInt(state.orderAndPaper?.quantity || 1);
@@ -185,6 +237,25 @@ const ReviewAndSubmit = ({
     }
   };
 
+  // Reset tracking when mode changes
+  useEffect(() => {
+    if (!isEditMode) {
+      editModeInitializedRef.current = false;
+      editModeMarkupRef.current = null;
+      userChangedMarkupRef.current = false;
+    }
+  }, [isEditMode]);
+
+  // Reset refs on unmount
+  useEffect(() => {
+    return () => {
+      markupInitializedRef.current = false;
+      editModeInitializedRef.current = false;
+      editModeMarkupRef.current = null;
+      userChangedMarkupRef.current = false;
+    };
+  }, []);
+
   // Compact cost item component
   const CostItem = ({ label, value, isSubItem = false, isTotal = false, isHighlight = false }) => {
     const formattedValue = parseFloat(value || 0).toFixed(2);
@@ -202,7 +273,7 @@ const ReviewAndSubmit = ({
     );
   };
 
-  // Section header component (non-collapsible)
+  // Section header component
   const SectionHeader = ({ title, icon: Icon, count }) => (
     <div className="flex items-center gap-2 p-2 bg-gray-100 border-b border-gray-200">
       <Icon size={16} className="text-gray-600" />
@@ -211,7 +282,7 @@ const ReviewAndSubmit = ({
     </div>
   );
 
-  // Non-collapsible section
+  // Section component
   const Section = ({ title, children, icon, count = 0 }) => (
     <div className="border border-gray-200 rounded-lg mb-3 overflow-hidden">
       <SectionHeader 
@@ -293,7 +364,7 @@ const ReviewAndSubmit = ({
         icon={Settings}
         count={serviceCounts.productionCount}
       >
-        {/* LP Section - ALL FIELDS INCLUDED */}
+        {/* LP Section */}
         {state.lpDetails?.isLPUsed && localCalculations.lpCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Letter Press (LP)" value={localCalculations.lpCostPerCard} isTotal />
@@ -308,7 +379,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* FS Section - ALL FIELDS INCLUDED */}
+        {/* FS Section */}
         {state.fsDetails?.isFSUsed && localCalculations.fsCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Foil Stamping (FS)" value={localCalculations.fsCostPerCard} isTotal />
@@ -322,7 +393,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* EMB Section - ALL FIELDS INCLUDED */}
+        {/* EMB Section */}
         {state.embDetails?.isEMBUsed && localCalculations.embCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Embossing (EMB)" value={localCalculations.embCostPerCard} isTotal />
@@ -339,7 +410,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Screen Print Section - ALL FIELDS INCLUDED */}
+        {/* Screen Print Section */}
         {(state.screenPrintDetails?.isScreenPrintUsed || state.screenPrint?.isScreenPrintUsed) && localCalculations.screenPrintCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Screen Printing" value={localCalculations.screenPrintCostPerCard} isTotal />
@@ -354,7 +425,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Digital Printing Section - ALL FIELDS INCLUDED */}
+        {/* Digital Printing Section */}
         {state.digiDetails?.isDigiUsed && localCalculations.digiCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Digital Printing" value={localCalculations.digiCostPerCard} isTotal />
@@ -372,7 +443,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Notebook Section - ALL FIELDS INCLUDED */}
+        {/* Notebook Section */}
         {state.orderAndPaper.jobType === "Notebook" && state.notebookDetails?.isNotebookUsed && localCalculations.notebookCostPerCard && (
           <div className="space-y-1">
             <CostItem label="Notebook" value={localCalculations.notebookCostPerCard} isTotal />
@@ -381,7 +452,6 @@ const ReviewAndSubmit = ({
               {localCalculations.notebookBindingCostPerCard && <CostItem label="Binding" value={localCalculations.notebookBindingCostPerCard} isSubItem />}
               {localCalculations.notebookGilCutCostPerCard && <CostItem label="Notebook GIL Cut Cost" value={localCalculations.notebookGilCutCostPerCard} isSubItem />}
             </div>
-            {/* Additional notebook information */}
             {localCalculations.possibleNumberOfForma && (
               <div className="text-xs text-gray-500 pl-2">Forma per notebook: {localCalculations.possibleNumberOfForma}</div>
             )}
@@ -400,7 +470,7 @@ const ReviewAndSubmit = ({
     );
   };
 
-  // Render Post-Production Services section - ALL FIELDS INCLUDED
+  // Render Post-Production Services section
   const renderPostProductionServices = () => {
     if (!localCalculations || serviceCounts.postProductionCount === 0) return null;
     
@@ -410,7 +480,7 @@ const ReviewAndSubmit = ({
         icon={Package}
         count={serviceCounts.postProductionCount}
       >
-        {/* Pre Die Cutting Section - ALL FIELDS */}
+        {/* Pre Die Cutting Section */}
         {state.preDieCutting?.isPreDieCuttingUsed && localCalculations.preDieCuttingCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Pre Die Cutting" value={localCalculations.preDieCuttingCostPerCard} isTotal />
@@ -421,7 +491,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Die Cutting Section - ALL FIELDS */}
+        {/* Die Cutting Section */}
         {state.dieCutting?.isDieCuttingUsed && localCalculations.dieCuttingCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Die Cutting" value={localCalculations.dieCuttingCostPerCard} isTotal />
@@ -432,7 +502,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Post Die Cutting Section - ALL FIELDS */}
+        {/* Post Die Cutting Section */}
         {state.postDC?.isPostDCUsed && localCalculations.postDCCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Post Die Cutting" value={localCalculations.postDCCostPerCard} isTotal />
@@ -443,7 +513,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Fold and Paste Section - ALL FIELDS */}
+        {/* Fold and Paste Section */}
         {state.foldAndPaste?.isFoldAndPasteUsed && localCalculations.foldAndPasteCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Fold and Paste" value={localCalculations.foldAndPasteCostPerCard} isTotal />
@@ -457,7 +527,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* DST Paste Section - ALL FIELDS */}
+        {/* DST Paste Section */}
         {state.dstPaste?.isDstPasteUsed && localCalculations.dstPasteCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="DST Paste" value={localCalculations.dstPasteCostPerCard} isTotal />
@@ -470,7 +540,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Magnet Section - ALL FIELDS */}
+        {/* Magnet Section */}
         {state.magnet?.isMagnetUsed && localCalculations.magnetCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Magnet" value={localCalculations.magnetCostPerCard} isTotal />
@@ -488,7 +558,7 @@ const ReviewAndSubmit = ({
           <CostItem label="Quality Check" value={localCalculations.qcCostPerCard} isTotal />
         )}
         
-        {/* Packing Section - ALL FIELDS */}
+        {/* Packing Section */}
         {state.packing?.isPackingUsed && localCalculations.packingCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Packing" value={localCalculations.packingCostPerCard} isTotal />
@@ -498,7 +568,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Misc Section - ALL FIELDS */}
+        {/* Misc Section */}
         {state.misc?.isMiscUsed && localCalculations.miscCostPerCard && (
           <div className="space-y-1 mb-2">
             <CostItem label="Miscellaneous" value={localCalculations.miscCostPerCard} isTotal />
@@ -511,7 +581,7 @@ const ReviewAndSubmit = ({
           </div>
         )}
         
-        {/* Sandwich/Duplex Section - ALL FIELDS */}
+        {/* Sandwich/Duplex Section */}
         {state.sandwich?.isSandwichComponentUsed && localCalculations.sandwichCostPerCard && (
           <div className="space-y-1">
             <CostItem label="Duplex/Sandwich" value={localCalculations.sandwichCostPerCard} isTotal />
@@ -528,7 +598,7 @@ const ReviewAndSubmit = ({
     );
   };
 
-  // Render Wastage and Overhead section - ALL FIELDS INCLUDED
+  // Render Wastage and Overhead section
   const renderWastageAndOverhead = () => {
     if (!localCalculations) return null;
     
@@ -560,19 +630,18 @@ const ReviewAndSubmit = ({
     );
   };
 
-  // Updated handleSubmit function - now handles preview
+  // Handle submit for preview
   const handleSubmit = (e) => {
     e.preventDefault();
     
     if (localCalculations) {
-      // Show preview instead of directly creating estimate
       onPreviewEstimate(localCalculations);
     } else {
       onPreviewEstimate();
     }
   };
 
-  // Handle direct submit (for edit mode)
+  // Handle direct submit for edit mode
   const handleDirectSubmit = (e) => {
     e.preventDefault();
     
@@ -633,7 +702,7 @@ const ReviewAndSubmit = ({
             </div>
           ) : (
             <>
-              {/* Admin/Staff View - ALL SECTIONS ALWAYS VISIBLE */}
+              {/* Admin/Staff View */}
               
               {/* Paper and Cutting Section */}
               {renderPaperAndCuttingSection()}
@@ -649,7 +718,9 @@ const ReviewAndSubmit = ({
 
               {/* Markup Selection */}
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">Markup Selection</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                  Markup Selection
+                </h4>
                 <div className="flex gap-2">
                   <select
                     onChange={handleMarkupSelection}
@@ -672,6 +743,12 @@ const ReviewAndSubmit = ({
                     {markupPercentage}%
                   </div>
                 </div>
+                
+                {!isEditMode && isB2BClient && (
+                  <div className="text-xs text-blue-600 mt-1">
+                    B2B Markup automatically applied
+                  </div>
+                )}
               </div>
 
               {/* Cost Summary */}
@@ -722,7 +799,7 @@ const ReviewAndSubmit = ({
       {/* Submit Buttons */}
       {!previewMode && (
         <div className="flex justify-end gap-3 pt-3 border-t border-gray-200">
-          {/* Preview Button - Primary action for new estimates */}
+          {/* Preview Button */}
           {shouldShowPreviewButton() && (
             <button
               onClick={handleSubmit}
@@ -743,7 +820,7 @@ const ReviewAndSubmit = ({
             </button>
           )}
           
-          {/* Direct Submit Button - For edit mode */}
+          {/* Direct Submit Button */}
           {isEditMode && hasValidCalculations() && (
             <button
               onClick={handleDirectSubmit}
@@ -764,7 +841,7 @@ const ReviewAndSubmit = ({
             </button>
           )}
           
-          {/* Show helpful message when button is not available */}
+          {/* Helper message */}
           {!shouldShowPreviewButton() && !isEditMode && (
             <div className="text-sm text-gray-500 italic">
               {!areRequiredFieldsFilled() ? 
