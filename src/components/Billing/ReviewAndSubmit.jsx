@@ -704,7 +704,7 @@ const ReviewAndSubmit = ({
                     <span className="font-mono">₹{parseFloat(localCalculations.gstAmount || 0).toFixed(2)}</span>
                   </div>
                   
-                  <div className="flex justify-between font-bold text-lg border-t pt-2 text-green-700">
+                  <div className="flex justify-between font-bold text-lg border-t pt-2">
                     <span>Total with GST:</span>
                     <span className="font-mono">₹{parseFloat(localCalculations.totalWithGST || 0).toFixed(2)}</span>
                   </div>
