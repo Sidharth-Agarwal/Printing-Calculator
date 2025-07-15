@@ -265,6 +265,7 @@ const SinglePageContent = ({
             <div>4. Delivery time will be confirmed upon order confirmation.</div>
             <div>5. Prices are subject to change based on final specifications.</div>
             <div>6. An additional extra charge will be added in case of custom dies.</div>
+            <div>7. Embossing block charges are not included in this estimate. Final rates will be shared separately once the design is sent to our vendor and their quote is received.</div>
           </div>
         </div>
       )}
@@ -522,6 +523,7 @@ const PageContent = ({
             <div>4. Delivery time will be confirmed upon order confirmation.</div>
             <div>5. Prices are subject to change based on final specifications.</div>
             <div>6. An additional extra charge will be added in case of custom dies.</div>
+            <div>7. Note : Embossing block charges are not included in this estimate. Final rates will be shared separately once the design is sent to our vendor and their quote is received.</div>
           </div>
         </div>
       )}
