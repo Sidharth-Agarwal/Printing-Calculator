@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "./AuthContext";
 import { collection, query, where, getDocs, getDoc, doc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
+import { findUserByFirebaseUID } from "../../services/userManagementService";
 import ForgotPasswordModal from "./ForgotPasswordModal";
 
 const Login = () => {
@@ -48,14 +49,16 @@ const Login = () => {
     }
   }, [checkingAdmin, adminExists, navigate]);
 
-  // Redirect if user is already logged in
+  // Redirect if user is already logged in (UPDATED to use new structure)
   useEffect(() => {
     if (currentUser) {
       const fetchUserRoleAndRedirect = async () => {
         try {
-          const userDoc = await getDoc(doc(db, "users", currentUser.uid));
-          if (userDoc.exists()) {
-            const userData = userDoc.data();
+          // Use the helper function to find user data
+          const userData = await findUserByFirebaseUID(currentUser.uid);
+          
+          if (userData) {
+            console.log("Found user data for redirect:", userData);
             
             if (userData.role === "admin") {
               navigate("/transactions");
@@ -65,10 +68,13 @@ const Login = () => {
               navigate("/new-bill");
             } else if (userData.role === "production") {
               navigate("/orders");
+            } else if (userData.role === "accountant") {
+              navigate("/new-bill");
             } else {
               navigate("/new-bill");
             }
           } else {
+            console.warn("No user data found, redirecting to default");
             navigate("/new-bill");
           }
         } catch (error) {
@@ -87,11 +93,15 @@ const Login = () => {
     setLoading(true);
     
     try {
+      console.log("Attempting login...");
       const userCredential = await login(email, password);
-      const userDoc = await getDoc(doc(db, "users", userCredential.user.uid));
       
-      if (userDoc.exists()) {
-        const userData = userDoc.data();
+      // Find user data using the helper function
+      const userData = await findUserByFirebaseUID(userCredential.user.uid);
+      
+      if (userData) {
+        console.log("Login successful, redirecting based on role:", userData.role);
+        
         if (userData.role === "admin") {
           navigate("/transactions");
         } else if (userData.role === "b2b") {
@@ -106,11 +116,14 @@ const Login = () => {
           navigate("/new-bill");
         }
       } else {
+        console.warn("User data not found after login, using default redirect");
         navigate("/new-bill");
       }
     } catch (error) {
       console.error("Login error:", error.message);
       setError(
+        error.message.includes("deactivated") ? error.message :
+        error.message.includes("not found") ? error.message :
         error.code === "auth/user-not-found" || error.code === "auth/wrong-password"
           ? "Invalid email or password"
           : "Failed to login. Please try again."
