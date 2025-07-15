@@ -89,7 +89,7 @@ export const getUserStatistics = (users) => {
 };
 
 // Validate user data
-export const validateUserData = (userData) => {
+export const validateUserData = (userData, skipPasswordValidation = false) => {
   const errors = {};
   
   if (!userData.displayName?.trim()) {
@@ -174,7 +174,7 @@ export const sortUsers = (users, sortField, sortDirection) => {
   });
 };
 
-// Check if email exists (for validation)
+// Check if email exists (for validation) - UPDATED to handle both document structures
 export const checkEmailExists = async (email, excludeUserId = null) => {
   try {
     const usersRef = collection(db, "users");
@@ -238,6 +238,60 @@ export const createUserActivityLog = async (userId, action, details = {}) => {
   }
 };
 
+// Helper function to find user document by Firebase UID (ADDED)
+export const findUserByFirebaseUID = async (firebaseUID) => {
+  try {
+    // First try to find by userId field
+    const usersRef = collection(db, "users");
+    const userQuery = query(usersRef, where("userId", "==", firebaseUID));
+    const querySnapshot = await getDocs(userQuery);
+    
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0];
+      return {
+        id: userDoc.id,
+        ...userDoc.data()
+      };
+    }
+    
+    // Fallback: Try to find by document ID (legacy)
+    const legacyUserDoc = await getDoc(doc(db, "users", firebaseUID));
+    if (legacyUserDoc.exists()) {
+      return {
+        id: legacyUserDoc.id,
+        ...legacyUserDoc.data()
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error finding user by Firebase UID:", error);
+    return null;
+  }
+};
+
+// Helper function to find user document by email (ADDED)
+export const findUserByEmail = async (email) => {
+  try {
+    const usersRef = collection(db, "users");
+    const emailQuery = query(usersRef, where("email", "==", email));
+    const querySnapshot = await getDocs(emailQuery);
+    
+    if (!querySnapshot.empty) {
+      const userDoc = querySnapshot.docs[0];
+      return {
+        id: userDoc.id,
+        ...userDoc.data()
+      };
+    }
+    
+    return null;
+  } catch (error) {
+    console.error("Error finding user by email:", error);
+    return null;
+  }
+};
+
 export default {
   USER_ROLES,
   USER_FIELDS,
@@ -251,5 +305,7 @@ export default {
   getRoleDisplayName,
   getRoleColor,
   getDefaultUserData,
-  createUserActivityLog
+  createUserActivityLog,
+  findUserByFirebaseUID,
+  findUserByEmail
 };

@@ -10,7 +10,7 @@ import {
   sendPasswordResetEmail,
   getAuth
 } from "firebase/auth";
-import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../../firebaseConfig";
 
 // Create the context
@@ -96,57 +96,107 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
-  // Record user login (call this from login success)
-  const recordUserLogin = async (userId) => {
+  // Record user login (updated to work with Firestore document IDs)
+  const recordUserLogin = async (firestoreDocId) => {
     try {
-      const userDoc = await getDoc(doc(db, "users", userId));
-      const currentLoginCount = userDoc.exists() ? (userDoc.data()?.loginCount || 0) : 0;
+      console.log("Recording login for Firestore document ID:", firestoreDocId);
       
-      await updateDoc(doc(db, "users", userId), {
+      const userDoc = await getDoc(doc(db, "users", firestoreDocId));
+      if (!userDoc.exists()) {
+        console.error("Cannot record login: User document not found:", firestoreDocId);
+        return;
+      }
+      
+      const currentLoginCount = userDoc.data()?.loginCount || 0;
+      
+      await updateDoc(doc(db, "users", firestoreDocId), {
         lastLoginAt: new Date().toISOString(),
         loginCount: currentLoginCount + 1
       });
+      
+      console.log("Login recorded successfully for document:", firestoreDocId);
     } catch (error) {
       console.error("Error recording user login:", error);
       // Don't throw error as this is not critical
     }
   };
 
-  // Login a user (updated to record login, clear temp passwords, and check active status)
+  // Login a user (UPDATED to handle userId field structure)
   const login = async (email, password) => {
     try {
       console.log("Attempting login with:", email);
       const result = await signInWithEmailAndPassword(auth, email, password);
       
       if (result.user) {
-        // Check if user is active before allowing login
-        const userDoc = await getDoc(doc(db, "users", result.user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
+        console.log("Firebase Auth successful, finding user document...");
+        
+        // Find user document by userId field (not document ID)
+        const usersRef = collection(db, "users");
+        const userQuery = query(usersRef, where("userId", "==", result.user.uid));
+        const querySnapshot = await getDocs(userQuery);
+        
+        if (!querySnapshot.empty) {
+          // Found user document
+          const userDocRef = querySnapshot.docs[0];
+          const userData = userDocRef.data();
+          const firestoreDocId = userDocRef.id;
+          
+          console.log("Found user document:", { 
+            firestoreId: firestoreDocId, 
+            firebaseUID: result.user.uid,
+            userData: userData 
+          });
           
           // Check if user account is active
           if (userData.isActive === false) {
-            // Sign out the user immediately
             await signOut(auth);
             throw new Error("Your account has been deactivated. Please contact an administrator.");
           }
           
-          // Record the login
-          await recordUserLogin(result.user.uid);
+          // Record the login using the Firestore document ID
+          await recordUserLogin(firestoreDocId);
           
-          // Clear temp password if it exists (after email reset)
+          // Clear temp password if it exists
           if (userData.temporaryPassword) {
-            await updateDoc(doc(db, "users", result.user.uid), {
+            await updateDoc(doc(db, "users", firestoreDocId), {
               temporaryPassword: null,
               passwordCreatedAt: null,
               updatedAt: new Date().toISOString()
             });
-            console.log("Cleared temporary password after email reset login");
+            console.log("Cleared temporary password after login");
           }
+          
         } else {
-          // User document doesn't exist in Firestore
-          await signOut(auth);
-          throw new Error("User account not found. Please contact an administrator.");
+          // No user document found with matching userId
+          console.error("No Firestore document found with userId:", result.user.uid);
+          
+          // Fallback: Check if document exists with document ID = Firebase UID (legacy)
+          const legacyUserDoc = await getDoc(doc(db, "users", result.user.uid));
+          
+          if (legacyUserDoc.exists()) {
+            console.log("Found legacy user document (document ID = Firebase UID)");
+            const userData = legacyUserDoc.data();
+            
+            if (userData.isActive === false) {
+              await signOut(auth);
+              throw new Error("Your account has been deactivated. Please contact an administrator.");
+            }
+            
+            await recordUserLogin(result.user.uid);
+            
+            if (userData.temporaryPassword) {
+              await updateDoc(doc(db, "users", result.user.uid), {
+                temporaryPassword: null,
+                passwordCreatedAt: null,
+                updatedAt: new Date().toISOString()
+              });
+            }
+          } else {
+            // No user document found at all
+            console.error("User authenticated in Firebase but no Firestore document found");
+            await signOut(auth);
+            throw new Error("User account not found. Please contact an administrator.");
+          }
         }
       }
       
@@ -185,12 +235,26 @@ export const AuthProvider = ({ children }) => {
       // Change password
       await updatePassword(currentUser, newPassword);
       
-      // Clear temporary password if it exists
-      await updateDoc(doc(db, "users", currentUser.uid), {
-        temporaryPassword: null,
-        passwordCreatedAt: null,
-        updatedAt: new Date().toISOString()
-      });
+      // Find and clear temporary password from Firestore document
+      const usersRef = collection(db, "users");
+      const userQuery = query(usersRef, where("userId", "==", currentUser.uid));
+      const querySnapshot = await getDocs(userQuery);
+      
+      if (!querySnapshot.empty) {
+        const userDocRef = querySnapshot.docs[0];
+        await updateDoc(doc(db, "users", userDocRef.id), {
+          temporaryPassword: null,
+          passwordCreatedAt: null,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        // Fallback for legacy users
+        await updateDoc(doc(db, "users", currentUser.uid), {
+          temporaryPassword: null,
+          passwordCreatedAt: null,
+          updatedAt: new Date().toISOString()
+        });
+      }
       
       return true;
     } catch (error) {
@@ -204,23 +268,41 @@ export const AuthProvider = ({ children }) => {
     return userRole === role || userRole === "admin"; // Admin has access to everything
   };
 
-  // Fetch user data from Firestore
+  // Fetch user data from Firestore (UPDATED to handle userId field structure)
   const fetchUserData = async (uid) => {
     try {
-      console.log("Fetching user data for:", uid);
-      const userDoc = await getDoc(doc(db, "users", uid));
-      if (userDoc.exists()) {
+      console.log("Fetching user data for Firebase UID:", uid);
+      
+      // First try to find by userId field
+      const usersRef = collection(db, "users");
+      const userQuery = query(usersRef, where("userId", "==", uid));
+      const querySnapshot = await getDocs(userQuery);
+      
+      if (!querySnapshot.empty) {
+        const userDoc = querySnapshot.docs[0];
         const userData = userDoc.data();
-        console.log("User data:", userData);
+        console.log("Found user data by userId field:", userData);
         setUserRole(userData.role);
         setUserDisplayName(userData.displayName || null);
         return userData;
-      } else {
-        console.log("No user document found");
-        setUserRole(null);
-        setUserDisplayName(null);
-        return null;
       }
+      
+      // Fallback: Try to find by document ID (legacy)
+      const legacyUserDoc = await getDoc(doc(db, "users", uid));
+      if (legacyUserDoc.exists()) {
+        const userData = legacyUserDoc.data();
+        console.log("Found user data by document ID (legacy):", userData);
+        setUserRole(userData.role);
+        setUserDisplayName(userData.displayName || null);
+        return userData;
+      }
+      
+      // No user found
+      console.log("No user document found for UID:", uid);
+      setUserRole(null);
+      setUserDisplayName(null);
+      return null;
+      
     } catch (error) {
       console.error("Error fetching user data:", error);
       setUserRole(null);
@@ -252,7 +334,22 @@ export const AuthProvider = ({ children }) => {
   // Update user display name
   const updateUserDisplayName = async (uid, newDisplayName) => {
     try {
-      await setDoc(doc(db, "users", uid), { displayName: newDisplayName }, { merge: true });
+      // Find user document by userId field
+      const usersRef = collection(db, "users");
+      const userQuery = query(usersRef, where("userId", "==", uid));
+      const querySnapshot = await getDocs(userQuery);
+      
+      if (!querySnapshot.empty) {
+        const userDocRef = querySnapshot.docs[0];
+        await updateDoc(doc(db, "users", userDocRef.id), { 
+          displayName: newDisplayName,
+          updatedAt: new Date().toISOString()
+        });
+      } else {
+        // Fallback for legacy users
+        await setDoc(doc(db, "users", uid), { displayName: newDisplayName }, { merge: true });
+      }
+      
       setUserDisplayName(newDisplayName);
       return true;
     } catch (error) {

@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, fetchSignInMethodsForEmail } from "firebase/auth";
-import { doc, setDoc, updateDoc } from "firebase/firestore";
+import { doc, updateDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 
 const SetupUserAccountModal = ({ user, onClose, onSuccess, adminEmail }) => {
@@ -73,7 +73,11 @@ const SetupUserAccountModal = ({ user, onClose, onSuccess, adminEmail }) => {
         generatedPassword
       );
       
-      // Update the existing user document in Firestore with auth information
+      console.log("Created Firebase Auth user:", userCredential.user.uid);
+      console.log("Updating Firestore document:", user.id);
+      
+      // IMPORTANT: Update the existing user document in Firestore with auth information
+      // This links the Firebase Auth UID to the existing Firestore document
       await updateDoc(doc(db, "users", user.id), {
         userId: userCredential.user.uid, // Link to Firebase Auth user
         hasAccount: true,
@@ -82,11 +86,15 @@ const SetupUserAccountModal = ({ user, onClose, onSuccess, adminEmail }) => {
         updatedAt: new Date().toISOString()
       });
       
+      console.log("Successfully linked Firebase Auth UID to Firestore document");
+      
       // Store the credentials for display
       setGeneratedCredentials({
         email: user.email,
         password: generatedPassword,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
+        firebaseUID: userCredential.user.uid,
+        firestoreID: user.id
       });
       
       // Re-authenticate admin to make sure we don't lose admin session
@@ -100,6 +108,8 @@ const SetupUserAccountModal = ({ user, onClose, onSuccess, adminEmail }) => {
         
         // Force URL again just to be sure
         window.history.pushState({}, "", "/user-management");
+        
+        console.log("Successfully re-authenticated admin");
         
       } catch (authError) {
         console.error("Error re-authenticating admin:", authError);
@@ -117,29 +127,31 @@ const SetupUserAccountModal = ({ user, onClose, onSuccess, adminEmail }) => {
         });
       }
       
+      setLoading(false);
+      
     } catch (error) {
       console.error("Error creating user account:", error);
       
+      let errorMessage = "Failed to create account";
       if (error.code === "auth/email-already-in-use") {
-        setError("An account with this email already exists.");
+        errorMessage = "An account with this email already exists.";
+      } else if (error.code === "auth/weak-password") {
+        errorMessage = "Generated password is too weak.";
+      } else if (error.code === "auth/invalid-email") {
+        errorMessage = "Invalid email address.";
       } else {
-        setError(`Failed to create account: ${error.message}`);
+        errorMessage = `Failed to create account: ${error.message}`;
       }
       
+      setError(errorMessage);
       setLoading(false);
       
       // Make sure admin stays logged in even on error
       try {
         const adminAuth = getAuth();
-        
-        // Force URL to stay at user management to prevent redirection
         window.history.pushState({}, "", "/user-management");
-        
         await signInWithEmailAndPassword(adminAuth, adminEmail, password);
-        
-        // Force URL again just to be sure
         window.history.pushState({}, "", "/user-management");
-        
       } catch (e) {
         console.error("Error re-authenticating admin after error:", e);
       }
@@ -150,8 +162,8 @@ const SetupUserAccountModal = ({ user, onClose, onSuccess, adminEmail }) => {
     const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
     let password = "";
     
-    // Generate a password with 10 characters
-    for (let i = 0; i < 10; i++) {
+    // Generate a password with 12 characters for better security
+    for (let i = 0; i < 12; i++) {
       const randomIndex = Math.floor(Math.random() * chars.length);
       password += chars[randomIndex];
     }
@@ -294,6 +306,13 @@ const SetupUserAccountModal = ({ user, onClose, onSuccess, adminEmail }) => {
                 </svg>
                 Copy Credentials
               </button>
+            </div>
+            
+            {/* Debug Information (remove in production) */}
+            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md text-xs">
+              <h5 className="font-medium text-blue-800 mb-1">Debug Info</h5>
+              <p className="text-blue-700">Firebase UID: {generatedCredentials.firebaseUID}</p>
+              <p className="text-blue-700">Firestore ID: {generatedCredentials.firestoreID}</p>
             </div>
             
             {/* Important Instructions */}
