@@ -1,7 +1,7 @@
 import React from "react";
 import VendorDuplicateIndicator from "./VendorDuplicateIndicator";
 
-const VendorDetailsModal = ({ vendor, onClose, onEdit, onToggleStatus, isAdmin }) => {
+const VendorDetailsModal = ({ vendor, onClose, onEdit, onToggleStatus, hasFullAccess }) => {
   if (!vendor) return null;
 
   // Format currency
@@ -60,7 +60,8 @@ const VendorDetailsModal = ({ vendor, onClose, onEdit, onToggleStatus, isAdmin }
                   {vendor.isActive ? "Active Vendor" : "Inactive Vendor"}
                 </span>
                 
-                {onToggleStatus && (
+                {/* Only show toggle button for users with full access */}
+                {hasFullAccess && onToggleStatus && (
                   <button 
                     onClick={onToggleStatus}
                     className={`mt-2 px-3 py-1.5 text-xs rounded-md flex items-center ${
@@ -256,7 +257,8 @@ const VendorDetailsModal = ({ vendor, onClose, onEdit, onToggleStatus, isAdmin }
           
           {/* Action buttons */}
           <div className="mt-6 flex justify-end">
-            {onEdit && (
+            {/* Only show edit button for users with full access */}
+            {hasFullAccess && onEdit && (
               <button 
                 onClick={onEdit}
                 className="px-4 py-2 bg-blue-600 text-white rounded-md text-sm hover:bg-blue-700 mr-2"

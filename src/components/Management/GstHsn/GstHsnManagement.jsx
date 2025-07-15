@@ -31,6 +31,7 @@ const GstHsnManagement = () => {
   
   // Check if user has admin privileges
   const isAdmin = userRole === "admin";
+  const canView = userRole === "accountant" || userRole === "staff";
 
   useEffect(() => {
     const gstHsnsCollection = collection(db, "gst_and_hsn");
@@ -208,7 +209,7 @@ const GstHsnManagement = () => {
   };
 
   // Redirect non-authorized users
-  if (!isAdmin && userRole !== "staff") {
+  if (!isAdmin && !canView) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
         <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">

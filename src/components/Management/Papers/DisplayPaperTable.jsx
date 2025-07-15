@@ -14,6 +14,10 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
   const [sortField, setSortField] = useState('paperName');
   const [sortDirection, setSortDirection] = useState('asc');
   
+  // Check if edit/delete functionality is enabled
+  const hasEditAccess = typeof onEditPaper === "function";
+  const hasDeleteAccess = typeof onDeletePaper === "function";
+  
   // Handle search input
   const handleSearch = (e) => {
     setSearchTerm(e.target.value);
@@ -30,7 +34,8 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
   };
   
   // Toggle expanded state for a row
-  const toggleRowExpand = (id) => {
+  const toggleRowExpand = (e, id) => {
+    e.stopPropagation();
     setExpandedRows(prev => ({
       ...prev,
       [id]: !prev[id]
@@ -92,6 +97,49 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
     </th>
   );
 
+  // Renders the action buttons with minimal styling like vendor management
+  const renderActionButtons = (paper) => (
+    <div className="flex items-center space-x-1">
+      {hasEditAccess && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEditPaper(paper);
+          }}
+          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+          title="Edit Paper"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+          </svg>
+        </button>
+      )}
+      {hasDeleteAccess && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDeletePaper(paper.id);
+          }}
+          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+          title="Delete Paper"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        </button>
+      )}
+      <button
+        onClick={(e) => toggleRowExpand(e, paper.id)}
+        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+        title={expandedRows[paper.id] ? "Show Less" : "Show More"}
+      >
+        <svg className={`w-4 h-4 transition-transform ${expandedRows[paper.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
+        </svg>
+      </button>
+    </div>
+  );
+
   // Compact view - shows only essential columns
   const renderCompactView = () => {
     return (
@@ -105,7 +153,9 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
               <SortableHeader field="pricePerSheet" label="Price/Sheet" />
               <SortableHeader field="finalRate" label="Final Rate" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Dimensions (L×B)</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+              {(hasEditAccess || hasDeleteAccess) && (
+                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+              )}
             </tr>
           </thead>
           <tbody>
@@ -118,38 +168,15 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
                   <td className="px-3 py-3">₹{paper.pricePerSheet || "-"}</td>
                   <td className="px-3 py-3 font-medium text-red-600">₹{paper.finalRate || "-"}</td>
                   <td className="px-3 py-3">{paper.length || "-"}×{paper.breadth || "-"}</td>
-                  <td className="px-3 py-3">
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => onEditPaper(paper)}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center"
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => onDeletePaper(paper.id)}
-                        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        Delete
-                      </button>
-                      <button
-                        onClick={() => toggleRowExpand(paper.id)}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-                      >
-                        {expandedRows[paper.id] ? '▲' : '▼'}
-                      </button>
-                    </div>
-                  </td>
+                  {(hasEditAccess || hasDeleteAccess) && (
+                    <td className="px-3 py-3">
+                      {renderActionButtons(paper)}
+                    </td>
+                  )}
                 </tr>
                 {expandedRows[paper.id] && (
                   <tr className="bg-gray-50">
-                    <td colSpan={8} className="px-4 py-3 border-b border-gray-200">
+                    <td colSpan={(hasEditAccess || hasDeleteAccess) ? 7 : 6} className="px-4 py-3 border-b border-gray-200">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="font-medium text-gray-700">Area:</p>
@@ -204,7 +231,9 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
                 <SortableHeader field="area" label="Area" />
                 <SortableHeader field="ratePerGram" label="Rate/Gram" />
                 <SortableHeader field="freightPerSheet" label="Freight/Sheet" />
-                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+                {(hasEditAccess || hasDeleteAccess) && (
+                  <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+                )}
               </tr>
             </thead>
             <tbody>
@@ -220,28 +249,11 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
                   <td className="px-3 py-3">{paper.area || "-"}</td>
                   <td className="px-3 py-3">₹{paper.ratePerGram || "-"}</td>
                   <td className="px-3 py-3">₹{paper.freightPerSheet || "-"}</td>
-                  <td className="px-3 py-3">
-                    <div className="flex space-x-1">
-                      <button
-                        onClick={() => onEditPaper(paper)}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center"
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => onDeletePaper(paper.id)}
-                        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-                      >
-                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        Delete
-                      </button>
-                    </div>
-                  </td>
+                  {(hasEditAccess || hasDeleteAccess) && (
+                    <td className="px-3 py-3">
+                      {renderActionButtons(paper)}
+                    </td>
+                  )}
                 </tr>
               ))}
             </tbody>
@@ -288,7 +300,7 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
               
               <div className="mt-3 flex justify-between items-center">
                 <button
-                  onClick={() => toggleRowExpand(paper.id)}
+                  onClick={(e) => toggleRowExpand(e, paper.id)}
                   className="text-xs text-gray-600 flex items-center"
                 >
                   {expandedRows[paper.id] ? (
@@ -308,26 +320,32 @@ const DisplayPaperTable = ({ papers, onEditPaper, onDeletePaper }) => {
                   )}
                 </button>
                 
-                <div className="flex space-x-2">
-                  <button
-                    onClick={() => onEditPaper(paper)}
-                    className="px-3 py-1 text-xs bg-gray-100 text-gray-700 rounded-full hover:bg-gray-200 transition-colors flex items-center"
-                  >
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                    </svg>
-                    Edit
-                  </button>
-                  <button
-                    onClick={() => onDeletePaper(paper.id)}
-                    className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded-full hover:bg-red-200 transition-colors flex items-center"
-                  >
-                    <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                    </svg>
-                    Delete
-                  </button>
-                </div>
+                {(hasEditAccess || hasDeleteAccess) && (
+                  <div className="flex space-x-2">
+                    {hasEditAccess && (
+                      <button
+                        onClick={() => onEditPaper(paper)}
+                        className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                        Edit
+                      </button>
+                    )}
+                    {hasDeleteAccess && (
+                      <button
+                        onClick={() => onDeletePaper(paper.id)}
+                        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Delete
+                      </button>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
             

@@ -14,8 +14,9 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
   // State for view type (compact or detailed)
   const [viewType, setViewType] = useState('compact');
   
-  // Check if edit functionality is enabled
-  const hasEditAccess = typeof onEdit === "function" && typeof onDelete === "function";
+  // Check if edit/delete functionality is enabled
+  const hasEditAccess = typeof onEdit === "function";
+  const hasDeleteAccess = typeof onDelete === "function";
   
   // Handle search input
   const handleSearch = (e) => {
@@ -33,7 +34,8 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
   };
   
   // Toggle expanded state for a row
-  const toggleRowExpand = (id) => {
+  const toggleRowExpand = (e, id) => {
+    e.stopPropagation();
     setExpandedRows(prev => ({
       ...prev,
       [id]: !prev[id]
@@ -94,32 +96,45 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
     </th>
   );
 
-  // Renders the action buttons with the correct styling
+  // Renders the action buttons with minimal styling like vendor management
   const renderActionButtons = (material) => (
-    <div className="flex space-x-2">
+    <div className="flex items-center space-x-1">
+      {hasEditAccess && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onEdit(material);
+          }}
+          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+          title="Edit Material"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+          </svg>
+        </button>
+      )}
+      {hasDeleteAccess && (
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            onDelete(material.id);
+          }}
+          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+          title="Delete Material"
+        >
+          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+          </svg>
+        </button>
+      )}
       <button
-        onClick={() => onEdit(material)}
-        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center"
+        onClick={(e) => toggleRowExpand(e, material.id)}
+        className="p-1.5 text-gray-600 hover:bg-gray-100 rounded transition-colors"
+        title={expandedRows[material.id] ? "Show Less" : "Show More"}
       >
-        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+        <svg className={`w-4 h-4 transition-transform ${expandedRows[material.id] ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path>
         </svg>
-        Edit
-      </button>
-      <button
-        onClick={() => onDelete(material.id)}
-        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-      >
-        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-        </svg>
-        Delete
-      </button>
-      <button
-        onClick={() => toggleRowExpand(material.id)}
-        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors"
-      >
-        {expandedRows[material.id] ? '▲' : '▼'}
       </button>
     </div>
   );
@@ -137,8 +152,8 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
               <SortableHeader field="rate" label="Rate" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Size (L×B)</th>
               <SortableHeader field="finalCostPerUnit" label="Final Cost/Unit" />
-              {hasEditAccess && (
-                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+              {(hasEditAccess || hasDeleteAccess) && (
+                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
               )}
             </tr>
           </thead>
@@ -152,7 +167,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                   <td className="px-3 py-3">₹{material.rate || "-"}</td>
                   <td className="px-3 py-3">{material.sizeL || "-"}×{material.sizeB || "-"}</td>
                   <td className="px-3 py-3 font-medium text-red-600">₹{material.finalCostPerUnit || "-"}</td>
-                  {hasEditAccess && (
+                  {(hasEditAccess || hasDeleteAccess) && (
                     <td className="px-3 py-3">
                       {renderActionButtons(material)}
                     </td>
@@ -160,7 +175,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                 </tr>
                 {expandedRows[material.id] && (
                   <tr className="bg-gray-50">
-                    <td colSpan={hasEditAccess ? 7 : 6} className="px-4 py-3 border-b border-gray-200">
+                    <td colSpan={(hasEditAccess || hasDeleteAccess) ? 7 : 6} className="px-4 py-3 border-b border-gray-200">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="font-medium text-gray-700">Quantity:</p>
@@ -217,8 +232,8 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
               <SortableHeader field="landedCost" label="Landed Cost" />
               <SortableHeader field="costPerUnit" label="Cost/Unit" />
               <SortableHeader field="finalCostPerUnit" label="Final Cost/Unit" />
-              {hasEditAccess && (
-                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Actions</th>
+              {(hasEditAccess || hasDeleteAccess) && (
+                <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
               )}
             </tr>
           </thead>
@@ -238,28 +253,9 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                 <td className="px-3 py-3">₹{material.landedCost || "-"}</td>
                 <td className="px-3 py-3">₹{material.costPerUnit || "-"}</td>
                 <td className="px-3 py-3 font-medium text-red-600">₹{material.finalCostPerUnit || "-"}</td>
-                {hasEditAccess && (
+                {(hasEditAccess || hasDeleteAccess) && (
                   <td className="px-3 py-3">
-                    <div className="flex space-x-2">
-                      <button
-                        onClick={() => onEdit(material)}
-                        className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center"
-                      >
-                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                        </svg>
-                        Edit
-                      </button>
-                      <button
-                        onClick={() => onDelete(material.id)}
-                        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-                      >
-                        <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                        </svg>
-                        Delete
-                      </button>
-                    </div>
+                    {renderActionButtons(material)}
                   </td>
                 )}
               </tr>
@@ -308,7 +304,7 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
               
               <div className="mt-3 flex justify-between items-center">
                 <button
-                  onClick={() => toggleRowExpand(material.id)}
+                  onClick={(e) => toggleRowExpand(e, material.id)}
                   className="text-xs text-gray-600 flex items-center"
                 >
                   {expandedRows[material.id] ? (
@@ -328,26 +324,30 @@ const DisplayMaterialTable = ({ materials, onDelete, onEdit }) => {
                   )}
                 </button>
                 
-                {hasEditAccess && (
+                {(hasEditAccess || hasDeleteAccess) && (
                   <div className="flex space-x-2">
-                    <button
-                      onClick={() => onEdit(material)}
-                      className="px-2 py-1 text-xs bg-gray-100 text-gray-700 rounded hover:bg-gray-200 transition-colors flex items-center"
-                    >
-                      <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
-                      </svg>
-                      Edit
-                    </button>
-                    <button
-                      onClick={() => onDelete(material.id)}
-                      className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
-                    >
-                      <svg className="w-3.5 h-3.5 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
-                      </svg>
-                      Delete
-                    </button>
+                    {hasEditAccess && (
+                      <button
+                        onClick={() => onEdit(material)}
+                        className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded hover:bg-blue-200 transition-colors flex items-center"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path>
+                        </svg>
+                        Edit
+                      </button>
+                    )}
+                    {hasDeleteAccess && (
+                      <button
+                        onClick={() => onDelete(material.id)}
+                        className="px-2 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 transition-colors flex items-center"
+                      >
+                        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path>
+                        </svg>
+                        Delete
+                      </button>
+                    )}
                   </div>
                 )}
               </div>

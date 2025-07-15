@@ -7,12 +7,17 @@ import UnifiedDetailsModal from "../Shared/UnifiedDetailsModal";
 import EstimatePreviewModal from "./EstimatePreviewModal";
 import EstimateTemplate from "./EsimateTemplate";
 import EditEstimateModal from "./EditEstimateModal";
+import VersionTransferModal from "./VersionTransferModal";
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import { createRoot } from "react-dom/client";
 import { useAuth } from "../Login/AuthContext";
 import { normalizeDataForOrders } from "../../utils/normalizeDataForOrders";
 import OrderSerializationService from "../../utils/OrderSerializationService";
+import {
+  createVersionTransferHelpers,
+  createVersionTransferHandlers
+} from "../../utils/versionTransferUtils";
 
 const EstimatesPage = () => {
   const navigate = useNavigate();
@@ -52,6 +57,10 @@ const EstimatesPage = () => {
   const [isMultiSelectActive, setIsMultiSelectActive] = useState(false);
   const [isMovingMultiple, setIsMovingMultiple] = useState(false);
   const [showAllVersions, setShowAllVersions] = useState(false);
+
+  // Version Transfer state
+  const [isVersionTransferMode, setIsVersionTransferMode] = useState(false);
+  const [isTransferringVersions, setIsTransferringVersions] = useState(false);
 
   // Initialize order serial counter on component mount
   useEffect(() => {
@@ -136,6 +145,7 @@ const EstimatesPage = () => {
   useEffect(() => {
     if (!isMultiSelectActive) {
       setSelectedEstimates({});
+      setIsVersionTransferMode(false); // Clear version transfer mode too
     }
   }, [isMultiSelectActive]);
 
@@ -284,6 +294,23 @@ const EstimatesPage = () => {
     return groups;
   }, [allEstimates, searchQuery, filterStatus, clientTypeFilter, activeClientsMap, showInactiveClients, isB2BClient, linkedClientId]);
 
+  // Create version transfer helpers using the extracted utilities
+  const versionHelpers = createVersionTransferHelpers(
+    expandedClientId,
+    clientGroups,
+    selectedEstimates,
+    allEstimates
+  );
+
+  // Create version transfer handlers using the extracted utilities
+  const versionHandlers = createVersionTransferHandlers(
+    setIsTransferringVersions,
+    setAllEstimates,
+    setSelectedEstimates,
+    setIsVersionTransferMode,
+    setIsMultiSelectActive
+  );
+
   // Sort client groups alphabetically by client name
   const sortedClientGroups = React.useMemo(() => {
     return Object.values(clientGroups).sort((a, b) => {
@@ -292,25 +319,12 @@ const EstimatesPage = () => {
     });
   }, [clientGroups]);
 
-  // Get a count of selected valid estimates
-  const getSelectedEstimatesCount = () => {
-    let count = 0;
-    Object.keys(selectedEstimates).forEach(estimateId => {
-      if (selectedEstimates[estimateId]?.selected) {
-        const estimate = allEstimates.find(est => est.id === estimateId);
-        if (estimate && !estimate.movedToOrders && !estimate.isCanceled && !estimate.inEscrow) {
-          count++;
-        }
-      }
-    });
-    return count;
-  };
-
   // Toggle multi-select mode
   const toggleMultiSelect = () => {
     setIsMultiSelectActive(!isMultiSelectActive);
     if (isMultiSelectActive) {
       setSelectedEstimates({});
+      setIsVersionTransferMode(false); // Clear version transfer mode too
     }
   };
 
@@ -753,7 +767,7 @@ const EstimatesPage = () => {
     
     try {
       // Calculate pagination
-      const ESTIMATES_PER_PAGE = 8;
+      const ESTIMATES_PER_PAGE = 6;
       const totalPages = Math.ceil(previewData.estimates.length / ESTIMATES_PER_PAGE);
       const pdf = new jsPDF({
         orientation: 'portrait',
@@ -811,7 +825,7 @@ const EstimatesPage = () => {
             height: 1000, // A4 aspect ratio
             backgroundColor: '#ffffff'
           });
-          
+
           // Add page to PDF
           if (pageIndex > 0) {
             pdf.addPage();
@@ -937,6 +951,25 @@ const EstimatesPage = () => {
       console.error("Error duplicating estimate:", error);
       throw error;
     }
+  };
+
+  // Version Transfer Event Handlers (using extracted utilities)
+  const handleVersionTransferConfirm = async (targetVersionId) => {
+    const movableEstimates = versionHelpers.getMovableEstimatesForTarget(targetVersionId);
+    return await versionHandlers.handleVersionTransferConfirm(targetVersionId, movableEstimates);
+  };
+
+  const handleSingleEstimateVersionMoveLocal = (estimate) => {
+    versionHandlers.handleSingleEstimateVersionMoveLocal(estimate);
+  };
+
+  const handleStartVersionTransfer = () => {
+    const selectedCount = versionHelpers.getSelectedEstimatesCount();
+    return versionHandlers.handleStartVersionTransfer(selectedCount);
+  };
+
+  const handleCancelVersionTransfer = () => {
+    versionHandlers.handleCancelVersionTransfer();
   };
 
   // Calculate active and inactive client counts
@@ -1226,7 +1259,7 @@ const EstimatesPage = () => {
                   )}
                 </div>
               </div>
-              
+
               {/* Expanded Content */}
               {expandedClientId === client.id && (
                 <div className="border-t border-gray-200 bg-white">
@@ -1320,8 +1353,26 @@ const EstimatesPage = () => {
                         </div>
                         
                         <div className="flex gap-2">
-                          {/* Bulk Move Action Button */}
-                          {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
+                          {/* NEW: Version Transfer Button */}
+                          {isMultiSelectActive && versionHelpers.getSelectedEstimatesCount() > 0 && (
+                            <button
+                              onClick={handleStartVersionTransfer}
+                              disabled={isVersionTransferMode || isTransferringVersions}
+                              className={`px-3 py-1.5 rounded text-sm flex items-center gap-1.5 ${
+                                isVersionTransferMode || isTransferringVersions
+                                ? 'bg-purple-300 text-white cursor-wait' 
+                                : 'bg-purple-500 text-white hover:bg-purple-600'
+                              }`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Move to Version ({versionHelpers.getSelectedEstimatesCount()})
+                            </button>
+                          )}
+                          
+                          {/* Existing Bulk Move Action Button */}
+                          {isMultiSelectActive && versionHelpers.getSelectedEstimatesCount() > 0 && !isVersionTransferMode && (
                             <button
                               onClick={handleMoveMultipleToOrders}
                               disabled={isMovingMultiple}
@@ -1335,7 +1386,7 @@ const EstimatesPage = () => {
                                 <>
                                   <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                   </svg>
                                   Processing...
                                 </>
@@ -1345,7 +1396,7 @@ const EstimatesPage = () => {
                                     <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
                                     <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
                                   </svg>
-                                  Process {getSelectedEstimatesCount()}
+                                  Process {versionHelpers.getSelectedEstimatesCount()}
                                 </>
                               )}
                             </button>
@@ -1353,7 +1404,7 @@ const EstimatesPage = () => {
                           
                           <button
                             onClick={() => handlePreviewJobTicket(client.id, selectedVersions[client.id])}
-                            className="px-3 py-1.5 rounded text-sm bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1.5"
+                            className="px-3 py-1.5 rounded text-xs bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 flex items-center gap-1.5"
                           >
                             <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
                               <path d="M10 12a2 2 0 100-4 2 2 0 000 4z" />
@@ -1364,34 +1415,40 @@ const EstimatesPage = () => {
                         </div>
                       </div>
                       
+                      {/* Enhanced EstimateCard Grid with Version Transfer Props */}
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                      {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
-                        <EstimateCard
-                          key={estimate.id}
-                          estimate={estimate}
-                          estimateNumber={index + 1}
-                          onViewDetails={() => handleViewEstimate(estimate)}
-                          onMoveToOrders={() => handleMoveToOrders(estimate)}
-                          onCancelEstimate={() => handleCancelEstimate(estimate)}
-                          onDeleteEstimate={() => handleDeleteEstimate(estimate)}
-                          onEditEstimate={() => handleEditEstimate(estimate)}
-                          onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
-                          isAdmin={userRole === "admin"}
-                          // Multi-select props
-                          isMultiSelectActive={isMultiSelectActive}
-                          isSelected={selectedEstimates[estimate.id]?.selected || false}
-                          onSelectToggle={(isSelected) => toggleEstimateSelection(
-                            estimate.id, 
-                            isSelected, 
-                            estimate.versionId || "1"
-                          )}
-                        />
-                      ))}
+                        {client.versions.get(selectedVersions[client.id])?.estimates.map((estimate, index) => (
+                          <EstimateCard
+                            key={estimate.id}
+                            estimate={estimate}
+                            estimateNumber={index + 1}
+                            onViewDetails={() => handleViewEstimate(estimate)}
+                            onMoveToOrders={() => handleMoveToOrders(estimate)}
+                            onCancelEstimate={() => handleCancelEstimate(estimate)}
+                            onDeleteEstimate={() => handleDeleteEstimate(estimate)}
+                            onEditEstimate={() => handleEditEstimate(estimate)}
+                            onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
+                            onMoveToVersion={() => handleSingleEstimateVersionMoveLocal(estimate)}
+                            isAdmin={userRole === "admin"}
+                            isStaff={userRole === "staff"}
+                            // Multi-select props
+                            isMultiSelectActive={isMultiSelectActive}
+                            isSelected={selectedEstimates[estimate.id]?.selected || false}
+                            onSelectToggle={(isSelected) => toggleEstimateSelection(
+                              estimate.id, 
+                              isSelected, 
+                              estimate.versionId || "1"
+                            )}
+                            // Version transfer props
+                            availableVersions={versionHelpers.getAllAvailableVersions()}
+                            currentVersion={selectedVersions[client.id]}
+                          />
+                        ))}
                       </div>
                     </div>
                   )}
 
-                  {/* Show all versions at once in a tabbed layout */}
+                  {/* Show all versions at once with enhanced version transfer */}
                   {showAllVersions && (
                     <div className="p-4">
                       <div className="flex justify-between items-center mb-4">
@@ -1417,39 +1474,59 @@ const EstimatesPage = () => {
                           </button>
                         </div>
                         
-                        {/* Bulk Move Action Button */}
-                        {isMultiSelectActive && getSelectedEstimatesCount() > 0 && (
-                          <button
-                            onClick={handleMoveMultipleToOrders}
-                            disabled={isMovingMultiple}
-                            className={`px-3 py-1.5 rounded text-sm ${
-                              isMovingMultiple
-                              ? 'bg-blue-300 text-white cursor-wait' 
-                              : 'bg-blue-500 text-white hover:bg-blue-600'
-                            } flex items-center gap-1.5`}
-                          >
-                            {isMovingMultiple ? (
-                              <>
-                                <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Processing...
-                              </>
-                            ) : (
-                              <>
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
-                                  <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
-                                  <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
-                                </svg>
-                                Process {getSelectedEstimatesCount()}
-                              </>
-                            )}
-                          </button>
-                        )}
+                        <div className="flex gap-2">
+                          {/* Version Transfer Button for All Versions */}
+                          {isMultiSelectActive && versionHelpers.getSelectedEstimatesCount() > 0 && (
+                            <button
+                              onClick={handleStartVersionTransfer}
+                              disabled={isVersionTransferMode || isTransferringVersions}
+                              className={`px-3 py-1.5 rounded text-sm flex items-center gap-1.5 ${
+                                isVersionTransferMode || isTransferringVersions
+                                ? 'bg-purple-300 text-white cursor-wait' 
+                                : 'bg-purple-500 text-white hover:bg-purple-600'
+                              }`}
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Move to Version ({versionHelpers.getSelectedEstimatesCount()})
+                            </button>
+                          )}
+
+                          {/* Bulk Move Action Button */}
+                          {isMultiSelectActive && versionHelpers.getSelectedEstimatesCount() > 0 && !isVersionTransferMode && (
+                            <button
+                              onClick={handleMoveMultipleToOrders}
+                              disabled={isMovingMultiple}
+                              className={`px-3 py-1.5 rounded text-sm ${
+                                isMovingMultiple
+                                ? 'bg-blue-300 text-white cursor-wait' 
+                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                              } flex items-center gap-1.5`}
+                            >
+                              {isMovingMultiple ? (
+                                <>
+                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                  </svg>
+                                  Processing...
+                                </>
+                              ) : (
+                                <>
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" viewBox="0 0 20 20" fill="currentColor">
+                                    <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
+                                    <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
+                                  </svg>
+                                  Process {versionHelpers.getSelectedEstimatesCount()}
+                                </>
+                              )}
+                            </button>
+                          )}
+                        </div>
                       </div>
                       
-                      {/* All versions shown with dividers between them */}
+                      {/* All versions with enhanced estimate cards */}
                       {Array.from(client.versions.entries()).sort(([a], [b]) => parseInt(a) - parseInt(b)).map(([versionId, versionData]) => (
                         <div key={versionId} className="mb-6">
                           <div className="flex justify-between items-center mb-3">
@@ -1476,7 +1553,7 @@ const EstimatesPage = () => {
                                   <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                     <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                                     <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
-                                    </svg>
+                                  </svg>
                                   Select All
                                 </button>
                               )}
@@ -1494,6 +1571,7 @@ const EstimatesPage = () => {
                             </div>
                           </div>
                           
+                          {/* Enhanced estimate cards with version transfer */}
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 mb-4">
                             {versionData.estimates.map((estimate, index) => (
                               <EstimateCard
@@ -1506,7 +1584,9 @@ const EstimatesPage = () => {
                                 onDeleteEstimate={() => handleDeleteEstimate(estimate)}
                                 onEditEstimate={() => handleEditEstimate(estimate)}
                                 onDuplicateEstimate={() => handleDuplicateEstimate(estimate)}
+                                onMoveToVersion={() => handleSingleEstimateVersionMoveLocal(estimate)}
                                 isAdmin={userRole === "admin"}
+                                isStaff={userRole === "staff"}
                                 // Multi-select props
                                 isMultiSelectActive={isMultiSelectActive}
                                 isSelected={selectedEstimates[estimate.id]?.selected || false}
@@ -1515,6 +1595,9 @@ const EstimatesPage = () => {
                                   isSelected, 
                                   estimate.versionId || "1"
                                 )}
+                                // Version transfer props
+                                availableVersions={versionHelpers.getAllAvailableVersions()}
+                                currentVersion={versionId}
                               />
                             ))}
                           </div>
@@ -1572,6 +1655,21 @@ const EstimatesPage = () => {
             setEstimateToEdit(null);
           }}
           onSave={handleSaveEditedEstimate}
+        />
+      )}
+
+      {/* Version Transfer Modal */}
+      {isVersionTransferMode && (
+        <VersionTransferModal
+          isOpen={isVersionTransferMode}
+          onClose={handleCancelVersionTransfer}
+          onConfirm={handleVersionTransferConfirm}
+          availableVersions={versionHelpers.getAllAvailableVersions()}
+          currentVersion={selectedVersions[expandedClientId]}
+          estimateCount={versionHelpers.getSelectedEstimatesForModal().length}
+          movableCount={versionHelpers.getMovableEstimatesForTarget("").length}
+          selectedEstimates={versionHelpers.getSelectedEstimatesForModal()}
+          clientName={expandedClientId ? clientGroups[expandedClientId]?.name : ""}
         />
       )}
     </div>

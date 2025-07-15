@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { collection, onSnapshot, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../../firebaseConfig";
 import useMRTypes from "../../../../hooks/useMRTypes";
@@ -74,6 +74,12 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   
   const [papers, setPapers] = useState([]);
   const [errors, setErrors] = useState({});
+  
+  // Refs to track user selections and initial render
+  const initialRender = useRef(true);
+  const lpSelectionMade = useRef(false);
+  const fsSelectionMade = useRef(false);
+  const embSelectionMade = useRef(false);
 
   // Use custom hooks to fetch dynamic data
   const { mrTypes: lpMRTypes, loading: lpMRTypesLoading } = useMRTypes("LP MR");
@@ -116,6 +122,256 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
   }, [dispatch, paperInfo.paperName]);
 
   const inchesToCm = (inches) => parseFloat(inches) * 2.54;
+
+  // ENHANCED: Clear errors when components are turned off
+  useEffect(() => {
+    let clearedErrors = { ...errors };
+    let needsErrorUpdate = false;
+
+    if (!lpDetailsSandwich.isLPUsed) {
+      // Clear LP-related errors
+      Object.keys(clearedErrors).forEach(key => {
+        if (key.includes('lp') || key.includes('LP')) {
+          delete clearedErrors[key];
+          needsErrorUpdate = true;
+        }
+      });
+    }
+
+    if (!fsDetailsSandwich.isFSUsed) {
+      // Clear FS-related errors
+      Object.keys(clearedErrors).forEach(key => {
+        if (key.includes('fs') || key.includes('FS')) {
+          delete clearedErrors[key];
+          needsErrorUpdate = true;
+        }
+      });
+    }
+
+    if (!embDetailsSandwich.isEMBUsed) {
+      // Clear EMB-related errors
+      Object.keys(clearedErrors).forEach(key => {
+        if (key.includes('emb') || key.includes('EMB')) {
+          delete clearedErrors[key];
+          needsErrorUpdate = true;
+        }
+      });
+    }
+
+    if (needsErrorUpdate) {
+      setErrors(clearedErrors);
+    }
+  }, [lpDetailsSandwich.isLPUsed, fsDetailsSandwich.isFSUsed, embDetailsSandwich.isEMBUsed, errors]);
+
+  // ENHANCED: Reset data when components are toggled off
+  useEffect(() => {
+    if (!lpDetailsSandwich.isLPUsed) {
+      if (lpDetailsSandwich.noOfColors !== 0 || lpDetailsSandwich.colorDetails.length !== 0) {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            lpDetailsSandwich: {
+              isLPUsed: false,
+              noOfColors: 0,
+              colorDetails: []
+            }
+          }
+        });
+      }
+    }
+  }, [lpDetailsSandwich.isLPUsed, lpDetailsSandwich.noOfColors, lpDetailsSandwich.colorDetails.length, dispatch]);
+
+  useEffect(() => {
+    if (!fsDetailsSandwich.isFSUsed) {
+      if (fsDetailsSandwich.fsType !== "" || fsDetailsSandwich.foilDetails.length !== 0) {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            fsDetailsSandwich: {
+              isFSUsed: false,
+              fsType: "",
+              foilDetails: []
+            }
+          }
+        });
+      }
+    }
+  }, [fsDetailsSandwich.isFSUsed, fsDetailsSandwich.fsType, fsDetailsSandwich.foilDetails.length, dispatch]);
+
+  useEffect(() => {
+    if (!embDetailsSandwich.isEMBUsed) {
+      if (embDetailsSandwich.plateSizeType !== "" || embDetailsSandwich.plateDimensions.length !== "" || 
+          embDetailsSandwich.plateDimensions.breadth !== "" || embDetailsSandwich.embMR !== "" || 
+          embDetailsSandwich.dstMaterial !== "") {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            embDetailsSandwich: {
+              isEMBUsed: false,
+              plateSizeType: "",
+              plateDimensions: { length: "", breadth: "", lengthInInches: "", breadthInInches: "" },
+              embMR: "",
+              embMRConcatenated: "",
+              dstMaterial: ""
+            }
+          }
+        });
+      }
+    }
+  }, [embDetailsSandwich.isEMBUsed, embDetailsSandwich.plateSizeType, embDetailsSandwich.plateDimensions.length, 
+      embDetailsSandwich.plateDimensions.breadth, embDetailsSandwich.embMR, embDetailsSandwich.dstMaterial, dispatch]);
+
+  // ENHANCED: Validate against available options (similar to FSDetails)
+  useEffect(() => {
+    // Skip during initial render
+    if (initialRender.current) {
+      initialRender.current = false;
+      return;
+    }
+
+    // LP validation
+    if (lpDetailsSandwich.isLPUsed && !lpPlateTypesLoading && !lpMRTypesLoading && 
+        lpPlateTypes.length > 0 && lpMRTypes.length > 0 && lpDetailsSandwich.colorDetails.length > 0 && 
+        !lpSelectionMade.current) {
+      
+      let needsLPUpdate = false;
+      const updatedLPColorDetails = [...lpDetailsSandwich.colorDetails];
+
+      updatedLPColorDetails.forEach((color, index) => {
+        // Check if plate type exists
+        if (color.plateType) {
+          const plateTypeExists = lpPlateTypes.some(pt => pt.materialName === color.plateType);
+          if (!plateTypeExists) {
+            updatedLPColorDetails[index].plateType = lpPlateTypes[0].materialName;
+            needsLPUpdate = true;
+          }
+        }
+
+        // Check if MR type exists
+        if (color.mrType) {
+          const mrTypeExists = lpMRTypes.some(mt => mt.type === color.mrType);
+          if (!mrTypeExists) {
+            updatedLPColorDetails[index].mrType = lpMRTypes[0].type;
+            const selectedMrType = lpMRTypes.find(mt => mt.type === lpMRTypes[0].type);
+            updatedLPColorDetails[index].mrTypeConcatenated = selectedMrType?.concatenated || `LP MR ${lpMRTypes[0].type}`;
+            needsLPUpdate = true;
+          }
+        }
+      });
+
+      if (needsLPUpdate) {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            lpDetailsSandwich: {
+              ...lpDetailsSandwich,
+              colorDetails: updatedLPColorDetails
+            }
+          }
+        });
+      }
+    }
+
+    // FS validation
+    if (fsDetailsSandwich.isFSUsed && !foilTypesLoading && !blockTypesLoading && !fsMRTypesLoading &&
+        foilTypes.length > 0 && blockTypes.length > 0 && fsMRTypes.length > 0 && 
+        fsDetailsSandwich.foilDetails.length > 0 && !fsSelectionMade.current) {
+      
+      let needsFSUpdate = false;
+      const updatedFSFoilDetails = [...fsDetailsSandwich.foilDetails];
+
+      updatedFSFoilDetails.forEach((foil, index) => {
+        // Check if foil type exists
+        if (foil.foilType) {
+          const foilTypeExists = foilTypes.some(ft => ft.materialName === foil.foilType);
+          if (!foilTypeExists) {
+            updatedFSFoilDetails[index].foilType = foilTypes[0].materialName;
+            needsFSUpdate = true;
+          }
+        }
+
+        // Check if block type exists
+        if (foil.blockType) {
+          const blockTypeExists = blockTypes.some(bt => bt.materialName === foil.blockType);
+          if (!blockTypeExists) {
+            updatedFSFoilDetails[index].blockType = blockTypes[0].materialName;
+            needsFSUpdate = true;
+          }
+        }
+
+        // Check if MR type exists
+        if (foil.mrType) {
+          const mrTypeExists = fsMRTypes.some(mt => mt.type === foil.mrType);
+          if (!mrTypeExists) {
+            updatedFSFoilDetails[index].mrType = fsMRTypes[0].type;
+            const selectedMrType = fsMRTypes.find(mt => mt.type === fsMRTypes[0].type);
+            updatedFSFoilDetails[index].mrTypeConcatenated = selectedMrType?.concatenated || `FS MR ${fsMRTypes[0].type}`;
+            needsFSUpdate = true;
+          }
+        }
+      });
+
+      if (needsFSUpdate) {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            fsDetailsSandwich: {
+              ...fsDetailsSandwich,
+              foilDetails: updatedFSFoilDetails
+            }
+          }
+        });
+      }
+    }
+
+    // EMB validation
+    if (embDetailsSandwich.isEMBUsed && !embMRTypesLoading && !dstMaterialsLoading &&
+        embMRTypes.length > 0 && dstMaterials.length > 0 && !embSelectionMade.current) {
+      
+      let needsEMBUpdate = false;
+      const updates = {};
+
+      // Check if EMB MR type exists
+      if (embDetailsSandwich.embMR) {
+        const mrTypeExists = embMRTypes.some(mt => mt.type === embDetailsSandwich.embMR);
+        if (!mrTypeExists) {
+          updates.embMR = embMRTypes[0].type;
+          const selectedMrType = embMRTypes.find(mt => mt.type === embMRTypes[0].type);
+          updates.embMRConcatenated = selectedMrType?.concatenated || `EMB MR ${embMRTypes[0].type}`;
+          needsEMBUpdate = true;
+        }
+      }
+
+      // Check if DST material exists
+      if (embDetailsSandwich.dstMaterial) {
+        const dstMaterialExists = dstMaterials.some(dm => dm.materialName === embDetailsSandwich.dstMaterial);
+        if (!dstMaterialExists) {
+          const preferredDstMaterial = dstMaterials.find(material => 
+            material.materialName === "DST PP PLATE"
+          );
+          updates.dstMaterial = preferredDstMaterial ? 
+            preferredDstMaterial.materialName : 
+            (dstMaterials[0]?.materialName || "");
+          needsEMBUpdate = true;
+        }
+      }
+
+      if (needsEMBUpdate) {
+        dispatch({
+          type: "UPDATE_SANDWICH",
+          payload: {
+            embDetailsSandwich: {
+              ...embDetailsSandwich,
+              ...updates
+            }
+          }
+        });
+      }
+    }
+  }, [lpPlateTypes, lpMRTypes, foilTypes, blockTypes, fsMRTypes, embMRTypes, dstMaterials,
+      lpPlateTypesLoading, lpMRTypesLoading, foilTypesLoading, blockTypesLoading, 
+      fsMRTypesLoading, embMRTypesLoading, dstMaterialsLoading,
+      lpDetailsSandwich, fsDetailsSandwich, embDetailsSandwich, dispatch]);
 
   // Set default MR Types for LP when component mounts or when LP is first enabled
   useEffect(() => {
@@ -171,6 +427,69 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
       }
     }
   }, [lpDetailsSandwich.isLPUsed, lpPlateTypes, lpDetailsSandwich.colorDetails, dispatch]);
+
+  // ENHANCED: Update foil details dynamically when FS type changes (like FSDetails)
+  useEffect(() => {
+    if (!fsDetailsSandwich.isFSUsed || fsDetailsSandwich.fsType === undefined) return;
+
+    // Determine how many foil details are needed based on FS type
+    const numberOfFoilOptions =
+      fsDetailsSandwich.fsType === "FS1" ? 1 :
+      fsDetailsSandwich.fsType === "FS2" ? 2 :
+      fsDetailsSandwich.fsType === "FS3" ? 3 :
+      fsDetailsSandwich.fsType === "FS4" ? 4 : 5; // For FS5
+
+    // Only update if the count doesn't match
+    if (fsDetailsSandwich.foilDetails.length !== numberOfFoilOptions) {
+      // Get default values from loaded data
+      const defaultFoilType = !foilTypesLoading && foilTypes.length > 0 ? foilTypes[0].materialName : "";
+      const defaultBlockType = !blockTypesLoading && blockTypes.length > 0 ? blockTypes[0].materialName : "";
+      const defaultMrType = !fsMRTypesLoading && fsMRTypes.length > 0 ? {
+        type: fsMRTypes[0].type,
+        concatenated: fsMRTypes[0].concatenated
+      } : {
+        type: "SIMPLE",
+        concatenated: "FS MR SIMPLE"
+      };
+
+      // Create new foil details array with the correct number of items
+      const updatedFoilDetails = Array.from({ length: numberOfFoilOptions }, (_, index) => {
+        // Preserve existing details if available
+        if (index < fsDetailsSandwich.foilDetails.length) {
+          return fsDetailsSandwich.foilDetails[index];
+        }
+
+        // Create new detail with proper defaults
+        const lengthCm = dieSize.length ? inchesToCm(dieSize.length).toFixed(2) : "";
+        const breadthCm = dieSize.breadth ? inchesToCm(dieSize.breadth).toFixed(2) : "";
+        
+        return {
+          blockSizeType: "Auto",
+          blockDimension: {
+            length: lengthCm,
+            breadth: breadthCm,
+            lengthInInches: dieSize.length || "",
+            breadthInInches: dieSize.breadth || ""
+          },
+          foilType: defaultFoilType,
+          blockType: defaultBlockType,
+          mrType: defaultMrType.type,
+          mrTypeConcatenated: defaultMrType.concatenated
+        };
+      });
+
+      dispatch({
+        type: "UPDATE_SANDWICH",
+        payload: {
+          fsDetailsSandwich: {
+            ...fsDetailsSandwich,
+            foilDetails: updatedFoilDetails
+          }
+        }
+      });
+    }
+  }, [fsDetailsSandwich.fsType, fsDetailsSandwich.isFSUsed, fsDetailsSandwich.foilDetails, dieSize, 
+      foilTypes, blockTypes, fsMRTypes, foilTypesLoading, blockTypesLoading, fsMRTypesLoading, dispatch]);
 
   // Set default MR Types for FS when component mounts or when FS is first enabled
   useEffect(() => {
@@ -611,8 +930,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   };
 
-  // Handle LP Sandwich color details change
+  // ENHANCED: Handle LP Sandwich color details change with selection tracking
   const handleLPColorDetailsChange = (index, field, value) => {
+    lpSelectionMade.current = true; // Track user selection
+    
     const updatedColorDetails = [...lpDetailsSandwich.colorDetails];
     
     if (field === "plateSizeType") {
@@ -741,8 +1062,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   };
 
-  // Handle FS Sandwich foil details change
+  // ENHANCED: Handle FS Sandwich foil details change with selection tracking
   const handleFoilDetailsChange = (index, field, value) => {
+    fsSelectionMade.current = true; // Track user selection
+    
     const updatedFoilDetails = [...fsDetailsSandwich.foilDetails];
     
     if (field === "blockSizeType") {
@@ -805,8 +1128,10 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     });
   };
 
-  // Handle EMB Sandwich change - Updated to handle DST material
+  // ENHANCED: Handle EMB Sandwich change with selection tracking
   const handleEMBSandwichChange = (e) => {
+    embSelectionMade.current = true; // Track user selection
+    
     const { name, value } = e.target;
     
     if (name === "plateSizeType") {
@@ -874,6 +1199,8 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
 
   // Handle EMB Sandwich plate dimensions change
   const handleEMBDimensionChange = (field, value) => {
+    embSelectionMade.current = true; // Track user selection
+    
     const updatedDimensions = { ...embDetailsSandwich.plateDimensions };
     
     if (field === "length") {
@@ -1020,11 +1347,14 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     return null;
   }
 
+  // ENHANCED: Check if any hooks are still loading
+  const isLoading = lpMRTypesLoading || lpPlateTypesLoading || fsMRTypesLoading || 
+                   foilTypesLoading || blockTypesLoading || embMRTypesLoading || dstMaterialsLoading;
+
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      {/* Paper Selection Section - FIXED */}
-      <div className="border-b pb-4 mb-4">
-        {/* <h3 className="text-md font-semibold mb-3">Sandwich Paper Selection</h3> */}
+      {/* Paper Selection Section */}
+      <div>
         <div>
           <label className="block mb-1 text-xs">Paper Name:</label>
           <SearchablePaperDropdown 
@@ -1032,14 +1362,14 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             selectedPaper={paperInfo.paperName || ""}
             onChange={handlePaperChange}
             compact={false}
-            isDieSelected={true} // Set to true since this is in a form context
+            isDieSelected={true}
           />
           {errors.paperName && <p className="text-red-500 text-xs mt-1">{errors.paperName}</p>}
         </div>
       </div>
 
       {/* LP Section in Sandwich */}
-      <div className="border-t pt-4">
+      <div>
         <div className="flex items-center space-x-3 cursor-pointer mb-4">
           <label
             className="flex items-center space-x-3"
@@ -1053,163 +1383,164 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         </div>
 
         {lpDetailsSandwich.isLPUsed && (
-          <div className=" border-gray-200 mb-4">
-            <div className="text-xs">
-              <label className="block font-medium mb-2">Number of Colors:</label>
-              <input
-                type="number"
-                name="noOfColors"
-                min="1"
-                max="10"
-                value={lpDetailsSandwich.noOfColors}
-                onChange={handleLPSandwichChange}
-                onWheel={(e) => e.target.blur()}
-                className="border rounded-md p-2 w-full text-xs"
-              />
-              {errors.lpNoOfColors && <p className="text-red-500 text-xs">{errors.lpNoOfColors}</p>}
-            </div>
-
-            {lpDetailsSandwich.noOfColors > 0 && lpDetailsSandwich.colorDetails.map((color, index) => (
-              <div key={index} className=" mt-3">
-                <h4 className="text-xs font-semibold mb-2">Color {index + 1}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                  {/* Plate Size Type */}
-                  <div>
-                    <label className="block text-xs mb-1">Plate Size:</label>
-                    <select
-                      value={color.plateSizeType || "Auto"}
-                      onChange={(e) => handleLPColorDetailsChange(index, "plateSizeType", e.target.value)}
-                      className="border rounded-md p-2 w-full text-xs"
-                    >
-                      <option value="Auto">Auto</option>
-                      <option value="Manual">Manual</option>
-                    </select>
-                    {errors[`lpPlateSizeType_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateSizeType_${index}`]}</p>}
-                  </div>
-
-                  {/* Plate Dimensions */}
-                  {color.plateSizeType === "Manual" ? (
-                    <>
-                      <div>
-                        <label className="block text-xs mb-1">Length:</label>
-                        <input
-                          type="number"
-                          placeholder="(inches)"
-                          value={color.plateDimensions?.lengthInInches || ""}
-                          onChange={(e) => handleLPColorDetailsChange(index, "plateDimensions", { length: e.target.value })}
-                          className="border rounded-md p-2 w-full text-xs"
-                        />
-                        {/* Show the cm conversion for reference */}
-                        <div className="text-xs text-gray-500 mt-1">
-                          {color.plateDimensions?.length ? `${color.plateDimensions.length} cm` : ""}
-                        </div>
-                        {errors[`lpPlateLength_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateLength_${index}`]}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-xs mb-1">Breadth:</label>
-                        <input
-                          type="number"
-                          placeholder="(inches)"
-                          value={color.plateDimensions?.breadthInInches || ""}
-                          onChange={(e) => handleLPColorDetailsChange(index, "plateDimensions", { breadth: e.target.value })}
-                          className="border rounded-md p-2 w-full text-xs"
-                        />
-                        {/* Show the cm conversion for reference */}
-                        <div className="text-xs text-gray-500 mt-1">
-                          {color.plateDimensions?.breadth ? `${color.plateDimensions.breadth} cm` : ""}
-                        </div>
-                        {errors[`lpPlateBreadth_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateBreadth_${index}`]}</p>}
-                      </div>
-                    </>
-                  ) : (
-                    // Auto mode - show read-only dimensions
-                    <>
-                      <div>
-                        <label className="block text-xs mb-1">Length:</label>
-                        <input
-                          type="number"
-                          placeholder="(inches)"
-                          value={color.plateDimensions?.lengthInInches || ""}
-                          className="border rounded-md p-2 w-full text-xs bg-gray-100"
-                          readOnly
-                        />
-                        <div className="text-xs text-gray-500 mt-1">
-                          {color.plateDimensions?.length ? `${color.plateDimensions.length} cm` : ""}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs mb-1">Breadth:</label>
-                        <input
-                          type="number"
-                          placeholder="(inches)"
-                          value={color.plateDimensions?.breadthInInches || ""}
-                          className="border rounded-md p-2 w-full text-xs bg-gray-100"
-                          readOnly
-                        />
-                        <div className="text-xs text-gray-500 mt-1">
-                          {color.plateDimensions?.breadth ? `${color.plateDimensions.breadth} cm` : ""}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Pantone Type */}
-                  <div>
-                    <label className="block text-xs mb-1">Pantone Type:</label>
-                    <input
-                      type="text"
-                      placeholder="Pantone Type"
-                      value={color.pantoneType || ""}
-                      onChange={(e) => handleLPColorDetailsChange(index, "pantoneType", e.target.value)}
-                      className="border rounded-md p-2 w-full text-xs"
-                    />
-                    {errors[`lpPantoneType_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPantoneType_${index}`]}</p>}
-                  </div>
-
-                  {/* Plate Type */}
-                  <div>
-                    <label className="block text-xs mb-1">Plate Type:</label>
-                    <select
-                      value={color.plateType || ""}
-                      onChange={(e) => handleLPColorDetailsChange(index, "plateType", e.target.value)}
-                      className="border rounded-md p-2 w-full text-xs"
-                    >
-                      {lpPlateTypesLoading ? (
-                        <option value="" disabled>Loading Plate Types...</option>
-                      ) : (
-                        lpPlateTypes.map((plateType, idx) => (
-                          <option key={idx} value={plateType.materialName}>
-                            {plateType.materialName}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    {errors[`lpPlateType_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateType_${index}`]}</p>}
-                  </div>
-
-                  {/* MR Type */}
-                  <div>
-                    <label className="block text-xs mb-1">MR Type:</label>
-                    <select
-                      value={color.mrType || ""}
-                      onChange={(e) => handleLPColorDetailsChange(index, "mrType", e.target.value)}
-                      className="border rounded-md p-2 w-full text-xs"
-                    >
-                      {lpMRTypesLoading ? (
-                        <option value="" disabled>Loading MR Types...</option>
-                      ) : (
-                        lpMRTypes.map((typeOption, idx) => (
-                          <option key={idx} value={typeOption.type}>
-                            {typeOption.type}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    {errors[`lpMrType_${index}`] && <p className="text-red-500 text-xs">{errors[`lpMrType_${index}`]}</p>}
-                  </div>
+          <div className="border-gray-200 mb-4">
+            {/* ENHANCED: Loading state for LP */}
+            {lpMRTypesLoading || lpPlateTypesLoading ? (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md mb-4">
+                <div className="flex justify-center">
+                  <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
                 </div>
+                <p className="text-center text-sm text-gray-500 mt-2">Loading LP materials...</p>
               </div>
-            ))}
+            ) : (
+              <>
+                <div className="text-xs">
+                  <label className="block font-medium mb-2">Number of Colors:</label>
+                  <input
+                    type="number"
+                    name="noOfColors"
+                    min="1"
+                    max="10"
+                    value={lpDetailsSandwich.noOfColors}
+                    onChange={handleLPSandwichChange}
+                    onWheel={(e) => e.target.blur()}
+                    className="border rounded-md p-2 w-full text-xs"
+                  />
+                  {errors.lpNoOfColors && <p className="text-red-500 text-xs">{errors.lpNoOfColors}</p>}
+                </div>
+
+                {lpDetailsSandwich.noOfColors > 0 && lpDetailsSandwich.colorDetails.map((color, index) => (
+                  <div key={index} className="mt-3">
+                    <h4 className="text-xs font-semibold mb-2">Color {index + 1}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Plate Size Type */}
+                      <div>
+                        <label className="block text-xs mb-1">Plate Size:</label>
+                        <select
+                          value={color.plateSizeType || "Auto"}
+                          onChange={(e) => handleLPColorDetailsChange(index, "plateSizeType", e.target.value)}
+                          className="border rounded-md p-2 w-full text-xs"
+                        >
+                          <option value="Auto">Auto</option>
+                          <option value="Manual">Manual</option>
+                        </select>
+                        {errors[`lpPlateSizeType_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateSizeType_${index}`]}</p>}
+                      </div>
+
+                      {/* Plate Dimensions */}
+                      {color.plateSizeType === "Manual" ? (
+                        <>
+                          <div>
+                            <label className="block text-xs mb-1">Length:</label>
+                            <input
+                              type="number"
+                              placeholder="(inches)"
+                              value={color.plateDimensions?.lengthInInches || ""}
+                              onChange={(e) => handleLPColorDetailsChange(index, "plateDimensions", { length: e.target.value })}
+                              className="border rounded-md p-2 w-full text-xs"
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {color.plateDimensions?.length ? `${color.plateDimensions.length} cm` : ""}
+                            </div>
+                            {errors[`lpPlateLength_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateLength_${index}`]}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-1">Breadth:</label>
+                            <input
+                              type="number"
+                              placeholder="(inches)"
+                              value={color.plateDimensions?.breadthInInches || ""}
+                              onChange={(e) => handleLPColorDetailsChange(index, "plateDimensions", { breadth: e.target.value })}
+                              className="border rounded-md p-2 w-full text-xs"
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {color.plateDimensions?.breadth ? `${color.plateDimensions.breadth} cm` : ""}
+                            </div>
+                            {errors[`lpPlateBreadth_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateBreadth_${index}`]}</p>}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <label className="block text-xs mb-1">Length:</label>
+                            <input
+                              type="number"
+                              placeholder="(inches)"
+                              value={color.plateDimensions?.lengthInInches || ""}
+                              className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                              readOnly
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {color.plateDimensions?.length ? `${color.plateDimensions.length} cm` : ""}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-1">Breadth:</label>
+                            <input
+                              type="number"
+                              placeholder="(inches)"
+                              value={color.plateDimensions?.breadthInInches || ""}
+                              className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                              readOnly
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {color.plateDimensions?.breadth ? `${color.plateDimensions.breadth} cm` : ""}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Pantone Type */}
+                      <div>
+                        <label className="block text-xs mb-1">Pantone Type:</label>
+                        <input
+                          type="text"
+                          placeholder="Pantone Type"
+                          value={color.pantoneType || ""}
+                          onChange={(e) => handleLPColorDetailsChange(index, "pantoneType", e.target.value)}
+                          className="border rounded-md p-2 w-full text-xs"
+                        />
+                        {errors[`lpPantoneType_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPantoneType_${index}`]}</p>}
+                      </div>
+
+                      {/* Plate Type */}
+                      <div>
+                        <label className="block text-xs mb-1">Plate Type:</label>
+                        <select
+                          value={color.plateType || ""}
+                          onChange={(e) => handleLPColorDetailsChange(index, "plateType", e.target.value)}
+                          className="border rounded-md p-2 w-full text-xs"
+                        >
+                          {lpPlateTypes.map((plateType, idx) => (
+                            <option key={idx} value={plateType.materialName}>
+                              {plateType.materialName}
+                            </option>
+                          ))}
+                        </select>
+                        {errors[`lpPlateType_${index}`] && <p className="text-red-500 text-xs">{errors[`lpPlateType_${index}`]}</p>}
+                      </div>
+
+                      {/* MR Type */}
+                      <div>
+                        <label className="block text-xs mb-1">MR Type:</label>
+                        <select
+                          value={color.mrType || ""}
+                          onChange={(e) => handleLPColorDetailsChange(index, "mrType", e.target.value)}
+                          className="border rounded-md p-2 w-full text-xs"
+                        >
+                          {lpMRTypes.map((typeOption, idx) => (
+                            <option key={idx} value={typeOption.type}>
+                              {typeOption.type}
+                            </option>
+                          ))}
+                        </select>
+                        {errors[`lpMrType_${index}`] && <p className="text-red-500 text-xs">{errors[`lpMrType_${index}`]}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1229,174 +1560,171 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         </div>
 
         {fsDetailsSandwich.isFSUsed && (
-          <div className=" border-gray-200 mb-4">
-            <div className="text-xs">
-              <label className="block font-medium mb-2">FS Type:</label>
-              <select
-                name="fsType"
-                value={fsDetailsSandwich.fsType}
-                onChange={handleFSSandwichChange}
-                className="border rounded-md p-2 w-full"
-              >
-                <option value="">Select FS Type</option>
-                {["FS1", "FS2", "FS3", "FS4", "FS5"].map((type, idx) => (
-                  <option key={idx} value={type}>
-                    {type}
-                  </option>
-                ))}
-              </select>
-              {errors.fsType && <p className="text-red-500 text-xs">{errors.fsType}</p>}
-            </div>
-
-            {fsDetailsSandwich.foilDetails.map((foil, index) => (
-              <div key={index} className=" mt-3">
-                <h4 className="text-xs font-semibold mb-2">Foil {index + 1}</h4>
-                <div className="grid grid-cols-1 md:grid-cols-6 gap-3">
-                  {/* Block Size Type */}
-                  <div>
-                    <label className="block text-xs mb-1">Block Size:</label>
-                    <select
-                      value={foil.blockSizeType || "Auto"}
-                      onChange={(e) => handleFoilDetailsChange(index, "blockSizeType", e.target.value)}
-                      className="border rounded-md p-2 w-full text-xs"
-                    >
-                      <option value="Auto">Auto</option>
-                      <option value="Manual">Manual</option>
-                    </select>
-                    {errors[`fsBlockSizeType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockSizeType_${index}`]}</p>}
-                  </div>
-
-                  {/* Block Dimensions */}
-                  {foil.blockSizeType === "Manual" ? (
-                    <>
-                      <div>
-                        <label className="block text-xs mb-1">Length:</label>
-                        <input
-                          type="number"
-                          placeholder="(inches)"
-                          value={foil.blockDimension?.lengthInInches || ""}
-                          onChange={(e) => handleFoilDetailsChange(index, "blockDimension", { length: e.target.value })}
-                          className="border rounded-md p-2 w-full text-xs"
-                        />
-                        {/* Show the cm conversion for reference */}
-                        <div className="text-xs text-gray-500 mt-1">
-                          {foil.blockDimension?.length ? `${foil.blockDimension.length} cm` : ""}
-                        </div>
-                        {errors[`fsBlockLength_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockLength_${index}`]}</p>}
-                      </div>
-                      <div>
-                        <label className="block text-xs mb-1">Breadth:</label>
-                        <input
-                          type="number"
-                          placeholder="(inches)"
-                          value={foil.blockDimension?.breadthInInches || ""}
-                          onChange={(e) => handleFoilDetailsChange(index, "blockDimension", { breadth: e.target.value })}
-                          className="border rounded-md p-2 w-full text-xs"
-                        />
-                        {/* Show the cm conversion for reference */}
-                        <div className="text-xs text-gray-500 mt-1">
-                          {foil.blockDimension?.breadth ? `${foil.blockDimension.breadth} cm` : ""}
-                        </div>
-                        {errors[`fsBlockBreadth_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockBreadth_${index}`]}</p>}
-                      </div>
-                    </>
-                  ) : (
-                    // Auto mode - show read-only dimensions
-                    <>
-                      <div>
-                        <label className="block text-xs mb-1">Length:</label>
-                        <input
-                          type="number"
-                          placeholder="(inches)"
-                          value={foil.blockDimension?.lengthInInches || ""}
-                          className="border rounded-md p-2 w-full text-xs bg-gray-100"
-                          readOnly
-                        />
-                        <div className="text-xs text-gray-500 mt-1">
-                          {foil.blockDimension?.length ? `${foil.blockDimension.length} cm` : ""}
-                        </div>
-                      </div>
-                      <div>
-                        <label className="block text-xs mb-1">Breadth:</label>
-                        <input
-                          type="number"
-                          placeholder="(inches)"
-                          value={foil.blockDimension?.breadthInInches || ""}
-                          className="border rounded-md p-2 w-full text-xs bg-gray-100"
-                          readOnly
-                        />
-                        <div className="text-xs text-gray-500 mt-1">
-                          {foil.blockDimension?.breadth ? `${foil.blockDimension.breadth} cm` : ""}
-                        </div>
-                      </div>
-                    </>
-                  )}
-
-                  {/* Foil Type */}
-                  <div>
-                    <label className="block text-xs mb-1">Foil Type:</label>
-                    <select
-                      value={foil.foilType || ""}
-                      onChange={(e) => handleFoilDetailsChange(index, "foilType", e.target.value)}
-                      className="border rounded-md p-2 w-full text-xs"
-                    >
-                      {foilTypesLoading ? (
-                        <option value="" disabled>Loading Foil Types...</option>
-                      ) : (
-                        foilTypes.map((foilType, idx) => (
-                          <option key={idx} value={foilType.materialName}>
-                            {foilType.materialName}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    {errors[`fsFoilType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsFoilType_${index}`]}</p>}
-                  </div>
-
-                  {/* Block Type */}
-                  <div>
-                    <label className="block text-xs mb-1">Block Type:</label>
-                    <select
-                      value={foil.blockType || ""}
-                      onChange={(e) => handleFoilDetailsChange(index, "blockType", e.target.value)}
-                      className="border rounded-md p-2 w-full text-xs"
-                    >
-                      {blockTypesLoading ? (
-                        <option value="" disabled>Loading Block Types...</option>
-                      ) : (
-                        blockTypes.map((blockType, idx) => (
-                          <option key={idx} value={blockType.materialName}>
-                            {blockType.materialName}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    {errors[`fsBlockType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockType_${index}`]}</p>}
-                  </div>
-
-                  {/* MR Type */}
-                  <div>
-                    <label className="block text-xs mb-1">MR Type:</label>
-                    <select
-                      value={foil.mrType || ""}
-                      onChange={(e) => handleFoilDetailsChange(index, "mrType", e.target.value)}
-                      className="border rounded-md p-2 w-full text-xs"
-                    >
-                      {fsMRTypesLoading ? (
-                        <option value="" disabled>Loading MR Types...</option>
-                      ) : (
-                        fsMRTypes.map((typeOption, idx) => (
-                          <option key={idx} value={typeOption.type}>
-                            {typeOption.type}
-                          </option>
-                        ))
-                      )}
-                    </select>
-                    {errors[`fsMrType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsMrType_${index}`]}</p>}
-                  </div>
+          <div className="border-gray-200 mb-4">
+            {/* ENHANCED: Loading state for FS */}
+            {fsMRTypesLoading || foilTypesLoading || blockTypesLoading ? (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md mb-4">
+                <div className="flex justify-center">
+                  <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
                 </div>
+                <p className="text-center text-sm text-gray-500 mt-2">Loading FS materials...</p>
               </div>
-            ))}
+            ) : (
+              <>
+                <div className="text-xs">
+                  <label className="block font-medium mb-2">FS Type:</label>
+                  <select
+                    name="fsType"
+                    value={fsDetailsSandwich.fsType}
+                    onChange={handleFSSandwichChange}
+                    className="border rounded-md p-2 w-full"
+                  >
+                    <option value="">Select FS Type</option>
+                    {["FS1", "FS2", "FS3", "FS4", "FS5"].map((type, idx) => (
+                      <option key={idx} value={type}>
+                        {type}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.fsType && <p className="text-red-500 text-xs">{errors.fsType}</p>}
+                </div>
+
+                {fsDetailsSandwich.foilDetails.map((foil, index) => (
+                  <div key={index} className="mt-3">
+                    <h4 className="text-xs font-semibold mb-2">Foil {index + 1}</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                      {/* Block Size Type */}
+                      <div>
+                        <label className="block text-xs mb-1">Block Size:</label>
+                        <select
+                          value={foil.blockSizeType || "Auto"}
+                          onChange={(e) => handleFoilDetailsChange(index, "blockSizeType", e.target.value)}
+                          className="border rounded-md p-2 w-full text-xs"
+                        >
+                          <option value="Auto">Auto</option>
+                          <option value="Manual">Manual</option>
+                        </select>
+                        {errors[`fsBlockSizeType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockSizeType_${index}`]}</p>}
+                      </div>
+
+                      {/* Block Dimensions */}
+                      {foil.blockSizeType === "Manual" ? (
+                        <>
+                          <div>
+                            <label className="block text-xs mb-1">Length:</label>
+                            <input
+                              type="number"
+                              placeholder="(inches)"
+                              value={foil.blockDimension?.lengthInInches || ""}
+                              onChange={(e) => handleFoilDetailsChange(index, "blockDimension", { length: e.target.value })}
+                              className="border rounded-md p-2 w-full text-xs"
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {foil.blockDimension?.length ? `${foil.blockDimension.length} cm` : ""}
+                            </div>
+                            {errors[`fsBlockLength_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockLength_${index}`]}</p>}
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-1">Breadth:</label>
+                            <input
+                              type="number"
+                              placeholder="(inches)"
+                              value={foil.blockDimension?.breadthInInches || ""}
+                              onChange={(e) => handleFoilDetailsChange(index, "blockDimension", { breadth: e.target.value })}
+                              className="border rounded-md p-2 w-full text-xs"
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {foil.blockDimension?.breadth ? `${foil.blockDimension.breadth} cm` : ""}
+                            </div>
+                            {errors[`fsBlockBreadth_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockBreadth_${index}`]}</p>}
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div>
+                            <label className="block text-xs mb-1">Length:</label>
+                            <input
+                              type="number"
+                              placeholder="(inches)"
+                              value={foil.blockDimension?.lengthInInches || ""}
+                              className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                              readOnly
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {foil.blockDimension?.length ? `${foil.blockDimension.length} cm` : ""}
+                            </div>
+                          </div>
+                          <div>
+                            <label className="block text-xs mb-1">Breadth:</label>
+                            <input
+                              type="number"
+                              placeholder="(inches)"
+                              value={foil.blockDimension?.breadthInInches || ""}
+                              className="border rounded-md p-2 w-full text-xs bg-gray-100"
+                              readOnly
+                            />
+                            <div className="text-xs text-gray-500 mt-1">
+                              {foil.blockDimension?.breadth ? `${foil.blockDimension.breadth} cm` : ""}
+                            </div>
+                          </div>
+                        </>
+                      )}
+
+                      {/* Foil Type */}
+                      <div>
+                        <label className="block text-xs mb-1">Foil Type:</label>
+                        <select
+                          value={foil.foilType || ""}
+                          onChange={(e) => handleFoilDetailsChange(index, "foilType", e.target.value)}
+                          className="border rounded-md p-2 w-full text-xs"
+                        >
+                          {foilTypes.map((foilType, idx) => (
+                            <option key={idx} value={foilType.materialName}>
+                              {foilType.materialName}
+                            </option>
+                          ))}
+                        </select>
+                        {errors[`fsFoilType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsFoilType_${index}`]}</p>}
+                      </div>
+
+                      {/* Block Type */}
+                      <div>
+                        <label className="block text-xs mb-1">Block Type:</label>
+                        <select
+                          value={foil.blockType || ""}
+                          onChange={(e) => handleFoilDetailsChange(index, "blockType", e.target.value)}
+                          className="border rounded-md p-2 w-full text-xs"
+                        >
+                          {blockTypes.map((blockType, idx) => (
+                            <option key={idx} value={blockType.materialName}>
+                              {blockType.materialName}
+                            </option>
+                          ))}
+                        </select>
+                        {errors[`fsBlockType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsBlockType_${index}`]}</p>}
+                      </div>
+
+                      {/* MR Type */}
+                      <div>
+                        <label className="block text-xs mb-1">MR Type:</label>
+                        <select
+                          value={foil.mrType || ""}
+                          onChange={(e) => handleFoilDetailsChange(index, "mrType", e.target.value)}
+                          className="border rounded-md p-2 w-full text-xs"
+                        >
+                          {fsMRTypes.map((typeOption, idx) => (
+                            <option key={idx} value={typeOption.type}>
+                              {typeOption.type}
+                            </option>
+                          ))}
+                        </select>
+                        {errors[`fsMrType_${index}`] && <p className="text-red-500 text-xs">{errors[`fsMrType_${index}`]}</p>}
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </>
+            )}
           </div>
         )}
       </div>
@@ -1416,145 +1744,153 @@ const Sandwich = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
         </div>
 
         {embDetailsSandwich.isEMBUsed && (
-          <div className=" border-gray-200 mb-4">
-            {/* All fields in a single line */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
-              {/* Plate Size Type */}
-              <div>
-                <label className="block text-xs mb-1">Plate Size:</label>
-                <select
-                  name="plateSizeType"
-                  value={embDetailsSandwich.plateSizeType}
-                  onChange={handleEMBSandwichChange}
-                  className={`border rounded-md p-2 w-full text-xs ${errors.embPlateSizeType ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select Plate Size Type</option>
-                  <option value="Auto">Auto</option>
-                  <option value="Manual">Manual</option>
-                </select>
-                {errors.embPlateSizeType && <p className="text-red-500 text-xs">{errors.embPlateSizeType}</p>}
+          <div className="border-gray-200 mb-4">
+            {/* ENHANCED: Loading state for EMB */}
+            {embMRTypesLoading || dstMaterialsLoading ? (
+              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md mb-4">
+                <div className="flex justify-center">
+                  <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
+                </div>
+                <p className="text-center text-sm text-gray-500 mt-2">Loading EMB materials...</p>
               </div>
+            ) : (
+              <>
+                {/* All fields in a single line */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  {/* Plate Size Type */}
+                  <div>
+                    <label className="block text-xs mb-1">Plate Size:</label>
+                    <select
+                      name="plateSizeType"
+                      value={embDetailsSandwich.plateSizeType}
+                      onChange={handleEMBSandwichChange}
+                      className={`border rounded-md p-2 w-full text-xs ${errors.embPlateSizeType ? "border-red-500" : ""}`}
+                    >
+                      <option value="">Select Plate Size Type</option>
+                      <option value="Auto">Auto</option>
+                      <option value="Manual">Manual</option>
+                    </select>
+                    {errors.embPlateSizeType && <p className="text-red-500 text-xs">{errors.embPlateSizeType}</p>}
+                  </div>
 
-              {/* Length Input - conditionally shown if plateSizeType is set */}
-              {embDetailsSandwich.plateSizeType && (
-                <div>
-                  <label className="block text-xs mb-1">Length (inches):</label>
-                  <input
-                    type="number"
-                    placeholder="Enter length"
-                    value={embDetailsSandwich.plateDimensions?.lengthInInches || ""}
-                    onChange={(e) => embDetailsSandwich.plateSizeType === "Manual" ? 
-                      handleEMBDimensionChange("length", e.target.value) : null}
-                    className={`border rounded-md p-2 w-full text-xs ${
-                      embDetailsSandwich.plateSizeType === "Auto" ? "bg-gray-50" : ""
-                    } ${errors.embPlateLength ? "border-red-500" : ""}`}
-                    readOnly={embDetailsSandwich.plateSizeType === "Auto"}
-                  />
-                  {embDetailsSandwich.plateDimensions?.length && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {embDetailsSandwich.plateDimensions.length} cm
+                  {/* Length Input - conditionally shown if plateSizeType is set */}
+                  {embDetailsSandwich.plateSizeType && (
+                    <div>
+                      <label className="block text-xs mb-1">Length (inches):</label>
+                      <input
+                        type="number"
+                        placeholder="Enter length"
+                        value={embDetailsSandwich.plateDimensions?.lengthInInches || ""}
+                        onChange={(e) => embDetailsSandwich.plateSizeType === "Manual" ? 
+                          handleEMBDimensionChange("length", e.target.value) : null}
+                        className={`border rounded-md p-2 w-full text-xs ${
+                          embDetailsSandwich.plateSizeType === "Auto" ? "bg-gray-50" : ""
+                        } ${errors.embPlateLength ? "border-red-500" : ""}`}
+                        readOnly={embDetailsSandwich.plateSizeType === "Auto"}
+                      />
+                      {embDetailsSandwich.plateDimensions?.length && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {embDetailsSandwich.plateDimensions.length} cm
+                        </div>
+                      )}
+                      {errors.embPlateLength && <p className="text-red-500 text-xs">{errors.embPlateLength}</p>}
                     </div>
                   )}
-                  {errors.embPlateLength && <p className="text-red-500 text-xs">{errors.embPlateLength}</p>}
-                </div>
-              )}
 
-              {/* Breadth Input - conditionally shown if plateSizeType is set */}
-              {embDetailsSandwich.plateSizeType && (
-                <div>
-                  <label className="block text-xs mb-1">Breadth (inches):</label>
-                  <input
-                    type="number"
-                    placeholder="Enter breadth"
-                    value={embDetailsSandwich.plateDimensions?.breadthInInches || ""}
-                    onChange={(e) => embDetailsSandwich.plateSizeType === "Manual" ? 
-                      handleEMBDimensionChange("breadth", e.target.value) : null}
-                    className={`border rounded-md p-2 w-full text-xs ${
-                      embDetailsSandwich.plateSizeType === "Auto" ? "bg-gray-50" : ""
-                    } ${errors.embPlateBreadth ? "border-red-500" : ""}`}
-                    readOnly={embDetailsSandwich.plateSizeType === "Auto"}
-                  />
-                  {embDetailsSandwich.plateDimensions?.breadth && (
-                    <div className="text-xs text-gray-500 mt-1">
-                      {embDetailsSandwich.plateDimensions.breadth} cm
+                  {/* Breadth Input - conditionally shown if plateSizeType is set */}
+                  {embDetailsSandwich.plateSizeType && (
+                    <div>
+                      <label className="block text-xs mb-1">Breadth (inches):</label>
+                      <input
+                        type="number"
+                        placeholder="Enter breadth"
+                        value={embDetailsSandwich.plateDimensions?.breadthInInches || ""}
+                        onChange={(e) => embDetailsSandwich.plateSizeType === "Manual" ? 
+                          handleEMBDimensionChange("breadth", e.target.value) : null}
+                        className={`border rounded-md p-2 w-full text-xs ${
+                          embDetailsSandwich.plateSizeType === "Auto" ? "bg-gray-50" : ""
+                        } ${errors.embPlateBreadth ? "border-red-500" : ""}`}
+                        readOnly={embDetailsSandwich.plateSizeType === "Auto"}
+                      />
+                      {embDetailsSandwich.plateDimensions?.breadth && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          {embDetailsSandwich.plateDimensions.breadth} cm
+                        </div>
+                      )}
+                      {errors.embPlateBreadth && <p className="text-red-500 text-xs">{errors.embPlateBreadth}</p>}
                     </div>
                   )}
-                  {errors.embPlateBreadth && <p className="text-red-500 text-xs">{errors.embPlateBreadth}</p>}
+
+                  {/* EMB MR Type */}
+                  <div>
+                    <label className="block text-xs mb-1">EMB MR:</label>
+                    <select
+                      name="embMR"
+                      value={embDetailsSandwich.embMR}
+                      onChange={handleEMBSandwichChange}
+                      className={`border rounded-md p-2 w-full text-xs ${errors.embMR ? "border-red-500" : ""}`}
+                    >
+                      <option value="">Select MR Type</option>
+                      {embMRTypes.map((typeOption, idx) => (
+                        <option key={idx} value={typeOption.type}>
+                          {typeOption.type}
+                        </option>
+                      ))}
+                    </select>
+                    {errors.embMR && <p className="text-red-500 text-xs">{errors.embMR}</p>}
+                  </div>
+
+                  {/* DST Material - NEW FIELD */}
+                  <div>
+                    <label className="block text-xs mb-1">DST Material:</label>
+                    <select
+                      name="dstMaterial"
+                      value={embDetailsSandwich.dstMaterial}
+                      onChange={handleEMBSandwichChange}
+                      className={`border rounded-md p-2 w-full text-xs ${
+                        errors.embDstMaterial ? "border-red-500" : ""
+                      }`}
+                      disabled={dstMaterialsLoading}
+                    >
+                      <option value="">
+                        {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
+                      </option>
+                      {/* Sort DST materials to show DST PP PLATE first if available */}
+                      {dstMaterials
+                        .sort((a, b) => {
+                          // Prioritize "DST PP PLATE" at the top
+                          if (a.materialName === "DST PP PLATE") return -1;
+                          if (b.materialName === "DST PP PLATE") return 1;
+                          return a.materialName.localeCompare(b.materialName);
+                        })
+                        .map((material) => (
+                          <option key={material.id} value={material.materialName}>
+                            {material.materialName}
+                          </option>
+                        ))}
+                    </select>
+                    {errors.embDstMaterial && (
+                      <p className="text-red-500 text-xs">{errors.embDstMaterial}</p>
+                    )}
+                    {dstMaterialsError && (
+                      <p className="text-red-500 text-xs">Failed to load DST materials</p>
+                    )}
+                  </div>
                 </div>
-              )}
 
-              {/* EMB MR Type */}
-              <div>
-                <label className="block text-xs mb-1">EMB MR:</label>
-                <select
-                  name="embMR"
-                  value={embDetailsSandwich.embMR}
-                  onChange={handleEMBSandwichChange}
-                  className={`border rounded-md p-2 w-full text-xs ${errors.embMR ? "border-red-500" : ""}`}
-                >
-                  <option value="">Select MR Type</option>
-                  {embMRTypesLoading ? (
-                    <option value="" disabled>Loading MR Types...</option>
-                  ) : (
-                    embMRTypes.map((typeOption, idx) => (
-                      <option key={idx} value={typeOption.type}>
-                        {typeOption.type}
-                      </option>
-                    ))
-                  )}
-                </select>
-                {errors.embMR && <p className="text-red-500 text-xs">{errors.embMR}</p>}
-              </div>
-
-              {/* DST Material - NEW FIELD */}
-              <div>
-                <label className="block text-xs mb-1">DST Material:</label>
-                <select
-                  name="dstMaterial"
-                  value={embDetailsSandwich.dstMaterial}
-                  onChange={handleEMBSandwichChange}
-                  className={`border rounded-md p-2 w-full text-xs ${
-                    errors.embDstMaterial ? "border-red-500" : ""
-                  }`}
-                  disabled={dstMaterialsLoading}
-                >
-                  <option value="">
-                    {dstMaterialsLoading ? "Loading DST Materials..." : "Select DST Material"}
-                  </option>
-                  {/* Sort DST materials to show DST PP PLATE first if available */}
-                  {dstMaterials
-                    .sort((a, b) => {
-                      // Prioritize "DST PP PLATE" at the top
-                      if (a.materialName === "DST PP PLATE") return -1;
-                      if (b.materialName === "DST PP PLATE") return 1;
-                      return a.materialName.localeCompare(b.materialName);
-                    })
-                    .map((material) => (
-                      <option key={material.id} value={material.materialName}>
-                        {material.materialName}
-                      </option>
-                    ))}
-                </select>
-                {errors.embDstMaterial && (
-                  <p className="text-red-500 text-xs">{errors.embDstMaterial}</p>
-                )}
-                {dstMaterialsError && (
-                  <p className="text-red-500 text-xs">Failed to load DST materials</p>
-                )}
-              </div>
-            </div>
-
-            {/* Plate Cost Message */}
-            <div className="p-3 bg-yellow-50 border border-yellow-100 rounded-md mt-3">
-              <div className="flex items-center">
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
-                </svg>
-                <p className="text-yellow-700 text-xs">
-                  Embossing plate costs will be calculated separately.
-                </p>
-              </div>
-            </div>
+                {/* Plate Cost Message */}
+                <div className="p-2 bg-yellow-50 border border-yellow-100 rounded-md mt-3">
+                  <div className="flex items-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
+                      <path fillRule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2h-1V9a1 1 0 00-1-1z" clipRule="evenodd" />
+                    </svg>
+                    <p className="text-yellow-700 text-xs">
+                      Embossing plate costs will be calculated separately.
+                    </p>
+                  </div>
+                </div>
+              </>
+            )}
           </div>
         )}
       </div>

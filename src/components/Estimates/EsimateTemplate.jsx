@@ -137,7 +137,7 @@ const SinglePageContent = ({
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="py-2 px-1 border border-gray-300 text-center">S.No</th>
-              <th className="py-2 px-1 border border-gray-300 text-left">Item</th>
+              <th className="py-2 px-1 border border-gray-300 text-left">Project Name</th>
               <th className="py-2 px-1 border border-gray-300 text-center">Job Type</th>
               <th className="py-2 px-1 border border-gray-300 text-center">Paper</th>
               <th className="py-2 px-1 border border-gray-300 text-center">Size</th>
@@ -265,6 +265,7 @@ const SinglePageContent = ({
             <div>4. Delivery time will be confirmed upon order confirmation.</div>
             <div>5. Prices are subject to change based on final specifications.</div>
             <div>6. An additional extra charge will be added in case of custom dies.</div>
+            <div>7. Embossing block charges are not included in this estimate. Final rates will be shared separately once the design is sent to our vendor and their quote is received.</div>
           </div>
         </div>
       )}
@@ -392,7 +393,7 @@ const PageContent = ({
           <thead>
             <tr className="bg-gray-100 text-gray-700">
               <th className="py-1 px-2 border border-gray-300 text-center">S.No</th>
-              <th className="py-1 px-2 border border-gray-300 text-left">Item</th>
+              <th className="py-1 px-2 border border-gray-300 text-left">Project Name</th>
               <th className="py-1 px-2 border border-gray-300 text-center">Job Type</th>
               <th className="py-1 px-2 border border-gray-300 text-center">Paper</th>
               <th className="py-1 px-2 border border-gray-300 text-center">Size</th>
@@ -522,6 +523,7 @@ const PageContent = ({
             <div>4. Delivery time will be confirmed upon order confirmation.</div>
             <div>5. Prices are subject to change based on final specifications.</div>
             <div>6. An additional extra charge will be added in case of custom dies.</div>
+            <div>7. Note : Embossing block charges are not included in this estimate. Final rates will be shared separately once the design is sent to our vendor and their quote is received.</div>
           </div>
         </div>
       )}
@@ -567,7 +569,7 @@ const EstimateTemplate = ({
   const [logoLoaded, setLogoLoaded] = useState(false);
 
   // Pagination constants
-  const ESTIMATES_PER_PAGE = 8;
+  const ESTIMATES_PER_PAGE = 6;
   
   // If currentPage is provided, we're in PDF generation mode (single page)
   // Otherwise, we're in normal preview mode (multi-page)

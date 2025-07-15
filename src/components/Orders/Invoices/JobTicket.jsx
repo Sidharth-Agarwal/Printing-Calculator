@@ -1,10 +1,46 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
 
 const JobTicket = ({ order }) => {
+  const [assignedStaffName, setAssignedStaffName] = useState('');
+  const [loadingStaffName, setLoadingStaffName] = useState(false);
+
   // Basic validation
   if (!order || Object.keys(order).length === 0) {
     return <div className="text-center text-red-500 p-2">No order data</div>;
   }
+
+  // Fetch assigned staff name
+  useEffect(() => {
+    const fetchStaffName = async () => {
+      if (!order.productionAssignments?.assigned) {
+        setAssignedStaffName('Not Assigned');
+        return;
+      }
+
+      setLoadingStaffName(true);
+      
+      try {
+        const staffDoc = await getDoc(doc(db, "users", order.productionAssignments.assigned));
+        
+        if (staffDoc.exists()) {
+          const staffData = staffDoc.data();
+          const staffName = staffData.displayName || staffData.email || 'Unknown Staff';
+          setAssignedStaffName(staffName);
+        } else {
+          setAssignedStaffName('Staff Not Found');
+        }
+      } catch (error) {
+        console.error("Error fetching staff details:", error);
+        setAssignedStaffName('Error Loading');
+      } finally {
+        setLoadingStaffName(false);
+      }
+    };
+
+    fetchStaffName();
+  }, [order.productionAssignments?.assigned]);
 
   // Format date utility
   const formatDate = (dateString) => {
@@ -198,6 +234,35 @@ const JobTicket = ({ order }) => {
           </div>
         </div>
       </div>
+
+      {/* Production Assignment Section */}
+      {order.productionAssignments && (order.productionAssignments.assigned || order.productionAssignments.deadlineDate) && (
+        <div className="mb-2 border rounded p-1.5">
+          <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Production Assignment</h2>
+          <div className="grid grid-cols-2 gap-x-1 gap-y-0.5 text-[10px]">
+            <div>Assigned to: <span className="font-normal">
+              {order.productionAssignments.assigned ? (
+                loadingStaffName ? 'Loading...' : assignedStaffName
+              ) : (
+                'Not Assigned'
+              )}
+            </span></div>
+            <div>Deadline: <span className={`font-normal ${
+              order.productionAssignments.deadlineDate && 
+              new Date(order.productionAssignments.deadlineDate) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) 
+                ? 'text-red-600 font-medium' : ''
+            }`}>
+              {order.productionAssignments.deadlineDate ? 
+                formatDate(order.productionAssignments.deadlineDate) : 'Not Set'}
+            </span></div>
+            {order.productionAssignments.assignedAt && (
+              <div className="col-span-2">Assigned on: <span className="font-normal">
+                {formatDate(order.productionAssignments.assignedAt)}
+              </span></div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Main Grid */}
       <div className="grid grid-cols-2 gap-2">

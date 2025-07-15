@@ -7,6 +7,7 @@ const UserDetailsModal = ({
   onEdit, 
   onToggleStatus,
   onManageCredentials,
+  onSetupAccount, // New prop for setting up account
   isAdmin 
 }) => {
   if (!user) return null;
@@ -58,15 +59,19 @@ const UserDetailsModal = ({
               <div className="flex-1">
                 <h2 className="text-2xl font-bold text-gray-800">{user.displayName}</h2>
                 <div className="flex items-center mt-2 flex-wrap gap-2">
-                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${getRoleColor(user.role)}`}>
-                    {getRoleDisplayName(user.role)}
-                  </span>
                   <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                     user.isActive
                       ? "bg-green-100 text-green-800" 
                       : "bg-red-100 text-red-800"
                   }`}>
                     {user.isActive ? "Active" : "Inactive"}
+                  </span>
+                  <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                    user.hasAccount
+                      ? "bg-green-100 text-green-800" 
+                      : "bg-yellow-100 text-yellow-800"
+                  }`}>
+                    {user.hasAccount ? "Account Setup" : "Setup Pending"}
                   </span>
                   {user.temporaryPassword && (
                     <span className="px-3 py-1 bg-yellow-100 text-yellow-800 text-sm rounded-full">
@@ -114,6 +119,39 @@ const UserDetailsModal = ({
             </div>
           </div>
           
+          {/* Account Status Information */}
+          <div className="mb-6">
+            <div className="bg-gray-50 rounded-lg p-4">
+              <h4 className="text-lg font-semibold mb-3 text-gray-700">Account Status</h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                <div>
+                  <p className="text-gray-500 font-medium">Login Account</p>
+                  <p className={`mt-1 font-medium ${user.hasAccount ? 'text-green-600' : 'text-yellow-600'}`}>
+                    {user.hasAccount ? "Setup Complete" : "Setup Pending"}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-gray-500 font-medium">Account Status</p>
+                  <p className={`mt-1 font-medium ${user.isActive ? 'text-green-600' : 'text-red-600'}`}>
+                    {user.isActive ? "Active" : "Inactive"}
+                  </p>
+                </div>
+                {user.hasAccount && user.userId && (
+                  <div>
+                    <p className="text-gray-500 font-medium">User ID</p>
+                    <p className="mt-1 font-mono text-xs">{user.userId.substring(0, 12)}...</p>
+                  </div>
+                )}
+                {user.hasAccount && (
+                  <div>
+                    <p className="text-gray-500 font-medium">Account Created</p>
+                    <p className="mt-1">{formatDateShort(user.passwordCreatedAt)}</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
           {/* Account Statistics */}
           <div className="mb-6">
             <div className="bg-gray-50 rounded-lg p-4">
@@ -128,7 +166,7 @@ const UserDetailsModal = ({
                   <p className="text-lg font-semibold text-gray-800">{formatDateShort(user.lastLoginAt)}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 font-medium">Account Created</p>
+                  <p className="text-gray-500 font-medium">Record Created</p>
                   <p className="text-lg font-semibold text-gray-800">{formatDateShort(user.createdAt)}</p>
                 </div>
                 <div>
@@ -170,13 +208,39 @@ const UserDetailsModal = ({
             </div>
           )}
           
+          {/* Account Setup Notice */}
+          {!user.hasAccount && (
+            <div className="mb-6">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <h4 className="text-lg font-semibold mb-3 text-blue-800">Account Setup Required</h4>
+                <div className="text-sm">
+                  <p className="text-blue-700 mb-3">
+                    This user record exists but no login account has been created yet. 
+                    The user cannot log in until an account is set up.
+                  </p>
+                  {isAdmin && onSetupAccount && (
+                    <button
+                      onClick={onSetupAccount}
+                      className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 text-sm flex items-center"
+                    >
+                      <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                      </svg>
+                      Setup Account Now
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+          
           {/* System Information */}
           <div className="mb-6">
             <div className="bg-gray-50 rounded-lg p-4">
               <h4 className="text-lg font-semibold mb-3 text-gray-700">System Information</h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                 <div>
-                  <p className="text-gray-500 font-medium">User ID</p>
+                  <p className="text-gray-500 font-medium">Record ID</p>
                   <p className="mt-1 font-mono text-xs">{user.id}</p>
                 </div>
                 <div>
@@ -184,8 +248,12 @@ const UserDetailsModal = ({
                   <p className="mt-1">{user.createdBy ? `Admin (${user.createdBy.substring(0, 8)}...)` : "System"}</p>
                 </div>
                 <div>
-                  <p className="text-gray-500 font-medium">Account Status</p>
-                  <p className="mt-1">{user.isActive ? "Active and can login" : "Inactive - login disabled"}</p>
+                  <p className="text-gray-500 font-medium">Login Status</p>
+                  <p className="mt-1">
+                    {user.hasAccount 
+                      ? (user.isActive ? "Can login" : "Login disabled") 
+                      : "Cannot login - no account"}
+                  </p>
                 </div>
                 <div>
                   <p className="text-gray-500 font-medium">Role Permissions</p>
@@ -230,7 +298,19 @@ const UserDetailsModal = ({
               </button>
             )}
             
-            {isAdmin && onManageCredentials && (
+            {isAdmin && onSetupAccount && !user.hasAccount && (
+              <button
+                onClick={onSetupAccount}
+                className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors flex items-center"
+              >
+                <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z"></path>
+                </svg>
+                Setup Account
+              </button>
+            )}
+            
+            {isAdmin && onManageCredentials && user.hasAccount && (
               <button
                 onClick={onManageCredentials}
                 className="px-4 py-2 bg-purple-600 text-white rounded-md hover:bg-purple-700 transition-colors flex items-center"

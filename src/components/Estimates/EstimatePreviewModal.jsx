@@ -12,7 +12,7 @@ const EstimatePreviewModal = ({
   if (!isOpen) return null;
 
   // Calculate pagination info
-  const ESTIMATES_PER_PAGE = 8;
+  const ESTIMATES_PER_PAGE = 6;
   const totalPages = Math.ceil(estimates.length / ESTIMATES_PER_PAGE);
   const showPaginationInfo = estimates.length > ESTIMATES_PER_PAGE;
 
