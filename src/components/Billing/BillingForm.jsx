@@ -2598,7 +2598,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           message="Estimate Created Successfully! You can create another estimate with the same client and project details."
           isVisible={showSuccessNotification}
           onClose={closeSuccessNotification}
-          duration={3000}
+          duration={1000}
         />
 
         {/* Reset Confirmation Modal */}
