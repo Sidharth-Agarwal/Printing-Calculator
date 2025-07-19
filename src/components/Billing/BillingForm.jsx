@@ -36,8 +36,8 @@ import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
 // Updated ServiceCard Component with dynamic height and scrolling
 const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
   return (
-    <div className="border border-gray-200 rounded-lg p-4 flex flex-col transition-all duration-300 ease-in-out">
-      <div className="flex items-center justify-between">
+    <div className="border border-gray-200 rounded-lg p-4 flex flex-col">
+      <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
         <div className="flex items-center space-x-2">
           {isUsed && (
@@ -57,17 +57,11 @@ const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
         </div>
       </div>
       
-      {/* FIXED: Content area with proper scrolling and dynamic height */}
-      <div className={`flex-1 transition-all duration-300 ease-in-out ${
-        isUsed 
-          ? 'opacity-100 max-h-[600px] mt-3' 
-          : 'opacity-0 max-h-0 mt-0'
-      }`}>
-        {isUsed && (
-          <div className="max-h-[500px] overflow-y-auto overflow-x-hidden">
-            {children}
-          </div>
-        )}
+      {/* UPDATED: Always show content with visual indication */}
+      <div className={`flex-1 ${isUsed ? 'opacity-100' : 'opacity-60'}`}>
+        <div className="max-h-[500px] overflow-y-auto overflow-x-hidden">
+          {children}
+        </div>
       </div>
     </div>
   );

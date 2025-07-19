@@ -282,15 +282,11 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
     }
   }, [dieSize, isEMBUsed, plateSizeType, plateDimensions, dispatch]);
 
-  // FIXED: Same pattern as LPDetails - return null if not being used
-  if (!isEMBUsed) {
-    return null;
-  }
-
+  // UPDATED: Always render all form fields, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-5">
-        {/* All Fields in a Single Line */}
+        {/* All Fields in a Single Line - Always visible */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
           <div>
             <label htmlFor="plateSizeType" className="block text-xs font-medium text-gray-600 mb-1">
@@ -311,46 +307,43 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
             )}
           </div>
 
-          {plateSizeType && (
-            <>
-              <div>
-                <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
-                  Length:
-                </label>
-                <input
-                  type="number"
-                  id="length"
-                  placeholder="Length"
-                  value={plateDimensions.lengthInInches || ""}
-                  onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("length", e.target.value) : null}
-                  className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
-                  readOnly={plateSizeType === "Auto"}
-                />
-                {plateDimensions.length && (
-                  <div className="text-xs text-gray-500 mt-1">{plateDimensions.length} cm</div>
-                )}
-                {errors.length && <p className="text-red-500 text-xs mt-1">{errors.length}</p>}
-              </div>
-              <div>
-                <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
-                  Breadth:
-                </label>
-                <input
-                  type="number"
-                  id="breadth"
-                  placeholder="Breadth"
-                  value={plateDimensions.breadthInInches || ""}
-                  onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("breadth", e.target.value) : null}
-                  className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
-                  readOnly={plateSizeType === "Auto"}
-                />
-                {plateDimensions.breadth && (
-                  <div className="text-xs text-gray-500 mt-1">{plateDimensions.breadth} cm</div>
-                )}
-                {errors.breadth && <p className="text-red-500 text-xs mt-1">{errors.breadth}</p>}
-              </div>
-            </>
-          )}
+          <div>
+            <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">
+              Length:
+            </label>
+            <input
+              type="number"
+              id="length"
+              placeholder="Length"
+              value={plateDimensions.lengthInInches || ""}
+              onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("length", e.target.value) : null}
+              className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              readOnly={plateSizeType === "Auto"}
+            />
+            {plateDimensions.length && (
+              <div className="text-xs text-gray-500 mt-1">{plateDimensions.length} cm</div>
+            )}
+            {errors.length && <p className="text-red-500 text-xs mt-1">{errors.length}</p>}
+          </div>
+
+          <div>
+            <label htmlFor="breadth" className="block text-xs font-medium text-gray-600 mb-1">
+              Breadth:
+            </label>
+            <input
+              type="number"
+              id="breadth"
+              placeholder="Breadth"
+              value={plateDimensions.breadthInInches || ""}
+              onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("breadth", e.target.value) : null}
+              className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              readOnly={plateSizeType === "Auto"}
+            />
+            {plateDimensions.breadth && (
+              <div className="text-xs text-gray-500 mt-1">{plateDimensions.breadth} cm</div>
+            )}
+            {errors.breadth && <p className="text-red-500 text-xs mt-1">{errors.breadth}</p>}
+          </div>
 
           <div>
             <label htmlFor="embMR" className="block text-xs font-medium text-gray-600 mb-1">
@@ -385,10 +378,10 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               name="dstMaterial"
               value={dstMaterial}
               onChange={handleChange}
+              disabled={dstMaterialsLoading}
               className={`w-full px-2 py-2 border ${
                 errors.dstMaterial ? "border-red-500" : "border-gray-300"
               } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
-              disabled={dstMaterialsLoading}
             >
               {dstMaterials
                 .sort((a, b) => {
@@ -412,7 +405,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
           </div>
         </div>
 
-        {/* Plate Cost Message */}
+        {/* Plate Cost Message - Always visible */}
         <div className="px-3 py-2 bg-yellow-50 border border-yellow-100 rounded-md mt-2">
           <div className="flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-yellow-500 mr-2" viewBox="0 0 20 20" fill="currentColor">
