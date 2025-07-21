@@ -111,11 +111,7 @@ const DstPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
     }
   };
 
-  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
-  if (!dstPaste.isDstPasteUsed) {
-    return null;
-  }
-
+  // UPDATED: Always render all form fields, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">

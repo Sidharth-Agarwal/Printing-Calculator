@@ -122,15 +122,11 @@ const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
     }
   };
 
-  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
-  if (!screenPrint.isScreenPrintUsed) {
-    return null;
-  }
-
+  // UPDATED: Always render all form fields, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-5">
-        {/* Screen Print Configuration - Fields side by side */}
+        {/* Screen Print Configuration - Always visible */}
         <div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {/* Number of Colors Input */}

@@ -75,17 +75,13 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
     }
   };
 
-  // FIXED: This is the working pattern - return null if not being used
-  if (!misc.isMiscUsed) {
-    return null;
-  }
-
   // Helper to determine if current value is custom
   const isCustomValue = () => {
     if (!dbDefaultValue || !misc.miscCharge) return false;
     return parseFloat(misc.miscCharge) !== dbDefaultValue;
   };
 
+  // UPDATED: Always render all form fields, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">

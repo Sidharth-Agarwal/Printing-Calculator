@@ -94,11 +94,7 @@ const PreDieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = f
     }
   };
 
-  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
-  if (!preDieCutting.isPreDieCuttingUsed) {
-    return null;
-  }
-
+  // UPDATED: Always render all form fields, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">

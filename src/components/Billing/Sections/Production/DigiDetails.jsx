@@ -83,14 +83,11 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
     }
   };
 
-  // FIXED: Same pattern as LPDetails - return null if not being used
-  if (!isDigiUsed) {
-    return null;
-  }
-
+  // UPDATED: Always render all form fields, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
+        {/* Digital Print Configuration - Always visible */}
         <div className="grid grid-cols-3 gap-2">
           <div className="col-span-1">
             <label htmlFor="digiDie" className="block text-xs font-medium text-gray-600 mb-1">
@@ -111,22 +108,19 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
             </select>
           </div>
 
-          {digiDie && (
-            <>
-              <div className="col-span-1">
-                <div className="text-xs font-medium text-gray-600 mb-1">Length:</div>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs w-full">
-                  {digiDimensions.length || "N/A"} inches
-                </div>
-              </div>
-              <div className="col-span-1">
-                <div className="text-xs font-medium text-gray-600 mb-1">Breadth:</div>
-                <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs w-full">
-                  {digiDimensions.breadth || "N/A"} inches
-                </div>
-              </div>
-            </>
-          )}
+          {/* Always show length and breadth fields */}
+          <div className="col-span-1">
+            <div className="text-xs font-medium text-gray-600 mb-1">Length:</div>
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs w-full">
+              {digiDimensions.length || "N/A"} inches
+            </div>
+          </div>
+          <div className="col-span-1">
+            <div className="text-xs font-medium text-gray-600 mb-1">Breadth:</div>
+            <div className="px-3 py-2 bg-gray-50 border border-gray-200 rounded-md text-xs w-full">
+              {digiDimensions.breadth || "N/A"} inches
+            </div>
+          </div>
         </div>
 
         {errors.digiDie && (

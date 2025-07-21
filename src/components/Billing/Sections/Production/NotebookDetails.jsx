@@ -205,15 +205,11 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
     }
   };
 
-  // FIXED: Same pattern as LPDetails - return null if not being used
-  if (!notebookDetails.isNotebookUsed) {
-    return null;
-  }
-
+  // UPDATED: Always render all form fields, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-4">
-        {/* Row 1: Paper Name - 1 field */}
+        {/* Row 1: Paper Name - Always visible */}
         <div className="grid grid-cols-1 gap-4">
           <div className="relative">
             <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
@@ -231,7 +227,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
           </div>
         </div>
 
-        {/* Row 2: Orientation, Number of Formas, Binding Type - 3 fields */}
+        {/* Row 2: Orientation, Number of Formas, Binding Type - Always visible */}
         <div className="grid grid-cols-3 gap-2">
           <div>
             <label htmlFor="orientation" className="block text-xs font-medium text-gray-600 mb-1">
@@ -303,7 +299,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
           </div>
         </div>
 
-        {/* Row 3: Length, Breadth, Calculated Length, Calculated Breadth - 4 fields */}
+        {/* Row 3: Length, Breadth, Calculated Length, Calculated Breadth - Always visible */}
         <div className="grid grid-cols-4 gap-2">
           <div>
             <label htmlFor="length" className="block text-xs font-medium text-gray-600 mb-1">

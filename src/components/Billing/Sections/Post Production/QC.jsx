@@ -25,11 +25,7 @@ const QC = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) => 
     }
   };
 
-  // FIXED: Same pattern as LPDetails and Misc component - return null if not being used
-  if (!qc.isQCUsed) {
-    return null;
-  }
-
+  // UPDATED: Always render the content, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="p-4 bg-green-50 border border-green-200 rounded-md">

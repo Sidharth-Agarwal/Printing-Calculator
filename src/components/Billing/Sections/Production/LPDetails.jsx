@@ -329,16 +329,11 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
     }
   };
 
-  // FIXED: Same pattern as Misc component - return null if not being used
-  // This ensures the component doesn't render when LP is toggled off
-  if (!lpDetails.isLPUsed) {
-    return null;
-  }
-
+  // UPDATED: Always render all form fields, regardless of toggle state
   return (
     <form onSubmit={handleSubmit}>
       <div className="space-y-5">
-        {/* Number of Colors Input */}
+        {/* Number of Colors Input - Always visible */}
         <div>
           <label htmlFor="noOfColors" className="block text-xs font-medium text-gray-600 mb-1">
             Number of Colors:
@@ -359,20 +354,19 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
           )}
         </div>
 
-        {/* Color Details Sections */}
-        {lpDetails.noOfColors > 0 && (
-          <div>
-            {/* Loading state */}
-            {mrTypesLoading || plateTypesLoading || dstMaterialsLoading ? (
-              <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
-                <div className="flex justify-center">
-                  <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
-                </div>
-                <p className="text-center text-sm text-gray-500 mt-2">Loading materials...</p>
+        {/* Color Details Sections - Always visible, show at least 1 color */}
+        <div>
+          {/* Loading state */}
+          {mrTypesLoading || plateTypesLoading || dstMaterialsLoading ? (
+            <div className="p-3 bg-gray-50 border border-gray-200 rounded-md">
+              <div className="flex justify-center">
+                <div className="inline-block animate-spin h-5 w-5 border-2 border-red-500 rounded-full border-t-transparent"></div>
               </div>
-            ) : (
-              /* Color details form for each color */
-              Array.from({ length: lpDetails.noOfColors }, (_, index) => (
+              <p className="text-center text-sm text-gray-500 mt-2">Loading materials...</p>
+            </div>
+          ) : (
+            /* Color details form - always show at least 1 color */
+            Array.from({ length: Math.max(lpDetails.noOfColors, 1) }, (_, index) => (
                 <div
                   key={index}
                   className="mb-4"
@@ -545,7 +539,6 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
               ))
             )}
           </div>
-        )}
       </div>
     </form>
   );
