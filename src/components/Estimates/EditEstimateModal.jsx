@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, doc, getDoc, query, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import BillingForm from '../Billing/BillingForm';
+import { validateCalculationConsistency } from '../../utils/calculationValidator';
 
 const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = [], setEstimatesData }) => {
   const [isSaving, setIsSaving] = useState(false);
@@ -154,6 +155,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     fetchClientInfo();
   }, [estimate]);
 
+  // CRITICAL FIX: Enhanced convertEstimateToFormState with calculation validation
   const convertEstimateToFormState = (estimate, fetchedClientInfo) => {
     let enhancedClientInfo = fetchedClientInfo;
     
@@ -163,6 +165,21 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         name: estimate.clientName || "Unknown Client",
         ...(estimate.clientInfo || {})
       };
+    }
+    
+    // CRITICAL: Validate saved calculations for consistency
+    if (estimate.calculations) {
+      console.log('🔍 Validating saved calculations for estimate:', estimate.projectName);
+      const validation = validateCalculationConsistency([estimate]);
+      
+      if (validation.hasErrors) {
+        console.warn('⚠️ Calculation inconsistencies detected in saved estimate:', validation.errors);
+        validation.errors.forEach(error => {
+          console.warn(`  - ${error.field}: expected ${error.expected}, got ${error.actual} (diff: ${error.difference})`);
+        });
+      } else {
+        console.log('✅ Saved calculations are consistent');
+      }
     }
     
     // Log available data for debugging
@@ -176,7 +193,13 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       type: estimate.dieDetails?.type,
       markupType: estimate.calculations?.markupType,
       markupPercentage: estimate.calculations?.markupPercentage,
-      weddingDate: estimate.weddingDate || estimate.jobDetails?.weddingDate
+      weddingDate: estimate.weddingDate || estimate.jobDetails?.weddingDate,
+      savedCalculations: {
+        totalCostPerCard: estimate.calculations?.totalCostPerCard,
+        totalCost: estimate.calculations?.totalCost,
+        gstAmount: estimate.calculations?.gstAmount,
+        totalWithGST: estimate.calculations?.totalWithGST
+      }
     });
     
     // Enhanced logging for all service details
@@ -211,7 +234,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         date: estimate.date ? new Date(estimate.date) : null,
         deliveryDate: estimate.deliveryDate ? new Date(estimate.deliveryDate) : null,
         weddingDate: estimate.weddingDate ? new Date(estimate.weddingDate) : 
-                     (estimate.jobDetails?.weddingDate ? new Date(estimate.jobDetails.weddingDate) : null), // ADDED WEDDING DATE
+                     (estimate.jobDetails?.weddingDate ? new Date(estimate.jobDetails.weddingDate) : null),
         jobType: estimate.jobDetails?.jobType || "Card",
         quantity: estimate.jobDetails?.quantity || "",
         paperProvided: estimate.jobDetails?.paperProvided || "Yes",
@@ -356,7 +379,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           embMRConcatenated: estimate.sandwich?.embDetailsSandwich?.embMRConcatenated || ""
         },
       },
-      // Preserve the original calculations INCLUDING markup information
+      // CRITICAL FIX: Preserve the original calculations INCLUDING markup information
       calculations: estimate.calculations || {},
     };
   };
@@ -378,7 +401,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     return sanitized;
   };
 
-  // UPDATED: Enhanced handleSave with proper service handling (following Misc pattern)
+  // CRITICAL FIX: Enhanced handleSave with calculation validation and preservation
   const handleSave = async (formData) => {
     if (isClientInactive) {
       if (!window.confirm("This client is inactive. Are you sure you want to update this estimate?")) {
@@ -388,7 +411,30 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     
     setIsSaving(true);
     try {
+      console.log("💾 EDIT MODE: Saving form data with preserved calculations");
       console.log("COMPLETE FORM DATA:", formData);
+      
+      // CRITICAL: Validate that calculations are consistent before saving
+      if (formData.calculations) {
+        console.log('🔍 Validating new calculations before save:', formData.calculations);
+        
+        // Create a temporary estimate object for validation
+        const tempEstimate = {
+          id: estimate.id,
+          projectName: formData.projectName || estimate.projectName,
+          jobDetails: {
+            quantity: formData.orderAndPaper?.quantity || estimate.jobDetails?.quantity
+          },
+          calculations: formData.calculations
+        };
+        
+        const validation = validateCalculationConsistency([tempEstimate]);
+        if (validation.hasErrors) {
+          console.warn('⚠️ New calculations have inconsistencies:', validation.errors);
+        } else {
+          console.log('✅ New calculations are consistent');
+        }
+      }
       
       // Enhanced service logging for debugging
       console.log("Saving service details:", {
@@ -408,7 +454,11 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         formDataMiscUsed: formData.misc?.isMiscUsed,
         finalMiscCharge: (formData.misc || estimate.misc)?.miscCharge,
         originalWeddingDate: estimate.weddingDate || estimate.jobDetails?.weddingDate,
-        formDataWeddingDate: formData.weddingDate || formData.orderAndPaper?.weddingDate
+        formDataWeddingDate: formData.weddingDate || formData.orderAndPaper?.weddingDate,
+        // CRITICAL: Log calculation preservation
+        originalCalculations: estimate.calculations,
+        newCalculations: formData.calculations,
+        calculationsPreserved: !!(formData.calculations && formData.calculations.totalWithGST)
       });
       
       // Extract and prioritize form data values
@@ -525,7 +575,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       
       const currentTimestamp = new Date().toISOString();
       
-      // Create updated estimate with explicit values for critical fields
+      // CRITICAL FIX: Create updated estimate with preserved/updated calculations
       const updatedEstimate = {
         id: estimate.id,
         clientId: formData.clientId || formData.client?.clientId || estimate.clientId,
@@ -536,7 +586,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         
         date: formData.date || estimate.date,
         deliveryDate: formData.deliveryDate || estimate.deliveryDate,
-        weddingDate: updatedWeddingDate ? (typeof updatedWeddingDate === 'string' ? updatedWeddingDate : updatedWeddingDate.toISOString()) : null, // ADDED WEDDING DATE
+        weddingDate: updatedWeddingDate ? (typeof updatedWeddingDate === 'string' ? updatedWeddingDate : updatedWeddingDate.toISOString()) : null,
         
         jobDetails: {
           jobType: updatedJobType,
@@ -546,7 +596,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           paperGsm: updatedPaperGsm,
           paperCompany: updatedPaperCompany,
           hsnCode: updatedHsnCode,
-          weddingDate: updatedWeddingDate ? (typeof updatedWeddingDate === 'string' ? updatedWeddingDate : updatedWeddingDate.toISOString()) : null, // ALSO ADD TO JOB DETAILS FOR FLEXIBILITY
+          weddingDate: updatedWeddingDate ? (typeof updatedWeddingDate === 'string' ? updatedWeddingDate : updatedWeddingDate.toISOString()) : null,
         },
         
         dieDetails: {
@@ -665,13 +715,14 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           isPackingUsed: false
         },
         
-        // FIXED: Enhanced misc handling - consistent with working Misc pattern
+        // CRITICAL FIX: Enhanced misc handling with calculation preservation
         misc: formData.misc || estimate.misc || {
           isMiscUsed: false,
           miscCharge: ""
         },
         
-        calculations: formData.calculations || estimate.calculations,
+        // CRITICAL FIX: Preserve/update calculations with validation
+        calculations: formData.calculations || estimate.calculations || {},
         
         versionId: formData.versionId || estimate.versionId || "1",
         movedToOrders: estimate.movedToOrders || false,
@@ -681,7 +732,8 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         updatedAt: currentTimestamp,
       };
 
-      console.log("FINAL VERIFICATION - All Service States:", {
+      // CRITICAL: Final validation before save
+      console.log("🔍 FINAL VERIFICATION - All Service States and Calculations:", {
         projectName: updatedEstimate.projectName,
         jobType: updatedEstimate.jobDetails.jobType,
         quantity: updatedEstimate.jobDetails.quantity,
@@ -699,35 +751,46 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         miscUsed: updatedEstimate.misc?.isMiscUsed,
         miscCharge: updatedEstimate.misc?.miscCharge,
         createdAt: updatedEstimate.createdAt,
-        updatedAt: updatedEstimate.updatedAt
+        updatedAt: updatedEstimate.updatedAt,
+        // CRITICAL: Verify calculations are preserved
+        calculationsExist: !!(updatedEstimate.calculations),
+        calculationFields: updatedEstimate.calculations ? {
+          markupType: updatedEstimate.calculations.markupType,
+          markupPercentage: updatedEstimate.calculations.markupPercentage,
+          totalCostPerCard: updatedEstimate.calculations.totalCostPerCard,
+          totalCost: updatedEstimate.calculations.totalCost,
+          gstAmount: updatedEstimate.calculations.gstAmount,
+          totalWithGST: updatedEstimate.calculations.totalWithGST
+        } : null
       });
       
       const sanitizedEstimate = sanitizeForFirestore(updatedEstimate);
       
-      console.log("FINAL SANITIZED ESTIMATE - All Service States:", {
-        projectName: sanitizedEstimate.projectName,
-        jobType: sanitizedEstimate.jobDetails.jobType,
-        quantity: sanitizedEstimate.jobDetails.quantity,
-        paperName: sanitizedEstimate.jobDetails.paperName,
-        dieCode: sanitizedEstimate.dieDetails.dieCode,
-        frags: sanitizedEstimate.dieDetails.frags,
-        type: sanitizedEstimate.dieDetails.type,
-        weddingDate: sanitizedEstimate.weddingDate,
-        lpUsed: sanitizedEstimate.lpDetails?.isLPUsed,
-        fsUsed: sanitizedEstimate.fsDetails?.isFSUsed,
-        embUsed: sanitizedEstimate.embDetails?.isEMBUsed,
-        digiUsed: sanitizedEstimate.digiDetails?.isDigiUsed,
-        notebookUsed: sanitizedEstimate.notebookDetails?.isNotebookUsed,
-        screenUsed: sanitizedEstimate.screenPrint?.isScreenPrintUsed,
-        miscUsed: sanitizedEstimate.misc?.isMiscUsed,
-        miscCharge: sanitizedEstimate.misc?.miscCharge,
-        createdAt: sanitizedEstimate.createdAt,
-        updatedAt: sanitizedEstimate.updatedAt
+      // CRITICAL: Final validation of sanitized data
+      if (sanitizedEstimate.calculations) {
+        const finalValidation = validateCalculationConsistency([{
+          id: sanitizedEstimate.id,
+          projectName: sanitizedEstimate.projectName,
+          jobDetails: sanitizedEstimate.jobDetails,
+          calculations: sanitizedEstimate.calculations
+        }]);
+        
+        if (finalValidation.hasErrors) {
+          console.warn('⚠️ FINAL: Sanitized calculations have inconsistencies:', finalValidation.errors);
+        } else {
+          console.log('✅ FINAL: Sanitized calculations are consistent');
+        }
+      }
+      
+      console.log("💾 FINAL SANITIZED ESTIMATE - Ready for Firestore:", {
+        hasCalculations: !!(sanitizedEstimate.calculations),
+        calculationKeys: sanitizedEstimate.calculations ? Object.keys(sanitizedEstimate.calculations) : [],
+        totalWithGST: sanitizedEstimate.calculations?.totalWithGST
       });
       
       await onSave(sanitizedEstimate);
     } catch (error) {
-      console.error('Error saving estimate:', error);
+      console.error('❌ Error saving estimate:', error);
       alert(`Failed to save estimate: ${error.message}`);
     } finally {
       setIsSaving(false);
@@ -762,6 +825,12 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
             {isClientInactive && (
               <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
                 Inactive Client
+              </span>
+            )}
+            {/* ADDED: Calculation preservation indicator */}
+            {initialFormState.calculations && (
+              <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                ✅ Calculations Preserved
               </span>
             )}
           </div>

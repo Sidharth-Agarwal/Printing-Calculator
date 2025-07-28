@@ -4,6 +4,7 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { Calculator, Package, Settings, TrendingUp, FileText, DollarSign, Eye } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
+import { calculateWithPrecision } from "../../utils/calculationValidator";
 
 const ReviewAndSubmit = ({ 
   state, 
@@ -152,27 +153,36 @@ const ReviewAndSubmit = ({
           markupAmount: (parseFloat(calculations.subtotalPerCard || 0) * (lockedMarkup.markupPercentage / 100)).toFixed(2),
         };
         
-        // Recalculate totals with locked markup
+        // Recalculate totals with locked markup using precision calculation
         const quantity = parseInt(state.orderAndPaper?.quantity || 1);
         const subtotalPerCard = parseFloat(calculations.subtotalPerCard || 0);
-        const markupAmount = subtotalPerCard * (lockedMarkup.markupPercentage / 100);
-        const totalCostPerCard = subtotalPerCard + markupAmount;
-        const totalCost = totalCostPerCard * quantity;
         const gstRate = parseFloat(calculations.gstRate || 18);
-        const gstAmount = totalCost * (gstRate / 100);
-        const totalWithGST = totalCost + gstAmount;
         
-        preservedCalculations.markupAmount = markupAmount.toFixed(2);
-        preservedCalculations.totalCostPerCard = totalCostPerCard.toFixed(2);
-        preservedCalculations.totalCost = totalCost.toFixed(2);
-        preservedCalculations.gstAmount = gstAmount.toFixed(2);
-        preservedCalculations.totalWithGST = totalWithGST.toFixed(2);
+        const preciseCalc = calculateWithPrecision(
+          subtotalPerCard,
+          lockedMarkup.markupPercentage,
+          quantity,
+          gstRate
+        );
+        
+        preservedCalculations.markupAmount = preciseCalc.markupAmount;
+        preservedCalculations.totalCostPerCard = preciseCalc.totalCostPerCard;
+        preservedCalculations.totalCost = preciseCalc.totalCost;
+        preservedCalculations.gstAmount = preciseCalc.gstAmount;
+        preservedCalculations.totalWithGST = preciseCalc.totalWithGST;
+        
+        console.log('🔒 Edit mode: Using locked markup values:', {
+          markupType: lockedMarkup.markupType,
+          markupPercentage: lockedMarkup.markupPercentage,
+          recalculatedTotals: preciseCalc
+        });
         
         setLocalCalculations(preservedCalculations);
         return;
       }
       
       // New mode: Use calculations as they come
+      console.log('📊 New mode: Using calculations as received:', calculations);
       setLocalCalculations(calculations);
       
       // Set markup from calculations if not already initialized
@@ -184,7 +194,7 @@ const ReviewAndSubmit = ({
     }
   }, [calculations, isEditMode, state.orderAndPaper?.quantity]);
 
-  // Markup selection handler
+  // CRITICAL FIX: Enhanced markup selection handler with precision calculations
   const handleMarkupSelection = (e) => {
     const selectedValue = e.target.value;
     const selectedRate = markupRates.find(rate => rate.name === selectedValue);
@@ -211,22 +221,43 @@ const ReviewAndSubmit = ({
         const quantity = parseInt(state.orderAndPaper?.quantity || 1);
         const currentGstRate = parseFloat(localCalculations.gstRate || 18);
         
-        const newMarkupAmount = currentSubtotal * (newMarkupPercentage / 100);
-        const newTotalCostPerCard = currentSubtotal + newMarkupAmount;
-        const newTotalCost = newTotalCostPerCard * quantity;
-        const newGstAmount = newTotalCost * (currentGstRate / 100);
-        const newTotalWithGST = newTotalCost + newGstAmount;
+        console.log('🔄 Markup change detected:', {
+          selectedValue,
+          newMarkupPercentage,
+          currentSubtotal,
+          quantity,
+          currentGstRate
+        });
+        
+        // CRITICAL FIX: Use precision calculation to avoid floating point errors
+        const preciseCalc = calculateWithPrecision(
+          currentSubtotal,
+          newMarkupPercentage,
+          quantity,
+          currentGstRate
+        );
         
         const updatedLocalCalculations = {
           ...localCalculations,
           markupType: selectedValue,
           markupPercentage: newMarkupPercentage,
-          markupAmount: newMarkupAmount.toFixed(2),
-          totalCostPerCard: newTotalCostPerCard.toFixed(2),
-          totalCost: newTotalCost.toFixed(2),
-          gstAmount: newGstAmount.toFixed(2),
-          totalWithGST: newTotalWithGST.toFixed(2)
+          markupAmount: preciseCalc.markupAmount,
+          totalCostPerCard: preciseCalc.totalCostPerCard,
+          totalCost: preciseCalc.totalCost,
+          gstAmount: preciseCalc.gstAmount,
+          totalWithGST: preciseCalc.totalWithGST
         };
+        
+        console.log('✅ Updated calculations with precision:', {
+          old: {
+            markupAmount: localCalculations.markupAmount,
+            totalCostPerCard: localCalculations.totalCostPerCard,
+            totalCost: localCalculations.totalCost,
+            gstAmount: localCalculations.gstAmount,
+            totalWithGST: localCalculations.totalWithGST
+          },
+          new: preciseCalc
+        });
         
         setLocalCalculations(updatedLocalCalculations);
       }
@@ -635,6 +666,7 @@ const ReviewAndSubmit = ({
     e.preventDefault();
     
     if (localCalculations) {
+      console.log('🎯 Submitting calculations for preview:', localCalculations);
       onPreviewEstimate(localCalculations);
     } else {
       onPreviewEstimate();
@@ -646,6 +678,7 @@ const ReviewAndSubmit = ({
     e.preventDefault();
     
     if (localCalculations) {
+      console.log('💾 Submitting calculations for save:', localCalculations);
       onCreateEstimate(localCalculations);
     } else {
       onCreateEstimate();
@@ -658,6 +691,14 @@ const ReviewAndSubmit = ({
       <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
         <Calculator className="text-blue-600" size={18} />
         <h3 className="text-lg font-semibold text-gray-800">Cost Calculation</h3>
+        {/* Debug indicator for calculation consistency */}
+        {localCalculations && (
+          <div className="ml-auto">
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+              {isEditMode ? '🔒 Edit Mode' : '✨ New Mode'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Calculation Content */}
@@ -716,10 +757,15 @@ const ReviewAndSubmit = ({
               {/* Wastage and Overhead Section */}
               {renderWastageAndOverhead()}
 
-              {/* Markup Selection */}
+              {/* Enhanced Markup Selection with Calculation Debugging */}
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center justify-between">
                   Markup Selection
+                  {localCalculations.markupType && (
+                    <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                      Applied: {localCalculations.markupPercentage}%
+                    </span>
+                  )}
                 </h4>
                 <div className="flex gap-2">
                   <select
@@ -749,11 +795,29 @@ const ReviewAndSubmit = ({
                     B2B Markup automatically applied
                   </div>
                 )}
+                
+                {isEditMode && editModeMarkupRef.current && (
+                  <div className="text-xs text-orange-600 mt-1">
+                    🔒 Edit mode: Using saved markup values
+                  </div>
+                )}
               </div>
 
-              {/* Cost Summary */}
+              {/* Enhanced Cost Summary with Debugging */}
               <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Summary</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+                  Summary
+                  {localCalculations && (
+                    <div className="flex gap-2">
+                      <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                        Base: ₹{parseFloat(localCalculations.subtotalPerCard || 0).toFixed(2)}
+                      </span>
+                      <span className="text-xs bg-blue-200 text-blue-700 px-2 py-1 rounded">
+                        +{markupPercentage}%
+                      </span>
+                    </div>
+                  )}
+                </h4>
                 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -781,11 +845,36 @@ const ReviewAndSubmit = ({
                     <span className="font-mono">₹{parseFloat(localCalculations.gstAmount || 0).toFixed(2)}</span>
                   </div>
                   
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                  <div className="flex justify-between font-bold text-lg border-t pt-2 bg-green-50 px-2 py-1 rounded">
                     <span>Total with GST:</span>
-                    <span className="font-mono">₹{parseFloat(localCalculations.totalWithGST || 0).toFixed(2)}</span>
+                    <span className="font-mono text-green-700">₹{parseFloat(localCalculations.totalWithGST || 0).toFixed(2)}</span>
                   </div>
                 </div>
+
+                {/* Calculation Debug Info - Only in Development */}
+                {process.env.NODE_ENV === 'development' && localCalculations && (
+                  <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                    <details>
+                      <summary className="cursor-pointer text-yellow-700 font-medium">
+                        🔍 Debug: Calculation Details
+                      </summary>
+                      <div className="mt-2 space-y-1 text-yellow-800">
+                        <div>Subtotal: {localCalculations.subtotalPerCard}</div>
+                        <div>Markup Type: {localCalculations.markupType}</div>
+                        <div>Markup %: {localCalculations.markupPercentage}</div>
+                        <div>Markup Amount: {localCalculations.markupAmount}</div>
+                        <div>Total Cost Per Card: {localCalculations.totalCostPerCard}</div>
+                        <div>Total Cost: {localCalculations.totalCost}</div>
+                        <div>GST Rate: {localCalculations.gstRate}</div>
+                        <div>GST Amount: {localCalculations.gstAmount}</div>
+                        <div>Total with GST: {localCalculations.totalWithGST}</div>
+                        <div className="pt-1 border-t border-yellow-300">
+                          Calculation Source: {isEditMode ? 'Edit Mode (Locked)' : 'Live Calculation'}
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                )}
               </div>
             </>
           )}
@@ -793,6 +882,16 @@ const ReviewAndSubmit = ({
       ) : (
         <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
           <p className="text-red-600 text-sm">Please fill in the required fields to calculate costs.</p>
+          {!areRequiredFieldsFilled() && (
+            <div className="mt-2 text-xs text-red-500">
+              Missing: {!state.client?.clientId && 'Client, '}
+              {!state.orderAndPaper?.projectName?.trim() && 'Project Name, '}
+              {!state.orderAndPaper?.quantity && 'Quantity, '}
+              {!state.orderAndPaper?.paperName?.trim() && 'Paper Name, '}
+              {!state.orderAndPaper?.dieCode?.trim() && 'Die Code, '}
+              {(!state.orderAndPaper?.dieSize?.length || !state.orderAndPaper?.dieSize?.breadth) && 'Die Size'}
+            </div>
+          )}
         </div>
       )}
 
@@ -850,6 +949,17 @@ const ReviewAndSubmit = ({
                 "Calculating costs..." : 
                 "Preview will be available once calculations are complete"
               }
+            </div>
+          )}
+
+          {/* Calculation Status Indicator */}
+          {localCalculations && (
+            <div className="flex items-center text-xs text-gray-500">
+              <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+              Calculations ready
+              {isEditMode && (
+                <span className="ml-1 text-orange-600">(Edit mode)</span>
+              )}
             </div>
           )}
         </div>
