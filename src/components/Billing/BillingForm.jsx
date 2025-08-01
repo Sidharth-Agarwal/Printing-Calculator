@@ -32,6 +32,7 @@ import FixedSection from "./Sections/Fixed/FixedSection";
 // Import service and job type configurations
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
 import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
+import { calculateWithPrecision } from "../../utils/calculationValidator";
 
 // Updated ServiceCard Component with dynamic height and scrolling
 const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
@@ -1475,32 +1476,31 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
 
       // CRITICAL FIX: Handle edit mode differently
       if (isEditMode && calculations && !calculations.error) {
-        console.log("Edit mode detected - using simplified markup recalculation");
-        
+        console.log("Edit mode detected - using precision markup recalculation");
+  
         // Use the displayed subtotal as the base for markup calculation
         const subtotalPerCard = parseFloat(calculations.subtotalPerCard || calculations.costWithMisc || 0);
         const quantity = parseInt(state.orderAndPaper?.quantity || 1);
         
-        // Calculate new markup amount based on displayed subtotal
-        const newMarkupAmount = subtotalPerCard * (markupPercentage / 100);
-        const newTotalCostPerCard = subtotalPerCard + newMarkupAmount;
-        const newTotalCost = newTotalCostPerCard * quantity;
-        
-        // Recalculate GST on the new total
-        const newGstAmount = newTotalCost * (gstRate / 100);
-        const newTotalWithGST = newTotalCost + newGstAmount;
+        // CRITICAL FIX: Use precision calculation
+        const preciseCalc = calculateWithPrecision(
+          subtotalPerCard,
+          markupPercentage,
+          quantity,
+          gstRate
+        );
         
         // Create updated calculations object
         const updatedCalculations = {
           ...calculations,
           markupType: markupType,
           markupPercentage: markupPercentage,
-          markupAmount: newMarkupAmount.toFixed(2),
-          totalCostPerCard: newTotalCostPerCard.toFixed(2),
-          totalCost: newTotalCost.toFixed(2),
+          markupAmount: preciseCalc.markupAmount,
+          totalCostPerCard: preciseCalc.totalCostPerCard,
+          totalCost: preciseCalc.totalCost,
           gstRate: gstRate,
-          gstAmount: newGstAmount.toFixed(2),
-          totalWithGST: newTotalWithGST.toFixed(2)
+          gstAmount: preciseCalc.gstAmount,
+          totalWithGST: preciseCalc.totalWithGST
         };
         
         console.log("Edit mode markup recalculation completed:", {
@@ -1573,22 +1573,24 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           const quantity = parseInt(state.orderAndPaper?.quantity || 1);
           const fallbackGstRate = 18; // Default GST rate
           
-          const markupAmount = subtotalPerCard * (markupPercentage / 100);
-          const totalCostPerCard = subtotalPerCard + markupAmount;
-          const totalCost = totalCostPerCard * quantity;
-          const gstAmount = totalCost * (fallbackGstRate / 100);
-          const totalWithGST = totalCost + gstAmount;
+          // CRITICAL FIX: Use precision calculation for fallback
+          const preciseCalc = calculateWithPrecision(
+            subtotalPerCard,
+            markupPercentage,
+            quantity,
+            fallbackGstRate
+          );
           
           const fallbackCalculations = {
             ...calculations,
             markupType: markupType,
             markupPercentage: markupPercentage,
-            markupAmount: markupAmount.toFixed(2),
-            totalCostPerCard: totalCostPerCard.toFixed(2),
-            totalCost: totalCost.toFixed(2),
+            markupAmount: preciseCalc.markupAmount,
+            totalCostPerCard: preciseCalc.totalCostPerCard,
+            totalCost: preciseCalc.totalCost,
             gstRate: fallbackGstRate,
-            gstAmount: gstAmount.toFixed(2),
-            totalWithGST: totalWithGST.toFixed(2),
+            gstAmount: preciseCalc.gstAmount,
+            totalWithGST: preciseCalc.totalWithGST,
             error: "Using fallback calculation due to error"
           };
           

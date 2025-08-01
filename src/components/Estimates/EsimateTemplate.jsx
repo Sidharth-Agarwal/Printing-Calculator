@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import logo from '../../assets/logo.png';
 import { validateCalculationConsistency } from '../../utils/calculationValidator';
+import { addCurrency, multiplyCurrency } from '../../utils/calculationValidator';
 
 // Format currency values
 const formatCurrency = (amount) => {
@@ -648,29 +649,31 @@ const EstimateTemplate = ({
     }
   }, [estimates]);
 
-  // CRITICAL FIX: Calculate totals using EXACT saved values to ensure consistency
+  // CRITICAL FIX: Calculate totals using EXACT saved values with precision helpers
   const totals = React.useMemo(() => {
     const estimatesForTotal = isPDFMode && allEstimates ? allEstimates : estimates;
     
     if (!estimatesForTotal || estimatesForTotal.length === 0) {
-      return { quantity: 0, amount: 0, gstRate: 18, gstAmount: 0, total: 0 };
+      return { quantity: 0, amount: "0.00", gstRate: 18, gstAmount: "0.00", total: "0.00" };
     }
 
     let totalQuantity = 0;
-    let totalAmount = 0;
-    let totalGST = 0;
     let gstRate = 18;
 
-    console.log('=== TOTALS CALCULATION DEBUG ===');
+    console.log('=== TOTALS CALCULATION DEBUG WITH PRECISION ===');
+    
+    // Use precision helpers for accumulation
+    let totalAmount = "0.00";
+    let totalGST = "0.00";
     
     estimatesForTotal.forEach((estimate, index) => {
       const qty = parseInt(estimate?.jobDetails?.quantity) || 0;
       const calc = estimate?.calculations || {};
       
       // CRITICAL FIX: Use the EXACT same values as line items to ensure consistency
-      const lineItemFinalTotal = parseFloat(calc.totalWithGST || 0);
-      const lineItemGSTAmount = parseFloat(calc.gstAmount || 0);
-      const lineItemSubtotal = lineItemFinalTotal - lineItemGSTAmount;
+      const lineItemFinalTotal = calc.totalWithGST || "0.00";
+      const lineItemGSTAmount = calc.gstAmount || "0.00";
+      const lineItemSubtotal = addCurrency(lineItemFinalTotal, `-${lineItemGSTAmount}`);
       
       console.log(`Estimate ${index + 1} (${estimate.projectName}):`, {
         quantity: qty,
@@ -685,30 +688,30 @@ const EstimateTemplate = ({
       });
       
       totalQuantity += qty;
-      totalAmount += lineItemSubtotal;
-      totalGST += lineItemGSTAmount;
+      totalAmount = addCurrency(totalAmount, lineItemSubtotal);
+      totalGST = addCurrency(totalGST, lineItemGSTAmount);
       gstRate = calc.gstRate || 18;
     });
 
     const calculatedTotal = {
       quantity: totalQuantity,
-      amount: totalAmount,
+      amount: parseFloat(totalAmount),
       gstRate: gstRate,
-      gstAmount: totalGST,
-      total: totalAmount + totalGST
+      gstAmount: parseFloat(totalGST),
+      total: parseFloat(addCurrency(totalAmount, totalGST))
     };
     
-    console.log('=== FINAL TOTALS ===', calculatedTotal);
+    console.log('=== FINAL TOTALS WITH PRECISION ===', calculatedTotal);
     console.log('=== END TOTALS CALCULATION DEBUG ===');
     
     return calculatedTotal;
   }, [estimates, allEstimates, isPDFMode]);
 
-  // CRITICAL FIX: Prepare line items using ONLY saved values - no recalculation
+  // CRITICAL FIX: Prepare line items using ONLY saved values with precision validation
   const allLineItems = React.useMemo(() => {
     if (!estimates || estimates.length === 0) return [];
 
-    console.log('=== LINE ITEMS CALCULATION DEBUG ===');
+    console.log('=== LINE ITEMS CALCULATION DEBUG WITH PRECISION ===');
 
     const lineItems = estimates.map((estimate, index) => {
       const jobDetails = estimate?.jobDetails || {};
@@ -743,32 +746,32 @@ const EstimateTemplate = ({
         rawCalculations: calc
       });
       
-      // VALIDATION: Check consistency and warn about discrepancies
-      const calculatedTotal = unitCost * quantity;
-      const calculatedGST = totalCost * (gstRate / 100);
-      const calculatedFinal = totalCost + gstAmount;
+      // VALIDATION: Check consistency using precision helpers and warn about discrepancies
+      const calculatedTotal = multiplyCurrency(unitCost.toString(), quantity);
+      const calculatedGST = addCurrency("0.00", multiplyCurrency(totalCost.toString(), gstRate / 100));
+      const calculatedFinal = addCurrency(totalCost.toString(), gstAmount.toString());
       
-      if (Math.abs(calculatedTotal - totalCost) > 0.02) {
+      if (Math.abs(parseFloat(calculatedTotal) - totalCost) > 0.01) {
         console.warn(`⚠️ Total cost mismatch for ${estimate.projectName}:`, {
-          calculated: calculatedTotal,
+          calculated: parseFloat(calculatedTotal),
           saved: totalCost,
-          difference: Math.abs(calculatedTotal - totalCost)
+          difference: Math.abs(parseFloat(calculatedTotal) - totalCost)
         });
       }
       
-      if (Math.abs(calculatedGST - gstAmount) > 0.02) {
+      if (Math.abs(parseFloat(calculatedGST) - gstAmount) > 0.01) {
         console.warn(`⚠️ GST mismatch for ${estimate.projectName}:`, {
-          calculated: calculatedGST,
+          calculated: parseFloat(calculatedGST),
           saved: gstAmount,
-          difference: Math.abs(calculatedGST - gstAmount)
+          difference: Math.abs(parseFloat(calculatedGST) - gstAmount)
         });
       }
       
-      if (Math.abs(calculatedFinal - finalTotal) > 0.02) {
+      if (Math.abs(parseFloat(calculatedFinal) - finalTotal) > 0.01) {
         console.warn(`⚠️ Final total mismatch for ${estimate.projectName}:`, {
-          calculated: calculatedFinal,
+          calculated: parseFloat(calculatedFinal),
           saved: finalTotal,
-          difference: Math.abs(calculatedFinal - finalTotal)
+          difference: Math.abs(parseFloat(calculatedFinal) - finalTotal)
         });
       }
       
@@ -893,13 +896,25 @@ const EstimateTemplate = ({
             const endIndex = Math.min(startIndex + ESTIMATES_PER_PAGE, allLineItems.length);
             const pageLineItems = allLineItems.slice(startIndex, endIndex);
             
-            // CRITICAL FIX: Calculate page totals using the exact same logic as grand totals
+            // CRITICAL FIX: Calculate page totals using precision helpers
             const pageTotals = pageLineItems.reduce((acc, item) => {
-              acc.amount += item.total;      // Already from saved calc.totalCost
-              acc.gstAmount += item.gstAmount; // Already from saved calc.gstAmount
-              acc.total += item.finalTotal;   // Already from saved calc.totalWithGST
-              return acc;
-            }, { amount: 0, gstAmount: 0, total: 0 });
+              return {
+                amount: addCurrency(acc.amount, item.total.toString()),      // Use precision addition
+                gstAmount: addCurrency(acc.gstAmount, item.gstAmount.toString()), // Use precision addition
+                total: addCurrency(acc.total, item.finalTotal.toString())   // Use precision addition
+              };
+            }, { 
+              amount: "0.00", 
+              gstAmount: "0.00", 
+              total: "0.00" 
+            });
+
+            // Convert to numbers for display
+            const displayPageTotals = {
+              amount: parseFloat(pageTotals.amount),
+              gstAmount: parseFloat(pageTotals.gstAmount),
+              total: parseFloat(pageTotals.total)
+            };
 
             return (
               <div 
@@ -918,7 +933,7 @@ const EstimateTemplate = ({
                   isFirstPage={isFirstPage}
                   isLastPage={isLastPage}
                   pageLineItems={pageLineItems}
-                  pageTotals={pageTotals}
+                  pageTotals={displayPageTotals}
                   totals={totals}
                   hsnSummary={hsnSummary}
                   clientInfo={clientInfo}

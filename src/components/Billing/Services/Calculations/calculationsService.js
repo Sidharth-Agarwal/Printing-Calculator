@@ -25,6 +25,14 @@ import {
 // Import loyalty service functions
 import { getClientCurrentTier, applyLoyaltyDiscount } from '../../../../utils/LoyaltyService';
 
+// Import precision calculation helpers
+import { 
+  calculateWithPrecision, 
+  addCurrency, 
+  multiplyCurrency, 
+  calculatePercentage 
+} from '../../../../utils/calculationValidator';
+
 /**
  * Performs all necessary calculations based on the form state
  * @param {Object} state - The complete form state
@@ -280,71 +288,73 @@ export const performCompleteCalculations = async (
       // Note: QC is handled separately per requirements
     ];    
 
-    // Calculate production costs
-    const productionCost = productionFields.reduce((acc, key) => {
+    // CRITICAL FIX: Calculate production costs using precision addition
+    let productionCost = "0.00";
+    productionFields.forEach(key => {
       const value = baseCalculations[key];
       const parsedValue = value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0;
       console.log(`Production field ${key}: ${value} -> ${parsedValue}`);
-      return acc + parsedValue;
-    }, 0);
+      productionCost = addCurrency(productionCost, parsedValue.toString());
+    });
     
-    // Calculate post-production costs (excluding QC, packing, and misc)
-    const postProductionCost = postProductionFields.reduce((acc, key) => {
+    // CRITICAL FIX: Calculate post-production costs using precision addition
+    let postProductionCost = "0.00";
+    postProductionFields.forEach(key => {
       const value = baseCalculations[key];
       const parsedValue = value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0;
       console.log(`Post-production field ${key}: ${value} -> ${parsedValue}`);
-      return acc + parsedValue;
-    }, 0);
+      postProductionCost = addCurrency(postProductionCost, parsedValue.toString());
+    });
     
     console.log("Production cost:", productionCost);
     console.log("Post-production cost (without QC):", postProductionCost);
     
-    // Calculate initial base cost without QC
-    const initialBaseCost = productionCost + postProductionCost;
+    // Calculate initial base cost without QC using precision addition
+    const initialBaseCost = addCurrency(productionCost, postProductionCost);
     console.log("Initial base cost (without QC):", initialBaseCost);
 
     // 1. Calculate QC costs if QC is enabled
-    let qcCost = 0;
+    let qcCost = "0.00";
     if (state.qc?.isQCUsed) {
       // Use the QC value from calculations or calculate if not present
       if (baseCalculations.qcCostPerCard) {
-        qcCost = parseFloat(baseCalculations.qcCostPerCard) || 0;
+        qcCost = (parseFloat(baseCalculations.qcCostPerCard) || 0).toString();
       } else {
         const qcResult = await calculateQCCosts(state);
-        qcCost = parseFloat(qcResult.qcCostPerCard) || 0;
+        qcCost = (parseFloat(qcResult.qcCostPerCard) || 0).toString();
       }
       console.log("QC cost per card:", qcCost);
     }
 
-    // Add QC to get complete base cost
-    const baseCost = initialBaseCost + qcCost;
+    // Add QC to get complete base cost using precision addition
+    const baseCost = addCurrency(initialBaseCost, qcCost);
     console.log("Base cost with QC:", baseCost);
 
     // Calculate wastage and overhead on base cost
-    const wastageResult = await calculateWastage(baseCost);
+    const wastageResult = await calculateWastage(parseFloat(baseCost));
     const wastagePercentage = wastageResult.wastagePercentage;
-    const wastageCost = parseFloat(wastageResult.wastageAmount);
+    const wastageCost = wastageResult.wastageAmount;
     
     console.log("Wastage calculation:", {
       percentage: wastagePercentage,
       amount: wastageCost
     });
     
-    const overheadResult = await calculateOverhead(baseCost);
+    const overheadResult = await calculateOverhead(parseFloat(baseCost));
     const overheadPercentage = overheadResult.overheadPercentage;
-    const overheadCost = parseFloat(overheadResult.overheadAmount);
+    const overheadCost = overheadResult.overheadAmount;
     
     console.log("Overhead calculation:", {
       percentage: overheadPercentage,
       amount: overheadCost
     });
     
-    // Calculate COGS (Cost of Goods Sold)
-    const COGS = baseCost + wastageCost + overheadCost;
+    // CRITICAL FIX: Calculate COGS using precision addition
+    const COGS = addCurrency(addCurrency(baseCost, wastageCost), overheadCost);
     console.log("COGS:", COGS);
 
     // 2. Calculate Packing cost if enabled (applied to COGS)
-    let packingCost = 0;
+    let packingCost = "0.00";
     let packingPercentage = 0;
     
     if (state.packing?.isPackingUsed) {
@@ -356,8 +366,8 @@ export const performCompleteCalculations = async (
         packingPercentage = parseFloat(packingResult.packingPercentage) || 0;
       }
       
-      // Calculate packing cost as percentage of COGS
-      packingCost = COGS * (packingPercentage / 100);
+      // CRITICAL FIX: Calculate packing cost using precision percentage calculation
+      packingCost = calculatePercentage(COGS, packingPercentage);
       
       console.log("Packing cost calculation:", {
         COGS,
@@ -366,42 +376,46 @@ export const performCompleteCalculations = async (
       });
     }
 
-    const costWithPacking = COGS + packingCost;
+    // CRITICAL FIX: Calculate cost with packing using precision addition
+    const costWithPacking = addCurrency(COGS, packingCost);
     console.log("Cost with packing:", costWithPacking);
     
     // 3. Calculate Misc cost if enabled
-    let miscCost = 0;
+    let miscCost = "0.00";
     
     if (state.misc?.isMiscUsed) {
       // Use provided misc charge if available, otherwise fetch from database
       if (miscChargePerCard !== null) {
-        miscCost = miscChargePerCard;
+        miscCost = miscChargePerCard.toString();
       } else if (baseCalculations.miscCostPerCard) {
-        miscCost = parseFloat(baseCalculations.miscCostPerCard) || 0;
+        miscCost = (parseFloat(baseCalculations.miscCostPerCard) || 0).toString();
       } else {
         const miscResult = await calculateMiscCosts(state);
-        miscCost = parseFloat(miscResult.miscCostPerCard) || 0;
+        miscCost = (parseFloat(miscResult.miscCostPerCard) || 0).toString();
       }
       console.log("Misc cost per card:", miscCost);
     }
 
-    const costWithMisc = costWithPacking + miscCost;
+    // CRITICAL FIX: Calculate cost with misc using precision addition
+    const costWithMisc = addCurrency(costWithPacking, miscCost);
     console.log("Cost with misc:", costWithMisc);
     
     // Calculate markup using specified percentage or fetch from DB
     let markupResult;
     if (markupPercentage !== null && typeof markupPercentage === 'number') {
-      // If a specific percentage is provided as a number, use it directly
+      // CRITICAL FIX: Use precision calculation for markup
+      const markupAmount = calculatePercentage(costWithMisc, markupPercentage);
+      
       markupResult = {
         markupType: markupType,
         markupPercentage: markupPercentage,
-        markupAmount: (costWithMisc * (markupPercentage / 100)).toFixed(2)
+        markupAmount: markupAmount
       };
       console.log("Using provided markup percentage:", markupPercentage);
     } else {
       // Otherwise fetch from database based on markup type
       console.log("Fetching markup from database for type:", markupType);
-      markupResult = await calculateMarkup(costWithMisc, markupType);
+      markupResult = await calculateMarkup(parseFloat(costWithMisc), markupType);
       
       // Ensure the markupPercentage is a number
       if (typeof markupResult.markupPercentage !== 'number') {
@@ -412,24 +426,24 @@ export const performCompleteCalculations = async (
         const numericPercentage = parseFloat(markupResult.markupPercentage);
         if (!isNaN(numericPercentage)) {
           markupResult.markupPercentage = numericPercentage;
-          markupResult.markupAmount = (costWithMisc * (numericPercentage / 100)).toFixed(2);
+          markupResult.markupAmount = calculatePercentage(costWithMisc, numericPercentage);
         } else {
           // Use default fallback
           markupResult.markupPercentage = 50;
-          markupResult.markupAmount = (costWithMisc * 0.5).toFixed(2);
+          markupResult.markupAmount = calculatePercentage(costWithMisc, 50);
         }
       }
     }
     
     console.log("Markup calculation:", markupResult);
     
-    const markupCost = parseFloat(markupResult.markupAmount);
+    const markupCost = markupResult.markupAmount;
     
-    // Calculate total cost per card
-    const totalCostPerCard = (costWithMisc + markupCost).toFixed(2);
+    // CRITICAL FIX: Calculate total cost per card using precision addition
+    const totalCostPerCard = addCurrency(costWithMisc, markupCost);
     
-    // Total cost for all cards
-    const totalCost = totalCostPerCard * (state.orderAndPaper?.quantity || 0);
+    // CRITICAL FIX: Calculate total cost using precision multiplication
+    const totalCost = multiplyCurrency(totalCostPerCard, state.orderAndPaper?.quantity || 0);
     
     console.log("Cost calculation after markup:", {
       totalCostPerCard,
@@ -440,14 +454,14 @@ export const performCompleteCalculations = async (
     // 4. Calculate GST using cached rate or fetch from database
     let gstResult;
     if (cachedGSTRate !== null) {
-      // Use cached rate - no database call
-      const gstAmount = totalCost * (cachedGSTRate / 100);
-      const totalWithGST = totalCost + gstAmount;
+      // CRITICAL FIX: Use precision calculation for GST
+      const gstAmount = calculatePercentage(totalCost, cachedGSTRate);
+      const totalWithGST = addCurrency(totalCost, gstAmount);
       
       gstResult = {
         gstRate: cachedGSTRate,
-        gstAmount: gstAmount.toFixed(2),
-        totalWithGST: totalWithGST.toFixed(2),
+        gstAmount: gstAmount,
+        totalWithGST: totalWithGST,
         success: true
       };
       console.log("Using cached GST rate:", cachedGSTRate + "%");
@@ -455,7 +469,7 @@ export const performCompleteCalculations = async (
       // Fallback to database fetch
       console.log("No cached GST rate, fetching from database...");
       const jobType = state.orderAndPaper?.jobType || "Card";
-      gstResult = await calculateGST(totalCost, jobType);
+      gstResult = await calculateGST(parseFloat(totalCost), jobType);
       
       // If GST fetch failed, handle the error
       if (!gstResult.success) {
@@ -465,6 +479,10 @@ export const performCompleteCalculations = async (
           error: `GST calculation failed: ${gstResult.error}` 
         };
       }
+      
+      // CRITICAL FIX: Ensure GST calculations use precision
+      gstResult.gstAmount = calculatePercentage(totalCost, gstResult.gstRate);
+      gstResult.totalWithGST = addCurrency(totalCost, gstResult.gstAmount);
     }
     
     console.log("GST calculation:", {
@@ -474,8 +492,8 @@ export const performCompleteCalculations = async (
       totalWithGST: gstResult.totalWithGST
     });
     
-    const gstAmount = parseFloat(gstResult.gstAmount);
-    const totalWithGST = parseFloat(gstResult.totalWithGST);
+    const gstAmount = gstResult.gstAmount;
+    const totalWithGST = gstResult.totalWithGST;
     
     // 5. NEW: Apply loyalty discount if applicable
     let finalCalculations = {
@@ -483,44 +501,44 @@ export const performCompleteCalculations = async (
       ...baseCalculations,
       
       // Cost components with detailed breakdown
-      productionCost: productionCost.toFixed(2),
-      postProductionCost: postProductionCost.toFixed(2),
-      qcCostPerCard: qcCost.toFixed(2),
-      baseCost: baseCost.toFixed(2),
+      productionCost: parseFloat(productionCost).toFixed(2),
+      postProductionCost: parseFloat(postProductionCost).toFixed(2),
+      qcCostPerCard: parseFloat(qcCost).toFixed(2),
+      baseCost: parseFloat(baseCost).toFixed(2),
       
       // Wastage and overhead
       wastagePercentage: wastagePercentage,
-      wastageAmount: wastageCost.toFixed(2),
+      wastageAmount: parseFloat(wastageCost).toFixed(2),
       overheadPercentage: overheadPercentage,
-      overheadAmount: overheadCost.toFixed(2),
+      overheadAmount: parseFloat(overheadCost).toFixed(2),
       
       // COGS
-      COGS: COGS.toFixed(2),
+      COGS: parseFloat(COGS).toFixed(2),
       
       // Packing
       packingPercentage: packingPercentage,
-      packingCostPerCard: packingCost.toFixed(2),
-      costWithPacking: costWithPacking.toFixed(2),
+      packingCostPerCard: parseFloat(packingCost).toFixed(2),
+      costWithPacking: parseFloat(costWithPacking).toFixed(2),
       
       // Misc
       miscUsed: state.misc?.isMiscUsed || false,
-      miscCostPerCard: miscCost.toFixed(2),
-      costWithMisc: costWithMisc.toFixed(2),
+      miscCostPerCard: parseFloat(miscCost).toFixed(2),
+      costWithMisc: parseFloat(costWithMisc).toFixed(2),
       
       // Markup information
       markupType: markupResult.markupType,
       markupPercentage: markupResult.markupPercentage,
-      markupAmount: markupResult.markupAmount,
+      markupAmount: parseFloat(markupResult.markupAmount).toFixed(2),
       
       // GST information
       gstRate: gstResult.gstRate,
-      gstAmount: gstResult.gstAmount,
+      gstAmount: parseFloat(gstResult.gstAmount).toFixed(2),
       
       // Final totals
-      subtotalPerCard: costWithMisc.toFixed(2), // Subtotal is now cost with misc (before markup)
-      totalCostPerCard: totalCostPerCard, // Total after markup (before GST)
-      totalCost: totalCost.toFixed(2), // Total for all cards after markup (before GST)
-      totalWithGST: gstResult.totalWithGST // Total for all cards including GST
+      subtotalPerCard: parseFloat(costWithMisc).toFixed(2), // Subtotal is now cost with misc (before markup)
+      totalCostPerCard: parseFloat(totalCostPerCard).toFixed(2), // Total after markup (before GST)
+      totalCost: parseFloat(totalCost).toFixed(2), // Total for all cards after markup (before GST)
+      totalWithGST: parseFloat(totalWithGST).toFixed(2) // Total for all cards including GST
     };
     
     // Check for loyalty discount only if this is for an actual client (not just preview)
@@ -610,37 +628,41 @@ export const recalculateTotals = async (
       'sandwichPaperCostPerCard',
     ];    
 
-    // Calculate production costs
-    const productionCost = productionFields.reduce((acc, key) => {
+    // CRITICAL FIX: Calculate production costs using precision addition
+    let productionCost = "0.00";
+    productionFields.forEach(key => {
       const value = baseCalculations[key];
-      return acc + (value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0);
-    }, 0);
+      const parsedValue = value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0;
+      productionCost = addCurrency(productionCost, parsedValue.toString());
+    });
     
-    // Calculate post-production costs
-    const postProductionCost = postProductionFields.reduce((acc, key) => {
+    // CRITICAL FIX: Calculate post-production costs using precision addition
+    let postProductionCost = "0.00";
+    postProductionFields.forEach(key => {
       const value = baseCalculations[key];
-      return acc + (value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0);
-    }, 0);
+      const parsedValue = value !== null && value !== "Not Provided" ? parseFloat(value) || 0 : 0;
+      postProductionCost = addCurrency(postProductionCost, parsedValue.toString());
+    });
     
     // Get QC cost
     const qcCost = baseCalculations.qcCostPerCard 
-      ? parseFloat(baseCalculations.qcCostPerCard) 
-      : 0;
+      ? (parseFloat(baseCalculations.qcCostPerCard) || 0).toString()
+      : "0.00";
     
-    // Calculate base cost as production + post-production + QC
-    const baseCost = productionCost + postProductionCost + qcCost;
+    // CRITICAL FIX: Calculate base cost using precision addition
+    const baseCost = addCurrency(addCurrency(productionCost, postProductionCost), qcCost);
 
     // Calculate wastage and overhead on base cost
-    const wastageResult = await calculateWastage(baseCost);
+    const wastageResult = await calculateWastage(parseFloat(baseCost));
     const wastagePercentage = wastageResult.wastagePercentage;
-    const wastageCost = parseFloat(wastageResult.wastageAmount);
+    const wastageCost = wastageResult.wastageAmount;
     
-    const overheadResult = await calculateOverhead(baseCost);
+    const overheadResult = await calculateOverhead(parseFloat(baseCost));
     const overheadPercentage = overheadResult.overheadPercentage;
-    const overheadCost = parseFloat(overheadResult.overheadAmount);
+    const overheadCost = overheadResult.overheadAmount;
     
-    // Calculate COGS (Cost of Goods Sold)
-    const COGS = baseCost + wastageCost + overheadCost;
+    // CRITICAL FIX: Calculate COGS using precision addition
+    const COGS = addCurrency(addCurrency(baseCost, wastageCost), overheadCost);
     
     // Get packing percentage and calculate cost
     const packingPercentage = baseCalculations.packingPercentage 
@@ -650,37 +672,38 @@ export const recalculateTotals = async (
     // Calculate packing cost as percentage of COGS
     // Check if packing is used in the base calculations
     const packingUsed = baseCalculations.packingCostPerCard && parseFloat(baseCalculations.packingCostPerCard) > 0;
-    const packingCost = packingUsed ? COGS * (packingPercentage / 100) : 0;
+    const packingCost = packingUsed ? calculatePercentage(COGS, packingPercentage) : "0.00";
     
-    const costWithPacking = COGS + packingCost;
+    // CRITICAL FIX: Calculate cost with packing using precision addition
+    const costWithPacking = addCurrency(COGS, packingCost);
     
     // Add misc charge if selected
     const miscUsed = baseCalculations.miscUsed || false;
-    const miscCharge = miscUsed ? miscChargePerCard : 0;
-    const costWithMisc = costWithPacking + miscCharge;
+    const miscCharge = miscUsed ? miscChargePerCard.toString() : "0.00";
+    const costWithMisc = addCurrency(costWithPacking, miscCharge);
     
-    // Calculate markup using the specified percentage
-    const markupCost = costWithMisc * (markupPercentage / 100);
+    // CRITICAL FIX: Calculate markup using precision percentage calculation
+    const markupCost = calculatePercentage(costWithMisc, markupPercentage);
     
-    // Calculate total cost per card
-    const totalCostPerCard = costWithMisc + markupCost;
+    // CRITICAL FIX: Calculate total cost per card using precision addition
+    const totalCostPerCard = addCurrency(costWithMisc, markupCost);
     
-    // Total cost for all cards
-    const totalCost = totalCostPerCard * quantity;
+    // CRITICAL FIX: Calculate total cost using precision multiplication
+    const totalCost = multiplyCurrency(totalCostPerCard, quantity);
     
     // Use cached GST rate instead of calling calculateGST
     let gstAmount, totalWithGST, gstRate;
     
     if (cachedGSTRate !== null) {
-      // Use cached rate
+      // CRITICAL FIX: Use precision calculations for GST
       gstRate = cachedGSTRate;
-      gstAmount = totalCost * (cachedGSTRate / 100);
-      totalWithGST = totalCost + gstAmount;
+      gstAmount = calculatePercentage(totalCost, cachedGSTRate);
+      totalWithGST = addCurrency(totalCost, gstAmount);
       console.log("Using cached GST rate in recalculation:", cachedGSTRate + "%");
     } else {
       // Fallback to database fetch
       console.log("No cached GST rate in recalculation, fetching from database...");
-      const gstResult = await calculateGST(totalCost, jobType);
+      const gstResult = await calculateGST(parseFloat(totalCost), jobType);
       
       if (!gstResult.success) {
         // Handle GST fetch error
@@ -692,52 +715,53 @@ export const recalculateTotals = async (
       }
       
       gstRate = gstResult.gstRate;
-      gstAmount = parseFloat(gstResult.gstAmount);
-      totalWithGST = parseFloat(gstResult.totalWithGST);
+      // CRITICAL FIX: Use precision calculations for GST
+      gstAmount = calculatePercentage(totalCost, gstResult.gstRate);
+      totalWithGST = addCurrency(totalCost, gstAmount);
     }
     
     // Prepare updated calculations
     let updatedCalculations = {
       ...baseCalculations, // Preserve original base calculations
       
-      productionCost: productionCost.toFixed(2),
-      postProductionCost: postProductionCost.toFixed(2),
-      qcCostPerCard: qcCost.toFixed(2),
-      baseCost: baseCost.toFixed(2),
+      productionCost: parseFloat(productionCost).toFixed(2),
+      postProductionCost: parseFloat(postProductionCost).toFixed(2),
+      qcCostPerCard: parseFloat(qcCost).toFixed(2),
+      baseCost: parseFloat(baseCost).toFixed(2),
       
       // Wastage and overhead
       wastagePercentage: wastagePercentage,
-      wastageAmount: wastageCost.toFixed(2),
+      wastageAmount: parseFloat(wastageCost).toFixed(2),
       overheadPercentage: overheadPercentage,
-      overheadAmount: overheadCost.toFixed(2),
+      overheadAmount: parseFloat(overheadCost).toFixed(2),
       
       // COGS
-      COGS: COGS.toFixed(2),
+      COGS: parseFloat(COGS).toFixed(2),
       
       // Packing
       packingPercentage: packingPercentage,
-      packingCostPerCard: packingCost.toFixed(2),
-      costWithPacking: costWithPacking.toFixed(2),
+      packingCostPerCard: parseFloat(packingCost).toFixed(2),
+      costWithPacking: parseFloat(costWithPacking).toFixed(2),
       
       // Misc
       miscUsed: miscUsed,
-      miscCostPerCard: miscCharge.toFixed(2),
-      costWithMisc: costWithMisc.toFixed(2),
+      miscCostPerCard: parseFloat(miscCharge).toFixed(2),
+      costWithMisc: parseFloat(costWithMisc).toFixed(2),
       
       // Markup
       markupType: markupType,
       markupPercentage: markupPercentage,
-      markupAmount: markupCost.toFixed(2),
+      markupAmount: parseFloat(markupCost).toFixed(2),
       
       // GST
       gstRate: gstRate,
-      gstAmount: gstAmount.toFixed(2),
+      gstAmount: parseFloat(gstAmount).toFixed(2),
       
       // Totals
-      subtotalPerCard: costWithMisc.toFixed(2),
-      totalCostPerCard: totalCostPerCard.toFixed(2),
-      totalCost: totalCost.toFixed(2),
-      totalWithGST: totalWithGST.toFixed(2)
+      subtotalPerCard: parseFloat(costWithMisc).toFixed(2),
+      totalCostPerCard: parseFloat(totalCostPerCard).toFixed(2),
+      totalCost: parseFloat(totalCost).toFixed(2),
+      totalWithGST: parseFloat(totalWithGST).toFixed(2)
     };
     
     // Apply loyalty discount if applicable
@@ -754,80 +778,80 @@ export const recalculateTotals = async (
     const OVERHEAD_PERCENTAGE = 35;
     const DEFAULT_GST_RATE = 18;
     
-    // Simple fallback calculation
-    const baseCost = parseFloat(baseCalculations.baseCost || 0);
-    const wastageCost = baseCost * (WASTAGE_PERCENTAGE / 100);
-    const overheadCost = baseCost * (OVERHEAD_PERCENTAGE / 100);
-    const COGS = baseCost + wastageCost + overheadCost;
+    // Simple fallback calculation using precision helpers
+    const baseCost = baseCalculations.baseCost || "0.00";
+    const wastageCost = calculatePercentage(baseCost, WASTAGE_PERCENTAGE);
+    const overheadCost = calculatePercentage(baseCost, OVERHEAD_PERCENTAGE);
+    const COGS = addCurrency(addCurrency(baseCost, wastageCost), overheadCost);
     
     // Calculate packing cost as percentage of COGS
     const packingPercentage = baseCalculations.packingPercentage 
       ? parseFloat(baseCalculations.packingPercentage) 
       : 0;
     const packingCost = baseCalculations.packingCostPerCard && parseFloat(baseCalculations.packingCostPerCard) > 0
-      ? COGS * (packingPercentage / 100) 
-      : 0;
+      ? calculatePercentage(COGS, packingPercentage)
+      : "0.00";
     
-    const costWithPacking = COGS + packingCost;
+    const costWithPacking = addCurrency(COGS, packingCost);
     
     const miscUsed = baseCalculations.miscUsed || false;
-    const miscCharge = miscUsed ? miscChargePerCard : 0;
-    const costWithMisc = costWithPacking + miscCharge;
+    const miscCharge = miscUsed ? miscChargePerCard.toString() : "0.00";
+    const costWithMisc = addCurrency(costWithPacking, miscCharge);
     
-    const markupCost = costWithMisc * (markupPercentage / 100);
-    const totalCostPerCard = costWithMisc + markupCost;
-    const totalCost = totalCostPerCard * quantity;
+    const markupCost = calculatePercentage(costWithMisc, markupPercentage);
+    const totalCostPerCard = addCurrency(costWithMisc, markupCost);
+    const totalCost = multiplyCurrency(totalCostPerCard, quantity);
     
     // Calculate GST (use cached rate if available, otherwise fallback)
     const gstRate = cachedGSTRate !== null ? cachedGSTRate : DEFAULT_GST_RATE;
-    const gstAmount = totalCost * (gstRate / 100);
-    const totalWithGST = totalCost + gstAmount;
+    const gstAmount = calculatePercentage(totalCost, gstRate);
+    const totalWithGST = addCurrency(totalCost, gstAmount);
     
     // Apply loyalty discount if applicable
     let updatedCalculations = {
       ...baseCalculations, // Preserve original base calculations
       error: "Error recalculating with database values, using fallback calculations.",
-      baseCost: baseCost.toFixed(2),
+      baseCost: parseFloat(baseCost).toFixed(2),
       wastagePercentage: WASTAGE_PERCENTAGE,
-      wastageAmount: wastageCost.toFixed(2),
+      wastageAmount: parseFloat(wastageCost).toFixed(2),
       overheadPercentage: OVERHEAD_PERCENTAGE,
-      overheadAmount: overheadCost.toFixed(2),
-      COGS: COGS.toFixed(2),
+      overheadAmount: parseFloat(overheadCost).toFixed(2),
+      COGS: parseFloat(COGS).toFixed(2),
       packingPercentage: packingPercentage,
-      packingCostPerCard: packingCost.toFixed(2),
-      costWithPacking: costWithPacking.toFixed(2),
+      packingCostPerCard: parseFloat(packingCost).toFixed(2),
+      costWithPacking: parseFloat(costWithPacking).toFixed(2),
       miscUsed: miscUsed,
-      miscCostPerCard: miscCharge.toFixed(2),
-      costWithMisc: costWithMisc.toFixed(2),
+      miscCostPerCard: parseFloat(miscCharge).toFixed(2),
+      costWithMisc: parseFloat(costWithMisc).toFixed(2),
       markupType: markupType,
       markupPercentage: markupPercentage,
-      markupAmount: markupCost.toFixed(2),
-      subtotalPerCard: costWithMisc.toFixed(2),
-      totalCostPerCard: totalCostPerCard.toFixed(2),
-      totalCost: totalCost.toFixed(2),
+      markupAmount: parseFloat(markupCost).toFixed(2),
+      subtotalPerCard: parseFloat(costWithMisc).toFixed(2),
+      totalCostPerCard: parseFloat(totalCostPerCard).toFixed(2),
+      totalCost: parseFloat(totalCost).toFixed(2),
       gstRate: gstRate,
-      gstAmount: gstAmount.toFixed(2),
-      totalWithGST: totalWithGST.toFixed(2)
+      gstAmount: parseFloat(gstAmount).toFixed(2),
+      totalWithGST: parseFloat(totalWithGST).toFixed(2)
     };
     
-    // Apply loyalty discount if applicable
+    // Apply loyalty discount if applicable using precision calculations
     if (clientLoyaltyTier && clientLoyaltyTier.discount > 0) {
       const discountPercent = clientLoyaltyTier.discount;
-      const discountAmount = totalCost * (discountPercent / 100);
-      const discountedTotal = totalCost - discountAmount;
-      const newGstAmount = discountedTotal * (gstRate / 100);
-      const newTotalWithGST = discountedTotal + newGstAmount;
+      const discountAmount = calculatePercentage(totalCost, discountPercent);
+      const discountedTotal = addCurrency(totalCost, `-${discountAmount}`);
+      const newGstAmount = calculatePercentage(discountedTotal, gstRate);
+      const newTotalWithGST = addCurrency(discountedTotal, newGstAmount);
       
       updatedCalculations = {
         ...updatedCalculations,
         loyaltyTierId: clientLoyaltyTier.dbId,
         loyaltyTierName: clientLoyaltyTier.name,
         loyaltyDiscount: discountPercent,
-        loyaltyDiscountAmount: discountAmount.toFixed(2),
-        discountedTotalCost: discountedTotal.toFixed(2),
-        originalTotalCost: totalCost.toFixed(2),
-        gstAmount: newGstAmount.toFixed(2),
-        totalWithGST: newTotalWithGST.toFixed(2)
+        loyaltyDiscountAmount: parseFloat(discountAmount).toFixed(2),
+        discountedTotalCost: parseFloat(discountedTotal).toFixed(2),
+        originalTotalCost: parseFloat(totalCost).toFixed(2),
+        gstAmount: parseFloat(newGstAmount).toFixed(2),
+        totalWithGST: parseFloat(newTotalWithGST).toFixed(2)
       };
     }
     
@@ -852,33 +876,33 @@ export const recalculateMarkupForEdit = (calculations, newMarkupPercentage, newM
     });
 
     // Use the subtotalPerCard as the base for markup calculation in edit mode
-    const subtotalPerCard = parseFloat(calculations.subtotalPerCard || calculations.costWithMisc || 0);
+    const subtotalPerCard = calculations.subtotalPerCard || calculations.costWithMisc || "0.00";
     
-    // Calculate new markup amount
-    const newMarkupAmount = subtotalPerCard * (newMarkupPercentage / 100);
+    // CRITICAL FIX: Calculate new markup amount using precision
+    const newMarkupAmount = calculatePercentage(subtotalPerCard, newMarkupPercentage);
     
-    // Calculate new total cost per card
-    const newTotalCostPerCard = subtotalPerCard + newMarkupAmount;
+    // CRITICAL FIX: Calculate new total cost per card using precision addition
+    const newTotalCostPerCard = addCurrency(subtotalPerCard, newMarkupAmount);
     
-    // Calculate total for all cards
+    // Calculate total for all cards using precision multiplication
     const quantity = parseInt(calculations.quantity || 1);
-    const newTotalCost = newTotalCostPerCard * quantity;
+    const newTotalCost = multiplyCurrency(newTotalCostPerCard, quantity);
     
-    // Recalculate GST on the new total
+    // Recalculate GST on the new total using precision
     const gstRate = parseFloat(calculations.gstRate || 18);
-    const newGstAmount = newTotalCost * (gstRate / 100);
-    const newTotalWithGST = newTotalCost + newGstAmount;
+    const newGstAmount = calculatePercentage(newTotalCost, gstRate);
+    const newTotalWithGST = addCurrency(newTotalCost, newGstAmount);
     
     // Return updated calculations
     const updatedCalculations = {
       ...calculations,
       markupType: newMarkupType,
       markupPercentage: newMarkupPercentage,
-      markupAmount: newMarkupAmount.toFixed(2),
-      totalCostPerCard: newTotalCostPerCard.toFixed(2),
-      totalCost: newTotalCost.toFixed(2),
-      gstAmount: newGstAmount.toFixed(2),
-      totalWithGST: newTotalWithGST.toFixed(2)
+      markupAmount: parseFloat(newMarkupAmount).toFixed(2),
+      totalCostPerCard: parseFloat(newTotalCostPerCard).toFixed(2),
+      totalCost: parseFloat(newTotalCost).toFixed(2),
+      gstAmount: parseFloat(newGstAmount).toFixed(2),
+      totalWithGST: parseFloat(newTotalWithGST).toFixed(2)
     };
     
     console.log("Updated calculations for edit:", {
@@ -907,27 +931,27 @@ export const recalculateMarkupForEdit = (calculations, newMarkupPercentage, newM
 export const simpleMarkupRecalculation = (existingCalculations, markupPercentage, markupType, quantity, gstRate) => {
   try {
     // Use the subtotal that's displayed in the UI
-    const subtotalPerCard = parseFloat(existingCalculations.subtotalPerCard || 0);
+    const subtotalPerCard = existingCalculations.subtotalPerCard || "0.00";
     
-    // Calculate new markup
-    const markupAmount = subtotalPerCard * (markupPercentage / 100);
-    const totalCostPerCard = subtotalPerCard + markupAmount;
-    const totalCost = totalCostPerCard * quantity;
+    // CRITICAL FIX: Calculate new markup using precision
+    const markupAmount = calculatePercentage(subtotalPerCard, markupPercentage);
+    const totalCostPerCard = addCurrency(subtotalPerCard, markupAmount);
+    const totalCost = multiplyCurrency(totalCostPerCard, quantity);
     
-    // Calculate GST
-    const gstAmount = totalCost * (gstRate / 100);
-    const totalWithGST = totalCost + gstAmount;
+    // Calculate GST using precision
+    const gstAmount = calculatePercentage(totalCost, gstRate);
+    const totalWithGST = addCurrency(totalCost, gstAmount);
     
     return {
       ...existingCalculations,
       markupType: markupType,
       markupPercentage: markupPercentage,
-      markupAmount: markupAmount.toFixed(2),
-      totalCostPerCard: totalCostPerCard.toFixed(2),
-      totalCost: totalCost.toFixed(2),
+      markupAmount: parseFloat(markupAmount).toFixed(2),
+      totalCostPerCard: parseFloat(totalCostPerCard).toFixed(2),
+      totalCost: parseFloat(totalCost).toFixed(2),
       gstRate: gstRate,
-      gstAmount: gstAmount.toFixed(2),
-      totalWithGST: totalWithGST.toFixed(2)
+      gstAmount: parseFloat(gstAmount).toFixed(2),
+      totalWithGST: parseFloat(totalWithGST).toFixed(2)
     };
   } catch (error) {
     console.error("Error in simple markup recalculation:", error);

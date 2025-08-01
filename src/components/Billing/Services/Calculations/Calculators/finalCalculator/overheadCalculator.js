@@ -1,5 +1,5 @@
-// src/components/BillingForm/Services/Calculations/calculators/finalCalculators/overheadCalculator.js
 import { fetchOverheadValue } from '../../../../../../utils/dbFetchUtils';
+import { calculatePercentage } from '../../../../../../utils/calculationValidator';
 
 /**
  * Calculates overhead amount based on base cost with miscellaneous charges
@@ -16,20 +16,26 @@ export const calculateOverhead = async (baseWithMisc) => {
       ? parseFloat(generalOverhead.percentage)
       : 35;
     
-    // Calculate overhead amount
-    const overheadAmount = baseWithMisc * (overheadPercentage / 100);
+    // CRITICAL FIX: Calculate overhead amount using precision calculation
+    const overheadAmount = calculatePercentage(baseWithMisc.toString(), overheadPercentage);
+    
+    console.log(`Overhead calculation: Base=${baseWithMisc}, Rate=${overheadPercentage}%, Amount=${overheadAmount}`);
     
     return {
       overheadPercentage,
-      overheadAmount: overheadAmount.toFixed(2),
+      overheadAmount: parseFloat(overheadAmount).toFixed(2),
       success: true
     };
   } catch (error) {
     console.error("Error calculating overhead:", error);
+    
+    // CRITICAL FIX: Use precision calculation for fallback overhead
+    const fallbackOverheadAmount = calculatePercentage(baseWithMisc.toString(), 35);
+    
     // Return default values in case of error
     return {
       overheadPercentage: 35,
-      overheadAmount: (baseWithMisc * 0.35).toFixed(2),
+      overheadAmount: parseFloat(fallbackOverheadAmount).toFixed(2),
       success: false,
       error: "Failed to calculate overhead"
     };

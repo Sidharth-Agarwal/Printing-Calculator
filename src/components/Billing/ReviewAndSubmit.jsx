@@ -171,7 +171,7 @@ const ReviewAndSubmit = ({
         preservedCalculations.gstAmount = preciseCalc.gstAmount;
         preservedCalculations.totalWithGST = preciseCalc.totalWithGST;
         
-        console.log('🔒 Edit mode: Using locked markup values:', {
+        console.log('🔒 Edit mode: Using locked markup values with precision:', {
           markupType: lockedMarkup.markupType,
           markupPercentage: lockedMarkup.markupPercentage,
           recalculatedTotals: preciseCalc
@@ -771,7 +771,7 @@ const ReviewAndSubmit = ({
                   <select
                     onChange={handleMarkupSelection}
                     value={selectedMarkupType}
-                    className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={isLoadingMarkups}
                   >
                     <option value="">Select Markup Type</option>
