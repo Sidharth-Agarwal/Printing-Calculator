@@ -926,7 +926,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                       <span className="flex items-center">
                         <svg className="animate-spin -ml-1 mr-1 h-3 w-3 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                           <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                         </svg>
                         Processing...
                       </span>
@@ -942,7 +942,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       )}
 
       {showSelectionUI ? (
-        // Die Selection UI - Updated layout with 50% search bar and 25% each for length/breadth
+        // Die Selection UI - Updated layout with vertical stacking
         <>
           <div className="flex justify-between items-center mb-1">
             <div className="text-xs text-gray-600">
@@ -957,10 +957,10 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
             </button>
           </div>
           
-          {/* Updated search layout: 50% search bar, 25% length, 25% breadth */}
-          <div className="grid grid-cols-4 gap-3 mb-1">
-            {/* Search input - takes 2 columns (50%) */}
-            <div className="col-span-2">
+          {/* Updated search layout: Search field separate, then length and breadth in same row */}
+          <div className="space-y-3 mb-1">
+            {/* Search input - full width */}
+            <div>
               <label className="block text-xs font-medium text-gray-600 mb-1">Search by Code, Type or Job Type</label>
               <div className="relative">
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -977,36 +977,39 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
               </div>
             </div>
             
-            {/* Length input - takes 1 column (25%) */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Length - Die or Product</label>
-              <input
-                type="number"
-                name="length"
-                step="0.01"
-                placeholder="Length (inches)"
-                value={searchDimensions.length}
-                onChange={handleSearchChange}
-                onWheel={(e) => e.target.blur()}
-                className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
-                data-testid="die-length-input"
-              />
-            </div>
-            
-            {/* Breadth input - takes 1 column (25%) */}
-            <div>
-              <label className="block text-xs font-medium text-gray-600 mb-1">Breadth (inches) - Die or Product</label>
-              <input
-                type="number"
-                name="breadth"
-                step="0.01"
-                placeholder="Breadth (inches)"
-                value={searchDimensions.breadth}
-                onChange={handleSearchChange}
-                onWheel={(e) => e.target.blur()}
-                className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
-                data-testid="die-breadth-input"
-              />
+            {/* Length and Breadth inputs - 2 columns in same row */}
+            <div className="grid grid-cols-2 gap-2">
+              {/* Length input */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Length - Die or Product</label>
+                <input
+                  type="number"
+                  name="length"
+                  step="0.01"
+                  placeholder="Length (inches)"
+                  value={searchDimensions.length}
+                  onChange={handleSearchChange}
+                  onWheel={(e) => e.target.blur()}
+                  className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
+                  data-testid="die-length-input"
+                />
+              </div>
+              
+              {/* Breadth input */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Breadth - Die or Product</label>
+                <input
+                  type="number"
+                  name="breadth"
+                  step="0.01"
+                  placeholder="Breadth (inches)"
+                  value={searchDimensions.breadth}
+                  onChange={handleSearchChange}
+                  onWheel={(e) => e.target.blur()}
+                  className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
+                  data-testid="die-breadth-input"
+                />
+              </div>
             </div>
           </div>
   

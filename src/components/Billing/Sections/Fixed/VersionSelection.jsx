@@ -166,17 +166,6 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
           >
             + New
           </button>
-          
-          {/* View existing estimates button */}
-          {selectedVersion && existingEstimates.length > 0 && (
-            <button
-              type="button"
-              onClick={() => setShowEstimates(!showEstimates)}
-              className="px-3 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors text-xs"
-            >
-              {showEstimates ? "Hide Estimates" : `View ${existingEstimates.length} Estimates`}
-            </button>
-          )}
         </div>
       </div>
 
