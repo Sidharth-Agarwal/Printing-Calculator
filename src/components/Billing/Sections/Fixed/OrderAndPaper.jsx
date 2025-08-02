@@ -317,7 +317,6 @@ const OrderAndPaper = ({
         <form onSubmit={handleSubmit} className={compact ? "space-y-4" : "space-y-6"}>
           {/* Form Fields Grid - Updated layout with three rows */}
           <div className="grid grid-cols-1 gap-4 text-sm">
-            {/* First Row: Project Name, Job Type, Quantity */}
             <div className="grid grid-cols-3 gap-4">
               {/* Project Name */}
               <div>
@@ -391,8 +390,40 @@ const OrderAndPaper = ({
                 )}
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-4">
+              {/* Paper Provided */}
+              <div>
+                <label htmlFor="paperProvided" className="block text-xs font-medium text-gray-600 mb-1">
+                  Paper Provided <span className="text-red-500">*</span>
+                </label>
+                <select
+                  id="paperProvided"
+                  name="paperProvided"
+                  value={orderAndPaper.paperProvided || "Yes"}
+                  onChange={handleChange}
+                  className="border rounded-md p-1.5 w-full text-xs"
+                  required
+                >
+                  <option value="Yes">Yes</option>
+                  <option value="No">No</option>
+                </select>
+              </div>
 
-            {/* Second Row: Date, Delivery Date, Wedding Date */}
+              {/* Paper Selection */}
+              <div>
+                <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
+                  Paper Name / Cover Name<span className="text-red-500">*</span>
+                </label>
+                <SearchablePaperDropdown 
+                  papers={papers}
+                  selectedPaper={orderAndPaper.paperName || ""}
+                  onChange={handleChange}
+                  compact={true}
+                  isDieSelected={!!(orderAndPaper.dieCode)}
+                />
+              </div>
+            </div>
+
             <div className="grid grid-cols-3 gap-4">
               {/* Date */}
               <div>
@@ -444,41 +475,6 @@ const OrderAndPaper = ({
                   className="border rounded-md p-1.5 w-full text-xs"
                   popperClassName="small-calendar"
                   calendarClassName="small-calendar"
-                />
-              </div>
-            </div>
-
-            {/* Third Row: Paper Provided and Paper Selection */}
-            <div className="grid grid-cols-2 gap-4">
-              {/* Paper Provided */}
-              <div>
-                <label htmlFor="paperProvided" className="block text-xs font-medium text-gray-600 mb-1">
-                  Paper Provided <span className="text-red-500">*</span>
-                </label>
-                <select
-                  id="paperProvided"
-                  name="paperProvided"
-                  value={orderAndPaper.paperProvided || "Yes"}
-                  onChange={handleChange}
-                  className="border rounded-md p-1.5 w-full text-xs"
-                  required
-                >
-                  <option value="Yes">Yes</option>
-                  <option value="No">No</option>
-                </select>
-              </div>
-
-              {/* Paper Selection */}
-              <div>
-                <label htmlFor="paperName" className="block text-xs font-medium text-gray-600 mb-1">
-                  Paper Name / Cover Name<span className="text-red-500">*</span>
-                </label>
-                <SearchablePaperDropdown 
-                  papers={papers}
-                  selectedPaper={orderAndPaper.paperName || ""}
-                  onChange={handleChange}
-                  compact={true}
-                  isDieSelected={!!(orderAndPaper.dieCode)}
                 />
               </div>
             </div>
