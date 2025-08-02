@@ -181,7 +181,7 @@ const AddPaperForm = ({ onSubmit, initialData, isSubmitting, onCancel, vendors }
         </button>
         <button
           type="submit"
-          className="px-4 py-2 bg-red-600 text-white rounded-md text-sm hover:bg-red-700"
+          className="px-4 py-2 bg-cyan-500 text-white rounded-md text-sm hover:bg-cyan-600"
           disabled={isSubmitting}
         >
           {isSubmitting ? (

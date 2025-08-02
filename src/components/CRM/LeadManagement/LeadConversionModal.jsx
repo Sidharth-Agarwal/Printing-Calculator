@@ -198,7 +198,7 @@ const LeadConversionModal = ({ lead, onClose, onSubmit }) => {
                name="clientType"
                value={formData.clientType}
                onChange={handleChange}
-               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 text-sm"
+               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none text-sm"
              >
                <option value="Direct">Direct</option>
                <option value="B2B">B2B</option>
@@ -215,7 +215,7 @@ const LeadConversionModal = ({ lead, onClose, onSubmit }) => {
                name="clientCode"
                value={formData.clientCode}
                readOnly
-               className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 text-sm bg-gray-50 ${
+               className={`w-full px-3 py-2 border rounded-md focus:outline-none text-sm bg-gray-50 ${
                  errors.clientCode ? "border-red-500" : "border-gray-300"
                }`}
              />

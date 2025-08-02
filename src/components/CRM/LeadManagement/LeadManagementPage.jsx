@@ -426,7 +426,7 @@ const LeadManagementPage = () => {
             onClick={() => setViewMode("kanban")}
             className={`px-3 py-2 text-sm font-medium rounded-md flex items-center ${
               viewMode === "kanban"
-                ? "bg-red-600 text-white"
+                ? "bg-cyan-500 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
             }`}
           >
@@ -440,7 +440,7 @@ const LeadManagementPage = () => {
             onClick={() => setViewMode("list")}
             className={`px-3 py-2 text-sm font-medium rounded-md flex items-center ${
               viewMode === "list"
-                ? "bg-red-600 text-white"
+                ? "bg-cyan-500 text-white"
                 : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
             }`}
           >
@@ -452,7 +452,7 @@ const LeadManagementPage = () => {
           
           <button
             onClick={handleAddNew}
-            className="px-4 py-2 text-sm font-medium rounded-md bg-red-600 text-white hover:bg-red-700 flex items-center"
+            className="px-4 py-2 text-sm font-medium rounded-md bg-cyan-500 text-white hover:bg-cyan-600 flex items-center"
           >
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />

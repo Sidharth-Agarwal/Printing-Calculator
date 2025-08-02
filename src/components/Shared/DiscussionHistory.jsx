@@ -226,7 +226,7 @@ const DiscussionHistory = ({
               onChange={handleChange}
               required
               rows="3"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
               placeholder="Summarize what was discussed with the lead..."
             ></textarea>
           </div>
@@ -241,7 +241,7 @@ const DiscussionHistory = ({
               value={editFormData.nextSteps}
               onChange={handleChange}
               rows="2"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
               placeholder="What are the next actions to be taken?"
             ></textarea>
           </div>

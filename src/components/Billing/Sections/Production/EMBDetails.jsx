@@ -297,7 +297,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               name="plateSizeType"
               value={plateSizeType}
               onChange={handleChange}
-              className={`w-full px-2 py-2 border ${errors.plateSizeType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.plateSizeType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
             >
               <option value="Auto">Auto</option>
               <option value="Manual">Manual</option>
@@ -317,7 +317,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               placeholder="Length"
               value={plateDimensions.lengthInInches || ""}
               onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("length", e.target.value) : null}
-              className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 text-xs`}
               readOnly={plateSizeType === "Auto"}
             />
             {plateDimensions.length && (
@@ -336,7 +336,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               placeholder="Breadth"
               value={plateDimensions.breadthInInches || ""}
               onChange={(e) => plateSizeType === "Manual" ? handleDimensionChange("breadth", e.target.value) : null}
-              className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md ${plateSizeType === "Auto" ? "bg-gray-50" : ""} focus:outline-none focus:ring-1 text-xs`}
               readOnly={plateSizeType === "Auto"}
             />
             {plateDimensions.breadth && (
@@ -354,7 +354,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               name="embMR"
               value={embMR}
               onChange={handleChange}
-              className={`w-full px-2 py-2 border ${errors.embMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.embMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
             >
               {mrTypesLoading ? (
                 <option value="" disabled>Loading...</option>
@@ -381,7 +381,7 @@ const EMBDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fals
               disabled={dstMaterialsLoading}
               className={`w-full px-2 py-2 border ${
                 errors.dstMaterial ? "border-red-500" : "border-gray-300"
-              } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              } rounded-md focus:outline-none focus:ring-1 text-xs`}
             >
               {dstMaterials
                 .sort((a, b) => {

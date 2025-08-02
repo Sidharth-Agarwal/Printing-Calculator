@@ -110,7 +110,7 @@ const DisplayGstHsnTable = ({ gstHsns, onDelete, onEdit }) => {
             placeholder="Search GST & HSN..."
             value={searchTerm}
             onChange={handleSearch}
-            className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2"
           />
         </div>
         
@@ -191,7 +191,7 @@ const DisplayGstHsnTable = ({ gstHsns, onDelete, onEdit }) => {
               <p className="mt-1">Try using different keywords or clear your search</p>
               <button 
                 onClick={() => setSearchTerm('')}
-                className="mt-4 px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+                className="mt-4 px-4 py-2 text-sm bg-cyan-500 text-white rounded-md hover:bg-cyan-600"
               >
                 Clear Search
               </button>

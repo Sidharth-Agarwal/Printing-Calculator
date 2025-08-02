@@ -143,7 +143,7 @@ const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
                 max="10"
                 onChange={handleChange}
                 onWheel={(e) => e.target.blur()}
-                className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
               />
               {errors.noOfColors && (
                 <p className="text-red-500 text-xs mt-1">{errors.noOfColors}</p>
@@ -160,7 +160,7 @@ const ScreenPrint = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
                 name="screenMR"
                 value={screenPrint.screenMR || ""}
                 onChange={handleChange}
-                className={`w-full px-3 py-2 border ${errors.screenMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                className={`w-full px-3 py-2 border ${errors.screenMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
               >
                 {mrTypesLoading ? (
                   <option value="" disabled>Loading...</option>

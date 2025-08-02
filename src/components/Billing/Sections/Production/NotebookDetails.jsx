@@ -238,7 +238,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               name="orientation"
               value={notebookDetails.orientation || ""}
               onChange={handleChange}
-              className={`w-full px-2 py-2 border ${errors.orientation ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.orientation ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
             >
               <option value="">Select Orientation</option>
               <option value="Length Wise Baby Size">Length Wise Baby Size</option>
@@ -260,7 +260,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               placeholder="Number of formas"
               value={notebookDetails.numberOfPages || ""}
               onChange={handleChange}
-              className={`w-full px-2 py-2 border ${errors.numberOfPages ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.numberOfPages ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
               min="1"
             />
             {errors.numberOfPages && (
@@ -277,7 +277,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               name="bindingType"
               value={notebookDetails.bindingType || ""}
               onChange={handleChange}
-              className={`w-full px-2 py-2 border ${errors.bindingType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.bindingType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
               disabled={isLoading}
             >
               <option value="">Select Binding Type</option>
@@ -313,7 +313,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               value={notebookDetails.length || ""}
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
-              className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.length ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
               step="0.01"
             />
             {errors.length && (
@@ -333,7 +333,7 @@ const NotebookDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode =
               value={notebookDetails.breadth || ""}
               onChange={handleChange}
               onWheel={(e) => e.target.blur()}
-              className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-2 py-2 border ${errors.breadth ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
               step="0.01"
             />
             {errors.breadth && (

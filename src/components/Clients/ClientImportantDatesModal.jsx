@@ -209,7 +209,7 @@ const ClientImportantDatesModal = ({ client, editingDate, onClose, onSubmit }) =
               onChange={handleChange}
               className={`w-full px-3 py-2 border rounded-md text-sm ${
                 errors.title ? "border-red-500" : "border-gray-300"
-              } focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500`}
+              } focus:outline-none focus:ring-2`}
               placeholder="e.g., Birthday, Anniversary, Company Founded"
               disabled={isSubmitting}
             />
@@ -232,7 +232,7 @@ const ClientImportantDatesModal = ({ client, editingDate, onClose, onSubmit }) =
               dateFormat="dd/MM/yyyy"
               className={`w-full px-3 py-2 border rounded-md text-sm ${
                 errors.date ? "border-red-500" : "border-gray-300"
-              } focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500`}
+              } focus:outline-none focus:ring-2`}
               disabled={isSubmitting}
               showYearDropdown
               yearDropdownItemNumber={10}
@@ -276,7 +276,7 @@ const ClientImportantDatesModal = ({ client, editingDate, onClose, onSubmit }) =
               value={formData.description}
               onChange={handleChange}
               rows="3"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2"
               placeholder="Add any notes, reminders, or details about this date..."
               disabled={isSubmitting}
             ></textarea>

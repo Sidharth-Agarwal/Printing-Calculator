@@ -100,7 +100,7 @@ const SearchableClientDropdown = ({
             onChange={handleSearchChange}
             onFocus={() => setIsDropdownOpen(true)}
             placeholder="Search clients by name, code, contact person or email..."
-            className="border border-gray-300 rounded-md p-2 pl-10 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+            className="border border-gray-300 rounded-md p-2 pl-10 w-full text-sm focus:outline-none focus:ring-1"
             disabled={isLoading}
           />
           <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">

@@ -177,7 +177,7 @@ const LeadRegistrationForm = ({
               placeholder="Enter lead name"
               required
               disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
                 errors.name ? "border-red-500" : "border-gray-300"
               } ${isSubmitting ? "bg-gray-100" : ""}`}
             />
@@ -196,7 +196,7 @@ const LeadRegistrationForm = ({
               onChange={handleChange}
               placeholder="Enter company name (if applicable)"
               disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
                 errors.company ? "border-red-500" : "border-gray-300"
               } ${isSubmitting ? "bg-gray-100" : ""}`}
             />
@@ -215,7 +215,7 @@ const LeadRegistrationForm = ({
               onChange={handleChange}
               placeholder="Enter email address"
               disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
                 errors.email ? "border-red-500" : "border-gray-300"
               } ${isSubmitting ? "bg-gray-100" : ""}`}
             />
@@ -235,7 +235,7 @@ const LeadRegistrationForm = ({
               placeholder="Enter phone number"
               required
               disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
                 errors.phone ? "border-red-500" : "border-gray-300"
               } ${isSubmitting ? "bg-gray-100" : ""}`}
             />
@@ -302,7 +302,7 @@ const LeadRegistrationForm = ({
               value={formData.jobType || ""}
               onChange={handleChange}
               disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
                 errors.jobType ? "border-red-500" : "border-gray-300"
               } ${isSubmitting ? "bg-gray-100" : ""}`}
             >
@@ -325,7 +325,7 @@ const LeadRegistrationForm = ({
               value={formData.budget || ""}
               onChange={handleChange}
               disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
                 errors.budget ? "border-red-500" : "border-gray-300"
               } ${isSubmitting ? "bg-gray-100" : ""}`}
             >
@@ -348,7 +348,7 @@ const LeadRegistrationForm = ({
               value={formData.urgency || ""}
               onChange={handleChange}
               disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
                 errors.urgency ? "border-red-500" : "border-gray-300"
               } ${isSubmitting ? "bg-gray-100" : ""}`}
             >
@@ -381,7 +381,7 @@ const LeadRegistrationForm = ({
               onChange={handleChange}
               placeholder="Enter street address"
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
             />
           </div>
           
@@ -397,7 +397,7 @@ const LeadRegistrationForm = ({
               onChange={handleChange}
               placeholder="Enter apartment, suite, etc."
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
             />
           </div>
           
@@ -413,7 +413,7 @@ const LeadRegistrationForm = ({
               onChange={handleChange}
               placeholder="Enter city"
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
             />
           </div>
           
@@ -429,7 +429,7 @@ const LeadRegistrationForm = ({
               onChange={handleChange}
               placeholder="Enter state or province"
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
             />
           </div>
           
@@ -445,7 +445,7 @@ const LeadRegistrationForm = ({
               onChange={handleChange}
               placeholder="Enter postal code"
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
             />
           </div>
           
@@ -460,7 +460,7 @@ const LeadRegistrationForm = ({
               value={formData.address?.country || "India"}
               onChange={handleChange}
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
             />
           </div>
         </div>
@@ -479,7 +479,7 @@ const LeadRegistrationForm = ({
             rows="3"
             placeholder="Enter any additional notes about this lead"
             disabled={isSubmitting}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
           ></textarea>
         </div>
       </div>

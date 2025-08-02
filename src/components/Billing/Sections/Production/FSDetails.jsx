@@ -325,7 +325,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             name="fsType"
             value={fsDetails.fsType || ""}
             onChange={handleChange}
-            className={`w-full px-2 py-2 border ${errors.fsType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+            className={`w-full px-2 py-2 border ${errors.fsType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
           >
             {["FS1", "FS2", "FS3", "FS4", "FS5"].map((type) => (
               <option key={type} value={type}>
@@ -370,7 +370,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         onChange={(e) => handleFoilDetailsChange(index, "blockSizeType", e.target.value)}
                         className={`w-full px-2 py-2 border ${
                           errors[`blockSizeType-${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } rounded-md focus:outline-none focus:ring-1 text-xs`}
                       >
                         <option value="Auto">Auto</option>
                         <option value="Manual">Manual</option>
@@ -395,7 +395,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           errors[`blockLength-${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md ${
                           (fsDetails.foilDetails[index]?.blockSizeType || "Auto") === "Auto" ? "bg-gray-50" : ""
-                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } focus:outline-none focus:ring-1 text-xs`}
                         readOnly={(fsDetails.foilDetails[index]?.blockSizeType || "Auto") === "Auto"}
                       />
                       {fsDetails.foilDetails[index]?.blockDimension?.length && (
@@ -421,7 +421,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           errors[`blockBreadth-${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md ${
                           (fsDetails.foilDetails[index]?.blockSizeType || "Auto") === "Auto" ? "bg-gray-50" : ""
-                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } focus:outline-none focus:ring-1 text-xs`}
                         readOnly={(fsDetails.foilDetails[index]?.blockSizeType || "Auto") === "Auto"}
                       />
                       {fsDetails.foilDetails[index]?.blockDimension?.breadth && (
@@ -441,7 +441,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         onChange={(e) => handleFoilDetailsChange(index, "foilType", e.target.value)}
                         className={`w-full px-2 py-2 border ${
                           errors[`foilType-${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } rounded-md focus:outline-none focus:ring-1 text-xs`}
                       >
                         {foilTypes.map((foilType, idx) => (
                           <option key={idx} value={foilType.materialName}>
@@ -463,7 +463,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         onChange={(e) => handleFoilDetailsChange(index, "blockType", e.target.value)}
                         className={`w-full px-2 py-2 border ${
                           errors[`blockType-${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } rounded-md focus:outline-none focus:ring-1 text-xs`}
                       >
                         {blockTypes.map((blockType, idx) => (
                           <option key={idx} value={blockType.materialName}>
@@ -485,7 +485,7 @@ const FSDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         onChange={(e) => handleFoilDetailsChange(index, "mrType", e.target.value)}
                         className={`w-full px-2 py-2 border ${
                           errors[`mrType-${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } rounded-md focus:outline-none focus:ring-1 text-xs`}
                       >
                         {mrTypes.map((typeOption, idx) => (
                           <option key={idx} value={typeOption.type}>

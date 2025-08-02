@@ -144,7 +144,7 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
                   <select
                     value={assignedStaff}
                     onChange={(e) => setAssignedStaff(e.target.value)}
-                    className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                    className="w-full border border-gray-300 rounded-md shadow-sm p-2 focus:outline-none focus:ring-1"
                   >
                     <option value="">-- Not Assigned --</option>
                     {productionStaff.map(staff => (
@@ -171,7 +171,7 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
                       dateFormat="dd/MM/yyyy"
                       placeholderText="DD/MM/YYYY"
                       minDate={new Date()}
-                      className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                      className="w-full border border-gray-300 rounded-md shadow-sm p-2 text-sm focus:outline-none focus:ring-1"
                     />
                   </div>
                   {order.deliveryDate && (
@@ -227,7 +227,7 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
           </button>
           <button
             onClick={saveAssignments}
-            className={`px-4 py-2 ${canSave ? 'bg-red-500 hover:bg-red-600' : 'bg-gray-300 cursor-not-allowed'} text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2`}
+            className={`px-4 py-2 ${canSave ? 'bg-cyan-500 hover:bg-cyan-600' : 'bg-gray-300 cursor-not-allowed'} text-white rounded-md focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2`}
             disabled={updating || loading || productionStaff.length === 0 || !canSave}
           >
             {updating ? (

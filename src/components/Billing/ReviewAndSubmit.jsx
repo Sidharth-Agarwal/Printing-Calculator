@@ -2045,10 +2045,10 @@ const ReviewAndSubmit = ({
           )}
         </div>
       ) : (
-        <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
-          <p className="text-red-600 text-sm">Please fill in the required fields to calculate costs.</p>
+        <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200 text-center">
+          <p className="text-cyan-600 text-sm">Please fill in the required fields to calculate costs.</p>
           {!areRequiredFieldsFilled() && (
-            <div className="mt-2 text-xs text-red-500">
+            <div className="mt-2 text-xs text-cyan-500">
               Missing: {!state.client?.clientId && 'Client, '}
               {!state.orderAndPaper?.projectName?.trim() && 'Project Name, '}
               {!state.orderAndPaper?.quantity && 'Quantity, '}

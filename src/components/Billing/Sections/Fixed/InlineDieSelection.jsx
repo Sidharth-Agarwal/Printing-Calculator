@@ -911,7 +911,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                   </button>
                   <button
                     type="submit"
-                    className="px-3 py-1.5 bg-red-600 text-white rounded-md text-xs hover:bg-red-700"
+                    className="px-3 py-1.5 bg-cyan-500 text-white rounded-md text-xs hover:bg-cyan-600"
                     disabled={isSubmitting}
                     onClick={(e) => {
                       e.preventDefault();
@@ -951,7 +951,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
             <button
               type="button"
               onClick={() => setShowAddDieForm(true)}
-              className="px-2 py-2 bg-red-600 text-white text-xs rounded-md flex items-center gap-1 hover:bg-red-700 transition-colors"
+              className="px-2 py-2 bg-cyan-500 text-white text-xs rounded-md flex items-center gap-1 hover:bg-cyan-600 transition-colors"
             >
               + New Die
             </button>
@@ -971,7 +971,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                   placeholder="Search by code, type or job type"
                   value={searchTerm}
                   onChange={handleTextSearch}
-                  className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
+                  className="border border-gray-300 rounded-md pl-9 pr-3 py-2 w-full text-sm focus:outline-none focus:ring-1 text-xs"
                   data-testid="die-search-input"
                 />
               </div>
@@ -990,7 +990,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                   value={searchDimensions.length}
                   onChange={handleSearchChange}
                   onWheel={(e) => e.target.blur()}
-                  className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
+                  className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 text-xs"
                   data-testid="die-length-input"
                 />
               </div>
@@ -1006,7 +1006,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
                   value={searchDimensions.breadth}
                   onChange={handleSearchChange}
                   onWheel={(e) => e.target.blur()}
-                  className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs"
+                  className="border border-gray-300 rounded-md p-2 w-full text-sm focus:outline-none focus:ring-1 text-xs"
                   data-testid="die-breadth-input"
                 />
               </div>

@@ -873,7 +873,7 @@ const DisplayClientTable = ({
             placeholder="Search clients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2"
           />
         </div>
         
@@ -881,7 +881,7 @@ const DisplayClientTable = ({
           <select
             value={filterClientType}
             onChange={(e) => setFilterClientType(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2"
           >
             <option value="">All Client Types</option>
             <option value="DIRECT">Direct Clients</option>
@@ -891,7 +891,7 @@ const DisplayClientTable = ({
           <select
             value={filterActiveStatus}
             onChange={(e) => setFilterActiveStatus(e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2"
           >
             <option value="">All Statuses</option>
             <option value="active">Active Clients</option>
@@ -903,7 +903,7 @@ const DisplayClientTable = ({
               onClick={() => setViewType('compact')}
               className={`px-3 py-2 text-sm flex items-center ${
                 viewType === 'compact' 
-                  ? 'bg-red-600 text-white' 
+                  ? 'bg-cyan-500 text-white' 
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -916,7 +916,7 @@ const DisplayClientTable = ({
               onClick={() => setViewType('detailed')}
               className={`px-3 py-2 text-sm flex items-center ${
                 viewType === 'detailed' 
-                  ? 'bg-red-600 text-white' 
+                  ? 'bg-cyan-500 text-white' 
                   : 'bg-white text-gray-700 hover:bg-gray-50'
               }`}
             >
@@ -960,7 +960,7 @@ const DisplayClientTable = ({
                   setFilterClientType('');
                   setFilterActiveStatus('');
                 }}
-                className="mt-4 px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+                className="mt-4 px-4 py-2 text-sm bg-cyan-500 text-white rounded-md hover:bg-cyan-600"
               >
                 Clear All Filters
               </button>

@@ -124,7 +124,7 @@ const DstPaste = ({ state, dispatch, onNext, onPrevious, singlePageMode = false 
             name="dstType"
             value={dstPaste.dstType || ""}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.dstType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+            className={`w-full px-3 py-2 border ${errors.dstType ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
             disabled={dstTypesLoading}
           >
             {dstTypesLoading ? (

@@ -604,7 +604,7 @@ const OrdersPage = () => {
               placeholder="Search orders, serials..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
             />
           </div>
           
@@ -612,7 +612,7 @@ const OrdersPage = () => {
             <select
               value={stageFilter}
               onChange={(e) => setStageFilter(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
             >
               <option value="">All Stages</option>
               {stages.map(stage => (
@@ -623,7 +623,7 @@ const OrdersPage = () => {
             <select
               value={sortBy}
               onChange={(e) => setSortBy(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
             >
               {Object.entries(sortOptions).map(([value, label]) => (
                 <option key={value} value={value}>{label}</option>
@@ -635,7 +635,7 @@ const OrdersPage = () => {
                 onClick={() => setViewMode('all')}
                 className={`px-3 py-2 text-sm ${
                   viewMode === 'all' 
-                    ? 'bg-red-500 text-white' 
+                    ? 'bg-cyan-500 text-white' 
                     : 'bg-white text-gray-700 hover:bg-gray-100'
                 }`}
               >
@@ -645,7 +645,7 @@ const OrdersPage = () => {
                 onClick={() => setViewMode('active')}
                 className={`px-3 py-2 text-sm ${
                   viewMode === 'active' 
-                    ? 'bg-red-500 text-white' 
+                    ? 'bg-cyan-500 text-white' 
                     : 'bg-white text-gray-700 hover:bg-gray-100'
                 }`}
               >
@@ -655,7 +655,7 @@ const OrdersPage = () => {
                 onClick={() => setViewMode('completed')}
                 className={`px-3 py-2 text-sm ${
                   viewMode === 'completed' 
-                  ? 'bg-red-500 text-white' 
+                  ? 'bg-cyan-500 text-white' 
                   : 'bg-white text-gray-700 hover:bg-gray-100'
                 }`}
               >
@@ -959,7 +959,7 @@ const OrdersPage = () => {
               </button>
               <button
                 onClick={updateStage}
-                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700"
+                className="px-4 py-2 text-sm bg-green-500 text-white rounded-md hover:bg-green-700"
                 disabled={updating}
               >
                 {updating ? (

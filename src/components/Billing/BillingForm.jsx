@@ -45,7 +45,7 @@ const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
         <h3 className="text-sm font-medium text-gray-700">{title}</h3>
         <div className="flex items-center space-x-2">
           {isUsed && (
-            <span className="text-xs bg-red-100 text-red-600 px-2 py-1 rounded">
+            <span className="text-xs bg-cyan-100 text-cyan-700 px-2 py-1 rounded">
               Active
             </span>
           )}
@@ -56,7 +56,7 @@ const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
               onChange={onToggleUsage}
               className="sr-only peer"
             />
-            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-500"></div>
+            <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-cyan-500"></div>
           </label>
         </div>
       </div>
@@ -2701,7 +2701,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             <button 
               type="button"
               onClick={handleResetForm}
-              className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+              className="px-4 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-500 transition-colors"
             >
               Reset Form
             </button>
@@ -2745,7 +2745,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 <button 
                   type="button"
                   onClick={confirmResetForm}
-                  className="px-4 py-2 bg-red-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                  className="px-4 py-2 bg-cyan-500 text-white rounded-md hover:bg-red-600 transition-colors"
                 >
                   Reset Form
                 </button>

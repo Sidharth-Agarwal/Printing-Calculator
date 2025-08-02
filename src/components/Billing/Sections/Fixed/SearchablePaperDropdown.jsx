@@ -144,7 +144,7 @@ const SearchablePaperDropdown = ({ papers, selectedPaper, onChange, compact = fa
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="Search papers..."
-                className="border border-gray-300 rounded-md pl-6 pr-2 py-1.5 w-full text-xs focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                className="border border-gray-300 rounded-md pl-6 pr-2 py-1.5 w-full text-xs focus:outline-none focus:ring-1"
                 data-testid="paper-search-input"
               />
               <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 absolute left-2.5 top-2 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
