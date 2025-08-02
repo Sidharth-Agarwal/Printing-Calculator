@@ -1,5 +1,5 @@
-// src/components/BillingForm/Services/Calculations/calculators/finalCalculators/wastageCalculator.js
 import { fetchOverheadValue } from '../../../../../../utils/dbFetchUtils';
+import { calculatePercentage } from '../../../../../../utils/calculationValidator';
 
 /**
  * Calculates wastage amount based on base cost with miscellaneous charges
@@ -16,20 +16,26 @@ export const calculateWastage = async (baseWithMisc) => {
       ? parseFloat(wastageOverhead.percentage)
       : 5;
     
-    // Calculate wastage amount
-    const wastageAmount = baseWithMisc * (wastagePercentage / 100);
+    // CRITICAL FIX: Calculate wastage amount using precision calculation
+    const wastageAmount = calculatePercentage(baseWithMisc.toString(), wastagePercentage);
+    
+    console.log(`Wastage calculation: Base=${baseWithMisc}, Rate=${wastagePercentage}%, Amount=${wastageAmount}`);
     
     return {
       wastagePercentage,
-      wastageAmount: wastageAmount.toFixed(2),
+      wastageAmount: parseFloat(wastageAmount).toFixed(2),
       success: true
     };
   } catch (error) {
     console.error("Error calculating wastage:", error);
+    
+    // CRITICAL FIX: Use precision calculation for fallback wastage
+    const fallbackWastageAmount = calculatePercentage(baseWithMisc.toString(), 5);
+    
     // Return default values in case of error
     return {
       wastagePercentage: 5,
-      wastageAmount: (baseWithMisc * 0.05).toFixed(2),
+      wastageAmount: parseFloat(fallbackWastageAmount).toFixed(2),
       success: false,
       error: "Failed to calculate wastage"
     };

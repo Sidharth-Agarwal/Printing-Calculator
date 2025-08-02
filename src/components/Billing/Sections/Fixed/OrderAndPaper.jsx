@@ -13,7 +13,8 @@ const OrderAndPaper = ({
   validationErrors = {}, 
   singlePageMode = false, 
   onJobTypeChange = null,
-  compact = false
+  compact = false,
+  hideDieSelection = false // New prop to hide die selection
 }) => {
   const { orderAndPaper } = state;
 
@@ -314,7 +315,7 @@ const OrderAndPaper = ({
           <h1 className="text-lg font-bold text-gray-700 mb-4">PROJECT & PAPER DETAILS</h1>
         )}
         <form onSubmit={handleSubmit} className={compact ? "space-y-4" : "space-y-6"}>
-          {/* Form Fields Grid - Updated layout with single line for dates and paper fields */}
+          {/* Form Fields Grid - Updated layout with three rows */}
           <div className="grid grid-cols-1 gap-4 text-sm">
             {/* First Row: Project Name, Job Type, Quantity */}
             <div className="grid grid-cols-3 gap-4">
@@ -366,7 +367,7 @@ const OrderAndPaper = ({
                 </select>
               </div>
 
-              {/* Quantity - Modified to prevent scroll changes and hide arrows */}
+              {/* Quantity */}
               <div>
                 <label htmlFor="quantity" className="block text-xs font-medium text-gray-600 mb-1">
                   Quantity <span className="text-red-500">*</span>
@@ -391,8 +392,8 @@ const OrderAndPaper = ({
               </div>
             </div>
 
-            {/* Second Row: All 5 fields in a single line - Smaller sizing */}
-            <div className="grid grid-cols-5 gap-2">
+            {/* Second Row: Date, Delivery Date, Wedding Date */}
+            <div className="grid grid-cols-3 gap-4">
               {/* Date */}
               <div>
                 <label htmlFor="date" className="block text-xs font-medium text-gray-600 mb-1">
@@ -429,7 +430,7 @@ const OrderAndPaper = ({
                 />
               </div>
 
-              {/* Wedding Date - NEW FIELD */}
+              {/* Wedding Date */}
               <div>
                 <label htmlFor="weddingDate" className="block text-xs font-medium text-gray-600 mb-1">
                   Wedding Date
@@ -445,7 +446,10 @@ const OrderAndPaper = ({
                   calendarClassName="small-calendar"
                 />
               </div>
+            </div>
 
+            {/* Third Row: Paper Provided and Paper Selection */}
+            <div className="grid grid-cols-2 gap-4">
               {/* Paper Provided */}
               <div>
                 <label htmlFor="paperProvided" className="block text-xs font-medium text-gray-600 mb-1">
@@ -480,27 +484,29 @@ const OrderAndPaper = ({
             </div>
           </div>
 
-          {/* Die Selection Section - Inline */}
-          <div className="mt-4">
-            <label className="block text-xs font-medium text-gray-600 mb-1">
-              Die Selection <span className="text-red-500">*</span>
-            </label>
-            <InlineDieSelection 
-              selectedDie={{
-                dieCode: orderAndPaper.dieCode || "",
-                dieSize: orderAndPaper.dieSize || { length: "", breadth: "" },
-                productSize: orderAndPaper.productSize || { length: "", breadth: "" },
-                image: orderAndPaper.image || "",
-                frags: orderAndPaper.frags || "",
-                type: orderAndPaper.type || ""
-              }}
-              onDieSelect={handleDieSelect}
-              compact={compact}
-            />
-            {validationErrors.dieCode && (
-              <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.dieCode}</p>
-            )}
-          </div>
+          {/* Die Selection Section - Only show if not hidden */}
+          {!hideDieSelection && (
+            <div className="mt-4">
+              <label className="block text-xs font-medium text-gray-600 mb-1">
+                Die Selection <span className="text-red-500">*</span>
+              </label>
+              <InlineDieSelection 
+                selectedDie={{
+                  dieCode: orderAndPaper.dieCode || "",
+                  dieSize: orderAndPaper.dieSize || { length: "", breadth: "" },
+                  productSize: orderAndPaper.productSize || { length: "", breadth: "" },
+                  image: orderAndPaper.image || "",
+                  frags: orderAndPaper.frags || "",
+                  type: orderAndPaper.type || ""
+                }}
+                onDieSelect={handleDieSelect}
+                compact={compact}
+              />
+              {validationErrors.dieCode && (
+                <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.dieCode}</p>
+              )}
+            </div>
+          )}
 
           {!singlePageMode && (
             <div className="flex justify-end mt-6">

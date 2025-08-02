@@ -1,5 +1,6 @@
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../../../../../firebaseConfig';
+import { calculatePercentage, addCurrency } from '../../../../../../utils/calculationValidator';
 
 /**
  * Fetches GST rate from gst_and_hsn collection based on job type
@@ -66,18 +67,18 @@ export const calculateGST = async (totalCost, jobType = "Card") => {
     // Fetch the appropriate GST rate for this job type
     const gstRate = await fetchGSTRate(jobType);
     
-    // Calculate GST amount
-    const gstAmount = totalCost * (gstRate / 100);
+    // CRITICAL FIX: Calculate GST amount using precision calculation
+    const gstAmount = calculatePercentage(totalCost.toString(), gstRate);
     
-    // Calculate total with GST
-    const totalWithGST = totalCost + gstAmount;
+    // CRITICAL FIX: Calculate total with GST using precision addition
+    const totalWithGST = addCurrency(totalCost.toString(), gstAmount);
     
-    console.log(`GST calculation for ${jobType}: Rate=${gstRate}%, Amount=${gstAmount.toFixed(2)}`);
+    console.log(`GST calculation for ${jobType}: Rate=${gstRate}%, Amount=${gstAmount}, Total=${totalWithGST}`);
     
     return {
       gstRate,
-      gstAmount: gstAmount.toFixed(2),
-      totalWithGST: totalWithGST.toFixed(2),
+      gstAmount: parseFloat(gstAmount).toFixed(2),
+      totalWithGST: parseFloat(totalWithGST).toFixed(2),
       success: true
     };
   } catch (error) {

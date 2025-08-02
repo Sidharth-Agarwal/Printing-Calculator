@@ -4,6 +4,8 @@ import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { Calculator, Package, Settings, TrendingUp, FileText, DollarSign, Eye } from 'lucide-react';
 import { useAuth } from "../Login/AuthContext";
+import { calculateWithPrecision, validateCalculationConsistency } from "../../utils/calculationValidator";
+import { getEditModeCalculationsForReview } from "../../utils/editModeCalculationManager";
 
 const ReviewAndSubmit = ({ 
   state, 
@@ -28,6 +30,10 @@ const ReviewAndSubmit = ({
   const editModeInitializedRef = useRef(false);
   const editModeMarkupRef = useRef(null);
   const userChangedMarkupRef = useRef(false);
+  
+  // ENHANCED: Store original base values for edit mode consistency
+  const originalCalculationBaseRef = useRef(null);
+  const editModeManagerRef = useRef(null);
 
   const { userRole } = useAuth(); 
   const isB2BClient = userRole === "b2b";
@@ -54,7 +60,7 @@ const ReviewAndSubmit = ({
     return !isEditMode && areRequiredFieldsFilled() && hasValidCalculations() && !isCalculating;
   };
 
-  // Markup initialization with edit mode handling
+  // ENHANCED: Markup initialization with improved edit mode handling
   useEffect(() => {
     const fetchMarkupRates = async () => {
       setIsLoadingMarkups(true);
@@ -78,8 +84,25 @@ const ReviewAndSubmit = ({
         if (fetchedMarkups.length > 0) {
           setMarkupRates(fetchedMarkups);
           
-          // In edit mode, lock saved values
+          // ENHANCED: Edit mode initialization with calculation manager
           if (isEditMode && calculations?.markupType && calculations?.markupPercentage && !editModeInitializedRef.current) {
+            console.log('🔒 EDIT MODE: Initializing with saved markup values:', {
+              markupType: calculations.markupType,
+              markupPercentage: calculations.markupPercentage,
+              subtotalPerCard: calculations.subtotalPerCard,
+              totalCostPerCard: calculations.totalCostPerCard
+            });
+            
+            // Store the original calculation base for consistency
+            originalCalculationBaseRef.current = {
+              subtotalPerCard: parseFloat(calculations.subtotalPerCard || calculations.costWithMisc || 0),
+              markupType: calculations.markupType,
+              markupPercentage: parseFloat(calculations.markupPercentage),
+              quantity: parseInt(state.orderAndPaper?.quantity || 1),
+              gstRate: parseFloat(calculations.gstRate || 18),
+              originalCalculations: calculations
+            };
+            
             editModeMarkupRef.current = {
               markupType: calculations.markupType,
               markupPercentage: parseFloat(calculations.markupPercentage)
@@ -132,7 +155,7 @@ const ReviewAndSubmit = ({
     fetchMarkupRates();
   }, [isB2BClient, hasAppliedB2BMarkup, onMarkupChange, isEditMode, calculations?.markupType, calculations?.markupPercentage]);
 
-  // Calculations update handling
+  // ENHANCED: Calculations update handling with validation
   useEffect(() => {
     if (calculationsRef.current === calculations) {
       return;
@@ -141,39 +164,47 @@ const ReviewAndSubmit = ({
     calculationsRef.current = calculations;
     
     if (calculations && !calculations.error) {
-      // Edit mode: Use locked markup values
+      // ENHANCED: Edit mode - preserve EXACT saved values with validation
       if (isEditMode && editModeMarkupRef.current && editModeInitializedRef.current && !userChangedMarkupRef.current) {
-        const lockedMarkup = editModeMarkupRef.current;
+        console.log('🔒 Edit mode: Using EXACT saved calculations without modification');
         
-        const preservedCalculations = {
+        // Validate the saved calculations for consistency
+        const validation = validateCalculationConsistency([{
+          id: 'edit-mode-validation',
+          projectName: state.orderAndPaper?.projectName || 'Edit Mode',
+          jobDetails: { quantity: state.orderAndPaper?.quantity },
+          calculations: calculations
+        }]);
+        
+        if (validation.hasErrors) {
+          console.warn('⚠️ Edit mode: Saved calculations have inconsistencies:', validation.errors);
+        } else {
+          console.log('✅ Edit mode: Saved calculations are consistent');
+        }
+        
+        setLocalCalculations({
           ...calculations,
-          markupType: lockedMarkup.markupType,
-          markupPercentage: lockedMarkup.markupPercentage,
-          markupAmount: (parseFloat(calculations.subtotalPerCard || 0) * (lockedMarkup.markupPercentage / 100)).toFixed(2),
-        };
-        
-        // Recalculate totals with locked markup
-        const quantity = parseInt(state.orderAndPaper?.quantity || 1);
-        const subtotalPerCard = parseFloat(calculations.subtotalPerCard || 0);
-        const markupAmount = subtotalPerCard * (lockedMarkup.markupPercentage / 100);
-        const totalCostPerCard = subtotalPerCard + markupAmount;
-        const totalCost = totalCostPerCard * quantity;
-        const gstRate = parseFloat(calculations.gstRate || 18);
-        const gstAmount = totalCost * (gstRate / 100);
-        const totalWithGST = totalCost + gstAmount;
-        
-        preservedCalculations.markupAmount = markupAmount.toFixed(2);
-        preservedCalculations.totalCostPerCard = totalCostPerCard.toFixed(2);
-        preservedCalculations.totalCost = totalCost.toFixed(2);
-        preservedCalculations.gstAmount = gstAmount.toFixed(2);
-        preservedCalculations.totalWithGST = totalWithGST.toFixed(2);
-        
-        setLocalCalculations(preservedCalculations);
+          validationStatus: validation.hasErrors ? 'inconsistent' : 'consistent',
+          validationErrors: validation.errors
+        });
         return;
       }
       
-      // New mode: Use calculations as they come
-      setLocalCalculations(calculations);
+      // New mode: Use calculations as they come with validation
+      console.log('📊 New mode: Using calculations as received');
+      
+      const validation = validateCalculationConsistency([{
+        id: 'new-mode-validation',
+        projectName: state.orderAndPaper?.projectName || 'New Mode',
+        jobDetails: { quantity: state.orderAndPaper?.quantity },
+        calculations: calculations
+      }]);
+      
+      setLocalCalculations({
+        ...calculations,
+        validationStatus: validation.hasErrors ? 'inconsistent' : 'consistent',
+        validationErrors: validation.errors
+      });
       
       // Set markup from calculations if not already initialized
       if (calculations.markupType && calculations.markupPercentage && !markupInitializedRef.current) {
@@ -184,7 +215,7 @@ const ReviewAndSubmit = ({
     }
   }, [calculations, isEditMode, state.orderAndPaper?.quantity]);
 
-  // Markup selection handler
+  // ENHANCED: Markup selection handler with edit mode calculation manager
   const handleMarkupSelection = (e) => {
     const selectedValue = e.target.value;
     const selectedRate = markupRates.find(rate => rate.name === selectedValue);
@@ -192,43 +223,92 @@ const ReviewAndSubmit = ({
     if (selectedRate) {
       userChangedMarkupRef.current = true;
       
-      // Update edit mode locked values if in edit mode
-      if (isEditMode) {
-        editModeMarkupRef.current = {
-          markupType: selectedValue,
-          markupPercentage: selectedRate.percentage
-        };
-      }
-      
       setSelectedMarkupType(selectedValue);
       setMarkupPercentage(selectedRate.percentage);
       
-      const hasValidCalculations = localCalculations && !localCalculations.error;
-      
-      if (hasValidCalculations) {
-        const currentSubtotal = parseFloat(localCalculations.subtotalPerCard || localCalculations.costWithMisc || 0);
-        const newMarkupPercentage = selectedRate.percentage;
+      // ENHANCED: Use edit mode calculation manager for consistency
+      if (isEditMode && localCalculations && !localCalculations.error && originalCalculationBaseRef.current) {
+        console.log('🔄 Edit mode markup change - using calculation manager');
+        
+        const editModeCalculations = getEditModeCalculationsForReview(
+          {
+            calculations: originalCalculationBaseRef.current.originalCalculations,
+            jobDetails: { quantity: state.orderAndPaper?.quantity }
+          },
+          selectedValue,
+          selectedRate.percentage
+        );
+        
+        if (editModeCalculations) {
+          // Validate the new calculations
+          const validation = validateCalculationConsistency([{
+            id: 'edit-markup-change',
+            projectName: state.orderAndPaper?.projectName || 'Edit Mode',
+            jobDetails: { quantity: parseInt(state.orderAndPaper?.quantity || 1) },
+            calculations: editModeCalculations
+          }]);
+          
+          if (!validation.hasErrors) {
+            console.log('✅ Edit mode markup calculations validated successfully');
+            setLocalCalculations({
+              ...editModeCalculations,
+              validationStatus: 'consistent',
+              validationErrors: []
+            });
+          } else {
+            console.warn('⚠️ Edit mode markup calculation validation failed:', validation.errors);
+            // Use the calculations anyway but mark as inconsistent
+            setLocalCalculations({
+              ...editModeCalculations,
+              validationStatus: 'inconsistent',
+              validationErrors: validation.errors
+            });
+          }
+        }
+      } else if (!isEditMode && localCalculations && !localCalculations.error) {
+        // New mode - use precision calculation
+        console.log('🔄 New mode markup change - using precision calculation');
+        
+        const baseSubtotal = parseFloat(localCalculations.subtotalPerCard || localCalculations.costWithMisc || 0);
         const quantity = parseInt(state.orderAndPaper?.quantity || 1);
         const currentGstRate = parseFloat(localCalculations.gstRate || 18);
         
-        const newMarkupAmount = currentSubtotal * (newMarkupPercentage / 100);
-        const newTotalCostPerCard = currentSubtotal + newMarkupAmount;
-        const newTotalCost = newTotalCostPerCard * quantity;
-        const newGstAmount = newTotalCost * (currentGstRate / 100);
-        const newTotalWithGST = newTotalCost + newGstAmount;
+        const preciseCalc = calculateWithPrecision(
+          baseSubtotal,
+          selectedRate.percentage,
+          quantity,
+          currentGstRate
+        );
         
-        const updatedLocalCalculations = {
+        const updatedCalculations = {
           ...localCalculations,
           markupType: selectedValue,
-          markupPercentage: newMarkupPercentage,
-          markupAmount: newMarkupAmount.toFixed(2),
-          totalCostPerCard: newTotalCostPerCard.toFixed(2),
-          totalCost: newTotalCost.toFixed(2),
-          gstAmount: newGstAmount.toFixed(2),
-          totalWithGST: newTotalWithGST.toFixed(2)
+          markupPercentage: selectedRate.percentage,
+          markupAmount: preciseCalc.markupAmount,
+          totalCostPerCard: preciseCalc.totalCostPerCard,
+          totalCost: preciseCalc.totalCost,
+          gstAmount: preciseCalc.gstAmount,
+          totalWithGST: preciseCalc.totalWithGST
         };
         
-        setLocalCalculations(updatedLocalCalculations);
+        // Validate the updated calculations
+        const validation = validateCalculationConsistency([{
+          id: 'new-markup-change',
+          projectName: state.orderAndPaper?.projectName || 'New Mode',
+          jobDetails: { quantity: quantity },
+          calculations: updatedCalculations
+        }]);
+        
+        setLocalCalculations({
+          ...updatedCalculations,
+          validationStatus: validation.hasErrors ? 'inconsistent' : 'consistent',
+          validationErrors: validation.errors
+        });
+        
+        console.log('✅ New mode markup calculations updated:', {
+          validation: validation.hasErrors ? 'Failed' : 'Passed',
+          errors: validation.errors
+        });
       }
       
       if (onMarkupChange) {
@@ -243,6 +323,7 @@ const ReviewAndSubmit = ({
       editModeInitializedRef.current = false;
       editModeMarkupRef.current = null;
       userChangedMarkupRef.current = false;
+      originalCalculationBaseRef.current = null;
     }
   }, [isEditMode]);
 
@@ -253,6 +334,7 @@ const ReviewAndSubmit = ({
       editModeInitializedRef.current = false;
       editModeMarkupRef.current = null;
       userChangedMarkupRef.current = false;
+      originalCalculationBaseRef.current = null;
     };
   }, []);
 
@@ -635,6 +717,11 @@ const ReviewAndSubmit = ({
     e.preventDefault();
     
     if (localCalculations) {
+      console.log('🎯 Submitting calculations for preview:', {
+        calculations: localCalculations,
+        validationStatus: localCalculations.validationStatus,
+        preservationMode: localCalculations.preservationMode
+      });
       onPreviewEstimate(localCalculations);
     } else {
       onPreviewEstimate();
@@ -646,6 +733,11 @@ const ReviewAndSubmit = ({
     e.preventDefault();
     
     if (localCalculations) {
+      console.log('💾 Submitting calculations for save:', {
+        calculations: localCalculations,
+        validationStatus: localCalculations.validationStatus,
+        preservationMode: localCalculations.preservationMode
+      });
       onCreateEstimate(localCalculations);
     } else {
       onCreateEstimate();
@@ -658,6 +750,14 @@ const ReviewAndSubmit = ({
       <div className="flex items-center gap-2 pb-2 border-b border-gray-200">
         <Calculator className="text-blue-600" size={18} />
         <h3 className="text-lg font-semibold text-gray-800">Cost Calculation</h3>
+        {/* Enhanced debug indicator for calculation consistency */}
+        {localCalculations && (
+          <div className="ml-auto flex items-center gap-2">
+            <span className="text-xs bg-green-100 text-green-700 px-2 py-1 rounded-full">
+              {isEditMode ? '🔒 Edit Mode' : '✨ New Mode'}
+            </span>
+          </div>
+        )}
       </div>
 
       {/* Calculation Content */}
@@ -716,16 +816,21 @@ const ReviewAndSubmit = ({
               {/* Wastage and Overhead Section */}
               {renderWastageAndOverhead()}
 
-              {/* Markup Selection */}
+              {/* Enhanced Markup Selection with Calculation Debugging */}
               <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <h4 className="text-sm font-semibold text-gray-700 mb-2">
+                <h4 className="text-sm font-semibold text-gray-700 mb-2 flex items-center justify-between">
                   Markup Selection
+                  {localCalculations.markupType && (
+                    <span className="text-xs bg-blue-200 text-blue-800 px-2 py-1 rounded">
+                      Applied: {localCalculations.markupPercentage}%
+                    </span>
+                  )}
                 </h4>
                 <div className="flex gap-2">
                   <select
                     onChange={handleMarkupSelection}
                     value={selectedMarkupType}
-                    className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 border border-gray-300 rounded-md p-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                     disabled={isLoadingMarkups}
                   >
                     <option value="">Select Markup Type</option>
@@ -749,11 +854,36 @@ const ReviewAndSubmit = ({
                     B2B Markup automatically applied
                   </div>
                 )}
+                
+                {/* {isEditMode && editModeMarkupRef.current && (
+                  <div className="text-xs text-orange-600 mt-1">
+                    🔒 Edit mode: Using saved markup values ({userChangedMarkupRef.current ? 'user modified' : 'preserved'})
+                  </div>
+                )}
+                {localCalculations.validationStatus && (
+                  <div className={`text-xs mt-1 ${
+                    localCalculations.validationStatus === 'consistent' ? 'text-green-600' : 'text-yellow-600'
+                  }`}>
+                    Validation: {localCalculations.validationStatus === 'consistent' ? 'All calculations are consistent' : 'Minor inconsistencies detected'}
+                  </div>
+                )} */}
               </div>
 
-              {/* Cost Summary */}
+              {/* Enhanced Cost Summary with Debugging */}
               <div className="bg-gradient-to-r from-gray-50 to-gray-100 p-4 rounded-lg border border-gray-200">
-                <h4 className="text-sm font-semibold text-gray-700 mb-3">Summary</h4>
+                <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center justify-between">
+                  Summary
+                  {localCalculations && (
+                    <div className="flex gap-2">
+                      <span className="text-xs bg-gray-200 text-gray-700 px-2 py-1 rounded">
+                        Base: ₹{parseFloat(localCalculations.subtotalPerCard || 0).toFixed(2)}
+                      </span>
+                      <span className="text-xs bg-blue-200 text-blue-700 px-2 py-1 rounded">
+                        +{markupPercentage}%
+                      </span>
+                    </div>
+                  )}
+                </h4>
                 
                 <div className="space-y-2">
                   <div className="flex justify-between text-sm">
@@ -781,11 +911,46 @@ const ReviewAndSubmit = ({
                     <span className="font-mono">₹{parseFloat(localCalculations.gstAmount || 0).toFixed(2)}</span>
                   </div>
                   
-                  <div className="flex justify-between font-bold text-lg border-t pt-2">
+                  <div className="flex justify-between font-bold text-lg border-t pt-2 bg-green-50 px-2 py-1 rounded">
                     <span>Total with GST:</span>
-                    <span className="font-mono">₹{parseFloat(localCalculations.totalWithGST || 0).toFixed(2)}</span>
+                    <span className="font-mono text-green-700">₹{parseFloat(localCalculations.totalWithGST || 0).toFixed(2)}</span>
                   </div>
                 </div>
+
+                {/* Enhanced Calculation Debug Info */}
+                {/* {process.env.NODE_ENV === 'development' && localCalculations && (
+                  <div className="mt-3 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
+                    <details>
+                      <summary className="cursor-pointer text-yellow-700 font-medium">
+                        🔍 Debug: Enhanced Calculation Details
+                      </summary>
+                      <div className="mt-2 space-y-1 text-yellow-800">
+                        <div>Mode: {isEditMode ? 'Edit' : 'New'}</div>
+                        <div>Validation Status: {localCalculations.validationStatus || 'Unknown'}</div>
+                        <div>Preservation Mode: {localCalculations.preservationMode || 'None'}</div>
+                        <div>Original Base: {originalCalculationBaseRef.current?.subtotalPerCard || 'N/A'}</div>
+                        <div>Current Subtotal: {localCalculations.subtotalPerCard}</div>
+                        <div>Markup Type: {localCalculations.markupType}</div>
+                        <div>Markup %: {localCalculations.markupPercentage}</div>
+                        <div>Markup Amount: {localCalculations.markupAmount}</div>
+                        <div>Total Cost Per Card: {localCalculations.totalCostPerCard}</div>
+                        <div>Total Cost: {localCalculations.totalCost}</div>
+                        <div>GST Rate: {localCalculations.gstRate}</div>
+                        <div>GST Amount: {localCalculations.gstAmount}</div>
+                        <div>Total with GST: {localCalculations.totalWithGST}</div>
+                        <div className="pt-1 border-t border-yellow-300">
+                          User Changed Markup: {userChangedMarkupRef.current ? 'Yes' : 'No'}
+                        </div>
+                        <div>
+                          Calculation Source: {isEditMode ? (userChangedMarkupRef.current ? 'Recalculated' : 'Preserved') : 'Live Calculation'}
+                        </div>
+                        <div>
+                          Validation Errors: {localCalculations.validationErrors?.length || 0}
+                        </div>
+                      </div>
+                    </details>
+                  </div>
+                )} */}
               </div>
             </>
           )}
@@ -793,6 +958,16 @@ const ReviewAndSubmit = ({
       ) : (
         <div className="bg-red-50 p-4 rounded-lg border border-red-200 text-center">
           <p className="text-red-600 text-sm">Please fill in the required fields to calculate costs.</p>
+          {!areRequiredFieldsFilled() && (
+            <div className="mt-2 text-xs text-red-500">
+              Missing: {!state.client?.clientId && 'Client, '}
+              {!state.orderAndPaper?.projectName?.trim() && 'Project Name, '}
+              {!state.orderAndPaper?.quantity && 'Quantity, '}
+              {!state.orderAndPaper?.paperName?.trim() && 'Paper Name, '}
+              {!state.orderAndPaper?.dieCode?.trim() && 'Die Code, '}
+              {(!state.orderAndPaper?.dieSize?.length || !state.orderAndPaper?.dieSize?.breadth) && 'Die Size'}
+            </div>
+          )}
         </div>
       )}
 
@@ -852,6 +1027,24 @@ const ReviewAndSubmit = ({
               }
             </div>
           )}
+
+          {/* Enhanced Calculation Status Indicator */}
+          {/* {localCalculations && (
+            <div className="flex items-center text-xs text-gray-500">
+              <div className={`w-2 h-2 rounded-full mr-2 ${
+                localCalculations.validationStatus === 'consistent' ? 'bg-green-500' : 
+                localCalculations.validationStatus === 'inconsistent' ? 'bg-yellow-500' : 'bg-gray-500'
+              }`}></div>
+              <span>
+                Calculations {localCalculations.validationStatus || 'ready'}
+                {isEditMode && (
+                  <span className="ml-1 text-orange-600">
+                    (Edit mode - {userChangedMarkupRef.current ? 'Modified' : 'Preserved'})
+                  </span>
+                )}
+              </span>
+            </div>
+          )} */}
         </div>
       )}
     </div>

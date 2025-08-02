@@ -1,5 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import logo from '../../assets/logo.png';
+import { validateCalculationConsistency } from '../../utils/calculationValidator';
+import { addCurrency, multiplyCurrency } from '../../utils/calculationValidator';
 
 // Format currency values
 const formatCurrency = (amount) => {
@@ -626,49 +628,92 @@ const EstimateTemplate = ({
   const currentDate = formatDate(new Date());
   const usedProcesses = getUsedProcesses();
 
-  // Calculate total quantities and amounts for ALL estimates - USING ONLY SAVED VALUES
+  // Validate calculations on component mount
+  useEffect(() => {
+    if (estimates && estimates.length > 0) {
+      const validation = validateCalculationConsistency(estimates);
+      if (validation.hasErrors) {
+        console.warn('=== CALCULATION INCONSISTENCIES DETECTED ===');
+        validation.errors.forEach(error => {
+          console.warn(`${error.projectName} (${error.estimateId}):`, {
+            field: error.field,
+            expected: error.expected,
+            actual: error.actual,
+            difference: error.difference
+          });
+        });
+        console.warn('=== END OF CALCULATION ERRORS ===');
+      } else {
+        console.log('✅ All calculations are consistent');
+      }
+    }
+  }, [estimates]);
+
+  // CRITICAL FIX: Calculate totals using EXACT saved values with precision helpers
   const totals = React.useMemo(() => {
-    // In PDF mode, use allEstimates for grand total, otherwise use estimates
     const estimatesForTotal = isPDFMode && allEstimates ? allEstimates : estimates;
     
     if (!estimatesForTotal || estimatesForTotal.length === 0) {
-      return { quantity: 0, amount: 0, gstRate: 18, gstAmount: 0, total: 0 };
+      return { quantity: 0, amount: "0.00", gstRate: 18, gstAmount: "0.00", total: "0.00" };
     }
 
     let totalQuantity = 0;
-    let totalAmount = 0;
-    let totalGST = 0;
     let gstRate = 18;
 
-    estimatesForTotal.forEach(estimate => {
+    console.log('=== TOTALS CALCULATION DEBUG WITH PRECISION ===');
+    
+    // Use precision helpers for accumulation
+    let totalAmount = "0.00";
+    let totalGST = "0.00";
+    
+    estimatesForTotal.forEach((estimate, index) => {
       const qty = parseInt(estimate?.jobDetails?.quantity) || 0;
       const calc = estimate?.calculations || {};
       
-      // FIXED: Use saved values only
-      const amount = parseFloat(calc.totalCost || 0);
-      const gstAmount = parseFloat(calc.gstAmount || 0);
-      const estimateGSTRate = calc.gstRate || 18;
+      // CRITICAL FIX: Use the EXACT same values as line items to ensure consistency
+      const lineItemFinalTotal = calc.totalWithGST || "0.00";
+      const lineItemGSTAmount = calc.gstAmount || "0.00";
+      const lineItemSubtotal = addCurrency(lineItemFinalTotal, `-${lineItemGSTAmount}`);
+      
+      console.log(`Estimate ${index + 1} (${estimate.projectName}):`, {
+        quantity: qty,
+        subtotal: lineItemSubtotal,
+        gst: lineItemGSTAmount,
+        final: lineItemFinalTotal,
+        savedValues: {
+          totalCost: calc.totalCost,
+          gstAmount: calc.gstAmount,
+          totalWithGST: calc.totalWithGST
+        }
+      });
       
       totalQuantity += qty;
-      totalAmount += amount;
-      totalGST += gstAmount;
-      gstRate = estimateGSTRate;
+      totalAmount = addCurrency(totalAmount, lineItemSubtotal);
+      totalGST = addCurrency(totalGST, lineItemGSTAmount);
+      gstRate = calc.gstRate || 18;
     });
 
-    return {
+    const calculatedTotal = {
       quantity: totalQuantity,
-      amount: totalAmount,
+      amount: parseFloat(totalAmount),
       gstRate: gstRate,
-      gstAmount: totalGST,
-      total: totalAmount + totalGST
+      gstAmount: parseFloat(totalGST),
+      total: parseFloat(addCurrency(totalAmount, totalGST))
     };
+    
+    console.log('=== FINAL TOTALS WITH PRECISION ===', calculatedTotal);
+    console.log('=== END TOTALS CALCULATION DEBUG ===');
+    
+    return calculatedTotal;
   }, [estimates, allEstimates, isPDFMode]);
 
-  // Prepare line items with global serial numbers and process details - USING ONLY SAVED VALUES
+  // CRITICAL FIX: Prepare line items using ONLY saved values with precision validation
   const allLineItems = React.useMemo(() => {
     if (!estimates || estimates.length === 0) return [];
 
-    return estimates.map((estimate, index) => {
+    console.log('=== LINE ITEMS CALCULATION DEBUG WITH PRECISION ===');
+
+    const lineItems = estimates.map((estimate, index) => {
       const jobDetails = estimate?.jobDetails || {};
       const dieDetails = estimate?.dieDetails || {};
       const calc = estimate?.calculations || {};
@@ -682,23 +727,53 @@ const EstimateTemplate = ({
       // Get process summary for this estimate
       const processSummary = getProcessSummary(estimate);
       
-      // Legacy features for backward compatibility
-      const features = [];
-      if (estimate?.lpDetails?.isLPUsed) features.push("LP");
-      if (estimate?.fsDetails?.isFSUsed) features.push("FS");
-      if (estimate?.embDetails?.isEMBUsed) features.push("EMB");
-      if (estimate?.digiDetails?.isDigiUsed) features.push("Digi");
-      if (estimate?.notebookDetails?.isNotebookUsed) features.push("Notebook");
-      if (estimate?.screenPrint?.isScreenPrintUsed) features.push("Screen");
-      
       const quantity = parseInt(jobDetails.quantity) || 0;
       
-      // FIXED: Use ONLY saved values from calculations
+      // CRITICAL FIX: Use EXACT saved values - no recalculation whatsoever
       const unitCost = parseFloat(calc.totalCostPerCard || 0);
       const totalCost = parseFloat(calc.totalCost || 0);
-      const gstRate = calc.gstRate || 18;
+      const gstRate = parseFloat(calc.gstRate || 18);
       const gstAmount = parseFloat(calc.gstAmount || 0);
       const finalTotal = parseFloat(calc.totalWithGST || 0);
+      
+      console.log(`Line Item ${index + 1} (${estimate.projectName}):`, {
+        quantity,
+        unitCost,
+        totalCost,
+        gstRate,
+        gstAmount,
+        finalTotal,
+        rawCalculations: calc
+      });
+      
+      // VALIDATION: Check consistency using precision helpers and warn about discrepancies
+      const calculatedTotal = multiplyCurrency(unitCost.toString(), quantity);
+      const calculatedGST = addCurrency("0.00", multiplyCurrency(totalCost.toString(), gstRate / 100));
+      const calculatedFinal = addCurrency(totalCost.toString(), gstAmount.toString());
+      
+      if (Math.abs(parseFloat(calculatedTotal) - totalCost) > 0.01) {
+        console.warn(`⚠️ Total cost mismatch for ${estimate.projectName}:`, {
+          calculated: parseFloat(calculatedTotal),
+          saved: totalCost,
+          difference: Math.abs(parseFloat(calculatedTotal) - totalCost)
+        });
+      }
+      
+      if (Math.abs(parseFloat(calculatedGST) - gstAmount) > 0.01) {
+        console.warn(`⚠️ GST mismatch for ${estimate.projectName}:`, {
+          calculated: parseFloat(calculatedGST),
+          saved: gstAmount,
+          difference: Math.abs(parseFloat(calculatedGST) - gstAmount)
+        });
+      }
+      
+      if (Math.abs(parseFloat(calculatedFinal) - finalTotal) > 0.01) {
+        console.warn(`⚠️ Final total mismatch for ${estimate.projectName}:`, {
+          calculated: parseFloat(calculatedFinal),
+          saved: finalTotal,
+          difference: Math.abs(parseFloat(calculatedFinal) - finalTotal)
+        });
+      }
       
       const productSize = dieDetails?.productSize || {};
       const productDimensions = productSize.length && productSize.breadth 
@@ -708,8 +783,7 @@ const EstimateTemplate = ({
       return {
         id: estimate.id || `est-${index}`,
         name: estimate.projectName || "Unnamed Project",
-        description: features.join(", "), // Keep for backward compatibility
-        processSummary: processSummary, // New simple process summary
+        processSummary: processSummary,
         jobType: jobDetails.jobType || "Card",
         paperInfo: paperInfo,
         dieCode: dieDetails.dieCode || "",
@@ -724,6 +798,10 @@ const EstimateTemplate = ({
         serialNumber: index + 1
       };
     });
+    
+    console.log('=== END LINE ITEMS CALCULATION DEBUG ===');
+    
+    return lineItems;
   }, [estimates]);
 
   // HSN Summary for all estimates
@@ -818,13 +896,25 @@ const EstimateTemplate = ({
             const endIndex = Math.min(startIndex + ESTIMATES_PER_PAGE, allLineItems.length);
             const pageLineItems = allLineItems.slice(startIndex, endIndex);
             
-            // Calculate page totals using saved values
+            // CRITICAL FIX: Calculate page totals using precision helpers
             const pageTotals = pageLineItems.reduce((acc, item) => {
-              acc.amount += item.total;      // Already from saved calc.totalCost
-              acc.gstAmount += item.gstAmount; // Already from saved calc.gstAmount
-              acc.total += item.finalTotal;   // Already from saved calc.totalWithGST
-              return acc;
-            }, { amount: 0, gstAmount: 0, total: 0 });
+              return {
+                amount: addCurrency(acc.amount, item.total.toString()),      // Use precision addition
+                gstAmount: addCurrency(acc.gstAmount, item.gstAmount.toString()), // Use precision addition
+                total: addCurrency(acc.total, item.finalTotal.toString())   // Use precision addition
+              };
+            }, { 
+              amount: "0.00", 
+              gstAmount: "0.00", 
+              total: "0.00" 
+            });
+
+            // Convert to numbers for display
+            const displayPageTotals = {
+              amount: parseFloat(pageTotals.amount),
+              gstAmount: parseFloat(pageTotals.gstAmount),
+              total: parseFloat(pageTotals.total)
+            };
 
             return (
               <div 
@@ -843,7 +933,7 @@ const EstimateTemplate = ({
                   isFirstPage={isFirstPage}
                   isLastPage={isLastPage}
                   pageLineItems={pageLineItems}
-                  pageTotals={pageTotals}
+                  pageTotals={displayPageTotals}
                   totals={totals}
                   hsnSummary={hsnSummary}
                   clientInfo={clientInfo}

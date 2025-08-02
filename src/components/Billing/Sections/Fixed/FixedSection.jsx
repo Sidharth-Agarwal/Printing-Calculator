@@ -3,6 +3,7 @@ import ClientSelection from "./ClientSelection";
 import ClientReadOnly from './ClientReadOnly';
 import VersionSelection from "./VersionSelection";
 import OrderAndPaper from "./OrderAndPaper";
+import InlineDieSelection from "./InlineDieSelection";
 
 /**
  * FixedSection component combines client selection, version selection, and project details
@@ -30,9 +31,9 @@ const FixedSection = ({
         <h2 className="text-md font-medium text-gray-800">Project Information</h2>
       </div>
       
-      <div className="p-5 grid grid-cols-[30%_70%] gap-4">
-        {/* Client and Version Selection - Side by Side */}
-        <div className="flex flex-wrap flex-col gap-2">
+      <div className="p-5 grid grid-cols-[30%_30%_40%] gap-2">
+        {/* Client Information and Version Column */}
+        <div className="flex flex-col gap-4">
           {/* Client Selection */}
           <div>
             <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Client Information</h3>
@@ -75,7 +76,7 @@ const FixedSection = ({
                 clientId={state.client.clientId}
                 selectedVersion={selectedVersion}
                 onVersionSelect={handleVersionSelect}
-                compact={true} // Use compact mode
+                compact={true}
               />
             ) : (
               <div className="p-3 bg-gray-50 rounded-md border border-gray-200 text-sm text-gray-500 text-xs">
@@ -88,20 +89,53 @@ const FixedSection = ({
           </div>
         </div>
         
-        {/* Project & Paper Details */}
+        {/* Project & Paper Details - Middle Column */}
         <div className="pr-3">
           <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Project & Paper Details</h3>
-          <div>
-            <OrderAndPaper 
-              state={state} 
-              dispatch={dispatch} 
-              onNext={() => {}} 
-              validationErrors={validationErrors}
-              singlePageMode={true}
-              onJobTypeChange={handleJobTypeChange}
-              compact={true} // Use compact mode
-            />
-          </div>
+          <OrderAndPaper 
+            state={state} 
+            dispatch={dispatch} 
+            onNext={() => {}} 
+            validationErrors={validationErrors}
+            singlePageMode={true}
+            onJobTypeChange={handleJobTypeChange}
+            compact={true}
+            hideDieSelection={true}
+          />
+        </div>
+
+        {/* Die Selection - Right Column */}
+        <div>
+          <h3 className="text-xs uppercase font-medium text-gray-500 mb-2">Die Selection <span className="text-red-500">*</span></h3>
+          <InlineDieSelection 
+            selectedDie={{
+              dieCode: state.orderAndPaper?.dieCode || "",
+              dieSize: state.orderAndPaper?.dieSize || { length: "", breadth: "" },
+              productSize: state.orderAndPaper?.productSize || { length: "", breadth: "" },
+              image: state.orderAndPaper?.image || "",
+              frags: state.orderAndPaper?.frags || "",
+              type: state.orderAndPaper?.type || ""
+            }}
+            onDieSelect={(dieData) => {
+              console.log("Die selected in FixedSection:", dieData);
+              dispatch({
+                type: "UPDATE_ORDER_AND_PAPER",
+                payload: {
+                  dieSelection: dieData.dieSelection || "",
+                  dieCode: dieData.dieCode || "",
+                  dieSize: dieData.dieSize || { length: "", breadth: "" },
+                  productSize: dieData.productSize || { length: "", breadth: "" },
+                  image: dieData.image || "",
+                  frags: dieData.frags || "",
+                  type: dieData.type || ""
+                }
+              });
+            }}
+            compact={true}
+          />
+          {validationErrors.dieCode && (
+            <p className="text-red-500 text-xs mt-1 error-message">{validationErrors.dieCode}</p>
+          )}
         </div>
       </div>
     </div>

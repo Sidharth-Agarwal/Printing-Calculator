@@ -1,5 +1,7 @@
-// src/components/BillingForm/Services/Calculations/calculators/finalCalculators/markupCalculator.js
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '../../../../../../firebaseConfig';
 import { fetchOverheadValue } from '../../../../../../utils/dbFetchUtils';
+import { calculatePercentage } from '../../../../../../utils/calculationValidator';
 
 /**
  * Calculates markup amount based on the subtotal cost
@@ -24,10 +26,13 @@ export const calculateMarkup = async (subtotal, markupType = "MARKUP TIMELESS") 
       
       // If even the default markup is not found, use a hardcoded value
       if (!defaultMarkup) {
+        // CRITICAL FIX: Use precision calculation for default markup
+        const defaultMarkupAmount = calculatePercentage(subtotal.toString(), 50);
+        
         return {
           markupType: "MARKUP TIMELESS",
           markupPercentage: 50, // Default percentage
-          markupAmount: (subtotal * 0.5).toFixed(2),
+          markupAmount: parseFloat(defaultMarkupAmount).toFixed(2),
           success: false,
           error: "Default markup not found, using 50%"
         };
@@ -35,31 +40,41 @@ export const calculateMarkup = async (subtotal, markupType = "MARKUP TIMELESS") 
       
       // Use the default markup
       const defaultPercentage = parseFloat(defaultMarkup.percentage) || 50;
+      const defaultMarkupAmount = calculatePercentage(subtotal.toString(), defaultPercentage);
+      
       return {
         markupType: "MARKUP TIMELESS",
         markupPercentage: defaultPercentage,
-        markupAmount: (subtotal * (defaultPercentage / 100)).toFixed(2),
+        markupAmount: parseFloat(defaultMarkupAmount).toFixed(2),
         success: true
       };
     }
     
     // Use the found markup
     const markupPercentage = parseFloat(markupOverhead.percentage) || 0;
-    const markupAmount = subtotal * (markupPercentage / 100);
+    
+    // CRITICAL FIX: Use precision calculation for markup amount
+    const markupAmount = calculatePercentage(subtotal.toString(), markupPercentage);
+    
+    console.log(`Markup calculation: Subtotal=${subtotal}, Type=${formattedMarkupType}, Rate=${markupPercentage}%, Amount=${markupAmount}`);
     
     return {
       markupType: formattedMarkupType,
       markupPercentage,
-      markupAmount: markupAmount.toFixed(2),
+      markupAmount: parseFloat(markupAmount).toFixed(2),
       success: true
     };
   } catch (error) {
     console.error("Error calculating markup:", error);
+    
+    // CRITICAL FIX: Use precision calculation for fallback markup
+    const fallbackMarkupAmount = calculatePercentage(subtotal.toString(), 50);
+    
     // Return default values in case of error
     return {
       markupType: "MARKUP TIMELESS",
       markupPercentage: 50,
-      markupAmount: (subtotal * 0.5).toFixed(2),
+      markupAmount: parseFloat(fallbackMarkupAmount).toFixed(2),
       success: false,
       error: "Failed to calculate markup"
     };
@@ -78,7 +93,7 @@ export const getAvailableMarkupTypes = async () => {
     
     // Example implementation if using Firestore
     const overheadsCollection = collection(db, "overheads");
-    const q = query(overheadsCollection, where("name", "like", "MARKUP%"));
+    const q = query(overheadsCollection, where("name", ">=", "MARKUP "), where("name", "<=", "MARKUP" + "\uf8ff"));
     const querySnapshot = await getDocs(q);
     return querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
