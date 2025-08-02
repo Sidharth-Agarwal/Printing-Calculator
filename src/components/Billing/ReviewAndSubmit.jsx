@@ -1027,24 +1027,6 @@ const ReviewAndSubmit = ({
               }
             </div>
           )}
-
-          {/* Enhanced Calculation Status Indicator */}
-          {/* {localCalculations && (
-            <div className="flex items-center text-xs text-gray-500">
-              <div className={`w-2 h-2 rounded-full mr-2 ${
-                localCalculations.validationStatus === 'consistent' ? 'bg-green-500' : 
-                localCalculations.validationStatus === 'inconsistent' ? 'bg-yellow-500' : 'bg-gray-500'
-              }`}></div>
-              <span>
-                Calculations {localCalculations.validationStatus || 'ready'}
-                {isEditMode && (
-                  <span className="ml-1 text-orange-600">
-                    (Edit mode - {userChangedMarkupRef.current ? 'Modified' : 'Preserved'})
-                  </span>
-                )}
-              </span>
-            </div>
-          )} */}
         </div>
       )}
     </div>
