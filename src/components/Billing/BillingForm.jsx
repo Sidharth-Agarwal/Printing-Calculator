@@ -32,7 +32,10 @@ import FixedSection from "./Sections/Fixed/FixedSection";
 // Import service and job type configurations
 import { serviceRegistry } from "./Services/Config/serviceRegistry";
 import { jobTypeConfigurations } from "./Services/Config/jobTypeConfigurations";
-import { calculateWithPrecision } from "../../utils/calculationValidator";
+
+// ENHANCED: Add calculation validation imports
+import { calculateWithPrecision, validateCalculationConsistency } from "../../utils/calculationValidator";
+import { handleEditModeCalculations, detectChangedFields } from "../../utils/editModeCalculationManager";
 
 // Updated ServiceCard Component with dynamic height and scrolling
 const ServiceCard = ({ title, isUsed, onToggleUsage, children }) => {
@@ -174,7 +177,6 @@ const initialFormState = {
   packing: {
     isPackingUsed: false,
   },
-  // FIXED: Proper misc initial state
   misc: {
     isMiscUsed: false,
     miscCharge: ""
@@ -265,7 +267,7 @@ const reducer = (state, action) => {
   }
 };
 
-// Map state to Firebase structure with sanitization for undefined values
+// ENHANCED: Map state to Firebase structure with validation
 const mapStateToFirebaseStructure = (state, calculations) => {
   const { 
     client, 
@@ -319,7 +321,7 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     projectName: orderAndPaper.projectName || "",
     date: orderAndPaper.date?.toISOString() || null,
     deliveryDate: orderAndPaper.deliveryDate?.toISOString() || null,
-    weddingDate: orderAndPaper.weddingDate?.toISOString() || null, // ADD THIS LINE
+    weddingDate: orderAndPaper.weddingDate?.toISOString() || null,
     
     // Job details with HSN code included
     jobDetails: sanitizeForFirestore({
@@ -479,6 +481,22 @@ const mapStateToFirebaseStructure = (state, calculations) => {
     updatedAt: new Date().toISOString(),
   };
 
+  // ENHANCED: Final validation of the data structure
+  if (firestoreData.calculations) {
+    const finalValidation = validateCalculationConsistency([{
+      id: 'firestore-prep',
+      projectName: firestoreData.projectName,
+      jobDetails: firestoreData.jobDetails,
+      calculations: firestoreData.calculations
+    }]);
+    
+    if (finalValidation.hasErrors) {
+      console.warn('⚠️ Final Firestore data validation found issues:', finalValidation.errors);
+    } else {
+      console.log('✅ Final Firestore data validation passed');
+    }
+  }
+
   return firestoreData;
 };
 
@@ -528,6 +546,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
   const [isB2BClient, setIsB2BClient] = useState(false);
   const [linkedClientData, setLinkedClientData] = useState(null);
 
+  // ENHANCED: Add edit mode tracking state
+  const [editModeManager, setEditModeManager] = useState(null);
+  const [originalEstimateRef, setOriginalEstimateRef] = useState(null);
+  const [calculationValidationStatus, setCalculationValidationStatus] = useState(null);
+
   // State to track direct initialization
   const [directInitializationDone, setDirectInitializationDone] = useState(false);
 
@@ -540,6 +563,26 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       [sectionId]: !prev[sectionId]
     }));
   };
+
+  // ENHANCED: Initialize edit mode tracking
+  useEffect(() => {
+    if (isEditMode && initialState && !originalEstimateRef) {
+      setOriginalEstimateRef(initialState);
+      console.log('🔒 Initializing edit mode calculation tracking');
+      
+      // Validate initial calculations
+      if (initialState.calculations) {
+        const validation = validateCalculationConsistency([initialState]);
+        setCalculationValidationStatus(validation);
+        
+        if (validation.hasErrors) {
+          console.warn('⚠️ Initial calculations have inconsistencies:', validation.errors);
+        } else {
+          console.log('✅ Initial calculations are consistent');
+        }
+      }
+    }
+  }, [isEditMode, initialState, originalEstimateRef]);
 
   // ⭐ NEW: GST Rate Caching with job type change detection
   useEffect(() => {
@@ -918,7 +961,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   }, [directInitializationDone, isEditMode, state.orderAndPaper.jobType, papers]);
 
-  // Initialize form with data if in edit mode
+  // CRITICAL FIX: Enhanced edit mode initialization
   useEffect(() => {
     if (initialState && isEditMode) {
       // Initialize form state with the provided data
@@ -933,11 +976,9 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         dieCode: initialState.orderAndPaper?.dieCode
       });
       
-      // If client info exists in initialState, set the client for display
       if (initialState.client?.clientId) {
         console.log("Setting client from initialState:", initialState.client);
         
-        // Create a client object from client info
         const clientData = {
           id: initialState.client.clientId,
           clientId: initialState.client.clientId,
@@ -947,37 +988,37 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           contactPerson: initialState.client.clientInfo?.contactPerson || "",
           email: initialState.client.clientInfo?.email || "",
           phone: initialState.client.clientInfo?.phone || "",
-          ...initialState.client.clientInfo // Include any other client properties
+          ...initialState.client.clientInfo
         };
         
-        // Set the selected client for display
         setSelectedClient(clientData);
       }
       
-      // Set selected version if it exists in initialState
       if (initialState.versionId) {
         setSelectedVersion(initialState.versionId);
       }
       
-      // CRITICAL FIX: In edit mode, LOCK markup values from saved calculations
+      // CRITICAL FIX: In edit mode, PRESERVE markup values from saved calculations
       if (initialState.calculations?.markupType && initialState.calculations?.markupPercentage) {
-        console.log("🔒 EDIT MODE - BillingForm: LOCKING markup from saved calculations:", {
+        console.log("🔒 EDIT MODE - BillingForm: PRESERVING markup from saved calculations:", {
           type: initialState.calculations.markupType,
-          percentage: initialState.calculations.markupPercentage
+          percentage: initialState.calculations.markupPercentage,
+          subtotalPerCard: initialState.calculations.subtotalPerCard,
+          totalCostPerCard: initialState.calculations.totalCostPerCard,
+          totalWithGST: initialState.calculations.totalWithGST
         });
         
-        // Set markup values and mark them as locked for edit mode
+        // Set markup values and preserve the exact calculations
         setSelectedMarkupType(initialState.calculations.markupType);
         setMarkupPercentage(parseFloat(initialState.calculations.markupPercentage));
         
-        // Set the calculations immediately and prevent further overrides
+        // CRITICAL: Set the calculations immediately with exact preservation
         setCalculations(initialState.calculations);
         
-        // CRITICAL: Mark that edit mode markup has been set to prevent further changes
+        // Mark that edit mode markup has been set to prevent overrides
         markupInitializedRef.current = true;
       }
       
-      // Mark initialization as done for edit mode
       setDirectInitializationDone(true);
     }
   }, [initialState, isEditMode]);
@@ -1431,12 +1472,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
-  // ⭐ UPDATED: Function to handle markup changes from ReviewAndSubmit component
+  // CRITICAL FIX: Enhanced markup change handler with precision preservation
   const handleMarkupChange = async (markupType, markupPercentage) => {
-    // In edit mode, only allow changes if explicitly triggered by user action
+    // In edit mode, preserve original base values for consistency
     if (isEditMode) {
-      console.log("⚠️ EDIT MODE: Markup change requested - this should only happen from user action in ReviewAndSubmit");
-      // Don't prevent the change, just log it for debugging
+      console.log("⚠️ EDIT MODE: Markup change - using preserved base values");
     }
     
     // For B2B clients, only allow MARKUP B2B MERCH to be selected (in new mode only)
@@ -1459,38 +1499,40 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     setShowSuccessNotification(false);
   };
 
-  // ⭐ UPDATED: Function to recalculate totals when markup changes (with fresh GST)
+  // ENHANCED: recalculateWithMarkup function with validation
   const recalculateWithMarkup = async (markupType, markupPercentage) => {
     console.log("Recalculating with new markup:", markupType, markupPercentage);
     setIsCalculating(true);
+    
     try {
       const jobType = state.orderAndPaper?.jobType || "Card";
-      
-      // Get GST rate (cached or fresh) for this job type
       const gstRate = await getGSTRateForJobType(jobType);
-      
-      // Get the misc charge from the form state if available and misc is enabled
       const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
         ? parseFloat(state.misc.miscCharge) 
         : null;
 
-      // CRITICAL FIX: Handle edit mode differently
-      if (isEditMode && calculations && !calculations.error) {
-        console.log("Edit mode detected - using precision markup recalculation");
-  
-        // Use the displayed subtotal as the base for markup calculation
-        const subtotalPerCard = parseFloat(calculations.subtotalPerCard || calculations.costWithMisc || 0);
+      // ENHANCED: Handle edit mode with validation
+      if (isEditMode && calculations && !calculations.error && originalEstimateRef) {
+        console.log("Edit mode detected - using EXACT base preservation with validation");
+
+        const originalSubtotalPerCard = parseFloat(calculations.subtotalPerCard || calculations.costWithMisc || 0);
         const quantity = parseInt(state.orderAndPaper?.quantity || 1);
         
-        // CRITICAL FIX: Use precision calculation
+        console.log("Edit mode precision recalculation:", {
+          originalSubtotalPerCard,
+          markupPercentage,
+          quantity,
+          gstRate
+        });
+        
+        // Use precision calculation to maintain consistency
         const preciseCalc = calculateWithPrecision(
-          subtotalPerCard,
+          originalSubtotalPerCard,
           markupPercentage,
           quantity,
           gstRate
         );
         
-        // Create updated calculations object
         const updatedCalculations = {
           ...calculations,
           markupType: markupType,
@@ -1503,62 +1545,87 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           totalWithGST: preciseCalc.totalWithGST
         };
         
-        console.log("Edit mode markup recalculation completed:", {
-          subtotalPerCard: subtotalPerCard.toFixed(2),
-          markupPercentage,
-          markupAmount: newMarkupAmount.toFixed(2),
-          totalCostPerCard: newTotalCostPerCard.toFixed(2),
-          totalCost: newTotalCost.toFixed(2),
-          gstAmount: newGstAmount.toFixed(2),
-          totalWithGST: newTotalWithGST.toFixed(2)
-        });
+        // Validate the updated calculations
+        const validation = validateCalculationConsistency([{
+          id: 'markup-recalc',
+          projectName: state.orderAndPaper.projectName,
+          jobDetails: { quantity: quantity },
+          calculations: updatedCalculations
+        }]);
+        
+        if (!validation.hasErrors) {
+          console.log("✅ Edit mode markup recalculation validated successfully");
+        } else {
+          console.warn("⚠️ Edit mode markup recalculation has inconsistencies:", validation.errors);
+        }
         
         setCalculations(updatedCalculations);
         return;
       }
 
-      // For new estimates (non-edit mode), use the existing complex recalculation logic
+      // For new estimates - use existing logic with validation
       console.log("New estimate mode - using full recalculation logic");
       
-      // Use the recalculateTotals function from calculationsService if we already have base calculations
       if (calculations && !calculations.error) {
-        console.log("Using existing calculations for recalculation");
-        
-        // Call recalculateTotals with the existing calculations, updated markup info, quantity, and fresh GST rate
         const result = await recalculateTotals(
           calculations,
-          miscCharge, // Use the custom misc charge if available
+          miscCharge,
           markupPercentage,
           parseInt(state.orderAndPaper?.quantity, 10) || 0,
           markupType,
           state.orderAndPaper?.jobType || "Card",
-          null, // clientLoyaltyTier
-          gstRate // ⭐ Pass fresh GST rate
+          null,
+          gstRate
         );
 
         if (result.error) {
           console.error("Error recalculating with new markup:", result.error);
-          // Don't update calculations if there's an error
         } else {
+          // Validate the result
+          const validation = validateCalculationConsistency([{
+            id: 'new-mode-recalc',
+            projectName: state.orderAndPaper.projectName,
+            jobDetails: { quantity: parseInt(state.orderAndPaper?.quantity, 10) || 0 },
+            calculations: result
+          }]);
+          
+          if (!validation.hasErrors) {
+            console.log("✅ New mode recalculation validated successfully");
+          } else {
+            console.warn("⚠️ New mode recalculation has inconsistencies:", validation.errors);
+          }
+          
           console.log("Updated calculations with new markup:", result);
           setCalculations(result);
         }
       } else {
         console.log("No existing calculations - performing complete calculation");
         
-        // If we don't have base calculations yet, perform a complete calculation
         const result = await performCompleteCalculations(
           state,
-          miscCharge, // Use the custom misc charge if available
+          miscCharge,
           markupPercentage,
           markupType,
-          gstRate // ⭐ Pass fresh GST rate
+          gstRate
         );
         
         if (result.error) {
           console.error("Error during complete calculations:", result.error);
-          // Don't update calculations if there's an error
         } else {
+          // Validate complete calculations
+          const validation = validateCalculationConsistency([{
+            id: 'complete-calc',
+            projectName: state.orderAndPaper.projectName,
+            jobDetails: { quantity: parseInt(state.orderAndPaper?.quantity, 10) || 0 },
+            calculations: result
+          }]);
+          
+          if (!validation.hasErrors) {
+            console.log("✅ Complete calculations validated successfully");
+          } else {
+            console.warn("⚠️ Complete calculations have inconsistencies:", validation.errors);
+          }
+          
           console.log("Complete calculations performed successfully:", result);
           setCalculations(result);
         }
@@ -1566,14 +1633,13 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     } catch (error) {
       console.error("Unexpected error during markup recalculation:", error);
       
-      // Fallback: If there's an error and we're in edit mode, try a simple calculation
+      // Enhanced fallback for edit mode with validation
       if (isEditMode && calculations && !calculations.error) {
         try {
           const subtotalPerCard = parseFloat(calculations.subtotalPerCard || 0);
           const quantity = parseInt(state.orderAndPaper?.quantity || 1);
-          const fallbackGstRate = 18; // Default GST rate
+          const fallbackGstRate = 18;
           
-          // CRITICAL FIX: Use precision calculation for fallback
           const preciseCalc = calculateWithPrecision(
             subtotalPerCard,
             markupPercentage,
@@ -1594,10 +1660,10 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             error: "Using fallback calculation due to error"
           };
           
-          console.log("Applied fallback calculation for edit mode:", fallbackCalculations);
+          console.log("Applied precision fallback calculation for edit mode:", fallbackCalculations);
           setCalculations(fallbackCalculations);
         } catch (fallbackError) {
-          console.error("Even fallback calculation failed:", fallbackError);
+          console.error("Even precision fallback calculation failed:", fallbackError);
         }
       }
     } finally {
@@ -1605,51 +1671,64 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
-  // ⭐ UPDATED: Enhanced calculation function using the centralized calculation service (with fresh GST)
+  // ENHANCED: performCalculations function with validation
   const performCalculations = async () => {
-    // Check if client and essential fields are filled
     const { projectName, quantity, paperName, dieCode, dieSize } = state.orderAndPaper;
     const { clientId } = state.client;
     
     if (!clientId || !projectName || !quantity || !paperName || !dieCode || 
         !dieSize.length || !dieSize.breadth) {
-      return; // Don't calculate if essential fields are missing
+      return;
     }
     
     setIsCalculating(true);
     try {
       const jobType = state.orderAndPaper?.jobType || "Card";
-      
-      // Get GST rate (cached or fresh) for this job type
       const gstRate = await getGSTRateForJobType(jobType);
-      
-      // Get the misc charge from the form state if available and misc is enabled
       const miscCharge = state.misc?.isMiscUsed && state.misc?.miscCharge 
         ? parseFloat(state.misc.miscCharge) 
-        : null; // Pass null to let the calculator fetch from DB
+        : null;
       
-      // Pass the current markup values, misc charge, and fresh GST rate to the calculation service
       const result = await performCompleteCalculations(
         state,
-        miscCharge, // Use the custom misc charge if available
+        miscCharge,
         markupPercentage,
         selectedMarkupType,
-        gstRate // ⭐ Pass fresh GST rate
+        gstRate
       );
       
       if (result.error) {
         console.error("Error during calculations:", result.error);
+        setCalculations(result);
       } else {
-        // Verify markup values are included
-        console.log("Calculation results with markup:", {
+        // ENHANCED: Validate calculations before setting
+        const validation = validateCalculationConsistency([{
+          id: 'live-calc',
+          projectName: projectName,
+          jobDetails: { quantity: quantity },
+          calculations: result
+        }]);
+        
+        if (!validation.hasErrors) {
+          console.log("✅ Live calculations validated successfully");
+        } else {
+          console.warn("⚠️ Live calculations have inconsistencies:", validation.errors);
+        }
+        
+        console.log("Calculation results with markup and validation:", {
           markupType: result.markupType,
           markupPercentage: result.markupPercentage,
           markupAmount: result.markupAmount,
           gstRate: result.gstRate,
+          validationStatus: validation.hasErrors ? 'inconsistent' : 'consistent',
           miscCharge: miscCharge ? `Custom: ${miscCharge}` : "From DB"
         });
         
-        setCalculations(result);
+        setCalculations({
+          ...result,
+          validationStatus: validation.hasErrors ? 'inconsistent' : 'consistent',
+          validationErrors: validation.errors
+        });
       }
     } catch (error) {
       console.error("Unexpected error during calculations:", error);
@@ -1699,22 +1778,38 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     setShowPreview(true);
   };
 
-  // Handler for Review and Submit when calculations are ready (for edit mode)
+  // ENHANCED: handleCreateEstimate function with validation
   const handleCreateEstimate = (enhancedCalculations) => {
-    // Log received calculations to verify markup values
     console.log("Enhanced calculations from ReviewAndSubmit:", {
       markupType: enhancedCalculations?.markupType,
       markupPercentage: enhancedCalculations?.markupPercentage,
       markupAmount: enhancedCalculations?.markupAmount,
-      gstRate: enhancedCalculations?.gstRate
+      gstRate: enhancedCalculations?.gstRate,
+      validationStatus: enhancedCalculations?.validationStatus
     });
     
-    // Store the enhanced calculations to use in handleSubmit
+    // ENHANCED: Validate calculations before submission
     if (enhancedCalculations) {
-      setCalculations(enhancedCalculations);
+      const validation = validateCalculationConsistency([{
+        id: 'pre-create',
+        projectName: state.orderAndPaper.projectName,
+        jobDetails: { quantity: state.orderAndPaper.quantity },
+        calculations: enhancedCalculations
+      }]);
+      
+      if (!validation.hasErrors) {
+        console.log("✅ Pre-submission validation passed");
+      } else {
+        console.warn("⚠️ Pre-submission validation found issues:", validation.errors);
+      }
+      
+      setCalculations({
+        ...enhancedCalculations,
+        finalValidationStatus: validation.hasErrors ? 'inconsistent' : 'consistent',
+        finalValidationErrors: validation.errors
+      });
     }
     
-    // Submit the form with the updated calculations
     handleSubmit(new Event('submit'));
   };
 
@@ -1830,12 +1925,11 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     }
   };
 
-  // Updated handleSubmit function with better debugging and explicit field handling
+  // ENHANCED: handleSubmit function with better validation and edit mode support
   const handleSubmit = async (e) => {
     e.preventDefault();
     
     if (!validateForm()) {
-      // Scroll to the first error
       const firstError = document.querySelector(".error-message");
       if (firstError) {
         firstError.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -1843,7 +1937,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       return;
     }
     
-    // Log critical form state before submission for debugging
     console.log("Form state before submission:", {
       jobType: state.orderAndPaper.jobType,
       quantity: state.orderAndPaper.quantity,
@@ -1855,25 +1948,67 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     
     setIsSubmitting(true);
     try {
-      // Double-check that markup values exist before saving
-      const calculationsWithMarkup = {
-        ...calculations,
-        markupType: selectedMarkupType,
-        markupPercentage: markupPercentage,
-        markupAmount: calculations?.markupAmount || "0.00"
-      };
+      let finalCalculations = calculations;
       
-      // Create the formatted data for Firebase using the enhanced calculations
-      const formattedData = mapStateToFirebaseStructure(state, calculationsWithMarkup);
+      // ENHANCED: Use edit mode calculation manager for better consistency
+      if (isEditMode && originalEstimateRef) {
+        console.log('🔒 Edit mode submission - using calculation manager');
+        
+        const changedFields = detectChangedFields(originalEstimateRef, state);
+        const editModeResult = handleEditModeCalculations(
+          originalEstimateRef,
+          state,
+          changedFields
+        );
+        
+        if (editModeResult.validation.isValid) {
+          finalCalculations = editModeResult.calculations;
+          console.log('✅ Edit mode calculations validated and preserved:', editModeResult.summary);
+        } else {
+          console.warn('⚠️ Edit mode calculation validation failed, using fallback');
+          finalCalculations = {
+            ...calculations,
+            markupType: selectedMarkupType,
+            markupPercentage: markupPercentage,
+            markupAmount: calculations?.markupAmount || "0.00"
+          };
+        }
+      } else {
+        // New mode - use existing logic
+        finalCalculations = {
+          ...calculations,
+          markupType: selectedMarkupType,
+          markupPercentage: markupPercentage,
+          markupAmount: calculations?.markupAmount || "0.00"
+        };
+      }
       
-      // Log the data before saving to verify critical fields
+      // Final validation before submission
+      if (finalCalculations) {
+        const finalValidation = validateCalculationConsistency([{
+          id: 'pre-submit',
+          projectName: state.orderAndPaper.projectName,
+          jobDetails: { quantity: state.orderAndPaper.quantity },
+          calculations: finalCalculations
+        }]);
+        
+        if (finalValidation.hasErrors) {
+          console.warn('⚠️ Final validation found inconsistencies:', finalValidation.errors);
+        } else {
+          console.log('✅ Final validation passed - calculations are consistent');
+        }
+      }
+      
+      const formattedData = mapStateToFirebaseStructure(state, finalCalculations);
+      
       console.log("Saving to Firebase - critical fields:", {
         jobType: formattedData.jobDetails.jobType,
         quantity: formattedData.jobDetails.quantity,
         paperName: formattedData.jobDetails.paperName,
         dieCode: formattedData.dieDetails.dieCode,
         projectName: formattedData.projectName,
-        weddingDate: formattedData.weddingDate // ADD THIS LINE
+        weddingDate: formattedData.weddingDate,
+        calculationsPreserved: !!(finalCalculations && finalCalculations.totalWithGST)
       });
       
       if (isEditMode && onSubmitSuccess) {
@@ -1881,11 +2016,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
         if (onClose) onClose();
       } else {
         await addDoc(collection(db, "estimates"), formattedData);
-        
-        // Show success notification
         setShowSuccessNotification(true);
-        
-        // Instead of fully resetting and navigating away, only reset production and post-production sections
         partialResetForm();
       }
     } catch (error) {
@@ -2588,7 +2719,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
             </p>
           </div>
         )}
-
+        
         {/* Success Notification Component */}
         <SuccessNotification
           message="Estimate Created Successfully! You can create another estimate with the same client and project details."
@@ -2983,40 +3114,6 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
               previewMode={false}
             />
           </div>
-
-          {/* <div className="flex flex-row-reverse justify-between">
-            <div className="flex">
-              {onClose && (
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="mr-3 px-5 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600 transition-colors"
-                  disabled={isSubmitting}
-                >
-                  Cancel
-                </button>
-              )}
-              {isEditMode && (
-                <button
-                  type="submit"
-                  className="px-6 py-2 bg-blue-600 text-white rounded-md flex items-center hover:bg-blue-700 transition-colors font-medium"
-                  disabled={isSubmitting}
-                >
-                  {isSubmitting ? (
-                    <>
-                      <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                      Saving...
-                    </>
-                  ) : (
-                    "Save Changes"
-                  )}
-                </button>
-              )}
-            </div>
-          </div> */}
         </form>
       </div>
     </div>

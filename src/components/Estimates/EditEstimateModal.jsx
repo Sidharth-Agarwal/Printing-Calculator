@@ -155,7 +155,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     fetchClientInfo();
   }, [estimate]);
 
-  // CRITICAL FIX: Enhanced convertEstimateToFormState with calculation validation
+  // CRITICAL FIX: Enhanced convertEstimateToFormState with exact calculation preservation
   const convertEstimateToFormState = (estimate, fetchedClientInfo) => {
     let enhancedClientInfo = fetchedClientInfo;
     
@@ -167,9 +167,19 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       };
     }
     
-    // CRITICAL: Validate saved calculations for consistency
+    // CRITICAL: Validate and preserve saved calculations EXACTLY
     if (estimate.calculations) {
-      console.log('🔍 Validating saved calculations for estimate:', estimate.projectName);
+      console.log('🔍 EDIT MODAL: Preserving exact saved calculations:', {
+        markupType: estimate.calculations.markupType,
+        markupPercentage: estimate.calculations.markupPercentage,
+        subtotalPerCard: estimate.calculations.subtotalPerCard,
+        markupAmount: estimate.calculations.markupAmount,
+        totalCostPerCard: estimate.calculations.totalCostPerCard,
+        totalCost: estimate.calculations.totalCost,
+        gstAmount: estimate.calculations.gstAmount,
+        totalWithGST: estimate.calculations.totalWithGST
+      });
+      
       const validation = validateCalculationConsistency([estimate]);
       
       if (validation.hasErrors) {
@@ -178,7 +188,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           console.warn(`  - ${error.field}: expected ${error.expected}, got ${error.actual} (diff: ${error.difference})`);
         });
       } else {
-        console.log('✅ Saved calculations are consistent');
+        console.log('✅ Saved calculations are consistent and will be preserved exactly');
       }
     }
     
@@ -191,10 +201,12 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       dieCode: estimate.dieDetails?.dieCode,
       frags: estimate.dieDetails?.frags,
       type: estimate.dieDetails?.type,
-      markupType: estimate.calculations?.markupType,
-      markupPercentage: estimate.calculations?.markupPercentage,
       weddingDate: estimate.weddingDate || estimate.jobDetails?.weddingDate,
+      // CRITICAL: Log calculation values being preserved
       savedCalculations: {
+        markupType: estimate.calculations?.markupType,
+        markupPercentage: estimate.calculations?.markupPercentage,
+        subtotalPerCard: estimate.calculations?.subtotalPerCard,
         totalCostPerCard: estimate.calculations?.totalCostPerCard,
         totalCost: estimate.calculations?.totalCost,
         gstAmount: estimate.calculations?.gstAmount,
@@ -222,7 +234,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     const foilDetails = Array.isArray(estimate.fsDetails?.foilDetails) ? 
                           estimate.fsDetails.foilDetails : [];
     
-    // Structure to match BillingForm's expected state
+    // Structure to match BillingForm's expected state with EXACT calculation preservation
     return {
       client: {
         clientId: estimate.clientId || (enhancedClientInfo && enhancedClientInfo.id) || null,
@@ -250,19 +262,17 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         frags: estimate.dieDetails?.frags || "",
         type: estimate.dieDetails?.type || ""
       },
-      // FIXED: Ensure proper default structure for LP Details
+      // Service details (keeping all original structure)
       lpDetails: {
         isLPUsed: estimate.lpDetails?.isLPUsed || false,
         noOfColors: estimate.lpDetails?.noOfColors || 0,
         colorDetails: colorDetails,
       },
-      // FIXED: Ensure proper default structure for FS Details
       fsDetails: {
         isFSUsed: estimate.fsDetails?.isFSUsed || false,
         fsType: estimate.fsDetails?.fsType || "",
         foilDetails: foilDetails,
       },
-      // FIXED: Ensure proper default structure for EMB Details
       embDetails: {
         isEMBUsed: estimate.embDetails?.isEMBUsed || false,
         plateSizeType: estimate.embDetails?.plateSizeType || "",
@@ -273,13 +283,11 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         embMRConcatenated: estimate.embDetails?.embMRConcatenated || "",
         dstMaterial: estimate.embDetails?.dstMaterial || ""
       },
-      // FIXED: Ensure proper default structure for Digi Details
       digiDetails: {
         isDigiUsed: estimate.digiDetails?.isDigiUsed || false,
         digiDie: estimate.digiDetails?.digiDie || "",
         digiDimensions: estimate.digiDetails?.digiDimensions || { length: "", breadth: "" },
       },
-      // FIXED: Ensure proper default structure for Notebook Details
       notebookDetails: {
         isNotebookUsed: estimate.notebookDetails?.isNotebookUsed || false,
         orientation: estimate.notebookDetails?.orientation || "",
@@ -292,61 +300,50 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         bindingTypeConcatenated: estimate.notebookDetails?.bindingTypeConcatenated || "",
         paperName: estimate.notebookDetails?.paperName || ""
       },
-      // FIXED: Ensure proper default structure for Screen Print
       screenPrint: {
         isScreenPrintUsed: estimate.screenPrint?.isScreenPrintUsed || false,
         noOfColors: estimate.screenPrint?.noOfColors || 1,
         screenMR: estimate.screenPrint?.screenMR || "",
         screenMRConcatenated: estimate.screenPrint?.screenMRConcatenated || ""
       },
-      // FIXED: Ensure proper default structure for Pre Die Cutting
       preDieCutting: {
         isPreDieCuttingUsed: estimate.preDieCutting?.isPreDieCuttingUsed || false,
         predcMR: estimate.preDieCutting?.predcMR || "",
         predcMRConcatenated: estimate.preDieCutting?.predcMRConcatenated || ""
       },
-      // FIXED: Ensure proper default structure for Die Cutting
       dieCutting: {
         isDieCuttingUsed: estimate.dieCutting?.isDieCuttingUsed || false,
         dcMR: estimate.dieCutting?.dcMR || "",
         dcMRConcatenated: estimate.dieCutting?.dcMRConcatenated || ""
       },
-      // FIXED: Ensure proper default structure for Post DC
       postDC: {
         isPostDCUsed: estimate.postDC?.isPostDCUsed || false,
         pdcMR: estimate.postDC?.pdcMR || "",
         pdcMRConcatenated: estimate.postDC?.pdcMRConcatenated || ""
       },
-      // FIXED: Ensure proper default structure for Fold And Paste
       foldAndPaste: {
         isFoldAndPasteUsed: estimate.foldAndPaste?.isFoldAndPasteUsed || false,
         dstMaterial: estimate.foldAndPaste?.dstMaterial || "",
         dstType: estimate.foldAndPaste?.dstType || "",
       },
-      // FIXED: Ensure proper default structure for DST Paste
       dstPaste: {
         isDstPasteUsed: estimate.dstPaste?.isDstPasteUsed || false,
         dstType: estimate.dstPaste?.dstType || "",
       },
-      // FIXED: Ensure proper default structure for Magnet
       magnet: {
         isMagnetUsed: estimate.magnet?.isMagnetUsed || false,
         magnetMaterial: estimate.magnet?.magnetMaterial || ""
       },
-      // FIXED: Ensure proper default structure for QC
       qc: {
         isQCUsed: estimate.qc?.isQCUsed || false,
       },
-      // FIXED: Ensure proper default structure for Packing
       packing: {
         isPackingUsed: estimate.packing?.isPackingUsed || false,
       },
-      // FIXED: Proper misc handling - consistent with working pattern
       misc: {
         isMiscUsed: estimate.misc?.isMiscUsed || false,
         miscCharge: estimate.misc?.miscCharge || ""
       },
-      // FIXED: Ensure proper default structure for Sandwich
       sandwich: {
         isSandwichComponentUsed: estimate.sandwich?.isSandwichComponentUsed || false,
         paperInfo: estimate.sandwich?.paperInfo || {
@@ -379,8 +376,20 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           embMRConcatenated: estimate.sandwich?.embDetailsSandwich?.embMRConcatenated || ""
         },
       },
-      // CRITICAL FIX: Preserve the original calculations INCLUDING markup information
-      calculations: estimate.calculations || {},
+      // CRITICAL FIX: Preserve the EXACT original calculations INCLUDING all markup information
+      calculations: estimate.calculations ? {
+        ...estimate.calculations,
+        // Ensure markup information is explicitly preserved
+        markupType: estimate.calculations.markupType,
+        markupPercentage: estimate.calculations.markupPercentage,
+        markupAmount: estimate.calculations.markupAmount,
+        subtotalPerCard: estimate.calculations.subtotalPerCard,
+        totalCostPerCard: estimate.calculations.totalCostPerCard,
+        totalCost: estimate.calculations.totalCost,
+        gstRate: estimate.calculations.gstRate,
+        gstAmount: estimate.calculations.gstAmount,
+        totalWithGST: estimate.calculations.totalWithGST
+      } : {},
     };
   };
 
@@ -401,7 +410,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
     return sanitized;
   };
 
-  // CRITICAL FIX: Enhanced handleSave with calculation validation and preservation
+  // CRITICAL FIX: Enhanced handleSave with calculation validation and exact preservation
   const handleSave = async (formData) => {
     if (isClientInactive) {
       if (!window.confirm("This client is inactive. Are you sure you want to update this estimate?")) {
@@ -414,25 +423,32 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       console.log("💾 EDIT MODE: Saving form data with preserved calculations");
       console.log("COMPLETE FORM DATA:", formData);
       
-      // CRITICAL: Validate that calculations are consistent before saving
+      // CRITICAL: Validate that calculations are consistent and preserve them exactly
       if (formData.calculations) {
-        console.log('🔍 Validating new calculations before save:', formData.calculations);
+        console.log('🔍 Validating calculations before save:', {
+          markupType: formData.calculations.markupType,
+          markupPercentage: formData.calculations.markupPercentage,
+          subtotalPerCard: formData.calculations.subtotalPerCard,
+          markupAmount: formData.calculations.markupAmount,
+          totalCostPerCard: formData.calculations.totalCostPerCard,
+          totalWithGST: formData.calculations.totalWithGST
+        });
         
         // Create a temporary estimate object for validation
         const tempEstimate = {
           id: estimate.id,
           projectName: formData.projectName || estimate.projectName,
           jobDetails: {
-            quantity: formData.orderAndPaper?.quantity || estimate.jobDetails?.quantity
+            quantity: formData.jobDetails?.quantity || formData.orderAndPaper?.quantity || estimate.jobDetails?.quantity
           },
           calculations: formData.calculations
         };
         
         const validation = validateCalculationConsistency([tempEstimate]);
         if (validation.hasErrors) {
-          console.warn('⚠️ New calculations have inconsistencies:', validation.errors);
+          console.warn('⚠️ Updated calculations have inconsistencies:', validation.errors);
         } else {
-          console.log('✅ New calculations are consistent');
+          console.log('✅ Updated calculations are consistent and will be preserved');
         }
       }
       
@@ -461,7 +477,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         calculationsPreserved: !!(formData.calculations && formData.calculations.totalWithGST)
       });
       
-      // Extract and prioritize form data values
+      // Extract and prioritize form data values with better fallback handling
       const updatedProjectName = formData.projectName || estimate.projectName || "Untitled Project";
       
       const updatedJobType = 
@@ -548,7 +564,6 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         estimate.dieDetails?.type || 
         "";
       
-      // ADDED: Handle wedding date update
       const updatedWeddingDate = 
         (formData.weddingDate) || 
         (formData.orderAndPaper?.weddingDate) || 
@@ -575,7 +590,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
       
       const currentTimestamp = new Date().toISOString();
       
-      // CRITICAL FIX: Create updated estimate with preserved/updated calculations
+      // CRITICAL FIX: Create updated estimate with EXACT calculation preservation
       const updatedEstimate = {
         id: estimate.id,
         clientId: formData.clientId || formData.client?.clientId || estimate.clientId,
@@ -609,6 +624,7 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           type: updatedType
         },
         
+        // Service details (preserve structure)
         lpDetails: formData.lpDetails || estimate.lpDetails || {
           isLPUsed: false,
           noOfColors: 0,
@@ -721,8 +737,20 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
           miscCharge: ""
         },
         
-        // CRITICAL FIX: Preserve/update calculations with validation
-        calculations: formData.calculations || estimate.calculations || {},
+        // CRITICAL FIX: Preserve/update calculations with EXACT values and validation
+        calculations: formData.calculations ? {
+          ...formData.calculations,
+          // Explicitly ensure all critical calculation fields are preserved
+          markupType: formData.calculations.markupType || estimate.calculations?.markupType,
+          markupPercentage: formData.calculations.markupPercentage || estimate.calculations?.markupPercentage,
+          markupAmount: formData.calculations.markupAmount || estimate.calculations?.markupAmount,
+          subtotalPerCard: formData.calculations.subtotalPerCard || estimate.calculations?.subtotalPerCard,
+          totalCostPerCard: formData.calculations.totalCostPerCard || estimate.calculations?.totalCostPerCard,
+          totalCost: formData.calculations.totalCost || estimate.calculations?.totalCost,
+          gstRate: formData.calculations.gstRate || estimate.calculations?.gstRate,
+          gstAmount: formData.calculations.gstAmount || estimate.calculations?.gstAmount,
+          totalWithGST: formData.calculations.totalWithGST || estimate.calculations?.totalWithGST
+        } : estimate.calculations || {},
         
         versionId: formData.versionId || estimate.versionId || "1",
         movedToOrders: estimate.movedToOrders || false,
@@ -752,11 +780,13 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         miscCharge: updatedEstimate.misc?.miscCharge,
         createdAt: updatedEstimate.createdAt,
         updatedAt: updatedEstimate.updatedAt,
-        // CRITICAL: Verify calculations are preserved
+        // CRITICAL: Verify calculations are preserved EXACTLY
         calculationsExist: !!(updatedEstimate.calculations),
         calculationFields: updatedEstimate.calculations ? {
           markupType: updatedEstimate.calculations.markupType,
           markupPercentage: updatedEstimate.calculations.markupPercentage,
+          subtotalPerCard: updatedEstimate.calculations.subtotalPerCard,
+          markupAmount: updatedEstimate.calculations.markupAmount,
           totalCostPerCard: updatedEstimate.calculations.totalCostPerCard,
           totalCost: updatedEstimate.calculations.totalCost,
           gstAmount: updatedEstimate.calculations.gstAmount,
@@ -778,14 +808,15 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
         if (finalValidation.hasErrors) {
           console.warn('⚠️ FINAL: Sanitized calculations have inconsistencies:', finalValidation.errors);
         } else {
-          console.log('✅ FINAL: Sanitized calculations are consistent');
+          console.log('✅ FINAL: Sanitized calculations are consistent and preserved exactly');
         }
       }
       
       console.log("💾 FINAL SANITIZED ESTIMATE - Ready for Firestore:", {
         hasCalculations: !!(sanitizedEstimate.calculations),
         calculationKeys: sanitizedEstimate.calculations ? Object.keys(sanitizedEstimate.calculations) : [],
-        totalWithGST: sanitizedEstimate.calculations?.totalWithGST
+        totalWithGST: sanitizedEstimate.calculations?.totalWithGST,
+        markupPreserved: !!(sanitizedEstimate.calculations?.markupType && sanitizedEstimate.calculations?.markupPercentage)
       });
       
       await onSave(sanitizedEstimate);
@@ -825,12 +856,6 @@ const EditEstimateModal = ({ estimate, onClose, onSave, groupKey, estimates = []
             {isClientInactive && (
               <span className="ml-2 px-2 py-0.5 bg-red-100 text-red-800 text-xs rounded-full">
                 Inactive Client
-              </span>
-            )}
-            {/* ADDED: Calculation preservation indicator */}
-            {initialFormState.calculations && (
-              <span className="ml-2 px-2 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                ✅ Calculations Preserved
               </span>
             )}
           </div>
