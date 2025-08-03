@@ -2745,7 +2745,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
                 <button 
                   type="button"
                   onClick={confirmResetForm}
-                  className="px-4 py-2 bg-cyan-500 text-white rounded-md hover:bg-red-600 transition-colors"
+                  className="px-4 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 transition-colors"
                 >
                   Reset Form
                 </button>
