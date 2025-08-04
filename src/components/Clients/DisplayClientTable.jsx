@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import { TABLE_DISPLAY_FIELDS, DETAILED_DISPLAY_FIELDS } from "../../constants/entityFields";
 import ClientDetailsModal from "./ClientDetailsModal";
 import DuplicateIndicator from "./DuplicateIndicator";
+import TempClientPromotionModal from "./TempClientPromotionModal";
 
 const DisplayClientTable = ({ 
   clients, 
@@ -11,17 +12,63 @@ const DisplayClientTable = ({
   onActivateClient, 
   onToggleStatus, 
   onAddDiscussion,
+  onPromoteTempClient,
   isAdmin 
 }) => {
   // State for search term, filter, sorting, and view type
   const [searchTerm, setSearchTerm] = useState("");
   const [filterClientType, setFilterClientType] = useState("");
   const [filterActiveStatus, setFilterActiveStatus] = useState("");
+  const [filterTempStatus, setFilterTempStatus] = useState(""); // NEW: Filter for temp clients
   const [sortField, setSortField] = useState("name");
   const [sortDirection, setSortDirection] = useState("asc");
   const [viewType, setViewType] = useState('compact');
   const [expandedRows, setExpandedRows] = useState({});
   const [selectedClient, setSelectedClient] = useState(null);
+  const [promotingClient, setPromotingClient] = useState(null); // NEW: For temp client promotion
+
+  // Helper function to check if temp client is expiring soon
+  const isExpiringSoon = (client) => {
+    if (!client.isTemporary || !client.expiryDate) return false;
+    
+    const expiryDate = client.expiryDate.toDate ? client.expiryDate.toDate() : new Date(client.expiryDate);
+    const today = new Date();
+    const diffTime = expiryDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7; // Expiring within 7 days
+  };
+
+  // Helper function to check if temp client is expired
+  const isExpired = (client) => {
+    if (!client.isTemporary || !client.expiryDate) return false;
+    
+    const expiryDate = client.expiryDate.toDate ? client.expiryDate.toDate() : new Date(client.expiryDate);
+    const today = new Date();
+    return today > expiryDate;
+  };
+
+  // Helper function to get days until expiry
+  const getDaysUntilExpiry = (client) => {
+    if (!client.isTemporary || !client.expiryDate) return null;
+    
+    const expiryDate = client.expiryDate.toDate ? client.expiryDate.toDate() : new Date(client.expiryDate);
+    const today = new Date();
+    const diffTime = expiryDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // Handle temp client promotion
+  const handlePromoteClick = (client) => {
+    setPromotingClient(client);
+  };
+
+  const handlePromotionSubmit = (clientId, success) => {
+    if (success && onPromoteTempClient) {
+      onPromoteTempClient(clientId, success);
+    }
+    setPromotingClient(null);
+  };
 
   // Helper function to truncate discussion summary
   const truncateDiscussion = (summary, maxLength = 25) => {
@@ -101,7 +148,21 @@ const DisplayClientTable = ({
         (filterActiveStatus === "inactive" && !isActive);
     }
 
-    return matchesSearch && matchesClientType && matchesActiveStatus;
+    // NEW: Filter by temporary status
+    let matchesTempStatus = true;
+    if (filterTempStatus !== "") {
+      if (filterTempStatus === "temporary") {
+        matchesTempStatus = client.isTemporary === true;
+      } else if (filterTempStatus === "permanent") {
+        matchesTempStatus = !client.isTemporary;
+      } else if (filterTempStatus === "expiring") {
+        matchesTempStatus = client.isTemporary && isExpiringSoon(client);
+      } else if (filterTempStatus === "expired") {
+        matchesTempStatus = client.isTemporary && isExpired(client);
+      }
+    }
+
+    return matchesSearch && matchesClientType && matchesActiveStatus && matchesTempStatus;
   });
 
   // Format currency
@@ -153,8 +214,29 @@ const DisplayClientTable = ({
     onToggleStatus(client.id, !client.isActive);
   };
 
-  // Get row style based on loyalty tier for B2B clients
+  // Get row style based on client type and status
   const getRowStyle = (client) => {
+    // Temp client styling
+    if (client.isTemporary) {
+      if (isExpired(client)) {
+        return {
+          backgroundColor: '#fef2f2', // red-50
+          borderLeft: '4px solid #ef4444' // red-500
+        };
+      } else if (isExpiringSoon(client)) {
+        return {
+          backgroundColor: '#fffbeb', // amber-50
+          borderLeft: '4px solid #f59e0b' // amber-500
+        };
+      } else {
+        return {
+          backgroundColor: '#fff7ed', // orange-50
+          borderLeft: '4px solid #f97316' // orange-500
+        };
+      }
+    }
+
+    // B2B loyalty tier styling
     const isB2B = client.clientType?.toUpperCase() === "B2B";
     const hasLoyaltyTier = isB2B && client.loyaltyTierId && client.loyaltyTierColor;
     
@@ -169,13 +251,46 @@ const DisplayClientTable = ({
     return {};
   };
 
-  // Classes for loyalty tier rows
+  // Classes for client rows
   const getRowClassName = (client) => {
     const isB2B = client.clientType?.toUpperCase() === "B2B";
     const hasLoyaltyTier = isB2B && client.loyaltyTierId;
     
     return `border-b border-gray-200 hover:bg-gray-50 transition-colors cursor-pointer 
             ${hasLoyaltyTier ? 'hover:bg-opacity-70' : ''}`;
+  };
+
+  // Render temp client status badge
+  const renderTempClientStatus = (client) => {
+    if (!client.isTemporary) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          Permanent
+        </span>
+      );
+    }
+
+    const daysLeft = getDaysUntilExpiry(client);
+    
+    if (isExpired(client)) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+          Expired
+        </span>
+      );
+    } else if (isExpiringSoon(client)) {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-100 text-amber-800">
+          Expires in {daysLeft} days
+        </span>
+      );
+    } else {
+      return (
+        <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-100 text-orange-800">
+          Temp ({daysLeft} days left)
+        </span>
+      );
+    }
   };
 
   // Render loyalty status for a client
@@ -251,10 +366,11 @@ const DisplayClientTable = ({
               {TABLE_DISPLAY_FIELDS.map(field => (
                 <SortableHeader key={field.field} field={field.field} label={field.label} />
               ))}
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Client Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Loyalty Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Last Contact</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-40">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -268,14 +384,21 @@ const DisplayClientTable = ({
                   {TABLE_DISPLAY_FIELDS.map(field => (
                     <td key={field.field} className="px-3 py-3">
                       {field.field === 'name' ? (
-                        <span className="font-medium">
-                          {client.name}
-                          {client.hasAccount && (
-                            <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                              Account
+                        <div className="flex flex-col">
+                          <span className="font-medium">
+                            {client.name}
+                            {client.hasAccount && (
+                              <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                                Account
+                              </span>
+                            )}
+                          </span>
+                          {client.isTemporary && (
+                            <span className="text-xs text-orange-600 font-medium mt-0.5">
+                              Temporary Client
                             </span>
                           )}
-                        </span>
+                        </div>
                       ) : field.field === 'clientType' ? (
                         <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                           client.clientType?.toUpperCase() === "B2B"
@@ -289,6 +412,9 @@ const DisplayClientTable = ({
                       )}
                     </td>
                   ))}
+                  <td className="px-3 py-3">
+                    {renderTempClientStatus(client)}
+                  </td>
                   <td className="px-3 py-3">
                     {renderLoyaltyStatus(client)}
                   </td>
@@ -320,7 +446,26 @@ const DisplayClientTable = ({
                     </span>
                   </td>
                   <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                    <div className="flex items-center space-x-1">
+                    <div className="flex items-center space-x-1 flex-wrap gap-1">
+                      {/* Temp Client Promotion Button - Priority button */}
+                      {client.isTemporary && (
+                        <button
+                          onClick={() => handlePromoteClick(client)}
+                          className={`p-1.5 rounded transition-colors ${
+                            isExpired(client) 
+                              ? "text-red-600 hover:bg-red-100" 
+                              : isExpiringSoon(client)
+                              ? "text-amber-600 hover:bg-amber-100"
+                              : "text-orange-600 hover:bg-orange-100"
+                          }`}
+                          title="Promote to Permanent Client"
+                        >
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                          </svg>
+                        </button>
+                      )}
+
                       {/* Talk Button */}
                       {onAddDiscussion && (
                         <button
@@ -371,8 +516,8 @@ const DisplayClientTable = ({
                         </svg>
                       </button>
                       
-                      {/* B2B Account Buttons */}
-                      {isAdmin && (client.clientType === "B2B" || client.clientType === "b2b" || client.clientType?.toUpperCase() === "B2B") && (
+                      {/* B2B Account Buttons (only for permanent B2B clients) */}
+                      {isAdmin && !client.isTemporary && (client.clientType === "B2B" || client.clientType === "b2b" || client.clientType?.toUpperCase() === "B2B") && (
                         <>
                           {client.hasAccount ? (
                             <button
@@ -419,7 +564,7 @@ const DisplayClientTable = ({
                 </tr>
                 {expandedRows[client.id] && (
                   <tr className="bg-gray-50" onClick={() => handleViewClient(client)}>
-                    <td colSpan={9} className="px-4 py-3 border-b border-gray-200">
+                    <td colSpan={10} className="px-4 py-3 border-b border-gray-200">
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <p className="font-medium text-gray-700">Email:</p>
@@ -444,8 +589,10 @@ const DisplayClientTable = ({
                           <p>Spend: {formatCurrency(client.totalSpend || 0)}</p>
                         </div>
                         <div>
-                          <p className="font-medium text-gray-700">Added On:</p>
-                          <p>{formatDate(client.createdAt)}</p>
+                          <p className="font-medium text-gray-700">
+                            {client.isTemporary ? "Expires On:" : "Added On:"}
+                          </p>
+                          <p>{client.isTemporary ? formatDate(client.expiryDate) : formatDate(client.createdAt)}</p>
                         </div>
                       </div>
                     </td>
@@ -464,7 +611,7 @@ const DisplayClientTable = ({
     );
   };
 
-  // Detailed view - shows all columns with duplicate indicators
+  // Detailed view - shows all columns with temp client support
   const renderDetailedView = () => {
     return (
       <div className="overflow-x-auto bg-white">
@@ -475,12 +622,13 @@ const DisplayClientTable = ({
                 <SortableHeader key={field.field} field={field.field} label={field.label} />
               ))}
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Address</th>
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Client Status</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Loyalty Status</th>
               <SortableHeader field="totalOrders" label="Orders" />
               <SortableHeader field="totalSpend" label="Total Spend" />
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Last Contact</th>
               <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800">Status</th>
-              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+              <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-40">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -494,14 +642,21 @@ const DisplayClientTable = ({
                 {DETAILED_DISPLAY_FIELDS.map(field => (
                   <td key={field.field} className="px-3 py-3">
                     {field.field === 'name' ? (
-                      <span className="font-medium">
-                        {client.name}
-                        {client.hasAccount && (
-                          <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
-                            Account
+                      <div className="flex flex-col">
+                        <span className="font-medium">
+                          {client.name}
+                          {client.hasAccount && (
+                            <span className="ml-2 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                              Account
+                            </span>
+                          )}
+                        </span>
+                        {client.isTemporary && (
+                          <span className="text-xs text-orange-600 font-medium mt-0.5">
+                            Temporary Client
                           </span>
                         )}
-                      </span>
+                      </div>
                     ) : field.field === 'clientType' ? (
                       <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                         client.clientType?.toUpperCase() === "B2B"
@@ -517,6 +672,9 @@ const DisplayClientTable = ({
                 ))}
                 <td className="px-3 py-3">
                   {client.address?.city ? `${client.address.city}, ${client.address.state || ""}` : "-"}
+                </td>
+                <td className="px-3 py-3">
+                  {renderTempClientStatus(client)}
                 </td>
                 <td className="px-3 py-3">
                   {renderLoyaltyStatus(client)}
@@ -551,7 +709,26 @@ const DisplayClientTable = ({
                   </span>
                 </td>
                 <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                  <div className="flex items-center space-x-1">
+                  <div className="flex items-center space-x-1 flex-wrap gap-1">
+                    {/* Temp Client Promotion Button - Priority button */}
+                    {client.isTemporary && (
+                      <button
+                        onClick={() => handlePromoteClick(client)}
+                        className={`p-1.5 rounded transition-colors ${
+                          isExpired(client) 
+                            ? "text-red-600 hover:bg-red-100" 
+                            : isExpiringSoon(client)
+                            ? "text-amber-600 hover:bg-amber-100"
+                            : "text-orange-600 hover:bg-orange-100"
+                        }`}
+                        title="Promote to Permanent Client"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                        </svg>
+                      </button>
+                    )}
+
                     {/* Talk Button */}
                     {onAddDiscussion && (
                       <button
@@ -560,7 +737,7 @@ const DisplayClientTable = ({
                         title="Add Discussion"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
                       </button>
                     )}
@@ -616,14 +793,14 @@ const DisplayClientTable = ({
     );
   };
 
-  // Mobile card view (keeping text labels for better UX on mobile)
+  // Mobile card view with temp client support
   const renderMobileCardView = () => {
     return (
       <div className="space-y-4">
         {filteredClients.map((client) => (
           <div 
             key={client.id} 
-            className="border border-gray-200 shadow-sm overflow-hidden bg-white cursor-pointer"
+            className="border border-gray-200 shadow-sm overflow-hidden bg-white cursor-pointer rounded-lg"
             onClick={() => handleViewClient(client)}
             style={getRowStyle(client)}
           >
@@ -632,17 +809,16 @@ const DisplayClientTable = ({
                 <div>
                   <h3 className="font-medium text-gray-800">{client.name}</h3>
                   <p className="text-sm text-gray-600">{client.clientCode} | {(client.clientType || "Direct").toUpperCase()}</p>
+                  {client.isTemporary && (
+                    <p className="text-xs text-orange-600 font-medium mt-1">
+                      Temporary Client
+                    </p>
+                  )}
                 </div>
                 <div className="text-right">
-                  <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                    client.isActive
-                      ? "bg-green-100 text-green-800" 
-                      : "bg-red-100 text-red-800"
-                  }`}>
-                    {client.isActive ? "Active" : "Inactive"}
-                  </span>
+                  {renderTempClientStatus(client)}
                   {client.hasAccount && (
-                    <span className="ml-1 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
+                    <span className="block mt-1 px-1.5 py-0.5 bg-green-100 text-green-800 text-xs rounded-full">
                       Account
                     </span>
                   )}
@@ -729,6 +905,25 @@ const DisplayClientTable = ({
                 </button>
                 
                 <div className="flex space-x-2" onClick={(e) => e.stopPropagation()}>
+                  {/* Temp Client Promotion Button - Mobile */}
+                  {client.isTemporary && (
+                    <button
+                      onClick={() => handlePromoteClick(client)}
+                      className={`px-2 py-1 text-xs rounded transition-colors flex items-center ${
+                        isExpired(client) 
+                          ? "bg-red-100 text-red-800 hover:bg-red-200"
+                          : isExpiringSoon(client)
+                          ? "bg-amber-100 text-amber-800 hover:bg-amber-200"
+                          : "bg-orange-100 text-orange-800 hover:bg-orange-200"
+                      }`}
+                    >
+                      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+                      </svg>
+                      Promote
+                    </button>
+                  )}
+
                   {onAddDiscussion && (
                     <button
                       onClick={() => onAddDiscussion(client)}
@@ -811,7 +1006,7 @@ const DisplayClientTable = ({
                   </button>
                 </div>
                 
-                {isAdmin && (client.clientType === "B2B" || client.clientType === "b2b" || client.clientType?.toUpperCase() === "B2B") && (
+                {isAdmin && !client.isTemporary && (client.clientType === "B2B" || client.clientType === "b2b" || client.clientType?.toUpperCase() === "B2B") && (
                   <div className="mt-3 pt-3 border-t border-gray-200" onClick={(e) => e.stopPropagation()}>
                     <div className="flex justify-center">
                       {client.hasAccount ? (
@@ -873,11 +1068,11 @@ const DisplayClientTable = ({
             placeholder="Search clients..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2"
+            className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm focus:outline-none"
           />
         </div>
         
-        <div className="flex items-center space-x-2 w-full md:w-auto">
+        <div className="flex items-center space-x-2 w-full md:w-auto flex-wrap gap-2">
           <select
             value={filterClientType}
             onChange={(e) => setFilterClientType(e.target.value)}
@@ -896,6 +1091,19 @@ const DisplayClientTable = ({
             <option value="">All Statuses</option>
             <option value="active">Active Clients</option>
             <option value="inactive">Inactive Clients</option>
+          </select>
+
+          {/* NEW: Temp Client Filter */}
+          <select
+            value={filterTempStatus}
+            onChange={(e) => setFilterTempStatus(e.target.value)}
+            className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-red-500 focus:border-red-500"
+          >
+            <option value="">All Client Types</option>
+            <option value="permanent">Permanent Only</option>
+            <option value="temporary">Temporary Only</option>
+            <option value="expiring">Expiring Soon</option>
+            <option value="expired">Expired</option>
           </select>
 
           <div className="flex border border-gray-300 rounded-md overflow-hidden">
@@ -928,11 +1136,6 @@ const DisplayClientTable = ({
           </div>
         </div>
       </div>
-      
-      {/* Client Count */}
-      <div className="px-4 py-2 text-sm text-gray-600">
-        Showing {filteredClients.length} of {clients.length} clients
-      </div>
 
       {/* Table Content */}
       {filteredClients.length > 0 ? (
@@ -950,7 +1153,7 @@ const DisplayClientTable = ({
           <svg className="w-12 h-12 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path>
           </svg>
-          {searchTerm || filterClientType || filterActiveStatus ? (
+          {searchTerm || filterClientType || filterActiveStatus || filterTempStatus ? (
             <>
               <p className="text-lg font-medium">No clients match your search</p>
               <p className="mt-1">Try using different filters or clear your search</p>
@@ -959,8 +1162,9 @@ const DisplayClientTable = ({
                   setSearchTerm('');
                   setFilterClientType('');
                   setFilterActiveStatus('');
+                  setFilterTempStatus('');
                 }}
-                className="mt-4 px-4 py-2 text-sm bg-cyan-500 text-white rounded-md hover:bg-cyan-600"
+                className="mt-4 px-4 py-2 text-sm bg-cyan-600 text-white rounded-md hover:bg-cyan-600"
               >
                 Clear All Filters
               </button>
@@ -992,6 +1196,15 @@ const DisplayClientTable = ({
             onAddDiscussion(selectedClient);
           } : undefined}
           isAdmin={isAdmin}
+        />
+      )}
+
+      {/* Temp Client Promotion Modal */}
+      {promotingClient && (
+        <TempClientPromotionModal
+          client={promotingClient}
+          onClose={() => setPromotingClient(null)}
+          onSubmit={handlePromotionSubmit}
         />
       )}
     </div>

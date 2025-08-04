@@ -57,14 +57,37 @@ const ClientManagement = () => {
     itemName: ""
   });
 
-  // Client statistics
+  // Client statistics - Updated to include temp client stats
   const [clientStats, setClientStats] = useState({
     totalClients: 0,
     activeClients: 0,
     b2bClients: 0,
     directClients: 0,
-    totalDiscussions: 0
+    totalDiscussions: 0,
+    tempClients: 0,
+    expiringSoon: 0,
+    expired: 0
   });
+
+  // Helper function to check if temp client is expiring soon
+  const isExpiringSoon = (client) => {
+    if (!client.isTemporary || !client.expiryDate) return false;
+    
+    const expiryDate = client.expiryDate.toDate ? client.expiryDate.toDate() : new Date(client.expiryDate);
+    const today = new Date();
+    const diffTime = expiryDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7; // Expiring within 7 days
+  };
+
+  // Helper function to check if temp client is expired
+  const isExpired = (client) => {
+    if (!client.isTemporary || !client.expiryDate) return false;
+    
+    const expiryDate = client.expiryDate.toDate ? client.expiryDate.toDate() : new Date(client.expiryDate);
+    const today = new Date();
+    return today > expiryDate;
+  };
 
   // Get default form data structure based on CLIENT_FIELDS
   const getDefaultClientData = () => {
@@ -102,6 +125,7 @@ const ClientManagement = () => {
     
     // Add other required properties
     clientData.isActive = true;
+    clientData.isTemporary = false; // Default to permanent
     
     // Add discussion fields
     clientData.lastDiscussionDate = null;
@@ -125,7 +149,10 @@ const ClientManagement = () => {
           // Ensure clientType exists for all clients and is uppercase for consistency
           clientType: (data.clientType || "DIRECT").toUpperCase(),
           // Ensure isActive exists for all clients
-          isActive: data.isActive !== undefined ? data.isActive : true
+          isActive: data.isActive !== undefined ? data.isActive : true,
+          // Ensure temp client fields exist
+          isTemporary: data.isTemporary || false,
+          expiryDate: data.expiryDate || null
         };
         
         return clientData;
@@ -133,13 +160,17 @@ const ClientManagement = () => {
       
       setClients(clientsData);
       
-      // Calculate client statistics including discussions
+      // Calculate client statistics including temp client info
+      const tempClients = clientsData.filter(client => client.isTemporary);
       const stats = {
         totalClients: clientsData.length,
         activeClients: clientsData.filter(client => client.isActive).length,
         b2bClients: clientsData.filter(client => client.clientType === "B2B").length,
         directClients: clientsData.filter(client => client.clientType === "DIRECT").length,
-        totalDiscussions: clientsData.reduce((sum, client) => sum + (client.totalDiscussions || 0), 0)
+        totalDiscussions: clientsData.reduce((sum, client) => sum + (client.totalDiscussions || 0), 0),
+        tempClients: tempClients.length,
+        expiringSoon: tempClients.filter(client => isExpiringSoon(client)).length,
+        expired: tempClients.filter(client => isExpired(client)).length
       };
       setClientStats(stats);
       
@@ -152,6 +183,27 @@ const ClientManagement = () => {
   const handleAddClick = () => {
     setSelectedClient(null); // Ensure we're not in edit mode
     setIsFormModalOpen(true);
+  };
+
+  // NEW: Handle temp client promotion
+  const handlePromoteTempClient = async (clientId, success) => {
+    if (success) {
+      setNotification({
+        isOpen: true,
+        message: "Client promoted to permanent successfully!",
+        title: "Success",
+        status: "success"
+      });
+      
+      // The onSnapshot listener will automatically update the client list
+    } else {
+      setNotification({
+        isOpen: true,
+        message: "Failed to promote client to permanent",
+        title: "Error",
+        status: "error"
+      });
+    }
   };
 
   // Handle adding a discussion to a client
@@ -340,14 +392,18 @@ const ClientManagement = () => {
         recentOrders: [],
         createdAt: new Date(),
         updatedAt: new Date(),
-        hasAccount: false, // Flag for B2B client login account
-        userId: null, // Reference to Firebase Auth user ID if B2B client
-        temporaryPassword: null, // To store the temporary password
-        passwordCreatedAt: null, // When the password was created
+        hasAccount: false,
+        userId: null,
+        temporaryPassword: null,
+        passwordCreatedAt: null,
         // Initialize discussion fields
         lastDiscussionDate: null,
         lastDiscussionSummary: null,
-        totalDiscussions: 0
+        totalDiscussions: 0,
+        // Initialize temp client fields
+        isTemporary: normalizedData.isTemporary || false,
+        expiryDate: normalizedData.expiryDate || null,
+        sourceLeadId: normalizedData.sourceLeadId || null
       });
       
       setNotification({
@@ -653,12 +709,12 @@ const ClientManagement = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
         <p className="text-gray-600 mt-1">
-          Add, edit, and manage your clients and their communications
+          Add, edit, and manage your clients and their communications. Promote temporary clients to permanent.
         </p>
       </div>
 
-      {/* Client Statistics */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 mb-6">
+      {/* Client Statistics - Updated with temp client stats */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-4 mb-6">
         <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
           <h2 className="text-sm font-medium text-gray-500 mb-2">Total Clients</h2>
           <p className="text-2xl font-bold text-gray-800">{clientStats.totalClients}</p>
@@ -683,11 +739,30 @@ const ClientManagement = () => {
           </p>
         </div>
         
-        <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
-          <h2 className="text-sm font-medium text-gray-500 mb-2">Inactive Clients</h2>
-          <p className="text-2xl font-bold text-gray-400">{clientStats.totalClients - clientStats.activeClients}</p>
+        {/* NEW: Temp Clients Stat */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-orange-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Temp Clients</h2>
+          <p className="text-2xl font-bold text-orange-600">{clientStats.tempClients}</p>
           <p className="text-xs text-gray-500 mt-1">
-            {((clientStats.totalClients - clientStats.activeClients) / clientStats.totalClients * 100 || 0).toFixed(1)}% of total clients
+            {((clientStats.tempClients / clientStats.totalClients) * 100 || 0).toFixed(1)}% of total clients
+          </p>
+        </div>
+        
+        {/* NEW: Expiring Soon Stat */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-amber-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Expiring Soon</h2>
+          <p className="text-2xl font-bold text-amber-600">{clientStats.expiringSoon}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            within 7 days
+          </p>
+        </div>
+        
+        {/* NEW: Expired Stat */}
+        <div className="bg-white p-4 rounded-lg shadow-sm border border-red-200">
+          <h2 className="text-sm font-medium text-gray-500 mb-2">Expired</h2>
+          <p className="text-2xl font-bold text-red-600">{clientStats.expired}</p>
+          <p className="text-xs text-gray-500 mt-1">
+            temp clients
           </p>
         </div>
         
@@ -722,7 +797,7 @@ const ClientManagement = () => {
         </button>
       </div>
       
-      {/* Table component */}
+      {/* Table component - Updated with temp client support */}
       <div className="bg-white overflow-hidden" id="clients-table">
         {isLoading ? (
           <div className="p-8 flex justify-center">
@@ -740,6 +815,7 @@ const ClientManagement = () => {
             onActivateClient={handleActivateClient}
             onToggleStatus={toggleClientStatus}
             onAddDiscussion={handleAddDiscussion}
+            onPromoteTempClient={handlePromoteTempClient}
             isAdmin={isAdmin}
           />
         )}
@@ -780,7 +856,7 @@ const ClientManagement = () => {
         />
       )}
 
-      {/* B2B Client Credentials Manager Modal - UPDATED: No password required */}
+      {/* B2B Client Credentials Manager Modal */}
       {selectedClientForAuth && (
         <B2BCredentialsManager
           client={selectedClientForAuth}

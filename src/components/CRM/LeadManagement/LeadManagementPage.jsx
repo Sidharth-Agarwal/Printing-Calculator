@@ -17,11 +17,11 @@ import {
   createDiscussion 
 } from "../../../services";
 import { useAuth } from "../../Login/AuthContext";
-import DBExportImport from "../../Shared/DBExportImport"; // Import the enhanced component
-import { db } from "../../../firebaseConfig"; // Import db for DBExportImport
+import DBExportImport from "../../Shared/DBExportImport";
+import { db } from "../../../firebaseConfig";
 
 /**
- * Main page component for lead management (lead pool) - Updated for 4-column Kanban with Import/Export
+ * Main page component for lead management (lead pool) - Updated with temp client support
  */
 const LeadManagementPage = () => {
   const { currentUser, userRole } = useAuth();
@@ -110,6 +110,26 @@ const LeadManagementPage = () => {
     
     // Show a subtle notification for inline updates
     showNotification("Lead updated successfully", "success");
+  };
+
+  // NEW: Handle temp client creation
+  const handleMakeTempClient = async (leadId, success, newTempClient = null) => {
+    if (success) {
+      showNotification(`Temporary client "${newTempClient?.name}" created successfully`);
+      
+      // Refresh lead if viewing
+      if (viewingLead && viewingLead.id === leadId) {
+        const updatedLead = await getLeadById(leadId);
+        setViewingLead(updatedLead);
+      }
+      
+      // Refresh leads list
+      if (refreshLeads) {
+        refreshLeads();
+      }
+    } else {
+      showNotification("Failed to create temporary client", "error");
+    }
   };
   
   // Handle viewing a lead
@@ -297,7 +317,7 @@ const LeadManagementPage = () => {
     );
   }
   
-  // Calculate lead statistics - Updated for 4-column Kanban structure
+  // Calculate lead statistics - Updated to include temp client info
   const displayedLeads = showMovedToClients ? leads : leads.filter(lead => !isLeadAddedToClients(lead));
   
   // Group leads by Kanban status for statistics
@@ -308,11 +328,12 @@ const LeadManagementPage = () => {
     lost: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "lost").length
   };
   
-  // Additional detailed stats for intermediate statuses
+  // Additional detailed stats for intermediate statuses and temp clients
   const detailedStats = {
     total: displayedLeads.length,
     contacted: displayedLeads.filter(lead => lead.status === "contacted").length,
-    negotiation: displayedLeads.filter(lead => lead.status === "negotiation").length
+    negotiation: displayedLeads.filter(lead => lead.status === "negotiation").length,
+    tempClients: displayedLeads.filter(lead => lead.tempClientId).length // NEW: Count temp clients
   };
   
   // Calculate conversion rate
@@ -329,7 +350,7 @@ const LeadManagementPage = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Qualified Leads</h1>
         <p className="text-gray-600 mt-1">
-          Manage your leads through the sales pipeline
+          Manage your leads through the sales pipeline and create temporary clients
         </p>
       </div>
       
@@ -344,8 +365,8 @@ const LeadManagementPage = () => {
         </div>
       )}
       
-      {/* Lead Statistics - Updated for 4-column layout */}
-      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4 mb-6">
+      {/* Lead Statistics - Updated for temp clients */}
+      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4 mb-6">
         {/* Total Leads */}
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Total Leads</span>
@@ -382,6 +403,13 @@ const LeadManagementPage = () => {
           <span className="text-2xl font-bold text-red-600 mt-1">{kanbanStats.lost}</span>
         </div>
         
+        {/* NEW: Temp Clients Created */}
+        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
+          <span className="text-xs font-medium text-gray-500">Temp Clients</span>
+          <span className="text-2xl font-bold text-orange-600 mt-1">{detailedStats.tempClients}</span>
+          <span className="text-xs text-gray-400 mt-1">from leads</span>
+        </div>
+        
         {/* Conversion Rate */}
         <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
           <span className="text-xs font-medium text-gray-500">Conversion Rate</span>
@@ -405,7 +433,7 @@ const LeadManagementPage = () => {
         </div>
       </div>
       
-      {/* Action buttons with Export/Import options - UPDATED SECTION */}
+      {/* Action buttons with Export/Import options */}
       <div className="flex flex-col md:flex-row justify-between mb-4">
         <div className="mb-2 md:mb-0">
           {/* Only show import/export to admins */}
@@ -415,8 +443,8 @@ const LeadManagementPage = () => {
               collectionName="leads"
               onSuccess={handleExportImportSuccess}
               onError={handleExportImportError}
-              dateFields={['createdAt', 'updatedAt', 'lastDiscussionDate']}
-              qualificationBadges={qualificationBadges} // Pass badges for processing
+              dateFields={['createdAt', 'updatedAt', 'lastDiscussionDate', 'tempClientCreatedAt']}
+              qualificationBadges={qualificationBadges}
             />
           )}
         </div>
@@ -482,7 +510,7 @@ const LeadManagementPage = () => {
           </div>
           
           <div className="flex items-center space-x-2 w-full md:w-auto">
-            {/* Status Filter - Updated for all statuses */}
+            {/* Status Filter */}
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
@@ -559,14 +587,16 @@ const LeadManagementPage = () => {
         </div>
       </div>
       
-      {/* Lead Count */}
+      {/* Lead Count - Updated with temp client info */}
       <div className="px-4 py-2 text-sm text-gray-600 mb-4 flex justify-between items-center">
         <span>Showing {filteredLeads.length} of {leads.length} leads</span>
-        {showMovedToClients && movedToClientsCount > 0 && (
-          <span className="text-blue-600 font-medium">
-            Including {movedToClientsCount} leads moved to clients
-          </span>
-        )}
+        <div className="flex space-x-4">
+          {showMovedToClients && movedToClientsCount > 0 && (
+            <span className="text-blue-600 font-medium">
+              Including {movedToClientsCount} leads moved to clients
+            </span>
+          )}
+        </div>
       </div>
       
       {/* Main Content - Conditionally render based on viewMode */}
@@ -581,6 +611,7 @@ const LeadManagementPage = () => {
           loading={isLoadingLeads}
           showMovedToClients={showMovedToClients}
           onLeadUpdate={handleLeadUpdate}
+          onMakeTempClient={handleMakeTempClient}
         />
       ) : (
         <DisplayLeadsTable
@@ -594,6 +625,7 @@ const LeadManagementPage = () => {
           fields={LEAD_PIPELINE_FIELDS}
           showMovedToClients={showMovedToClients}
           onLeadUpdate={handleLeadUpdate}
+          onMakeTempClient={handleMakeTempClient}
         />
       )}
       
@@ -606,6 +638,7 @@ const LeadManagementPage = () => {
           onAddDiscussion={handleAddDiscussion}
           onConvert={handleConvert}
           onLeadUpdate={handleLeadUpdate}
+          onMakeTempClient={handleMakeTempClient}
         />
       )}
       
