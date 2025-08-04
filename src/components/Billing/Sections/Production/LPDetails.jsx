@@ -347,7 +347,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
             max="10"
             onChange={handleChange}
             onWheel={(e) => e.target.blur()}
-            className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+            className={`w-full px-3 py-2 border ${errors.noOfColors ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
           />
           {errors.noOfColors && (
             <p className="text-red-500 text-xs mt-1">{errors.noOfColors}</p>
@@ -391,7 +391,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         )}
                         className={`w-full px-2 py-2 border ${
                           errors[`plateSizeType_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } rounded-md focus:outline-none focus:ring-1 text-xs`}
                       >
                         <option value="Auto">Auto</option>
                         <option value="Manual">Manual</option>
@@ -418,7 +418,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           errors[`plateLength_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md ${
                           lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
-                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } focus:outline-none focus:ring-1 text-xs`}
                         readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
                       />
                       {lpDetails.colorDetails[index]?.plateDimensions?.length && (
@@ -448,7 +448,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                           errors[`plateBreadth_${index}`] ? "border-red-500" : "border-gray-300"
                         } rounded-md ${
                           lpDetails.colorDetails[index]?.plateSizeType === "Auto" ? "bg-gray-50" : ""
-                        } focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } focus:outline-none focus:ring-1 text-xs`}
                         readOnly={lpDetails.colorDetails[index]?.plateSizeType === "Auto"}
                       />
                       {lpDetails.colorDetails[index]?.plateDimensions?.breadth && (
@@ -477,7 +477,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         )}
                         className={`w-full px-2 py-2 border ${
                           errors[`pantoneType_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } rounded-md focus:outline-none focus:ring-1 text-xs`}
                         placeholder="Pantone"
                       />
                       {errors[`pantoneType_${index}`] && (
@@ -496,7 +496,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         onChange={(e) => handleColorDetailsChange(index, "plateType", e.target.value)}
                         className={`w-full px-2 py-2 border ${
                           errors[`plateType_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } rounded-md focus:outline-none focus:ring-1 text-xs`}
                       >
                         {plateTypes.map((plateType, idx) => (
                           <option key={idx} value={plateType.materialName}>
@@ -520,7 +520,7 @@ const LPDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = false
                         onChange={(e) => handleColorDetailsChange(index, "mrType", e.target.value)}
                         className={`w-full px-2 py-2 border ${
                           errors[`mrType_${index}`] ? "border-red-500" : "border-gray-300"
-                        } rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+                        } rounded-md focus:outline-none focus:ring-1 text-xs`}
                       >
                         {mrTypes.map((typeOption, idx) => (
                           <option key={idx} value={typeOption.type}>

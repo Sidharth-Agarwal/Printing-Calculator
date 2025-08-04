@@ -766,7 +766,7 @@ const EscrowDashboard = () => {
               placeholder="Search escrow items..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
             />
           </div>
           
@@ -774,7 +774,7 @@ const EscrowDashboard = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
             >
               <option value="">All Status</option>
               <option value="Pending">Pending</option>
@@ -817,7 +817,7 @@ const EscrowDashboard = () => {
              </div>
              <button
                onClick={handleDismissLoyaltyNotification}
-               className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+               className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
              >
                Dismiss
              </button>

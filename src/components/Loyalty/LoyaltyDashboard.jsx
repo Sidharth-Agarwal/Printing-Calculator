@@ -176,8 +176,8 @@ const LoyaltyDashboard = () => {
           <button 
             onClick={handleSyncTiers}
             disabled={syncLoading}
-            className={`px-4 py-2 rounded-md shadow hover:bg-red-700 transition-colors flex items-center ${
-              syncLoading ? "bg-gray-400 cursor-not-allowed" : "bg-red-600 text-white"
+            className={`px-4 py-2 rounded-md shadow hover:bg-cyan-600 transition-colors flex items-center ${
+              syncLoading ? "bg-gray-400 cursor-not-allowed" : "bg-cyan-500 text-white"
             }`}
           >
             {syncLoading ? (
@@ -306,14 +306,14 @@ const LoyaltyDashboard = () => {
                   placeholder="Search clients..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                  className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
                 />
               </div>
               
               <select
                 value={viewType}
                 onChange={(e) => setViewType(e.target.value)}
-                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+                className="px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
               >
                 <option value="all">All Clients</option>
                 <option value="withTier">With Tier</option>

@@ -139,7 +139,7 @@ const BadgeForm = ({
             name="name"
             value={formData.name}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+            className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
               errors.name ? "border-red-500" : "border-gray-300"
             }`}
             placeholder="e.g., Hot Lead, VIP Client, High Value"
@@ -167,7 +167,7 @@ const BadgeForm = ({
               value={formData.color}
               onChange={handleChange}
               placeholder="#RRGGBB"
-              className={`ml-2 flex-1 px-3 py-2 border rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 ${
+              className={`ml-2 flex-1 px-3 py-2 border rounded-md focus:outline-none ${
                 errors.color ? "border-red-500" : "border-gray-300"
               }`}
             />
@@ -200,7 +200,7 @@ const BadgeForm = ({
             value={formData.description}
             onChange={handleChange}
             rows="3"
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
             placeholder="Describe when this badge should be used"
           ></textarea>
         </div>
@@ -216,7 +216,7 @@ const BadgeForm = ({
             value={formData.priority}
             onChange={handleChange}
             min="1"
-            className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500"
+            className="w-24 px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
           />
           <p className="mt-1 text-xs text-gray-500">
             Lower numbers appear first in lists

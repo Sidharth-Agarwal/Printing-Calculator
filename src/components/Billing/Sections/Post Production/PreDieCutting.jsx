@@ -107,7 +107,7 @@ const PreDieCutting = ({ state, dispatch, onNext, onPrevious, singlePageMode = f
             name="predcMR"
             value={preDieCutting.predcMR}
             onChange={handleChange}
-            className={`w-full px-3 py-2 border ${errors.predcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+            className={`w-full px-3 py-2 border ${errors.predcMR ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
           >
             {mrTypesLoading ? (
               <option value="" disabled>Loading MR Types...</option>

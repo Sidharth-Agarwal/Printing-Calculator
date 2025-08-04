@@ -98,7 +98,7 @@ const DigiDetails = ({ state, dispatch, onNext, onPrevious, singlePageMode = fal
               name="digiDie"
               value={digiDie}
               onChange={handleChange}
-              className={`w-full px-3 py-2 border ${errors.digiDie ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-3 py-2 border ${errors.digiDie ? "border-red-500" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
             >
               {Object.keys(DIGI_DIE_OPTIONS).map((option) => (
                 <option key={option} value={option}>

@@ -469,7 +469,7 @@ const AddDieForm = ({ onAddDie, onUpdateDie, editingDie, setEditingDie, storage,
         </button>
         <button
           type="submit"
-          className="px-3 py-1.5 bg-red-600 text-white rounded-md text-xs hover:bg-red-700"
+          className="px-3 py-1.5 bg-cyan-500 text-white rounded-md text-xs hover:bg-cyan-600"
           disabled={isSubmitting}
         >
           {isSubmitting ? (

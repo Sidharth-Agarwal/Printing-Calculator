@@ -100,7 +100,7 @@ const Misc = ({ state, dispatch, onNext, onPrevious, singlePageMode = false }) =
               disabled={loading}
               value={misc.miscCharge}
               onChange={handleMiscChargeChange}
-              className={`w-full px-3 py-2 pl-7 pr-12 border ${loading ? "bg-gray-50" : ""} ${isCustomValue() ? "border-blue-300 bg-blue-50" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs`}
+              className={`w-full px-3 py-2 pl-7 pr-12 border ${loading ? "bg-gray-50" : ""} ${isCustomValue() ? "border-blue-300 bg-blue-50" : "border-gray-300"} rounded-md focus:outline-none focus:ring-1 text-xs`}
               placeholder={loading ? "Loading..." : "0.00"}
             />
             <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">

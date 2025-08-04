@@ -144,7 +144,7 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
             <select
               value={selectedVersion || ""}
               onChange={handleVersionChange}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500 text-xs appearance-none"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 text-xs appearance-none"
               disabled={!clientId}
             >
               <option value="">Select a Version</option>
@@ -161,7 +161,7 @@ const VersionSelection = ({ clientId, selectedVersion, onVersionSelect, compact 
             type="button"
             onClick={addNewVersion}
             disabled={!clientId}
-            className="px-3 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-xs"
+            className="px-3 py-2 bg-cyan-500 text-white rounded-md hover:bg-cyan-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed text-xs"
             title={clientId ? "Add a new version" : "Select a client first"}
           >
             + New

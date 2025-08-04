@@ -7,6 +7,7 @@ import { updateLeadStatus, updateLead } from "../../../services";
 import { useCRM } from "../../../context/CRMContext";
 import { doc, updateDoc, serverTimestamp, writeBatch } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
+import TempClientModal from "./TempClientModal";
 
 /**
  * Inline badge editor for Kanban cards
@@ -93,6 +94,7 @@ const InlineKanbanBadgeEditor = ({ leadId, currentBadgeId, onUpdate, disabled = 
  * @param {function} props.onDelete - Delete handler
  * @param {boolean} props.loading - Loading state
  * @param {function} props.onLeadUpdate - Lead update callback for inline editing
+ * @param {function} props.onMakeTempClient - Make temp client handler
  */
 const LeadPool = ({ 
   leads = [], 
@@ -102,13 +104,15 @@ const LeadPool = ({
   onConvert,
   onDelete,
   loading = false,
-  onLeadUpdate
+  onLeadUpdate,
+  onMakeTempClient
 }) => {
   const [draggedLead, setDraggedLead] = useState(null);
   const [updatingLeadId, setUpdatingLeadId] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState(null);
   const [dragOverIndex, setDragOverIndex] = useState(null);
   const [isDragging, setIsDragging] = useState(false);
+  const [tempClientLead, setTempClientLead] = useState(null);
   
   const dragNode = useRef(null);
   const ghostRef = useRef(null);
@@ -156,6 +160,39 @@ const LeadPool = ({
       onLeadUpdate();
     }
   }, [onLeadUpdate]);
+
+  // Handle temp client creation
+  const handleMakeTempClient = useCallback((lead) => {
+    setTempClientLead(lead);
+  }, []);
+
+  // Handle temp client submission
+  const handleTempClientSubmit = useCallback(async (leadId, success, newTempClient = null) => {
+    if (success) {
+      // Update lead to reference temp client
+      try {
+        const leadRef = doc(db, "leads", leadId);
+        await updateDoc(leadRef, {
+          tempClientId: newTempClient.id,
+          tempClientCreatedAt: new Date(),
+          updatedAt: serverTimestamp()
+        });
+        
+        handleLeadUpdate();
+        console.log("Lead updated with temp client reference");
+      } catch (error) {
+        console.error("Error updating lead with temp client reference:", error);
+      }
+    }
+    
+    // Close temp client modal
+    setTempClientLead(null);
+    
+    // Call parent handler if provided
+    if (onMakeTempClient) {
+      onMakeTempClient(leadId, success, newTempClient);
+    }
+  }, [handleLeadUpdate, onMakeTempClient]);
   
   // Optimized mouse move handler with requestAnimationFrame
   const handleMouseMove = useCallback((e) => {
@@ -267,8 +304,8 @@ const LeadPool = ({
   
   // Optimized drag start
   const handleDragStart = useCallback((e, lead, kanbanStatus, index) => {
-    // Don't allow dragging if lead is moved to clients
-    if (isLeadAddedToClients(lead)) {
+    // Don't allow dragging if lead is moved to clients or has temp client
+    if (isLeadAddedToClients(lead) || lead.tempClientId) {
       e.preventDefault();
       return;
     }
@@ -582,10 +619,10 @@ const LeadPool = ({
                         } ${
                           updatingLeadId === lead.id ? "animate-pulse" : ""
                         } ${
-                          isLeadAddedToClients(lead) ? "cursor-default opacity-75" : ""
+                          isLeadAddedToClients(lead) || lead.tempClientId ? "cursor-default opacity-75" : ""
                         }`}
                         onClick={() => onView(lead)}
-                        draggable={!isLeadAddedToClients(lead)}
+                        draggable={!isLeadAddedToClients(lead) && !lead.tempClientId}
                         onDragStart={(e) => handleDragStart(e, lead, status.id, index)}
                         onDragEnd={handleDragEnd}
                         onDragOver={(e) => handleDragOverCard(e, status.id, index, lead.id)}
@@ -611,7 +648,7 @@ const LeadPool = ({
                                 leadId={lead.id}
                                 currentBadgeId={lead.badgeId}
                                 onUpdate={handleLeadUpdate}
-                                disabled={isLeadAddedToClients(lead)}
+                                disabled={isLeadAddedToClients(lead) || lead.tempClientId}
                               />
                             </div>
                           </div>
@@ -633,8 +670,8 @@ const LeadPool = ({
                             </div>
                           )}
                           
-                          {/* Action buttons - Updated logic */}
-                          <div className="mt-2 flex justify-center gap-2" onClick={(e) => e.stopPropagation()}>
+                          {/* Action buttons - Updated logic with temp client support */}
+                          <div className="mt-2 flex justify-center gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
                             {isLeadAddedToClients(lead) ? (
                               // Only show "Added to Clients" status for leads that have been moved
                               <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
@@ -643,114 +680,151 @@ const LeadPool = ({
                                 </svg>
                                 Added to Clients
                               </div>
+                            ) : lead.tempClientId ? (
+                              // Show temp client status if lead has been converted to temp client
+                              <div className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-md font-medium flex items-center">
+                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Temporary Client
+                              </div>
+                            ) : lead.status === "converted" ? (
+                              // For converted leads that haven't been moved to clients yet
+                              <CRMActionButton
+                                type="primary"
+                                size="xs"
+                                onClick={() => onConvert(lead)}
+                                aria-label="Move to Clients"
+                                icon={
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                                  </svg>
+                                }
+                              >
+                                Move to Clients
+                              </CRMActionButton>
                             ) : (
-                              // Show action buttons for all other leads
+                              // For all non-converted leads
                               <>
-                                {lead.status === "converted" ? (
-                                  // For converted leads that haven't been moved to clients yet
-                                  <CRMActionButton
-                                    type="primary"
-                                    size="xs"
-                                    onClick={() => onConvert(lead)}
-                                    aria-label="Move to Clients"
-                                    icon={
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                      </svg>
-                                    }
-                                  >
-                                    Move to Clients
-                                  </CRMActionButton>
-                                ) : (
-                                  // For all non-converted leads
+                                <CRMActionButton
+                                  type="info"
+                                  size="xs"
+                                  onClick={() => onAddDiscussion(lead)}
+                                  aria-label="Add discussion"
+                                  icon={
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                    </svg>
+                                  }
+                                >
+                                  Talk
+                                </CRMActionButton>
+                                
+                                {/* Quick action buttons based on current status */}
+                                {status.id === "newLead" && (
                                   <>
                                     <CRMActionButton
-                                      type="info"
+                                      type="success"
                                       size="xs"
-                                      onClick={() => onAddDiscussion(lead)}
-                                      aria-label="Add discussion"
+                                      onClick={async () => {
+                                        try {
+                                          await updateLeadStatus(lead.id, "qualified");
+                                          handleLeadUpdate();
+                                        } catch (error) {
+                                          console.error("Error qualifying lead:", error);
+                                        }
+                                      }}
+                                      aria-label="Qualify lead"
                                       icon={
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
                                         </svg>
                                       }
                                     >
-                                      Talk
+                                      Qualify
                                     </CRMActionButton>
                                     
-                                    {/* Quick action buttons based on current status */}
-                                    {status.id === "newLead" && (
-                                      <CRMActionButton
-                                        type="success"
-                                        size="xs"
-                                        onClick={async () => {
-                                          try {
-                                            await updateLeadStatus(lead.id, "qualified");
-                                            handleLeadUpdate();
-                                          } catch (error) {
-                                            console.error("Error qualifying lead:", error);
-                                          }
-                                        }}
-                                        aria-label="Qualify lead"
-                                        icon={
-                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                          </svg>
-                                        }
-                                      >
-                                        Qualify
-                                      </CRMActionButton>
-                                    )}
-                                    
-                                    {status.id === "qualified" && (
-                                      <CRMActionButton
-                                        type="success"
-                                        size="xs"
-                                        onClick={async () => {
-                                          try {
-                                            await updateLeadStatus(lead.id, "converted");
-                                            handleLeadUpdate();
-                                          } catch (error) {
-                                            console.error("Error converting lead:", error);
-                                          }
-                                        }}
-                                        aria-label="Convert lead"
-                                        icon={
-                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                          </svg>
-                                        }
-                                      >
-                                        Convert
-                                      </CRMActionButton>
-                                    )}
-                                    
-                                    {/* Mark as Lost button (available for non-lost leads) */}
-                                    {status.id !== "lost" && (
-                                      <CRMActionButton
-                                        type="danger"
-                                        size="xs"
-                                        onClick={async () => {
-                                          if (window.confirm(`Mark "${lead.name}" as lost?`)) {
-                                            try {
-                                              await updateLeadStatus(lead.id, "lost");
-                                              handleLeadUpdate();
-                                            } catch (error) {
-                                              console.error("Error marking lead as lost:", error);
-                                            }
-                                          }
-                                        }}
-                                        aria-label="Mark as lost"
-                                        icon={
-                                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                          </svg>
-                                        }
-                                      >
-                                        Lost
-                                      </CRMActionButton>
-                                    )}
+                                    {/* NEW: Make Temp Client button for new leads */}
+                                    <CRMActionButton
+                                      type="warning"
+                                      size="xs"
+                                      onClick={() => handleMakeTempClient(lead)}
+                                      aria-label="Make temporary client"
+                                      icon={
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                      }
+                                    >
+                                      Temp Client
+                                    </CRMActionButton>
                                   </>
+                                )}
+                                
+                                {status.id === "qualified" && (
+                                  <>
+                                    <CRMActionButton
+                                      type="success"
+                                      size="xs"
+                                      onClick={async () => {
+                                        try {
+                                          await updateLeadStatus(lead.id, "converted");
+                                          handleLeadUpdate();
+                                        } catch (error) {
+                                          console.error("Error converting lead:", error);
+                                        }
+                                      }}
+                                      aria-label="Convert lead"
+                                      icon={
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                      }
+                                    >
+                                      Convert
+                                    </CRMActionButton>
+                                    
+                                    {/* NEW: Make Temp Client button for qualified leads */}
+                                    <CRMActionButton
+                                      type="warning"
+                                      size="xs"
+                                      onClick={() => handleMakeTempClient(lead)}
+                                      aria-label="Make temporary client"
+                                      icon={
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                      }
+                                    >
+                                      Temp Client
+                                    </CRMActionButton>
+                                  </>
+                                )}
+                                
+                                {/* Mark as Lost button (available for non-lost leads) */}
+                                {status.id !== "lost" && (
+                                  <CRMActionButton
+                                    type="danger"
+                                    size="xs"
+                                    onClick={async () => {
+                                      if (window.confirm(`Mark "${lead.name}" as lost?`)) {
+                                        try {
+                                          await updateLeadStatus(lead.id, "lost");
+                                          handleLeadUpdate();
+                                        } catch (error) {
+                                          console.error("Error marking lead as lost:", error);
+                                        }
+                                      }
+                                    }}
+                                    aria-label="Mark as lost"
+                                    icon={
+                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                      </svg>
+                                    }
+                                  >
+                                    Lost
+                                  </CRMActionButton>
                                 )}
                               </>
                             )}
@@ -777,6 +851,15 @@ const LeadPool = ({
           </div>
         ))}
       </div>
+      
+      {/* Temp Client Modal */}
+      {tempClientLead && (
+        <TempClientModal
+          lead={tempClientLead}
+          onClose={() => setTempClientLead(null)}
+          onSubmit={handleTempClientSubmit}
+        />
+      )}
     </div>
   );
 };

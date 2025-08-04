@@ -141,7 +141,7 @@ const EscrowApprovalModal = ({ estimate, isOpen, onClose, onApprove, onReject, i
               className={`px-4 py-2 text-sm text-white rounded-md focus:outline-none focus:ring-2 focus:ring-offset-2 ${
                 approvalType === 'approve'
                   ? 'bg-green-600 hover:bg-green-700 focus:ring-green-500'
-                  : 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+                  : 'bg-red-500 hover:bg-red-700 focus:ring-red-500'
               } ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
             >
               {isProcessing ? (

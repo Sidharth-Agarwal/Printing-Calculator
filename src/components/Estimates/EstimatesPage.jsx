@@ -1090,7 +1090,7 @@ const EstimatesPage = () => {
               placeholder="Search estimates..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
             />
           </div>
           
@@ -1098,7 +1098,7 @@ const EstimatesPage = () => {
             <select
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
-              className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
             >
               <option value="">All Status</option>
               <option value="Pending">Pending</option>
@@ -1110,7 +1110,7 @@ const EstimatesPage = () => {
             <select
               value={clientTypeFilter}
               onChange={(e) => setClientTypeFilter(e.target.value)}
-              className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-red-500"
+              className="min-w-[140px] px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none"
             >
               <option value="">All Client Types</option>
               <option value="B2B">B2B Clients</option>
@@ -1396,7 +1396,7 @@ const EstimatesPage = () => {
                                     <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
                                     <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
                                   </svg>
-                                  Process {versionHelpers.getSelectedEstimatesCount()}
+                                  Convert {versionHelpers.getSelectedEstimatesCount()}
                                 </>
                               )}
                             </button>
@@ -1518,7 +1518,7 @@ const EstimatesPage = () => {
                                     <path d="M8 5a1 1 0 100 2h5.586l-1.293 1.293a1 1 0 001.414 1.414l3-3a1 1 0 000-1.414l-3-3a1 1 0 10-1.414 1.414L13.586 5H8z" />
                                     <path d="M12 15a1 1 0 100-2H6.414l1.293-1.293a1 1 0 10-1.414-1.414l-3 3a1 1 0 000 1.414l3 3a1 1 0 001.414-1.414L6.414 15H12z" />
                                   </svg>
-                                  Process {versionHelpers.getSelectedEstimatesCount()}
+                                  Convert {versionHelpers.getSelectedEstimatesCount()}
                                 </>
                               )}
                             </button>

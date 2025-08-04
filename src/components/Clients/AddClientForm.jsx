@@ -483,7 +483,7 @@ const AddClientForm = ({ onSubmit, selectedClient, onUpdate, setSelectedClient, 
         
         <button 
           type="submit" 
-          className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-md text-sm disabled:bg-red-300"
+          className="px-4 py-2 bg-cyan-500 hover:bg-cyan-600 text-white rounded-md text-sm disabled:bg-red-300"
           disabled={submitLoading || validationLoading.email || validationLoading.phone}
         >
           {submitLoading ? (
