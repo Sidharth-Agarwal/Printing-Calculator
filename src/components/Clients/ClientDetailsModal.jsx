@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, query, where, orderBy, onSnapshot, getDocs } from "firebase/firestore";
+import { collection, query, where, orderBy, onSnapshot, getDocs, doc, getDoc } from "firebase/firestore";
 import { db } from "../../firebaseConfig";
 import { CLIENT_FIELDS } from "../../constants/entityFields";
 import DiscussionHistory from "../Shared/DiscussionHistory";
@@ -29,11 +29,74 @@ const ClientDetailsModal = ({
   });
   const [datesLoading, setDatesLoading] = useState(false);
   const [importantDatesKey, setImportantDatesKey] = useState(0);
+  const [leadInfo, setLeadInfo] = useState(null); // NEW: Store lead information
+  const [isLoadingLeadInfo, setIsLoadingLeadInfo] = useState(false);
   const [notification, setNotification] = useState({
     show: false,
     message: "",
     type: "success"
   });
+
+  // Helper function to check if temp client is expiring soon
+  const isExpiringSoon = (client) => {
+    if (!client.isTemporary || !client.expiryDate) return false;
+    
+    const expiryDate = client.expiryDate.toDate ? client.expiryDate.toDate() : new Date(client.expiryDate);
+    const today = new Date();
+    const diffTime = expiryDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays <= 7; // Expiring within 7 days
+  };
+
+  // Helper function to check if temp client is expired
+  const isExpired = (client) => {
+    if (!client.isTemporary || !client.expiryDate) return false;
+    
+    const expiryDate = client.expiryDate.toDate ? client.expiryDate.toDate() : new Date(client.expiryDate);
+    const today = new Date();
+    return today > expiryDate;
+  };
+
+  // Helper function to get days until expiry
+  const getDaysUntilExpiry = (client) => {
+    if (!client.isTemporary || !client.expiryDate) return null;
+    
+    const expiryDate = client.expiryDate.toDate ? client.expiryDate.toDate() : new Date(client.expiryDate);
+    const today = new Date();
+    const diffTime = expiryDate - today;
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return diffDays;
+  };
+
+  // NEW: Fetch lead information if client was created from a lead
+  useEffect(() => {
+    const fetchLeadInfo = async () => {
+      if (!client?.sourceLeadId) {
+        setLeadInfo(null);
+        return;
+      }
+
+      setIsLoadingLeadInfo(true);
+      try {
+        const leadDoc = await getDoc(doc(db, "leads", client.sourceLeadId));
+        if (leadDoc.exists()) {
+          setLeadInfo({
+            id: leadDoc.id,
+            ...leadDoc.data()
+          });
+        } else {
+          setLeadInfo(null);
+        }
+      } catch (error) {
+        console.error("Error fetching lead info:", error);
+        setLeadInfo(null);
+      } finally {
+        setIsLoadingLeadInfo(false);
+      }
+    };
+
+    fetchLeadInfo();
+  }, [client?.sourceLeadId]);
 
   // Show notification
   const showNotification = (message, type = "success") => {
@@ -193,9 +256,29 @@ const ClientDetailsModal = ({
     return date.toLocaleDateString("en-IN");
   };
 
-  // Get header style based on loyalty tier for B2B clients
+  // Get header style based on client type and temporary status
   const getHeaderStyle = () => {
-    // Check if client is B2B and has loyalty tier
+    // Temporary client styling takes priority
+    if (client.isTemporary) {
+      if (isExpired(client)) {
+        return {
+          backgroundImage: 'linear-gradient(to right, #ef4444, #dc2626)', // red gradient
+          color: 'white'
+        };
+      } else if (isExpiringSoon(client)) {
+        return {
+          backgroundImage: 'linear-gradient(to right, #f59e0b, #d97706)', // amber gradient
+          color: 'white'
+        };
+      } else {
+        return {
+          backgroundImage: 'linear-gradient(to right, #f97316, #ea580c)', // orange gradient
+          color: 'white'
+        };
+      }
+    }
+
+    // B2B loyalty tier styling for permanent clients
     const isB2B = client.clientType?.toUpperCase() === "B2B";
     const hasLoyaltyTier = isB2B && client.loyaltyTierId && client.loyaltyTierColor;
     
@@ -259,13 +342,22 @@ const ClientDetailsModal = ({
   return (
     <div className="fixed inset-0 bg-black bg-opacity-40 backdrop-blur-sm flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl w-full max-w-7xl mx-4 overflow-auto max-h-[90vh]">
-        {/* Header with loyalty tier styling if applicable */}
+        {/* Header with temporary client styling */}
         <div className="p-4 flex justify-between items-center" style={getHeaderStyle()}>
           <h3 className="text-lg font-semibold">
             Client Details
-            {hasLoyaltyTier && (
+            {client.isTemporary ? (
+              <span className="ml-2 px-2 py-0.5 bg-white bg-opacity-20 rounded-full text-xs">
+                {isExpired(client) ? "Expired Temporary" : 
+                 isExpiringSoon(client) ? "Expiring Soon" : "Temporary Client"}
+              </span>
+            ) : hasLoyaltyTier ? (
               <span className="ml-2 px-2 py-0.5 bg-white bg-opacity-20 rounded-full text-xs">
                 {client.loyaltyTierName} Tier
+              </span>
+            ) : (
+              <span className="ml-2 px-2 py-0.5 bg-white bg-opacity-20 rounded-full text-xs">
+                Permanent Client
               </span>
             )}
           </h3>
@@ -344,7 +436,115 @@ const ClientDetailsModal = ({
                 </div>
               </div>
             </div>
-            
+
+            {/* NEW: Temporary Client Information Section */}
+            {client.isTemporary && (
+              <div className="mb-6">
+                <div className={`rounded p-4 border-2 ${
+                  isExpired(client) 
+                    ? "bg-red-50 border-red-200" 
+                    : isExpiringSoon(client) 
+                    ? "bg-amber-50 border-amber-200" 
+                    : "bg-orange-50 border-orange-200"
+                }`}>
+                  <div className="flex items-start justify-between">
+                    <div className="flex-1">
+                      <h4 className={`text-base font-semibold mb-2 ${
+                        isExpired(client) 
+                          ? "text-red-800" 
+                          : isExpiringSoon(client) 
+                          ? "text-amber-800" 
+                          : "text-orange-800"
+                      }`}>
+                        <svg className="w-5 h-5 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        Temporary Client Information
+                      </h4>
+                      
+                      <div className="space-y-2 text-sm">
+                        {/* Expiry Status */}
+                        <div>
+                          <span className="text-gray-600">Status:</span>
+                          <span className={`ml-2 px-2 py-1 rounded-full text-xs font-medium ${
+                            isExpired(client) 
+                              ? "bg-red-100 text-red-800" 
+                              : isExpiringSoon(client) 
+                              ? "bg-amber-100 text-amber-800" 
+                              : "bg-orange-100 text-orange-800"
+                          }`}>
+                            {isExpired(client) 
+                              ? "Expired" 
+                              : isExpiringSoon(client) 
+                              ? `Expires in ${getDaysUntilExpiry(client)} days` 
+                              : `${getDaysUntilExpiry(client)} days remaining`}
+                          </span>
+                        </div>
+
+                        {/* Expiry Date */}
+                        {client.expiryDate && (
+                          <div>
+                            <span className="text-gray-600">Expires On:</span>
+                            <span className="ml-2 font-medium">{formatDate(client.expiryDate)}</span>
+                          </div>
+                        )}
+
+                        {/* Creation Date */}
+                        <div>
+                          <span className="text-gray-600">Created:</span>
+                          <span className="ml-2 font-medium">{formatDate(client.createdAt)}</span>
+                        </div>
+
+                        {/* Source Lead Information */}
+                        {client.sourceLeadId && (
+                          <div className="mt-3 pt-3 border-t border-gray-200">
+                            <span className="text-gray-600 block mb-1">Source Lead:</span>
+                            {isLoadingLeadInfo ? (
+                              <div className="flex items-center text-xs text-gray-500">
+                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-gray-400 mr-2"></div>
+                                Loading lead info...
+                              </div>
+                            ) : leadInfo ? (
+                              <div className="bg-white rounded border p-2">
+                                <div className="text-sm font-medium">{leadInfo.name}</div>
+                                {leadInfo.company && (
+                                  <div className="text-xs text-gray-600">{leadInfo.company}</div>
+                                )}
+                                <div className="text-xs text-gray-500 mt-1">
+                                  Status: {leadInfo.status} | Source: {leadInfo.source}
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-xs text-gray-500 italic">
+                                Lead information not available (may have been deleted)
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Icon */}
+                    <div className="ml-4">
+                      {isExpired(client) ? (
+                        <svg className="w-8 h-8 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      ) : isExpiringSoon(client) ? (
+                        <svg className="w-8 h-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                        </svg>
+                      ) : (
+                        <svg className="w-8 h-8 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {/* Contact Information with Duplicate Indicators */}
             <div className="mb-6">
               <div className="bg-gray-50 rounded p-3">
@@ -429,8 +629,8 @@ const ClientDetailsModal = ({
               </div>
             </div>
             
-            {/* B2B Account & Loyalty Info (if applicable) */}
-            {client.clientType?.toUpperCase() === "B2B" && (
+            {/* B2B Account & Loyalty Info (only for permanent B2B clients) */}
+            {!client.isTemporary && client.clientType?.toUpperCase() === "B2B" && (
               <div className="mb-6">
                 <div className={`rounded p-3 ${hasLoyaltyTier ? 'bg-opacity-10' : 'bg-gray-50'}`} 
                      style={hasLoyaltyTier ? { backgroundColor: `${client.loyaltyTierColor}20` } : {}}>
@@ -504,6 +704,29 @@ const ClientDetailsModal = ({
                     <p className="text-gray-500">Last Updated</p>
                     <p className="font-medium">{formatDate(client.updatedAt)}</p>
                   </div>
+                  {/* Show expiry date for temporary clients */}
+                  {client.isTemporary && client.expiryDate && (
+                    <>
+                      <div>
+                        <p className="text-gray-500">Expires On</p>
+                        <p className={`font-medium ${
+                          isExpired(client) ? "text-red-600" : 
+                          isExpiringSoon(client) ? "text-amber-600" : "text-orange-600"
+                        }`}>
+                          {formatDate(client.expiryDate)}
+                        </p>
+                      </div>
+                      <div>
+                        <p className="text-gray-500">Days Remaining</p>
+                        <p className={`font-medium ${
+                          isExpired(client) ? "text-red-600" : 
+                          isExpiringSoon(client) ? "text-amber-600" : "text-orange-600"
+                        }`}>
+                          {isExpired(client) ? "Expired" : `${getDaysUntilExpiry(client)} days`}
+                        </p>
+                      </div>
+                    </>
+                  )}
                 </div>
               </div>
             </div>

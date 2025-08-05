@@ -1,12 +1,14 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { LEAD_TABLE_FIELDS } from "../../../constants/leadFields";
-import { LEAD_STATUSES } from "../../../constants/leadStatuses"; // Updated import
+import { LEAD_STATUSES } from "../../../constants/leadStatuses";
 import LeadStatusBadge from "../../Shared/LeadStatusBadge";
 import { LeadSourceDisplay } from "../../Shared/LeadSourceSelector";
 import QualificationBadge from "../../Shared/QualificationBadge";
 import CRMActionButton from "../../Shared/CRMActionButton";
 import { useCRM } from "../../../context/CRMContext";
 import { updateLead, updateLeadStatus } from "../../../services";
+import { collection, query, where, getDocs } from "firebase/firestore";
+import { db } from "../../../firebaseConfig";
 
 /**
  * Inline dropdown component for editing qualification badges
@@ -85,7 +87,7 @@ const InlineQualificationDropdown = ({
 };
 
 /**
- * Inline dropdown component for editing lead status - Updated to use LEAD_STATUSES
+ * Inline dropdown component for editing lead status
  */
 const InlineStatusDropdown = ({ 
   leadId, 
@@ -156,6 +158,118 @@ const InlineStatusDropdown = ({
 };
 
 /**
+ * Component to show temp client status for a lead in actions column
+ */
+const TempClientStatusBadge = ({ leadId }) => {
+  const [tempClientInfo, setTempClientInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTempClientInfo = async () => {
+      if (!leadId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Query clients collection for any client with sourceLeadId matching this lead
+        const clientsQuery = query(
+          collection(db, "clients"),
+          where("sourceLeadId", "==", leadId),
+          where("isTemporary", "==", true)
+        );
+
+        const querySnapshot = await getDocs(clientsQuery);
+        
+        if (!querySnapshot.empty) {
+          const tempClient = querySnapshot.docs[0].data();
+          const tempClientId = querySnapshot.docs[0].id;
+          
+          // Check if expired or expiring soon
+          let status = "active";
+          if (tempClient.expiryDate) {
+            const expiryDate = tempClient.expiryDate.toDate ? 
+              tempClient.expiryDate.toDate() : 
+              new Date(tempClient.expiryDate);
+            const today = new Date();
+            const diffTime = expiryDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+              status = "expired";
+            } else if (diffDays <= 7) {
+              status = "expiring";
+            }
+          }
+          
+          setTempClientInfo({
+            id: tempClientId,
+            name: tempClient.name,
+            clientCode: tempClient.clientCode,
+            expiryDate: tempClient.expiryDate,
+            status: status
+          });
+        } else {
+          setTempClientInfo(null);
+        }
+      } catch (error) {
+        console.error("Error fetching temp client info:", error);
+        setTempClientInfo(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTempClientInfo();
+  }, [leadId]);
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center py-1">
+        <div className="animate-spin h-3 w-3 border border-gray-300 border-t-blue-600 rounded-full"></div>
+      </div>
+    );
+  }
+
+  if (!tempClientInfo) {
+    return null;
+  }
+
+  const getStatusStyle = () => {
+    switch (tempClientInfo.status) {
+      case "expired":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "expiring":
+        return "bg-amber-100 text-amber-800 border-amber-200";
+      default:
+        return "bg-orange-100 text-orange-800 border-orange-200";
+    }
+  };
+
+  const getStatusText = () => {
+    switch (tempClientInfo.status) {
+      case "expired":
+        return "Temp Client (Expired)";
+      case "expiring":
+        return "Temp Client (Expiring)";
+      default:
+        return "Temp Client Created";
+    }
+  };
+
+  return (
+    <div className="mb-2">
+      <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center justify-center ${getStatusStyle()}`}>
+        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        {getStatusText()}
+      </div>
+    </div>
+  );
+};
+
+/**
  * Component to display leads in a table with inline editing
  */
 const DisplayLeadsTable = ({ 
@@ -167,7 +281,8 @@ const DisplayLeadsTable = ({
   onConvert,
   loading = false,
   fields = LEAD_TABLE_FIELDS,
-  onLeadUpdate
+  onLeadUpdate,
+  onMakeTempClient
 }) => {
   // State for sorting
   const [sortField, setSortField] = useState("createdAt");
@@ -350,7 +465,7 @@ const DisplayLeadsTable = ({
                 </th>
               )
             ))}
-            <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-32">Actions</th>
+            <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-40">Actions</th>
           </tr>
         </thead>
         <tbody>
@@ -373,64 +488,84 @@ const DisplayLeadsTable = ({
                   {renderCellContent(lead, field)}
                 </td>
               ))}
+              {/* Actions Cell with Temp Client Status */}
               <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                <div className="flex items-center space-x-1">
-                  {isLeadAddedToClients(lead) ? (
-                    <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                      </svg>
-                      Added to Clients
-                    </div>
-                  ) : (
-                    <>
-                      {/* Talk Button */}
-                      <button
-                        onClick={() => onAddDiscussion(lead)}
-                        className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"
-                        title="Add Discussion"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <div className="flex flex-col space-y-2">
+                  {/* Show temp client status first if it exists */}
+                  <TempClientStatusBadge leadId={lead.id} />
+                  
+                  {/* Then show action buttons */}
+                  <div className="flex items-center space-x-1 justify-center">
+                    {isLeadAddedToClients(lead) ? (
+                      <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                         </svg>
-                      </button>
-                      
-                      {/* Edit Button */}
-                      <button
-                        onClick={() => onEdit(lead)}
-                        className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                        title="Edit Lead"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                        </svg>
-                      </button>
-                      
-                      {/* Convert to Client Button */}
-                      {lead.status === "converted" && onConvert && (
+                        Added to Clients
+                      </div>
+                    ) : (
+                      <>
+                        {/* Talk Button */}
                         <button
-                          onClick={() => onConvert(lead)}
-                          className="p-1.5 text-purple-600 hover:bg-purple-100 rounded transition-colors"
-                          title="Move to Clients"
+                          onClick={() => onAddDiscussion(lead)}
+                          className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"
+                          title="Add Discussion"
                         >
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         </button>
-                      )}
-                      
-                      {/* Delete Button */}
-                      <button
-                        onClick={() => confirmDelete(lead)}
-                        className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
-                        title="Delete Lead"
-                      >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                        </svg>
-                      </button>
-                    </>
-                  )}
+                        
+                        {/* Make Temp Client Button - Show for leads that don't have temp client yet */}
+                        {onMakeTempClient && !lead.tempClientId && (lead.status === "newLead" || lead.status === "qualified") && (
+                          <button
+                            onClick={() => onMakeTempClient(lead)}
+                            className="p-1.5 text-orange-600 hover:bg-orange-100 rounded transition-colors"
+                            title="Create Temporary Client"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                          </button>
+                        )}
+                        
+                        {/* Edit Button */}
+                        <button
+                          onClick={() => onEdit(lead)}
+                          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                          title="Edit Lead"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          </svg>
+                        </button>
+                        
+                        {/* Convert to Client Button */}
+                        {lead.status === "converted" && onConvert && (
+                          <button
+                            onClick={() => onConvert(lead)}
+                            className="p-1.5 text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                            title="Move to Clients"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                            </svg>
+                          </button>
+                        )}
+                        
+                        {/* Delete Button */}
+                        <button
+                          onClick={() => confirmDelete(lead)}
+                          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
+                          title="Delete Lead"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                          </svg>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
               </td>
             </tr>
