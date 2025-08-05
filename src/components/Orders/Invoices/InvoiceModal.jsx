@@ -34,12 +34,11 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }));
   };
   
-  // Calculate totals for all orders with GST and loyalty discounts
+  // Calculate totals for all orders with GST and loyalty discounts - FIXED GST CALCULATION
   const calculateTotals = () => {
     let subtotal = 0;
     let loyaltyDiscountTotal = 0;
     let totalQuantity = 0;
-    let totalGstAmount = 0;
     
     orders.forEach(order => {
       // Get cost per card from calculations
@@ -57,21 +56,17 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
       // Apply loyalty discount if available
       const loyaltyDiscountAmount = parseFloat(order.loyaltyInfo?.discountAmount || calculations.loyaltyDiscountAmount || 0);
       loyaltyDiscountTotal += loyaltyDiscountAmount;
-      
-      // Get discounted total
-      const discountedTotal = parseFloat(calculations.discountedTotalCost || (itemTotal - loyaltyDiscountAmount));
-      
-      // Get GST info from calculations
-      const gstRate = calculations.gstRate || 18;
-      const gstAmount = invoiceData.showTax ? parseFloat(calculations.gstAmount || (discountedTotal * gstRate / 100)) : 0;
-      totalGstAmount += gstAmount;
     });
     
     // Calculate discount amount (from invoice discount percentage, not loyalty)
     const invoiceDiscountAmount = (subtotal * (invoiceData.discount / 100)) || 0;
     
-    // Apply discounts to subtotal
+    // Apply discounts to subtotal to get taxable amount
     const taxableAmount = subtotal - loyaltyDiscountTotal - invoiceDiscountAmount;
+    
+    // FIXED: Calculate GST on the final taxable amount (after all discounts)
+    const gstRate = 18; // Standard GST rate
+    const totalGstAmount = invoiceData.showTax ? (taxableAmount * gstRate / 100) : 0;
     
     // Calculate total with GST
     const total = taxableAmount + totalGstAmount;
@@ -282,7 +277,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                 <>
                   <svg className="animate-spin h-4 w-4" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                   Generating...
                 </>
@@ -389,9 +384,14 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                     </div>
                   )}
                   
+                  <div className="flex justify-between border-t border-gray-300 pt-0.5">
+                    <span>Taxable Amount:</span>
+                    <span className="font-mono">{formatCurrency(totals.taxableAmount)}</span>
+                  </div>
+                  
                   {invoiceData.showTax && (
                     <div className="flex justify-between">
-                      <span>GST Amount:</span>
+                      <span>GST Amount (18%):</span>
                       <span className="font-mono">{formatCurrency(totals.tax)}</span>
                     </div>
                   )}

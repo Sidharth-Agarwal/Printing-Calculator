@@ -344,6 +344,48 @@ const InvoicesPage = () => {
     setIsDeliverySlipModalOpen(true);
   };
 
+  // Handle single order invoice generation
+  const handleSingleOrderInvoice = (orders) => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    
+    // Clear any existing selections and select these orders
+    const orderIds = orders.map(order => order.id);
+    setSelectedOrders(orderIds);
+    
+    // Open invoice modal
+    setTimeout(() => {
+      setIsInvoiceModalOpen(true);
+    }, 100);
+  };
+
+  // Handle single order job ticket generation
+  const handleSingleOrderJobTicket = (orders) => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    
+    // Clear any existing selections and select these orders
+    const orderIds = orders.map(order => order.id);
+    setSelectedOrders(orderIds);
+    
+    // Open job ticket modal
+    setTimeout(() => {
+      setIsJobTicketModalOpen(true);
+    }, 100);
+  };
+
+  // Handle single order delivery slip generation
+  const handleSingleOrderDeliverySlip = (orders) => {
+    if (!Array.isArray(orders) || orders.length === 0) return;
+    
+    // Clear any existing selections and select these orders
+    const orderIds = orders.map(order => order.id);
+    setSelectedOrders(orderIds);
+    
+    // Open delivery slip modal
+    setTimeout(() => {
+      setIsDeliverySlipModalOpen(true);
+    }, 100);
+  };
+
   // Handle view order details
   const handleViewOrderDetails = (order) => {
     setSelectedOrder(order);
@@ -576,7 +618,7 @@ const InvoicesPage = () => {
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                  <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5h2.5a1 1 0 00.91-.6l1.59-3.36a1 1 0 00-.91-1.4H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.45A2.5 2.5 0 019 15h7.5a1 1 0 000-2H9c-.412 0-.787.164-1.06.43-.273.266-.44.638-.44 1.06s.167.794.44 1.06c.273.266.648.43 1.06.43h7.5a2.5 2.5 0 010 5h-15a1 1 0 100 2h15a4.5 4.5 0 10-3.07-7.8l.7-1.2H18.5a1 1 0 001-1v-1a1 1 0 00-1-1h-11l.89-1.87.23-.47L11.75 6H18a1 1 0 001-1V4a1 1 0 00-1-1h-5l-1.26-2.5a1 1 0 00-.9-.5H7.81l.35.7L9.5 4H18v1H9.5l-.58 1.16L8.5 7H18v1H8.13l.58-1.15L10.01 5l-.51-1H3.9L3 2.2A1 1 0 102.2 3l6 11.9A2.5 2.5 0 018 15h7.5a1 1 0 100-2H8a1 1 0 100 2h7.5a2.5 2.5 0 010 5h-15a1 1 0 100 2h15a4.5 4.5 0 100-9H9a2.5 2.5 0 00-2.45 2h1.05a1.5 1.5 0 013 0z" />
+                  <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5h2.5a1 1 0 00.91-.6l1.59-3.36a1 1 0 00-.91-1.4H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.45A2.5 2.5 0 009 15h7.5a1 1 0 000-2H9c-.412 0-.787.164-1.06.43-.273.266-.44.638-.44 1.06s.167.794.44 1.06c.273.266.648.43 1.06.43h7.5a2.5 2.5 0 010 5h-15a1 1 0 100 2h15a4.5 4.5 0 10-3.07-7.8l.7-1.2H18.5a1 1 0 001-1v-1a1 1 0 00-1-1h-11l.89-1.87.23-.47L11.75 6H18a1 1 0 001-1V4a1 1 0 00-1-1h-5l-1.26-2.5a1 1 0 00-.9-.5H7.81l.35.7L9.5 4H18v1H9.5l-.58 1.16L8.5 7H18v1H8.13l.58-1.15L10.01 5l-.51-1H3.9L3 2.2A1 1 0 102.2 3l6 11.9A2.5 2.5 0 018 15h7.5a1 1 0 100-2H8a1 1 0 100 2h7.5a2.5 2.5 0 010 5h-15a1 1 0 100 2h15a4.5 4.5 0 100-9H9a2.5 2.5 0 00-2.45 2h1.05a1.5 1.5 0 013 0z" />
                 </svg>
                 Generate Delivery Slip
               </button>
@@ -642,6 +684,9 @@ const InvoicesPage = () => {
               onSelectAllOrders={handleSelectAllClientOrders}
               onOrderClick={handleViewOrderDetails}
               formatDate={formatDate}
+              onGenerateInvoice={handleSingleOrderInvoice}
+              onGenerateJobTicket={handleSingleOrderJobTicket}
+              onGenerateDeliverySlip={handleSingleOrderDeliverySlip}
             />
           ))}
         </div>

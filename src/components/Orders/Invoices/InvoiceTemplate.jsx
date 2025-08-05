@@ -25,16 +25,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
     }).format(amount);
   };
 
-  // Get tax information
-  const getTaxInfo = (order) => {
-    const calculations = order.calculations || {};
-    return {
-      rate: calculations.gstRate || 18,
-      amount: parseFloat(calculations.gstAmount) || 0
-    };
-  };
-
-  // Prepare line items from orders
+  // Prepare line items from orders with FIXED GST calculation
   const prepareLineItems = () => {
     return orders.map(order => {
       // Calculate cost per card from calculations
@@ -67,12 +58,15 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       
       // Original and discounted totals
       const originalTotal = costPerCard * quantity;
-      const discountedTotal = parseFloat(calculations.discountedTotalCost) || (originalTotal - loyaltyDiscountAmount);
+      const afterLoyaltyDiscount = originalTotal - loyaltyDiscountAmount;
       
-      // Tax information (GST)
-      const taxInfo = getTaxInfo(order);
-      const gstAmount = parseFloat(calculations.gstAmount) || 
-                        (taxInfo.rate > 0 ? (discountedTotal * taxInfo.rate / 100) : 0);
+      // Apply additional invoice discount proportionally to this item
+      const itemDiscountAmount = (afterLoyaltyDiscount * (invoiceData.discount / 100)) || 0;
+      const discountedTotal = afterLoyaltyDiscount - itemDiscountAmount;
+      
+      // FIXED: Calculate GST on the final discounted amount (after all discounts)
+      const gstRate = 18; // Standard GST rate
+      const gstAmount = invoiceData.showTax ? (discountedTotal * gstRate / 100) : 0;
       
       const finalTotal = discountedTotal + gstAmount;
       
@@ -88,8 +82,9 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         loyaltyDiscountAmount: loyaltyDiscountAmount,
         loyaltyTierName: loyaltyTierName,
         loyaltyTierColor: loyaltyTierColor,
+        invoiceDiscountAmount: itemDiscountAmount,
         discountedTotal: discountedTotal,
-        gstRate: taxInfo.rate,
+        gstRate: gstRate,
         gstAmount: gstAmount,
         finalTotal: finalTotal,
         hsnCode: hsnCode || 'N/A'
@@ -216,10 +211,13 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
                 <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
                 <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.originalTotal.toFixed(2)}</td>
                 <td className="py-0.5 px-1 border border-gray-300 text-center">
-                  {item.loyaltyDiscount > 0 && <span>{item.loyaltyDiscount}%</span>}
+                  {(item.loyaltyDiscount > 0 || invoiceData.discount > 0) && 
+                    <span>{((item.loyaltyDiscountAmount + item.invoiceDiscountAmount) / item.originalTotal * 100).toFixed(1)}%</span>
+                  }
                 </td>
                 <td className="py-0.5 px-1 border border-gray-300 text-right font-mono text-red-600">
-                  {item.loyaltyDiscountAmount > 0 ? `-${item.loyaltyDiscountAmount.toFixed(2)}` : '-'}
+                  {(item.loyaltyDiscountAmount + item.invoiceDiscountAmount) > 0 ? 
+                    `-${(item.loyaltyDiscountAmount + item.invoiceDiscountAmount).toFixed(2)}` : '-'}
                 </td>
                 <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.discountedTotal.toFixed(2)}</td>
                 <td className="py-0.5 px-1 border border-gray-300 text-center">{item.gstRate}%</td>
@@ -261,8 +259,15 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
             </div>
           )}
           
+          <div className="flex justify-between py-0.5 text-xs border-t border-gray-300">
+            <div className="text-gray-700">Taxable Amount:</div>
+            <div className="text-gray-900 font-mono">
+              {formatCurrency(totals.taxableAmount)}
+            </div>
+          </div>
+          
           <div className="flex justify-between py-0.5 text-xs">
-            <div className="text-gray-700">GST Amount:</div>
+            <div className="text-gray-700">GST Amount (18%):</div>
             <div className="text-gray-900 font-mono">
               {formatCurrency(totals.tax)}
             </div>
