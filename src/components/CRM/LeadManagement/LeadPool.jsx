@@ -126,10 +126,6 @@ const KanbanTempClientIndicator = ({ leadId }) => {
 
   return (
     <div className="mb-2">
-      <div className={`px-2 py-1 rounded text-xs font-medium border flex items-center ${getStatusStyle()}`}>
-        {getStatusIcon()}
-        <span className="ml-1">{getStatusText()}</span>
-      </div>
       <div className="text-xs text-gray-600 mt-1">
         Client: {tempClientInfo.clientCode}
       </div>

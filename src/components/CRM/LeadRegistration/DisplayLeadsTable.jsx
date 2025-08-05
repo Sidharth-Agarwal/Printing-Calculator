@@ -54,7 +54,7 @@ const InlineQualificationDropdown = ({
           onBlur={() => setIsEditing(false)}
           autoFocus
           disabled={isUpdating}
-          className="text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white min-w-[120px]"
+          className="text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white min-w-[100px]"
         >
           <option value="">No Badge</option>
           {qualificationBadges?.map((badge) => (
@@ -129,7 +129,7 @@ const InlineStatusDropdown = ({
           onBlur={() => setIsEditing(false)}
           autoFocus
           disabled={isUpdating}
-          className="text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white min-w-[120px]"
+          className="text-xs px-2 py-1 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white min-w-[100px]"
         >
           {LEAD_STATUSES.map((status) => (
             <option key={status.id} value={status.id}>
@@ -258,13 +258,11 @@ const TempClientStatusBadge = ({ leadId }) => {
   };
 
   return (
-    <div className="mb-2">
-      <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center justify-center ${getStatusStyle()}`}>
-        <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        {getStatusText()}
-      </div>
+    <div className={`px-2 py-1 rounded-full text-xs font-medium border flex items-center justify-center ${getStatusStyle()}`}>
+      <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+      </svg>
+      {getStatusText()}
     </div>
   );
 };
@@ -291,6 +289,16 @@ const DisplayLeadsTable = ({
   // Helper function to check if lead is added to clients
   const isLeadAddedToClients = (lead) => {
     return lead.status === "converted" && lead.movedToClients;
+  };
+  
+  // Helper function to check if lead has temp client
+  const hasTempClient = (lead) => {
+    return lead.tempClientId;
+  };
+
+  // Helper function to check if actions should be disabled
+  const shouldDisableActions = (lead) => {
+    return isLeadAddedToClients(lead) || hasTempClient(lead);
   };
   
   // Handle sort
@@ -326,7 +334,7 @@ const DisplayLeadsTable = ({
   };
   
   // Truncate text for display
-  const truncateText = (text, maxLength = 100) => {
+  const truncateText = (text, maxLength = 60) => {
     if (!text) return "";
     if (text.length <= maxLength) return text;
     return text.substring(0, maxLength) + "...";
@@ -364,20 +372,20 @@ const DisplayLeadsTable = ({
   // Render cell content based on field type with inline editing
   const renderCellContent = (lead, field) => {
     const value = lead[field.field];
-    const isAddedToClients = isLeadAddedToClients(lead);
+    const actionsDisabled = shouldDisableActions(lead);
     
     if (field.field === 'phone') {
       return (
-        <div className="flex flex-col">
-          {lead.phone && <span className="text-gray-600">{lead.phone}</span>}
+        <div className="truncate max-w-[120px]">
+          {lead.phone && <span className="text-gray-600 text-sm">{lead.phone}</span>}
         </div>
       );
     }
     
     if (field.field === 'email') {
       return (
-        <div className="flex flex-col">
-          {lead.email && <span className="text-gray-600">{lead.email}</span>}
+        <div className="truncate max-w-[150px]">
+          {lead.email && <span className="text-gray-600 text-sm">{lead.email}</span>}
         </div>
       );
     }
@@ -392,7 +400,7 @@ const DisplayLeadsTable = ({
           leadId={lead.id}
           currentBadgeId={value}
           onUpdate={onLeadUpdate}
-          disabled={isAddedToClients}
+          disabled={actionsDisabled}
         />
       );
     }
@@ -403,32 +411,32 @@ const DisplayLeadsTable = ({
           leadId={lead.id}
           currentStatus={value}
           onUpdate={onLeadUpdate}
-          disabled={isAddedToClients}
+          disabled={actionsDisabled}
         />
       );
     }
     
     if (field.type === 'date' && value) {
-      return formatDate(value);
+      return <span className="text-sm">{formatDate(value)}</span>;
     }
     
     if (field.truncate && typeof value === 'string') {
-      return <div className="truncate max-w-xs">{truncateText(value, 60)}</div>;
+      return <div className="truncate max-w-[200px] text-sm">{truncateText(value, 60)}</div>;
     }
     
-    return value || "-";
+    return <span className="text-sm">{value || "-"}</span>;
   };
   
   // Create a sortable table header
   const SortableHeader = ({ field, label, className = "" }) => (
     <th 
-      className={`px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 text-left cursor-pointer hover:bg-gray-50 transition-colors ${className}`}
+      className={`px-2 py-2 border-b-2 border-gray-200 font-semibold text-gray-800 text-left cursor-pointer hover:bg-gray-50 transition-colors text-xs ${className}`}
       onClick={() => handleSort(field)}
     >
       <div className="flex items-center">
         {label}
         {sortField === field && (
-          <span className="ml-1">
+          <span className="ml-1 text-xs">
             {sortDirection === "asc" ? "▲" : "▼"}
           </span>
         )}
@@ -446,7 +454,7 @@ const DisplayLeadsTable = ({
   
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full text-sm text-left">
+      <table className="min-w-full text-xs text-left">
         <thead>
           <tr className="bg-gray-100">
             {fields.map((field) => (
@@ -459,25 +467,25 @@ const DisplayLeadsTable = ({
               ) : (
                 <th 
                   key={field.field}
-                  className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 text-left"
+                  className="px-2 py-2 border-b-2 border-gray-200 font-semibold text-gray-800 text-left text-xs"
                 >
                   {field.label}
                 </th>
               )
             ))}
-            <th className="px-3 py-3 border-b-2 border-gray-200 font-semibold text-gray-800 w-40">Actions</th>
+            <th className="px-2 py-2 border-b-2 border-gray-200 font-semibold text-gray-800 w-32 text-xs">Actions</th>
           </tr>
         </thead>
         <tbody>
           {sortedLeads.map((lead) => (
             <tr 
               key={lead.id} 
-              className="border-b border-gray-200 hover:bg-gray-50 transition-colors"
+              className="border-b border-gray-200 hover:bg-gray-50 transition-colors h-12"
             >
               {fields.map((field) => (
                 <td 
                   key={field.field} 
-                  className="px-3 py-3"
+                  className="px-2 py-2"
                   onClick={(e) => {
                     if (field.field !== 'badgeId' && field.field !== 'status') {
                       onView(lead);
@@ -489,83 +497,80 @@ const DisplayLeadsTable = ({
                 </td>
               ))}
               {/* Actions Cell with Temp Client Status */}
-              <td className="px-3 py-3" onClick={(e) => e.stopPropagation()}>
-                <div className="flex flex-col space-y-2">
-                  {/* Show temp client status first if it exists */}
-                  <TempClientStatusBadge leadId={lead.id} />
-                  
-                  {/* Then show action buttons */}
-                  <div className="flex items-center space-x-1 justify-center">
-                    {isLeadAddedToClients(lead) ? (
-                      <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              <td className="px-2 py-2" onClick={(e) => e.stopPropagation()}>
+                <div className="flex items-center space-x-1">
+                  {/* Show temp client status badge */}
+                  {hasTempClient(lead) ? (
+                    <TempClientStatusBadge leadId={lead.id} />
+                  ) : isLeadAddedToClients(lead) ? (
+                    <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                      </svg>
+                      Added to Clients
+                    </div>
+                  ) : (
+                    <>
+                      {/* Talk Button */}
+                      <button
+                        onClick={() => onAddDiscussion(lead)}
+                        className="p-1 text-green-600 hover:bg-green-100 rounded transition-colors"
+                        title="Add Discussion"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                         </svg>
-                        Added to Clients
-                      </div>
-                    ) : (
-                      <>
-                        {/* Talk Button */}
+                      </button>
+                      
+                      {/* Make Temp Client Button - Show for leads that don't have temp client yet */}
+                      {onMakeTempClient && (lead.status === "newLead" || lead.status === "qualified") && (
                         <button
-                          onClick={() => onAddDiscussion(lead)}
-                          className="p-1.5 text-green-600 hover:bg-green-100 rounded transition-colors"
-                          title="Add Discussion"
+                          onClick={() => onMakeTempClient(lead)}
+                          className="p-1 text-orange-600 hover:bg-orange-100 rounded transition-colors"
+                          title="Create Temporary Client"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                           </svg>
                         </button>
-                        
-                        {/* Make Temp Client Button - Show for leads that don't have temp client yet */}
-                        {onMakeTempClient && !lead.tempClientId && (lead.status === "newLead" || lead.status === "qualified") && (
-                          <button
-                            onClick={() => onMakeTempClient(lead)}
-                            className="p-1.5 text-orange-600 hover:bg-orange-100 rounded transition-colors"
-                            title="Create Temporary Client"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                            </svg>
-                          </button>
-                        )}
-                        
-                        {/* Edit Button */}
+                      )}
+                      
+                      {/* Edit Button */}
+                      <button
+                        onClick={() => onEdit(lead)}
+                        className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                        title="Edit Lead"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                        </svg>
+                      </button>
+                      
+                      {/* Convert to Client Button */}
+                      {lead.status === "converted" && onConvert && (
                         <button
-                          onClick={() => onEdit(lead)}
-                          className="p-1.5 text-blue-600 hover:bg-blue-100 rounded transition-colors"
-                          title="Edit Lead"
+                          onClick={() => onConvert(lead)}
+                          className="p-1 text-purple-600 hover:bg-purple-100 rounded transition-colors"
+                          title="Move to Clients"
                         >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
                           </svg>
                         </button>
-                        
-                        {/* Convert to Client Button */}
-                        {lead.status === "converted" && onConvert && (
-                          <button
-                            onClick={() => onConvert(lead)}
-                            className="p-1.5 text-purple-600 hover:bg-purple-100 rounded transition-colors"
-                            title="Move to Clients"
-                          >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                            </svg>
-                          </button>
-                        )}
-                        
-                        {/* Delete Button */}
-                        <button
-                          onClick={() => confirmDelete(lead)}
-                          className="p-1.5 text-red-600 hover:bg-red-100 rounded transition-colors"
-                          title="Delete Lead"
-                        >
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                          </svg>
-                        </button>
-                      </>
-                    )}
-                  </div>
+                      )}
+                      
+                      {/* Delete Button */}
+                      <button
+                        onClick={() => confirmDelete(lead)}
+                        className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                        title="Delete Lead"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        </svg>
+                      </button>
+                    </>
+                  )}
                 </div>
               </td>
             </tr>

@@ -46,6 +46,16 @@ const LeadDetailsModal = ({
     return leadData.status === "converted" && leadData.movedToClients;
   };
   
+  // Helper function to check if lead has temp client
+  const hasTempClient = (leadData) => {
+    return leadData.tempClientId;
+  };
+
+  // Helper function to check if actions should be disabled
+  const shouldDisableActions = (leadData) => {
+    return isLeadAddedToClients(leadData) || hasTempClient(leadData);
+  };
+  
   // Show notification
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type });
@@ -208,11 +218,12 @@ const LeadDetailsModal = ({
     }
   };
 
-  // NEW: Handle temp client creation
+  // UPDATED: Handle temp client creation - FIX for functionality
   const handleMakeTempClient = () => {
     if (onMakeTempClient) {
+      console.log("Creating temp client for lead:", currentLead);
       onMakeTempClient(currentLead);
-      onClose(); // Close modal after initiating temp client creation
+      // Don't close modal here - let parent handle it
     }
   };
 
@@ -266,11 +277,17 @@ const LeadDetailsModal = ({
   // Check if converted lead has been moved to clients
   const isAddedToClients = isLeadAddedToClients(currentLead);
 
-  // NEW: Check if lead has temp client
-  const hasTempClient = currentLead.tempClientId;
+  // Check if lead has temp client
+  const leadHasTempClient = hasTempClient(currentLead);
 
-  // NEW: Check if temp client can be created (new lead or qualified)
-  const canCreateTempClient = (currentLead.status === "newLead" || currentLead.status === "qualified") && !hasTempClient && !isConverted;
+  // Check if actions should be disabled
+  const actionsDisabled = shouldDisableActions(currentLead);
+
+  // Check if temp client can be created (new lead or qualified, and doesn't have temp client or isn't converted)
+  const canCreateTempClient = (currentLead.status === "newLead" || currentLead.status === "qualified") && 
+                              !leadHasTempClient && 
+                              !isConverted &&
+                              !isAddedToClients;
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -280,10 +297,16 @@ const LeadDetailsModal = ({
           <div className="flex items-center">
             <h3 className="text-lg font-semibold mr-2">Lead Details</h3>
             <LeadStatusBadge status={currentLead.status} />
-            {/* NEW: Show temp client indicator */}
-            {hasTempClient && (
+            {/* Show temp client indicator */}
+            {leadHasTempClient && (
               <span className="ml-2 px-2 py-1 bg-orange-100 text-orange-800 text-xs rounded-full font-medium">
                 Has Temp Client
+              </span>
+            )}
+            {/* Show actions disabled indicator */}
+            {actionsDisabled && (
+              <span className="ml-2 px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">
+                Actions Disabled
               </span>
             )}
           </div>
@@ -346,8 +369,8 @@ const LeadDetailsModal = ({
               </div>
             </div>
 
-            {/* NEW: Temp Client Information Section */}
-            {hasTempClient && (
+            {/* Temp Client Information Section */}
+            {leadHasTempClient && (
               <div className="mb-6">
                 <h3 className="text-md font-medium mb-3 border-b border-gray-200 pb-1">Temporary Client Information</h3>
                 {isLoadingTempClient ? (
@@ -452,7 +475,7 @@ const LeadDetailsModal = ({
               </div>
             )}
             
-            {/* Action Buttons Section - Updated Logic with Temp Client Support */}
+            {/* Action Buttons Section - UPDATED: Removed redundant temp client section */}
             {isAddedToClients ? (
               // Only show "Added to Clients" status for leads that have been moved
               <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -469,9 +492,9 @@ const LeadDetailsModal = ({
                 </p>
               </div>
             ) : (
-              // Show action buttons for all other leads
+              // Show action buttons for all other leads (including temp clients)
               <>
-                {/* NEW: Temp Client Creation Button */}
+                {/* Temp Client Creation Button - Only show if can create temp client */}
                 {canCreateTempClient && (
                   <div className="mb-4">
                     <CRMActionButton
@@ -520,7 +543,7 @@ const LeadDetailsModal = ({
                 )}
 
                 {/* Convert Button for non-converted leads without temp client */}
-                {!isConverted && !hasTempClient && canConvert && (
+                {!isConverted && !leadHasTempClient && canConvert && (
                   <div className="mb-4">
                     <CRMActionButton
                       type="success"
@@ -592,7 +615,7 @@ const LeadDetailsModal = ({
           <div className="w-full md:w-1/2 border-t md:border-t-0 md:border-l border-gray-200 p-4 overflow-y-auto bg-gray-50">
             <div className="flex justify-between items-center mb-4">
               <h3 className="text-lg font-medium">Discussions</h3>
-              {!isAddedToClients && (
+              {!actionsDisabled && (
                 <CRMActionButton
                   type="primary"
                   size="sm"
@@ -614,7 +637,7 @@ const LeadDetailsModal = ({
               formatDate={formatDate}
               lead={currentLead}
               onUpdate={refreshDiscussions}
-              readOnly={isAddedToClients} // Pass read-only state to discussion history
+              readOnly={actionsDisabled} // Pass read-only state to discussion history
             />
           </div>
         </div>
