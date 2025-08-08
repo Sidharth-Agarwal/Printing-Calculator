@@ -72,6 +72,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       
       return {
         id: order.id,
+        orderId: order.orderSerial || 'N/A', // Add order serial number
         name,
         jobType,
         paperInfo,
@@ -178,30 +179,32 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         </div>
       </div>
       
-      {/* Line Items - Significantly more compact table */}
+      {/* Line Items - Updated table with Order ID column and adjusted widths */}
       <div className="mb-3">
         <table className="w-full border-collapse text-xs" style={{ fontSize: "65%" }}>
           <thead>
             <tr className="bg-gray-100 text-gray-700">
-              <th className="py-0.5 px-1 border border-gray-300 text-center w-8">S.No</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-left w-24">Item</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center w-16">Job Type</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center w-24">Paper</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center w-12">Qty</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Unit</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right w-20">Total</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center w-12">Disc%</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right w-20">Discount</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right w-20">Net Amt</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center w-12">GST%</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right w-20">GST</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right w-20">Final</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center w-6">S.No</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center w-20">Order Serial</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-left w-18">Item</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center w-12">Job Type</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center w-18">Paper</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center w-10">Qty</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right w-14">Unit</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Total</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center w-10">Disc%</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Discount</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Net Amt</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center w-10">GST%</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">GST</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Final</th>
             </tr>
           </thead>
           <tbody>
             {lineItems.map((item, index) => (
               <tr key={item.id || index} className="text-gray-700">
                 <td className="py-0.5 px-1 border border-gray-300 text-center">{index + 1}</td>
+                <td className="py-0.5 px-1 border border-gray-300 text-center font-mono text-[8px] whitespace-nowrap">{item.orderId}</td>
                 <td className="py-0.5 px-1 border border-gray-300 truncate">
                   <div className="font-medium truncate">{item.name}</div>
                 </td>

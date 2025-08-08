@@ -218,6 +218,7 @@ const JobTicket = ({ order }) => {
         <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold">JOB TICKET</h1>
           <div className="text-right text-[10px]">
+            <p className="font-bold">Order Serial: <span className="font-normal font-mono">{order.orderSerial || 'N/A'}</span></p>
             <p className="font-bold">Job #: <span className="font-normal">{order.id?.substring(0, 8) || 'N/A'}</span></p>
             <p className="font-bold">Type: <span className="font-normal">{order.jobDetails?.jobType || 'N/A'}</span></p>
             <p className="font-bold">Qty: <span className="font-normal">{order.jobDetails?.quantity || 'N/A'}</span></p>

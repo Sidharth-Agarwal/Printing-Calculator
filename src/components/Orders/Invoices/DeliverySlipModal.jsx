@@ -1,4 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../../../firebaseConfig';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
 import DeliverySlipTemplate from './DeliverySlipTemplate';
@@ -12,13 +14,67 @@ const DeliverySlipModal = ({ orders, onClose, selectedOrderIds }) => {
   });
   const contentRef = useRef(null);
   
+  // Add state for refreshed orders with complete data
+  const [refreshedOrders, setRefreshedOrders] = useState([]);
+  const [loadingOrders, setLoadingOrders] = useState(true);
+  
+  // Fetch complete order data from Firebase
+  useEffect(() => {
+    const fetchCompleteOrderData = async () => {
+      if (!Array.isArray(orders) || orders.length === 0) {
+        setLoadingOrders(false);
+        return;
+      }
+      
+      console.log('Fetching complete order data for Delivery Slip:', orders.length, 'orders');
+      
+      try {
+        const completeOrders = await Promise.all(
+          orders.map(async (order) => {
+            if (!order.id) return order;
+            
+            try {
+              const orderDoc = await getDoc(doc(db, "orders", order.id));
+              if (orderDoc.exists()) {
+                const completeOrderData = orderDoc.data();
+                console.log(`Delivery Slip - Order ${order.id} serial:`, completeOrderData.orderSerial);
+                return {
+                  id: order.id,
+                  ...completeOrderData
+                };
+              }
+            } catch (error) {
+              console.error(`Error fetching order ${order.id}:`, error);
+            }
+            
+            return order; // Return original order if fetch fails
+          })
+        );
+        
+        setRefreshedOrders(completeOrders);
+        console.log('Delivery Slip - Refreshed orders with complete data:', completeOrders);
+        
+      } catch (error) {
+        console.error('Error fetching complete order data:', error);
+        setRefreshedOrders(orders); // Fall back to original orders
+      } finally {
+        setLoadingOrders(false);
+      }
+    };
+    
+    fetchCompleteOrderData();
+  }, [orders]);
+  
+  // Use refreshed orders instead of original orders
+  const ordersToUse = refreshedOrders.length > 0 ? refreshedOrders : orders;
+  
   // Get client info (all orders should be from the same client)
-  const clientInfo = orders.length > 0 ? {
-    name: orders[0].clientName || orders[0].clientInfo?.name,
-    clientCode: orders[0].clientInfo?.clientCode || 'N/A',
-    address: orders[0].clientInfo?.address || {},
-    id: orders[0].clientId,
-    clientType: orders[0].clientInfo?.clientType || 'Direct'
+  const clientInfo = ordersToUse.length > 0 ? {
+    name: ordersToUse[0].clientName || ordersToUse[0].clientInfo?.name,
+    clientCode: ordersToUse[0].clientInfo?.clientCode || 'N/A',
+    address: ordersToUse[0].clientInfo?.address || {},
+    id: ordersToUse[0].clientId,
+    clientType: ordersToUse[0].clientInfo?.clientType || 'Direct'
   } : { name: 'Unknown Client', id: 'unknown', clientCode: 'N/A', address: {} };
   
   // Handle input change
@@ -129,9 +185,26 @@ const DeliverySlipModal = ({ orders, onClose, selectedOrderIds }) => {
   };
   
   // Calculate total quantity
-  const totalQuantity = orders.reduce((total, order) => {
+  const totalQuantity = ordersToUse.reduce((total, order) => {
     return total + (parseInt(order.jobDetails?.quantity) || 0);
   }, 0);
+  
+  // Show loading state while fetching complete order data
+  if (loadingOrders) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+        <div className="bg-white rounded-lg shadow-xl p-6">
+          <div className="flex items-center gap-3">
+            <svg className="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span className="text-gray-700">Loading complete order data...</span>
+          </div>
+        </div>
+      </div>
+    );
+  }
   
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4 overflow-y-auto">
@@ -151,7 +224,7 @@ const DeliverySlipModal = ({ orders, onClose, selectedOrderIds }) => {
                 <>
                   <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
                   </svg>
                   Generating...
                 </>
@@ -218,7 +291,7 @@ const DeliverySlipModal = ({ orders, onClose, selectedOrderIds }) => {
                 <div className="space-y-1">
                   <div className="flex justify-between">
                     <span>Total Orders:</span>
-                    <span className="font-mono">{orders.length}</span>
+                    <span className="font-mono">{ordersToUse.length}</span>
                   </div>
                   
                   <div className="flex justify-between">
@@ -241,7 +314,7 @@ const DeliverySlipModal = ({ orders, onClose, selectedOrderIds }) => {
               <div ref={contentRef} className="bg-white shadow-lg rounded-lg overflow-hidden">
                 <DeliverySlipTemplate
                   deliveryData={deliveryData}
-                  orders={orders}
+                  orders={ordersToUse}
                   clientInfo={clientInfo}
                 />
               </div>
