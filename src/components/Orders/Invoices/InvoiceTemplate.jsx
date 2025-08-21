@@ -25,54 +25,51 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
     }).format(amount);
   };
 
-  // Prepare line items from orders with FIXED GST calculation
+  // Prepare line items from orders - USING DB VALUES ONLY
   const prepareLineItems = () => {
     return orders.map(order => {
-      // Calculate cost per card from calculations
+      // Get all values from DB calculations object - NO FRONTEND CALCULATIONS
       const calculations = order.calculations || {};
-      const costPerCard = parseFloat(calculations.totalCostPerCard || 0);
       
-      // Get quantity and name
+      // Basic item info from DB
       const quantity = parseInt(order.jobDetails?.quantity) || 0;
       const name = `${order.projectName || 'Project'}`;
-      
-      // Get job type, paper
       const jobType = order.jobDetails?.jobType || 'Card';
       
-      // Get paper details with GSM
+      // Paper details
       const paperName = order.jobDetails?.paperName || '';
       const paperGsm = order.jobDetails?.paperGsm || '';
       const paperCompany = order.jobDetails?.paperCompany || '';
-      
-      // Format paper info including GSM if available
       const paperInfo = paperName + (paperGsm ? ` ${paperGsm}gsm` : '') + (paperCompany ? ` (${paperCompany})` : '');
       
-      // Get HSN code from jobDetails if available
-      const hsnCode = order.jobDetails?.hsnCode || '';
+      // HSN code from DB
+      const hsnCode = order.jobDetails?.hsnCode || 'N/A';
       
-      // Get loyalty information
-      const loyaltyDiscount = order.loyaltyInfo?.discount || calculations.loyaltyTierDiscount || 0;
-      const loyaltyDiscountAmount = parseFloat(order.loyaltyInfo?.discountAmount || calculations.loyaltyDiscountAmount || 0);
-      const loyaltyTierName = order.loyaltyInfo?.tierName || calculations.loyaltyTierName || '';
-      const loyaltyTierColor = calculations.loyaltyTierColor || '#CCCCCC';
+      // ALL FINANCIAL VALUES FROM DB ONLY - NO CALCULATIONS HERE
+      const costPerCard = parseFloat(calculations.totalCostPerCard || 0);
+      const originalTotal = parseFloat(calculations.subtotalBeforeDiscounts || (costPerCard * quantity)) || 0;
       
-      // Original and discounted totals
-      const originalTotal = costPerCard * quantity;
+      // Loyalty discount from DB
+      const loyaltyDiscountAmount = parseFloat(calculations.loyaltyDiscountAmount || 0);
+      const loyaltyDiscount = parseFloat(calculations.loyaltyTierDiscount || 0);
+      const loyaltyTierName = calculations.loyaltyTierName || '';
+      
+      // GST values from DB (IMPORTANT: Use DB stored GST rate and amount)
+      const gstRate = parseFloat(calculations.gstRate || order.jobDetails?.gstRate || 18); // Use DB stored GST rate
+      const gstAmount = parseFloat(calculations.gstAmount || 0); // Use calculated GST from DB
+      
+      // Final amounts from DB
+      const taxableAmount = parseFloat(calculations.taxableAmount || 0);
+      const finalTotal = parseFloat(calculations.finalTotalWithGst || 0);
+      
+      // Invoice level discount (applied proportionally)
       const afterLoyaltyDiscount = originalTotal - loyaltyDiscountAmount;
-      
-      // Apply additional invoice discount proportionally to this item
       const itemDiscountAmount = (afterLoyaltyDiscount * (invoiceData.discount / 100)) || 0;
-      const discountedTotal = afterLoyaltyDiscount - itemDiscountAmount;
-      
-      // FIXED: Calculate GST on the final discounted amount (after all discounts)
-      const gstRate = 18; // Standard GST rate
-      const gstAmount = invoiceData.showTax ? (discountedTotal * gstRate / 100) : 0;
-      
-      const finalTotal = discountedTotal + gstAmount;
+      const discountedTotal = taxableAmount; // Use DB value instead of calculating
       
       return {
         id: order.id,
-        orderId: order.orderSerial || 'N/A', // Add order serial number
+        orderId: order.orderSerial || order.id?.slice(-6) || 'N/A',
         name,
         jobType,
         paperInfo,
@@ -82,13 +79,12 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         loyaltyDiscount: loyaltyDiscount,
         loyaltyDiscountAmount: loyaltyDiscountAmount,
         loyaltyTierName: loyaltyTierName,
-        loyaltyTierColor: loyaltyTierColor,
         invoiceDiscountAmount: itemDiscountAmount,
         discountedTotal: discountedTotal,
-        gstRate: gstRate,
-        gstAmount: gstAmount,
-        finalTotal: finalTotal,
-        hsnCode: hsnCode || 'N/A'
+        gstRate: gstRate, // From DB
+        gstAmount: gstAmount, // From DB
+        finalTotal: finalTotal, // From DB
+        hsnCode: hsnCode
       };
     });
   };
@@ -119,19 +115,16 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           <h1 className="text-xl font-bold text-gray-900">INVOICE</h1>
           <div className="text-xs text-gray-600 mb-1">{invoiceData.invoiceNumber}</div>
           
-          {/* Client Info - Positioned directly under invoice number */}
+          {/* Client Info */}
           <div>
             <h2 className="text-xs font-semibold text-gray-700 mb-0.5">Bill To:</h2>
             <div className="font-medium">{clientInfo.name || "Unknown Client"}</div>
-            {/* Display address line 1 if available */}
             {clientInfo?.address?.line1 && (
               <div className="text-gray-600 text-xs">{clientInfo.address.line1}</div>
             )}
-            {/* Display address line 2 if available */}
             {clientInfo?.address?.line2 && (
               <div className="text-gray-600 text-xs">{clientInfo.address.line2}</div>
             )}
-            {/* Display city and state together with comma separator */}
             {(clientInfo?.address?.city || clientInfo?.address?.state) && (
               <div className="text-gray-600 text-xs">
                 {clientInfo.address.city || ""}
@@ -167,7 +160,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           <div className="text-gray-600 text-xs">Phone: +919233152718</div>
           <div className="text-gray-600 text-xs">Email: info@famousletterpress.com</div>
           
-          {/* Bank Details moved to right side, below company info */}
+          {/* Bank Details */}
           <div className="my-0.5">
             <div className="text-xs">
               <div className="font-medium">Bank Details</div>
@@ -179,7 +172,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         </div>
       </div>
       
-      {/* Line Items - Updated table with Order ID column and adjusted widths */}
+      {/* Line Items Table */}
       <div className="mb-3">
         <table className="w-full border-collapse text-xs" style={{ fontSize: "65%" }}>
           <thead>
@@ -187,14 +180,14 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
               <th className="py-0.5 px-1 border border-gray-300 text-center w-6">S.No</th>
               <th className="py-0.5 px-1 border border-gray-300 text-center w-20">Order Serial</th>
               <th className="py-0.5 px-1 border border-gray-300 text-left w-18">Item</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-center w-12">Job Type</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-center w-12">Type</th>
               <th className="py-0.5 px-1 border border-gray-300 text-center w-18">Paper</th>
               <th className="py-0.5 px-1 border border-gray-300 text-center w-10">Qty</th>
               <th className="py-0.5 px-1 border border-gray-300 text-right w-14">Unit</th>
               <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Total</th>
               <th className="py-0.5 px-1 border border-gray-300 text-center w-10">Disc%</th>
               <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Discount</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Net Amt</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Net</th>
               <th className="py-0.5 px-1 border border-gray-300 text-center w-10">GST%</th>
               <th className="py-0.5 px-1 border border-gray-300 text-right w-16">GST</th>
               <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Final</th>
@@ -214,7 +207,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
                 <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
                 <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.originalTotal.toFixed(2)}</td>
                 <td className="py-0.5 px-1 border border-gray-300 text-center">
-                  {(item.loyaltyDiscount > 0 || invoiceData.discount > 0) && 
+                  {(item.loyaltyDiscountAmount + item.invoiceDiscountAmount) > 0 && 
                     <span>{((item.loyaltyDiscountAmount + item.invoiceDiscountAmount) / item.originalTotal * 100).toFixed(1)}%</span>
                   }
                 </td>
@@ -232,7 +225,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         </table>
       </div>
       
-      {/* Summary */}
+      {/* Summary - Using passed totals from DB */}
       <div className="flex justify-end mb-1">
         <div className="w-48">
           <div className="flex justify-between py-0.5 text-xs border-t border-gray-200">
@@ -242,7 +235,6 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
             </div>
           </div>
           
-          {/* Total Loyalty Discount */}
           {totals.loyaltyDiscount > 0 && (
             <div className="flex justify-between py-0.5 text-xs text-red-600">
               <div>Loyalty Discount:</div>
@@ -252,7 +244,6 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
             </div>
           )}
           
-          {/* Additional Invoice Discount */}
           {invoiceData.discount > 0 && (
             <div className="flex justify-between py-0.5 text-xs text-red-600">
               <div>Invoice Discount ({invoiceData.discount}%):</div>
@@ -270,7 +261,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
           </div>
           
           <div className="flex justify-between py-0.5 text-xs">
-            <div className="text-gray-700">GST Amount (18%):</div>
+            <div className="text-gray-700">GST Amount:</div>
             <div className="text-gray-900 font-mono">
               {formatCurrency(totals.tax)}
             </div>
@@ -285,7 +276,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         </div>
       </div>
       
-      {/* HSN Summary - More compact */}
+      {/* HSN Summary */}
       <div className="mb-1">
         <div className="font-medium text-xs mb-0.5">HSN Summary:</div>
         <table className="w-full border-collapse text-xs">
@@ -306,7 +297,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         </table>
       </div>
       
-      {/* Notes Section - Added if there are notes */}
+      {/* Notes Section */}
       {invoiceData.notes && (
         <div className="mb-1">
           <div className="font-medium text-xs mb-0.5">Notes:</div>
@@ -316,7 +307,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         </div>
       )}
       
-      {/* Footer - Declaration */}
+      {/* Footer */}
       <div className="mt-1 pt-0.5 border-t border-gray-200">
         <div className="grid grid-cols-2">
           <div>

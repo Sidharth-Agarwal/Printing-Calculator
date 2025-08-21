@@ -10,7 +10,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
   const [invoiceData, setInvoiceData] = useState({
     invoiceNumber: `INV-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`,
     date: new Date().toISOString().split('T')[0],
-    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0], // 30 days from now
+    dueDate: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
     notes: '',
     additionalInfo: '',
     discount: 0,
@@ -18,7 +18,6 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
   });
   const contentRef = useRef(null);
   
-  // Add state for refreshed orders with complete data
   const [refreshedOrders, setRefreshedOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   
@@ -41,7 +40,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
               const orderDoc = await getDoc(doc(db, "orders", order.id));
               if (orderDoc.exists()) {
                 const completeOrderData = orderDoc.data();
-                console.log(`Invoice - Order ${order.id} serial:`, completeOrderData.orderSerial);
+                console.log(`Invoice - Order ${order.id} complete data:`, completeOrderData);
                 return {
                   id: order.id,
                   ...completeOrderData
@@ -51,7 +50,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
               console.error(`Error fetching order ${order.id}:`, error);
             }
             
-            return order; // Return original order if fetch fails
+            return order;
           })
         );
         
@@ -60,7 +59,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
         
       } catch (error) {
         console.error('Error fetching complete order data:', error);
-        setRefreshedOrders(orders); // Fall back to original orders
+        setRefreshedOrders(orders);
       } finally {
         setLoadingOrders(false);
       }
@@ -69,10 +68,9 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     fetchCompleteOrderData();
   }, [orders]);
   
-  // Use refreshed orders instead of original orders
   const ordersToUse = refreshedOrders.length > 0 ? refreshedOrders : orders;
   
-  // Get client info (all orders should be from the same client)
+  // Get client info
   const clientInfo = ordersToUse.length > 0 ? {
     name: ordersToUse[0].clientName || ordersToUse[0].clientInfo?.name,
     clientCode: ordersToUse[0].clientInfo?.clientCode || 'N/A',
@@ -81,7 +79,6 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     clientType: ordersToUse[0].clientInfo?.clientType || 'Direct'
   } : { name: 'Unknown Client', id: 'unknown', clientCode: 'N/A', address: {} };
   
-  // Handle input change
   const handleInputChange = (e) => {
     const { name, value, type, checked } = e.target;
     setInvoiceData(prev => ({
@@ -90,55 +87,47 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }));
   };
   
-  // Calculate totals for all orders with GST and loyalty discounts - FIXED GST CALCULATION
+  // FIXED: Calculate totals using DB values only
   const calculateTotals = () => {
     let subtotal = 0;
     let loyaltyDiscountTotal = 0;
+    let totalGstAmount = 0;
     let totalQuantity = 0;
     
     ordersToUse.forEach(order => {
-      // Get cost per card from calculations
       const calculations = order.calculations || {};
-      const costPerCard = parseFloat(calculations.totalCostPerCard || 0);
       
-      // Get quantity
-      const quantity = parseInt(order.jobDetails?.quantity) || 0;
+      // Use DB calculated values - NO FRONTEND CALCULATIONS
+      const orderSubtotal = parseFloat(calculations.subtotalBeforeDiscounts || 0);
+      const orderLoyaltyDiscount = parseFloat(calculations.loyaltyDiscountAmount || 0);
+      const orderGstAmount = parseFloat(calculations.gstAmount || 0);
+      const quantity = parseInt(order.jobDetails?.quantity || 0);
+      
+      subtotal += orderSubtotal;
+      loyaltyDiscountTotal += orderLoyaltyDiscount;
+      totalGstAmount += orderGstAmount;
       totalQuantity += quantity;
-      
-      // Calculate item total (before loyalty discount)
-      const itemTotal = costPerCard * quantity;
-      subtotal += itemTotal;
-      
-      // Apply loyalty discount if available
-      const loyaltyDiscountAmount = parseFloat(order.loyaltyInfo?.discountAmount || calculations.loyaltyDiscountAmount || 0);
-      loyaltyDiscountTotal += loyaltyDiscountAmount;
     });
     
-    // Calculate discount amount (from invoice discount percentage, not loyalty)
-    const invoiceDiscountAmount = (subtotal * (invoiceData.discount / 100)) || 0;
+    // Apply additional invoice discount only (loyalty already applied in DB)
+    const invoiceDiscountAmount = (subtotal - loyaltyDiscountTotal) * (invoiceData.discount / 100) || 0;
     
-    // Apply discounts to subtotal to get taxable amount
+    // Calculate final amounts
     const taxableAmount = subtotal - loyaltyDiscountTotal - invoiceDiscountAmount;
-    
-    // FIXED: Calculate GST on the final taxable amount (after all discounts)
-    const gstRate = 18; // Standard GST rate
-    const totalGstAmount = invoiceData.showTax ? (taxableAmount * gstRate / 100) : 0;
-    
-    // Calculate total with GST
-    const total = taxableAmount + totalGstAmount;
+    const finalGstAmount = invoiceData.showTax ? totalGstAmount : 0;
+    const total = taxableAmount + finalGstAmount;
     
     return {
       subtotal: parseFloat(subtotal.toFixed(2)),
       loyaltyDiscount: parseFloat(loyaltyDiscountTotal.toFixed(2)),
       discount: parseFloat(invoiceDiscountAmount.toFixed(2)),
       taxableAmount: parseFloat(taxableAmount.toFixed(2)),
-      tax: parseFloat(totalGstAmount.toFixed(2)),
+      tax: parseFloat(finalGstAmount.toFixed(2)),
       total: parseFloat(total.toFixed(2)),
       totalQuantity
     };
   };
   
-  // Format number as currency
   const formatCurrency = (amount) => {
     return new Intl.NumberFormat('en-IN', {
       style: 'currency',
@@ -147,12 +136,11 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }).format(amount);
   };
   
-  // Get HSN data for display in the modal summary
+  // Get HSN data for display
   const getHsnSummary = () => {
     const hsnSummary = {};
     
     ordersToUse.forEach(order => {
-      // Extract HSN code from the order
       const hsnCode = order.jobDetails?.hsnCode || 'N/A';
       const jobType = order.jobDetails?.jobType || 'Unknown';
       
@@ -172,43 +160,35 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     return hsnSummary;
   };
   
-  // Generate PDF - Improved version with enforced portrait orientation
+  // Generate PDF function (keeping existing logic)
   const generatePDF = async () => {
     if (!contentRef.current) return;
     
     setIsGeneratingPDF(true);
     try {
-      // Wait for any images to load
       const images = contentRef.current.querySelectorAll('img');
       const imagePromises = Array.from(images).map(img => {
         if (img.complete) return Promise.resolve();
         return new Promise((resolve) => {
           img.onload = resolve;
-          img.onerror = resolve; // Use resolve even for errors to proceed
-          // Set a timeout to resolve after 2 seconds in case image loading hangs
+          img.onerror = resolve;
           setTimeout(resolve, 2000);
         });
       });
       
       await Promise.all(imagePromises);
       
-      // Create a new container with improved settings for PDF generation
-      // Setting width to match A4 proportions for portrait mode
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.top = '-9999px';
       container.style.left = '-9999px';
-      // Set width to match A4 portrait dimensions ratio (width/height = 210/297)
-      container.style.width = '620px'; // Slightly narrower to ensure portrait fit
+      container.style.width = '620px';
       container.style.padding = '0';
       container.style.margin = '0';
       container.style.backgroundColor = 'white';
-      container.style.overflow = 'visible'; // Prevent scrollbars in rendering
+      container.style.overflow = 'visible';
       
-      // Clone the invoice content
       const clone = contentRef.current.cloneNode(true);
-      
-      // Remove any potential overflow issues in the clone
       const allElements = clone.querySelectorAll('*');
       allElements.forEach(el => {
         if (el.style) {
@@ -219,17 +199,15 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
       container.appendChild(clone);
       document.body.appendChild(container);
       
-      // Generate PDF with better settings
       const canvas = await html2canvas(container, {
-        scale: 2, // Higher scale for better quality
+        scale: 2,
         useCORS: true,
         logging: false,
         allowTaint: true,
         imageTimeout: 0,
-        scrollY: 0, // Fix scroll position issues
-        windowWidth: 620, // Match container width for portrait
+        scrollY: 0,
+        windowWidth: 620,
         onclone: (clonedDoc) => {
-          // Additional adjustments to the cloned document if needed
           const clonedContent = clonedDoc.querySelector('[data-html2canvas-clone]');
           if (clonedContent) {
             clonedContent.style.overflow = 'visible';
@@ -237,69 +215,56 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
         }
       });
       
-      // Remove the temp container
       document.body.removeChild(container);
       
-      // ENFORCE PORTRAIT: Always create PDF in portrait mode regardless of content proportions
       const pdf = new jsPDF({
-        orientation: 'portrait', // Always portrait
+        orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
-        compress: true // Enable compression for smaller file size
+        compress: true
       });
       
-      // Get PDF dimensions (A4 portrait)
-      const pdfWidth = 210; // A4 width in mm
-      const pdfHeight = 297; // A4 height in mm
-      
-      // Calculate image dimensions to fit in PDF while maintaining aspect ratio
-      // Adjust width to fit portrait mode
-      const imgWidth = pdfWidth - 20; // Add some margin
+      const pdfWidth = 210;
+      const pdfHeight = 297;
+      const imgWidth = pdfWidth - 20;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      // If the content would be too wide for portrait, scale it down
       if (canvas.width / canvas.height > pdfWidth / pdfHeight) {
-        const adjustedWidth = pdfWidth - 20; // Leave 10mm margin on each side
+        const adjustedWidth = pdfWidth - 20;
         const adjustedHeight = (canvas.height * adjustedWidth) / canvas.width;
         
         pdf.addImage(
-          canvas.toDataURL('image/jpeg', 0.95), // Slightly reduce quality for smaller file
+          canvas.toDataURL('image/jpeg', 0.95),
           'JPEG',
-          10, // Left margin of 10mm
-          10, // Top margin of 10mm
+          10,
+          10,
           adjustedWidth,
           adjustedHeight
         );
-      } 
-      // If the content would be too tall, scale it down to fit
-      else if (imgHeight > pdfHeight - 20) {
-        const adjustedHeight = pdfHeight - 20; // Leave 10mm margin top and bottom
+      } else if (imgHeight > pdfHeight - 20) {
+        const adjustedHeight = pdfHeight - 20;
         const adjustedWidth = (canvas.width * adjustedHeight) / canvas.height;
         
         pdf.addImage(
           canvas.toDataURL('image/jpeg', 0.95),
           'JPEG',
-          (pdfWidth - adjustedWidth) / 2, // Center horizontally
-          10, // Top margin
+          (pdfWidth - adjustedWidth) / 2,
+          10,
           adjustedWidth,
           adjustedHeight
         );
-      } 
-      // Otherwise center it
-      else {
+      } else {
         pdf.addImage(
           canvas.toDataURL('image/jpeg', 0.95),
           'JPEG',
-          (pdfWidth - imgWidth) / 2, // Center horizontally
-          (pdfHeight - imgHeight) / 2, // Center vertically
+          (pdfWidth - imgWidth) / 2,
+          (pdfHeight - imgHeight) / 2,
           imgWidth,
           imgHeight
         );
       }
       
-      // Save the PDF
       pdf.save(`Invoice_${clientInfo.name}_${invoiceData.invoiceNumber}.pdf`);
-      
       onClose();
     } catch (error) {
       console.error("Error generating PDF:", error);
@@ -309,13 +274,9 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }
   };
   
-  // Get totals
   const totals = calculateTotals();
-  
-  // Get HSN summary
   const hsnSummary = getHsnSummary();
-  
-  // Show loading state while fetching complete order data
+
   if (loadingOrders) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -370,9 +331,9 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
           </div>
         </div>
         
-        {/* Modal Body - Updated layout for better space utilization */}
+        {/* Modal Body */}
         <div className="flex flex-col md:flex-row flex-1 overflow-hidden">
-          {/* Invoice Controls - Smaller width */}
+          {/* Invoice Controls */}
           <div className="p-3 md:w-1/5 overflow-y-auto border-r border-gray-200">
             <div className="space-y-2">
               <h3 className="text-sm font-medium">Invoice Details</h3>
@@ -435,6 +396,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                 </div>
               </div>
               
+              {/* Invoice Summary - Updated to show DB values */}
               <div className="mt-2 bg-gray-50 p-2 rounded-lg text-xs">
                 <h4 className="font-medium text-gray-700 mb-1">Invoice Summary</h4>
                 <div className="space-y-0.5">
@@ -464,7 +426,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                   
                   {invoiceData.showTax && (
                     <div className="flex justify-between">
-                      <span>GST Amount (18%):</span>
+                      <span>GST Amount:</span>
                       <span className="font-mono">{formatCurrency(totals.tax)}</span>
                     </div>
                   )}
@@ -510,7 +472,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
             </div>
           </div>
           
-          {/* Invoice Preview - Resized for A4 Portrait proportions */}
+          {/* Invoice Preview */}
           <div className="flex-1 overflow-y-auto bg-gray-50">
             <div className="p-3">
               <div 
@@ -519,7 +481,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                 style={{ 
                   maxWidth: '600px', 
                   width: '100%',
-                  aspectRatio: '210/297', /* A4 portrait ratio */
+                  aspectRatio: '210/297',
                   boxSizing: 'border-box'
                 }}
               >
