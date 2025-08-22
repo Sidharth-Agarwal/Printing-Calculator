@@ -674,8 +674,6 @@ const ReviewAndSubmit = ({
               {localCalculations.embPlateCostPerCard && <CostItem label="Plate" value={localCalculations.embPlateCostPerCard} isSubItem />}
               {localCalculations.embImpressionCostPerCard && <CostItem label="Impression" value={localCalculations.embImpressionCostPerCard} isSubItem />}
               {localCalculations.embMRCostPerCard && <CostItem label="MR Cost" value={localCalculations.embMRCostPerCard} isSubItem />}
-              // Continuation of the component from where it was cut off...
-
               {localCalculations.embMkgPlateCostPerCard && <CostItem label="EMB Making Plate" value={localCalculations.embMkgPlateCostPerCard} isSubItem />}
               {localCalculations.embPositiveFilmCostPerCard && <CostItem label="EMB Positive Film" value={localCalculations.embPositiveFilmCostPerCard} isSubItem />}
               {localCalculations.embDstMaterialCostPerCard && parseFloat(localCalculations.embDstMaterialCostPerCard) > 0 && (
