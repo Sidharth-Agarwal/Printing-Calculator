@@ -998,11 +998,10 @@ const ReviewAndSubmit = ({
               
               {/* Three Column Layout for ALL sections */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                {/* Column 1: Paper & Cutting + Wastage & Overhead + Markup Selection */}
+                {/* Column 1: Paper & Cutting + Wastage & Overhead */}
                 <div className="space-y-4">
                   {renderPaperAndCuttingSection()}
                   {renderWastageAndOverhead()}
-                  {renderMarkupSelection()}
                 </div>
                 
                 {/* Column 2: Production Services */}
@@ -1010,9 +1009,10 @@ const ReviewAndSubmit = ({
                   {renderProductionServices()}
                 </div>
                 
-                {/* Column 3: Post-Production Services + Final Summary */}
+                {/* Column 3: Post-Production Services + Markup Selection + Final Summary */}
                 <div className="space-y-4">
                   {renderPostProductionServices()}
+                  {renderMarkupSelection()}
                   {renderCostSummary()}
                 </div>
               </div>
