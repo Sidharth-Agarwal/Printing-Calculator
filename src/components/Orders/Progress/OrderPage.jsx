@@ -811,7 +811,7 @@ const OrdersPage = () => {
                               </div>
                             ) : (
                               <span className="text-xs text-purple-700">
-                                B2B
+                                0%
                               </span>
                             )
                           ) : (

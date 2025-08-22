@@ -5,7 +5,7 @@ const DisplayLoyaltyTierTable = ({ tiers, onDelete, onEdit }) => {
   const [searchTerm, setSearchTerm] = useState('');
   
   // State for sort field and direction
-  const [sortField, setSortField] = useState('orderThreshold');
+  const [sortField, setSortField] = useState('amountThreshold');
   const [sortDirection, setSortDirection] = useState('asc');
   
   // Check which actions are available
@@ -28,6 +28,18 @@ const DisplayLoyaltyTierTable = ({ tiers, onDelete, onEdit }) => {
     }
   };
 
+  // Format currency for display
+  const formatCurrency = (amount) => {
+    if (!amount || isNaN(amount)) return "₹0";
+    
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   // Filter tiers based on search term
   const filteredTiers = tiers.filter(tier => {
     if (!searchTerm.trim()) return true;
@@ -37,10 +49,11 @@ const DisplayLoyaltyTierTable = ({ tiers, onDelete, onEdit }) => {
     const searchFields = [
       tier.name || "",
       tier.id || "",
-      tier.orderThreshold?.toString() || "",
+      tier.amountThreshold?.toString() || "",
       tier.discount?.toString() || "",
       tier.color || "",
       tier.description || "",
+      formatCurrency(tier.amountThreshold || 0),
       ...(tier.benefits || [])
     ];
     
@@ -53,7 +66,7 @@ const DisplayLoyaltyTierTable = ({ tiers, onDelete, onEdit }) => {
   const sortedTiers = [...filteredTiers].sort((a, b) => {
     let aValue, bValue;
     
-    if (sortField === "orderThreshold" || sortField === "discount") {
+    if (sortField === "amountThreshold" || sortField === "discount") {
       aValue = parseFloat(a[sortField]) || 0;
       bValue = parseFloat(b[sortField]) || 0;
     } else {
@@ -110,16 +123,15 @@ const DisplayLoyaltyTierTable = ({ tiers, onDelete, onEdit }) => {
     </div>
   );
 
-  // Function to render order threshold with appropriate suffix
-  const renderOrderThreshold = (threshold) => {
-    const suffix = threshold === 1 
-      ? "st Order" 
-      : threshold === 2 
-        ? "nd Order" 
-        : threshold === 3 
-          ? "rd Order" 
-          : "th Order";
-    return `${threshold}${suffix}`;
+  // Function to render amount threshold with currency formatting
+  const renderAmountThreshold = (threshold) => {
+    const formattedAmount = formatCurrency(threshold);
+    return (
+      <div>
+        <div className="font-medium text-blue-600">{formattedAmount}</div>
+        <div className="text-xs text-gray-500">Total orders</div>
+      </div>
+    );
   };
 
   // Function to render discount as percentage
@@ -195,7 +207,7 @@ const DisplayLoyaltyTierTable = ({ tiers, onDelete, onEdit }) => {
             <thead className="bg-gray-100">
               <tr>
                 <SortableHeader field="name" label="Tier" />
-                <SortableHeader field="orderThreshold" label="Order Threshold" />
+                <SortableHeader field="amountThreshold" label="Amount Threshold" />
                 <SortableHeader field="discount" label="Discount" />
                 <SortableHeader field="color" label="Color" />
                 <SortableHeader field="description" label="Description" />
@@ -216,7 +228,7 @@ const DisplayLoyaltyTierTable = ({ tiers, onDelete, onEdit }) => {
                     {renderTierInfo(tier)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
-                    {renderOrderThreshold(tier.orderThreshold)}
+                    {renderAmountThreshold(tier.amountThreshold)}
                   </td>
                   <td className="px-4 py-3 whitespace-nowrap">
                     {renderDiscount(tier.discount)}

@@ -1,5 +1,6 @@
 import { collection, addDoc, query, where, getDocs, deleteDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
+import { formatCurrency } from "./LoyaltyService";
 
 /**
  * Create a notification for a loyalty tier change
@@ -63,38 +64,40 @@ export const deleteRelatedNotifications = async (estimateId, clientId) => {
 };
 
 /**
- * Format a loyalty tier message for clients
+ * Format a loyalty tier message for clients based on order amounts
  */
-export const formatLoyaltyTierMessage = (oldTier, newTier, orderCount) => {
+export const formatLoyaltyTierMessage = (oldTier, newTier, totalOrderAmount) => {
   if (!newTier) return null;
   
+  const formattedAmount = formatCurrency(totalOrderAmount);
+  
   if (!oldTier) {
-    return `Congratulations! You've reached the ${newTier.name} loyalty tier with ${orderCount} orders. You now receive a ${newTier.discount}% discount on all orders.`;
+    return `Congratulations! You've reached the ${newTier.name} loyalty tier with ${formattedAmount} in total orders. You now receive a ${newTier.discount}% discount on all orders.`;
   }
   
-  return `Congratulations! You've been upgraded from ${oldTier.name} to ${newTier.name} with ${orderCount} orders. Your discount has increased from ${oldTier.discount}% to ${newTier.discount}%.`;
+  return `Congratulations! You've been upgraded from ${oldTier.name} to ${newTier.name} with ${formattedAmount} in total orders. Your discount has increased from ${oldTier.discount}% to ${newTier.discount}%.`;
 };
 
 /**
- * Generate loyalty progress information for a client
+ * Generate loyalty progress information for a client based on order amounts
  */
-export const getLoyaltyProgressInfo = (clientOrderCount, tiers) => {
-  if (!tiers || tiers.length === 0 || !clientOrderCount) {
+export const getLoyaltyProgressInfo = (clientTotalAmount, tiers) => {
+  if (!tiers || tiers.length === 0 || !clientTotalAmount) {
     return {
       currentTierIndex: -1,
       nextTier: null,
-      ordersUntilNextTier: null,
+      amountUntilNextTier: null,
       progressPercentage: 0
     };
   }
   
-  // Sort tiers by order threshold
-  const sortedTiers = [...tiers].sort((a, b) => a.orderThreshold - b.orderThreshold);
+  // Sort tiers by amount threshold
+  const sortedTiers = [...tiers].sort((a, b) => a.amountThreshold - b.amountThreshold);
   
   // Find current tier index
   let currentTierIndex = -1;
   for (let i = 0; i < sortedTiers.length; i++) {
-    if (clientOrderCount >= sortedTiers[i].orderThreshold) {
+    if (clientTotalAmount >= sortedTiers[i].amountThreshold) {
       currentTierIndex = i;
     } else {
       break;
@@ -108,7 +111,7 @@ export const getLoyaltyProgressInfo = (clientOrderCount, tiers) => {
       return {
         currentTierIndex,
         nextTier: null,
-        ordersUntilNextTier: null,
+        amountUntilNextTier: null,
         progressPercentage: 100
       };
     }
@@ -118,31 +121,31 @@ export const getLoyaltyProgressInfo = (clientOrderCount, tiers) => {
     return {
       currentTierIndex: -1,
       nextTier: firstTier,
-      ordersUntilNextTier: firstTier.orderThreshold - clientOrderCount,
-      progressPercentage: (clientOrderCount / firstTier.orderThreshold) * 100
+      amountUntilNextTier: firstTier.amountThreshold - clientTotalAmount,
+      progressPercentage: (clientTotalAmount / firstTier.amountThreshold) * 100
     };
   }
   
   // There is a next tier available
   const currentTier = sortedTiers[currentTierIndex];
   const nextTier = sortedTiers[currentTierIndex + 1];
-  const ordersUntilNextTier = nextTier.orderThreshold - clientOrderCount;
+  const amountUntilNextTier = nextTier.amountThreshold - clientTotalAmount;
   
   // Calculate progress percentage to next tier
-  const totalOrdersForNextTier = nextTier.orderThreshold - currentTier.orderThreshold;
-  const ordersProgress = clientOrderCount - currentTier.orderThreshold;
-  const progressPercentage = (ordersProgress / totalOrdersForNextTier) * 100;
+  const totalAmountForNextTier = nextTier.amountThreshold - currentTier.amountThreshold;
+  const amountProgress = clientTotalAmount - currentTier.amountThreshold;
+  const progressPercentage = (amountProgress / totalAmountForNextTier) * 100;
   
   return {
     currentTierIndex,
     nextTier,
-    ordersUntilNextTier,
+    amountUntilNextTier,
     progressPercentage
   };
 };
 
 /**
- * Recalculate estimates with loyalty discount
+ * Recalculate estimates with loyalty discount preview based on amounts
  * Can be used for displaying preview of discount on estimates screen
  */
 export const previewLoyaltyDiscount = (calculations, discountPercentage) => {
@@ -185,4 +188,42 @@ export const previewLoyaltyDiscount = (calculations, discountPercentage) => {
     console.error("Error calculating loyalty discount preview:", error);
     return calculations;
   }
+};
+
+/**
+ * Calculate what tier a hypothetical amount would qualify for
+ */
+export const getQualifyingTierForAmount = (amount, tiers) => {
+  if (!amount || !tiers || tiers.length === 0) return null;
+  
+  const sortedTiers = [...tiers].sort((a, b) => a.amountThreshold - b.amountThreshold);
+  
+  let qualifyingTier = null;
+  for (const tier of sortedTiers) {
+    if (amount >= tier.amountThreshold) {
+      qualifyingTier = tier;
+    } else {
+      break;
+    }
+  }
+  
+  return qualifyingTier;
+};
+
+/**
+ * Format amount progress message for UI display
+ */
+export const formatAmountProgressMessage = (currentAmount, nextTier, currentTier = null) => {
+  if (!nextTier) {
+    return "Highest tier achieved!";
+  }
+  
+  const amountNeeded = nextTier.amountThreshold - currentAmount;
+  const formattedAmount = formatCurrency(amountNeeded);
+  
+  if (!currentTier) {
+    return `${formattedAmount} more to reach ${nextTier.name}`;
+  }
+  
+  return `${formattedAmount} more to upgrade to ${nextTier.name}`;
 };

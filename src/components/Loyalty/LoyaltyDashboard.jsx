@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getLoyaltyStatusReport, syncAllClientLoyaltyTiers } from "../../utils/ClientLoyaltyService";
-import { getLoyaltyTiers } from "../../utils/LoyaltyService";
+import { getLoyaltyTiers, formatCurrency } from "../../utils/LoyaltyService";
 import { useAuth } from "../Login/AuthContext";
 import ConfirmationModal from "../Shared/ConfirmationModal";
 
@@ -31,8 +31,8 @@ const LoyaltyDashboard = () => {
         
         // Fetch loyalty tiers
         const tiersData = await getLoyaltyTiers();
-        // Sort by order threshold
-        const sortedTiers = tiersData.sort((a, b) => a.orderThreshold - b.orderThreshold);
+        // Sort by amount threshold
+        const sortedTiers = tiersData.sort((a, b) => a.amountThreshold - b.amountThreshold);
         setTiers(sortedTiers);
         
         // Fetch loyalty report
@@ -166,7 +166,7 @@ const LoyaltyDashboard = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Loyalty Dashboard</h1>
         <p className="text-gray-600 mt-1">
-          Manage B2B client loyalty tiers and view loyalty program statistics
+          Manage B2B client loyalty tiers and view loyalty program statistics based on order amounts
         </p>
       </div>
       
@@ -184,7 +184,7 @@ const LoyaltyDashboard = () => {
               <>
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                 </svg>
                 Processing...
               </>
@@ -214,7 +214,7 @@ const LoyaltyDashboard = () => {
           <h2 className="text-sm font-medium text-gray-500 mb-2">Active Tiers</h2>
           <p className="text-2xl font-bold text-red-600">{tiers.length}</p>
           <p className="text-xs text-gray-500 mt-2">
-            From {tiers[0]?.discount || 0}% to {tiers[tiers.length - 1]?.discount || 0}% discount
+            From {formatCurrency(tiers[0]?.amountThreshold || 0)} to {formatCurrency(tiers[tiers.length - 1]?.amountThreshold || 0)}
           </p>
         </div>
         
@@ -242,7 +242,7 @@ const LoyaltyDashboard = () => {
             <thead>
               <tr className="bg-gray-50">
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Tier Name</th>
-                <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Order Threshold</th>
+                <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Amount Threshold</th>
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Discount</th>
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Client Count</th>
               </tr>
@@ -260,7 +260,7 @@ const LoyaltyDashboard = () => {
                     </div>
                   </td>
                   <td className="px-4 py-3 text-gray-600">
-                    {tier.orderThreshold} {tier.orderThreshold === 1 ? "Order" : "Orders"}
+                    {tier.amountThreshold > 0 ? formatCurrency(tier.amountThreshold) : "No Threshold"}
                   </td>
                   <td className="px-4 py-3">
                     <div className="font-medium text-green-600">{tier.discount}%</div>
@@ -335,6 +335,7 @@ const LoyaltyDashboard = () => {
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Client Name</th>
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Client Code</th>
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Order Count</th>
+                <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Total Amount</th>
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Current Tier</th>
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Discount</th>
                 <th className="px-4 py-3 border-b border-gray-200 font-medium text-gray-500">Next Tier</th>
@@ -345,7 +346,7 @@ const LoyaltyDashboard = () => {
                 // Find next tier
                 const currentTierIndex = tiers.findIndex((t) => t.dbId === client.currentTierId);
                 const nextTier = currentTierIndex < tiers.length - 1 ? tiers[currentTierIndex + 1] : null;
-                const ordersUntilNextTier = nextTier ? nextTier.orderThreshold - client.orderCount : null;
+                const amountUntilNextTier = nextTier ? nextTier.amountThreshold - client.totalOrderAmount : null;
                 
                 return (
                   <tr 
@@ -359,6 +360,11 @@ const LoyaltyDashboard = () => {
                     <td className="px-4 py-3 font-medium text-gray-900">{client.name}</td>
                     <td className="px-4 py-3 text-gray-600">{client.clientCode || "-"}</td>
                     <td className="px-4 py-3 text-gray-600">{client.orderCount}</td>
+                    <td className="px-4 py-3 text-gray-600">
+                      <div className="font-medium text-blue-600">
+                        {formatCurrency(client.totalOrderAmount || 0)}
+                      </div>
+                    </td>
                     <td className="px-4 py-3">
                       {client.currentTierName ? (
                         <div className="flex items-center">
@@ -390,10 +396,11 @@ const LoyaltyDashboard = () => {
                     <td className="px-4 py-3 text-gray-600">
                       {nextTier ? (
                         <>
-                          {nextTier.name} in {ordersUntilNextTier} more {ordersUntilNextTier === 1 ? "order" : "orders"}
+                          {nextTier.name} at {formatCurrency(amountUntilNextTier)} more
                         </>
                       ) : (
-                        client.currentTierId ? "Highest tier reached" : `${tiers[0]?.name || 'First tier'} in ${tiers[0]?.orderThreshold || 1} orders`
+                        client.currentTierId ? "Highest tier reached" : 
+                        `${tiers[0]?.name || 'First tier'} at ${formatCurrency((tiers[0]?.amountThreshold || 0) - (client.totalOrderAmount || 0))}`
                       )}
                     </td>
                   </tr>

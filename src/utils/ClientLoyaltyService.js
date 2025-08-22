@@ -1,10 +1,9 @@
 import { collection, doc, getDoc, getDocs, query, where, updateDoc } from "firebase/firestore";
 import { db } from "../firebaseConfig";
-import { getLoyaltyTiers, getTierByOrderCount } from "./LoyaltyService";
+import { getLoyaltyTiers, getTierByOrderAmount, formatCurrency } from "./LoyaltyService";
 
 /**
- * Check and update loyalty tiers for all clients
- * This can be run periodically to ensure all clients are in the correct tier
+ * Check and update loyalty tiers for all clients based on total order amounts
  */
 export const syncAllClientLoyaltyTiers = async () => {
   try {
@@ -28,12 +27,12 @@ export const syncAllClientLoyaltyTiers = async () => {
       // Only update B2B clients
       if (clientData.clientType && clientData.clientType.toUpperCase() === "B2B") {
         try {
-          const currentOrderCount = clientData.orderCount || 0;
+          const currentTotalAmount = clientData.totalOrderAmount || 0;
           
-          // Skip clients with no orders
-          if (currentOrderCount > 0) {
-            // Get appropriate tier for this order count
-            const appropriateTier = await getTierByOrderCount(currentOrderCount);
+          // Skip clients with no order amount
+          if (currentTotalAmount > 0) {
+            // Get appropriate tier for this total amount
+            const appropriateTier = await getTierByOrderAmount(currentTotalAmount);
             
             // Check if client needs tier update
             const needsUpdate = 
@@ -45,8 +44,8 @@ export const syncAllClientLoyaltyTiers = async () => {
               const updatePromise = updateDoc(doc(db, "clients", clientId), {
                 loyaltyTierId: appropriateTier?.dbId || null,
                 loyaltyTierName: appropriateTier?.name || null,
-                loyaltyTierColor: appropriateTier?.color || "#9f7aea", // Add tier color
-                loyaltyTierDiscount: appropriateTier?.discount || 0, // Rename to keep consistent naming
+                loyaltyTierColor: appropriateTier?.color || "#9f7aea",
+                loyaltyTierDiscount: appropriateTier?.discount || 0,
                 updatedAt: new Date().toISOString()
               });
               
@@ -58,7 +57,7 @@ export const syncAllClientLoyaltyTiers = async () => {
                 oldTierId: clientData.loyaltyTierId || null,
                 newTierId: appropriateTier?.dbId || null,
                 newTierColor: appropriateTier?.color || "#9f7aea",
-                orderCount: currentOrderCount
+                totalOrderAmount: currentTotalAmount
               });
             }
           }
@@ -85,7 +84,7 @@ export const syncAllClientLoyaltyTiers = async () => {
 };
 
 /**
- * Get a report of all clients and their loyalty status
+ * Get a report of all clients and their loyalty status based on order amounts
  */
 export const getLoyaltyStatusReport = async () => {
   try {
@@ -103,10 +102,12 @@ export const getLoyaltyStatusReport = async () => {
       return {
         id: doc.id,
         name: data.name,
+        clientCode: data.clientCode || data.code,
         orderCount: data.orderCount || 0,
+        totalOrderAmount: data.totalOrderAmount || 0,
         currentTierId: data.loyaltyTierId,
         currentTierName: data.loyaltyTierName,
-        color: data.loyaltyTierColor || "#9f7aea", // Include color in client data
+        color: data.loyaltyTierColor || "#9f7aea",
         discount: data.loyaltyTierDiscount || 0
       };
     });
@@ -118,9 +119,9 @@ export const getLoyaltyStatusReport = async () => {
         tierId: tier.dbId,
         tierName: tier.name,
         clientCount: clientsInTier.length,
-        orderThreshold: tier.orderThreshold,
+        amountThreshold: tier.amountThreshold,
         discount: tier.discount,
-        color: tier.color || "#9f7aea" // Include color in tier summary
+        color: tier.color || "#9f7aea"
       };
     });
     
@@ -130,9 +131,9 @@ export const getLoyaltyStatusReport = async () => {
       tierId: null,
       tierName: "No Tier",
       clientCount: clientsWithNoTier.length,
-      orderThreshold: 0,
+      amountThreshold: 0,
       discount: 0,
-      color: "#cccccc" // Default color for "No Tier"
+      color: "#cccccc"
     });
     
     return {
@@ -149,7 +150,7 @@ export const getLoyaltyStatusReport = async () => {
 };
 
 /**
- * Get detailed client loyalty history
+ * Get detailed client loyalty history based on order amounts
  */
 export const getClientLoyaltyHistory = async (clientId) => {
   try {
@@ -180,6 +181,7 @@ export const getClientLoyaltyHistory = async (clientId) => {
         return {
           id: doc.id,
           date: data.date || data.createdAt,
+          orderAmount: parseFloat(data.calculations?.totalWithGST || 0),
           loyaltyInfo: data.loyaltyInfo || null,
           totalWithDiscount: data.calculations?.discountedTotalCost || data.calculations?.totalCost,
           discountAmount: data.calculations?.loyaltyDiscountAmount || 0
@@ -193,20 +195,22 @@ export const getClientLoyaltyHistory = async (clientId) => {
     
     // Calculate next tier information
     let nextTier = null;
-    let ordersUntilNextTier = null;
+    let amountUntilNextTier = null;
+    
+    const currentTotalAmount = clientData.totalOrderAmount || 0;
     
     if (clientData.loyaltyTierId) {
       const currentTierIndex = tiers.findIndex(t => t.dbId === clientData.loyaltyTierId);
       
       if (currentTierIndex >= 0 && currentTierIndex < tiers.length - 1) {
         nextTier = tiers[currentTierIndex + 1];
-        ordersUntilNextTier = nextTier.orderThreshold - (clientData.orderCount || 0);
+        amountUntilNextTier = nextTier.amountThreshold - currentTotalAmount;
       }
     } else {
-      // If client has no tier but has orders, check if they're close to the first tier
-      if ((clientData.orderCount || 0) > 0 && tiers.length > 0) {
+      // If client has no tier but has order amount, check if they're close to the first tier
+      if (currentTotalAmount > 0 && tiers.length > 0) {
         nextTier = tiers[0];
-        ordersUntilNextTier = nextTier.orderThreshold - (clientData.orderCount || 0);
+        amountUntilNextTier = nextTier.amountThreshold - currentTotalAmount;
       }
     }
     
@@ -222,17 +226,18 @@ export const getClientLoyaltyHistory = async (clientId) => {
         name: clientData.name,
         email: clientData.email,
         orderCount: clientData.orderCount || 0,
+        totalOrderAmount: currentTotalAmount,
         currentTierId: clientData.loyaltyTierId,
         currentTierName: clientData.loyaltyTierName,
-        currentTierColor: clientData.loyaltyTierColor || "#9f7aea", // Include color in client info
+        currentTierColor: clientData.loyaltyTierColor || "#9f7aea",
         currentDiscount: clientData.loyaltyTierDiscount || 0
       },
       nextTier: nextTier ? {
         id: nextTier.dbId,
         name: nextTier.name,
         discount: nextTier.discount,
-        color: nextTier.color || "#9f7aea", // Include color in next tier info
-        ordersRequired: ordersUntilNextTier
+        color: nextTier.color || "#9f7aea",
+        amountRequired: amountUntilNextTier
       } : null,
       totalSavings: totalSavings.toFixed(2),
       ordersWithLoyalty
@@ -244,12 +249,9 @@ export const getClientLoyaltyHistory = async (clientId) => {
 };
 
 /**
- * Update a single client's loyalty tier based on order count
- * @param {string} clientId - Client's document ID
- * @param {number} orderCount - Current order count
- * @returns {Promise<Object>} - Result of the update operation
+ * Update a single client's loyalty tier based on total order amount
  */
-export const updateClientLoyaltyTier = async (clientId, orderCount) => {
+export const updateClientLoyaltyTier = async (clientId, totalOrderAmount) => {
   try {
     if (!clientId) {
       throw new Error("Client ID is required");
@@ -273,15 +275,15 @@ export const updateClientLoyaltyTier = async (clientId, orderCount) => {
       };
     }
     
-    // Get appropriate tier for this order count
-    const appropriateTier = await getTierByOrderCount(orderCount);
+    // Get appropriate tier for this total amount
+    const appropriateTier = await getTierByOrderAmount(totalOrderAmount);
     
     // If no appropriate tier found, clear loyalty info
     if (!appropriateTier) {
       await updateDoc(clientRef, {
         loyaltyTierId: null,
         loyaltyTierName: null,
-        loyaltyTierColor: null, // Clear color
+        loyaltyTierColor: null,
         loyaltyTierDiscount: 0,
         updatedAt: new Date().toISOString()
       });
@@ -297,7 +299,7 @@ export const updateClientLoyaltyTier = async (clientId, orderCount) => {
     await updateDoc(clientRef, {
       loyaltyTierId: appropriateTier.dbId,
       loyaltyTierName: appropriateTier.name,
-      loyaltyTierColor: appropriateTier.color || "#9f7aea", // Set tier color
+      loyaltyTierColor: appropriateTier.color || "#9f7aea",
       loyaltyTierDiscount: appropriateTier.discount,
       updatedAt: new Date().toISOString()
     });
