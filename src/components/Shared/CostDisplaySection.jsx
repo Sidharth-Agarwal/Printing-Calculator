@@ -317,20 +317,6 @@ const CostDisplaySection = ({
               isHighlight
             />
           </div>
-          
-          {/* Quick summary stats */}
-          <div className="mt-3 pt-2 border-t border-green-200">
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div className="bg-white p-2 rounded">
-                <div className="text-gray-600">Per Item</div>
-                <div className="font-bold text-green-700">₹{parseFloat(calculations.totalCostPerCard || 0).toFixed(2)}</div>
-              </div>
-              <div className="bg-white p-2 rounded">
-                <div className="text-gray-600">Total</div>
-                <div className="font-bold text-green-700">₹{parseFloat(calculations.totalWithGST || 0).toFixed(2)}</div>
-              </div>
-            </div>
-          </div>
         </div>
       </CollapsibleSection>
     );

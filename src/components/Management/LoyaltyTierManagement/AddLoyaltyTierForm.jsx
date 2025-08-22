@@ -4,7 +4,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
   const [formData, setFormData] = useState({
     id: "",
     name: "",
-    orderThreshold: "",
+    amountThreshold: "",
     discount: "",
     color: "#CCCCCC",
     description: "",
@@ -23,7 +23,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
       setFormData({
         id: "",
         name: "",
-        orderThreshold: "",
+        amountThreshold: "",
         discount: "",
         color: "#CCCCCC",
         description: "",
@@ -38,8 +38,8 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
     setFormData((prev) => ({
       ...prev,
       [name]:
-        name === "orderThreshold" || name === "discount"
-          ? value === "" ? "" : parseInt(value, 10)
+        name === "amountThreshold" || name === "discount"
+          ? value === "" ? "" : parseFloat(value)
           : value,
     }));
 
@@ -77,18 +77,28 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
     }));
   };
 
+  const formatCurrency = (amount) => {
+    if (!amount) return "";
+    return new Intl.NumberFormat('en-IN').format(amount);
+  };
+
   const handleSubmit = (e) => {
     e.preventDefault();
 
     if (
       !formData.id ||
       !formData.name ||
-      !formData.orderThreshold ||
+      !formData.amountThreshold ||
       formData.discount === "" ||
       formData.discount === null ||
       formData.discount === undefined
     ) {
       setError("Please fill in all required fields");
+      return;
+    }
+
+    if (formData.amountThreshold <= 0) {
+      setError("Amount threshold must be greater than 0");
       return;
     }
 
@@ -124,7 +134,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               name="id"
               value={formData.id || ""}
               onChange={handleChange}
-              placeholder="E.g., welcome_circle, trusted_circle"
+              placeholder="E.g., bronze_tier, silver_tier"
               className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2"
               required
             />
@@ -140,7 +150,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               name="name"
               value={formData.name || ""}
               onChange={handleChange}
-              placeholder="E.g., Welcome Circle, Trusted Circle"
+              placeholder="E.g., Bronze Tier, Silver Tier"
               className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2"
               required
             />
@@ -149,21 +159,26 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
 
           <div>
             <label className="block text-xs font-medium text-gray-700 mb-1">
-              Order Threshold <span className="text-red-500">*</span>
+              Amount Threshold (₹) <span className="text-red-500">*</span>
             </label>
             <input
               type="number"
-              name="orderThreshold"
-              value={formData.orderThreshold || ""}
+              name="amountThreshold"
+              value={formData.amountThreshold || ""}
               onChange={handleChange}
-              placeholder="E.g., 1, 2, 3, 4"
+              placeholder="E.g., 25000, 50000, 100000"
               className="w-full p-2 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2"
               required
               min="1"
               onWheel={(e) => e.target.blur()}
             />
             <p className="mt-1 text-xs text-gray-500">
-              Minimum number of orders to reach this tier
+              Minimum total order amount to reach this tier
+              {formData.amountThreshold && (
+                <span className="block font-medium text-blue-600">
+                  ₹{formatCurrency(formData.amountThreshold)}
+                </span>
+              )}
             </p>
           </div>
 
@@ -181,6 +196,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
               required
               min="0"
               max="100"
+              step="0.1"
               onWheel={(e) => e.target.blur()}
             />
             <p className="mt-1 text-xs text-gray-500">
@@ -289,7 +305,7 @@ const AddLoyaltyTierForm = ({ onSubmit, selectedTier, onUpdate, isSubmitting, on
                 <path
                   className="opacity-75"
                   fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
                 ></path>
               </svg>
               Processing...

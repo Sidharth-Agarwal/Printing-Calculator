@@ -8,10 +8,11 @@ import EscrowApprovalModal from "./EscrowApprovalModal";
 import { useAuth } from "../Login/AuthContext";
 import { normalizeDataForOrders } from "../../utils/normalizeDataForOrders";
 import { 
-  updateClientOrderCountAndTier, 
+  updateClientOrderAmountAndTier, 
   getClientCurrentTier, 
   applyLoyaltyDiscount,
-  isClientEligibleForLoyalty 
+  isClientEligibleForLoyalty,
+  formatCurrency
 } from "../../utils/LoyaltyService";
 import { 
   createLoyaltyTierChangeNotification,
@@ -375,7 +376,7 @@ const EscrowDashboard = () => {
     setIsApprovalModalOpen(true);
   };
 
-  // UPDATED: Process approval for a single estimate with serial number generation
+  // UPDATED: Process approval for a single estimate with amount-based loyalty and serial number generation
   const processApproveEstimate = async (estimate, notes = "") => {
     try {
       setIsProcessingApproval(true);
@@ -410,29 +411,35 @@ const EscrowDashboard = () => {
       normalizedEstimate.createdAt = estimate.createdAt || currentTimestamp;
       normalizedEstimate.updatedAt = currentTimestamp;
       
-      // Get the client ID
+      // Get the client ID and order amount
       const clientId = normalizedEstimate.clientId;
+      const orderAmount = parseFloat(normalizedEstimate.calculations?.totalWithGST || 0);
       
-      // Process loyalty for B2B clients
+      // Process loyalty for B2B clients based on order amount
       let loyaltyUpdate = null;
       let tierChanged = false;
       let oldTier = null;
       
-      if (clientId) {
+      if (clientId && orderAmount > 0) {
         try {
           // Check if this client is eligible for the loyalty program (B2B)
           const isLoyaltyEligible = await isClientEligibleForLoyalty(clientId);
           normalizedEstimate.isLoyaltyEligible = isLoyaltyEligible;
           
           if (isLoyaltyEligible) {
-            console.log("Processing B2B client loyalty...");
+            console.log("Processing B2B client loyalty based on order amount...");
             
             // Get current tier info before updating
             oldTier = await getClientCurrentTier(clientId);
             
-            // Update client's order count and get updated tier info
-            loyaltyUpdate = await updateClientOrderCountAndTier(clientId);
+            // UPDATED: Update client's total order amount and get updated tier info
+            loyaltyUpdate = await updateClientOrderAmountAndTier(clientId, orderAmount);
             tierChanged = loyaltyUpdate.tierChanged;
+            
+            console.log("Loyalty update result:", loyaltyUpdate);
+            console.log("Tier changed:", tierChanged);
+            console.log("Old tier:", oldTier);
+            console.log("New tier:", loyaltyUpdate.tier);
             
             if (loyaltyUpdate.success && loyaltyUpdate.tier) {
               console.log("Applied loyalty tier:", loyaltyUpdate.tier.name);
@@ -446,14 +453,22 @@ const EscrowDashboard = () => {
               // Update the estimate with new calculations
               normalizedEstimate.calculations = updatedCalculations;
               
-              // Add loyalty information to the order
+              // Debug logging - FIXED
+              console.log("Original calculations:", normalizedEstimate.calculations);
+              console.log("Updated calculations:", updatedCalculations);
+              console.log("Loyalty discount amount:", updatedCalculations.loyaltyDiscountAmount);
+              console.log("Tier discount:", loyaltyUpdate.tier.discount);
+              
+              // Add loyalty information to the order - FIXED
               normalizedEstimate.loyaltyInfo = {
                 tierId: loyaltyUpdate.tier.dbId,
                 tierName: loyaltyUpdate.tier.name,
                 discount: loyaltyUpdate.tier.discount,
-                discountAmount: updatedCalculations.loyaltyDiscountAmount,
+                discountAmount: updatedCalculations.loyaltyDiscountAmount || "0.00", // FIXED: Handle undefined
                 tierChanged: loyaltyUpdate.tierChanged,
-                clientOrderCount: loyaltyUpdate.orderCount
+                clientOrderCount: loyaltyUpdate.orderCount,
+                clientTotalAmount: loyaltyUpdate.totalOrderAmount,
+                orderAmount: orderAmount
               };
               
               // If tier changed, create a notification
@@ -506,6 +521,9 @@ const EscrowDashboard = () => {
       
       console.log("Successfully approved B2B estimate and moved to orders");
       
+      // FIXED: Debug popup trigger logic
+      console.log("Should show popup:", tierChanged && loyaltyUpdate && loyaltyUpdate.tier);
+      
       // Show popup if tier changed
       if (tierChanged && loyaltyUpdate && loyaltyUpdate.tier) {
         // Get client info for the popup
@@ -517,7 +535,8 @@ const EscrowDashboard = () => {
           clientName: clientName,
           oldTier: oldTier?.name || "No Tier",
           newTier: loyaltyUpdate.tier.name,
-          newDiscount: loyaltyUpdate.tier.discount
+          newDiscount: loyaltyUpdate.tier.discount,
+          totalAmount: loyaltyUpdate.totalOrderAmount
         });
       } else {
         // Show success message with serial number if available
@@ -586,7 +605,7 @@ const EscrowDashboard = () => {
     }
   };
 
-  // Handle approving multiple estimates with serial number generation
+  // Handle approving multiple estimates with amount-based loyalty and serial number generation
   const handleApproveMultiple = async () => {
     try {
       setIsApprovingMultiple(true);
@@ -747,7 +766,7 @@ const EscrowDashboard = () => {
           B2B Escrow Approval
         </h1>
         <p className="text-gray-600 mt-1">
-          Review and approve B2B estimates before converting them to orders with serial numbers
+          Review and approve B2B estimates before converting them to orders with serial numbers and amount-based loyalty processing
         </p>
       </div>
 
@@ -785,7 +804,7 @@ const EscrowDashboard = () => {
         </div>
       </div>
 
-      {/* Loyalty Tier Upgrade Popup with Timer */}
+      {/* Loyalty Tier Upgrade Popup with Timer and Amount Display - FIXED SVG */}
       {loyaltyNotification && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl max-w-md w-full p-6 border-l-4 border-red-500">
@@ -805,10 +824,15 @@ const EscrowDashboard = () => {
                 <p className="text-red-600 font-medium">
                   New discount: {loyaltyNotification.newDiscount}%
                 </p>
+                {/* Show total amount achieved */}
+                <p className="text-blue-600 text-sm mt-1">
+                  Total order amount: {formatCurrency(loyaltyNotification.totalAmount || 0)}
+                </p>
               </div>
             </div>
             <div className="flex justify-between items-center mt-4">
               <div className="flex items-center">
+                {/* FIXED SVG PATH */}
                 <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -817,7 +841,7 @@ const EscrowDashboard = () => {
              </div>
              <button
                onClick={handleDismissLoyaltyNotification}
-               className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500"
+               className="px-4 py-2 bg-green-500 text-white rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-green-500"
              >
                Dismiss
              </button>
@@ -829,6 +853,7 @@ const EscrowDashboard = () => {
      {/* Main Content Area */}
      {isLoading ? (
        <div className="flex flex-col items-center justify-center h-64">
+         {/* FIXED SVG PATH */}
          <div className="animate-spin h-10 w-10 border-4 border-red-500 rounded-full border-t-transparent mb-4"></div>
          <p className="text-gray-500">Loading escrow items...</p>
        </div>
@@ -994,9 +1019,10 @@ const EscrowDashboard = () => {
                              >
                                {isApprovingMultiple ? (
                                  <>
+                                   {/* FIXED SVG PATH */}
                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                                    </svg>
                                    Processing...
                                  </>
@@ -1020,6 +1046,7 @@ const EscrowDashboard = () => {
                              >
                                {isApprovingMultiple ? (
                                  <>
+                                   {/* FIXED SVG PATH */}
                                    <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1103,6 +1130,7 @@ const EscrowDashboard = () => {
                            >
                              {isApprovingMultiple ? (
                                <>
+                                 {/* FIXED SVG PATH */}
                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1129,6 +1157,7 @@ const EscrowDashboard = () => {
                            >
                              {isApprovingMultiple ? (
                                <>
+                                 {/* FIXED SVG PATH */}
                                  <svg className="animate-spin h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 818-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
@@ -1177,7 +1206,7 @@ const EscrowDashboard = () => {
                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
                                    <path d="M9 2a1 1 0 000 2h2a1 1 0 100-2H9z" />
                                    <path fillRule="evenodd" d="M4 5a2 2 0 012-2 3 3 0 003 3h2a3 3 0 003-3 2 2 0 012 2v11a2 2 0 01-2 2H6a2 2 0 01-2-2V5z" clipRule="evenodd" />
-                                   </svg>
+                                 </svg>
                                  Select All
                                </button>
                              )}

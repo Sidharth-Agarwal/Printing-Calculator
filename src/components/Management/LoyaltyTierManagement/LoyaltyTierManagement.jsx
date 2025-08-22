@@ -44,6 +44,18 @@ const LoyaltyTierManagement = () => {
     maxDiscount: 0
   });
 
+  // Format currency for display
+  const formatCurrency = (amount) => {
+    if (!amount || isNaN(amount)) return "₹0";
+    
+    return new Intl.NumberFormat('en-IN', {
+      style: 'currency',
+      currency: 'INR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   // Fetch loyalty tiers from Firestore
   useEffect(() => {
     const loadData = async () => {
@@ -412,7 +424,7 @@ const LoyaltyTierManagement = () => {
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">B2B Loyalty Program Management</h1>
         <p className="text-gray-600 mt-1">
-          Manage loyalty tiers, discounts, and thresholds for B2B clients
+          Manage loyalty tiers, discounts, and amount thresholds for B2B clients
         </p>
       </div>
 
