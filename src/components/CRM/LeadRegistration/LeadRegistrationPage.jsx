@@ -4,6 +4,7 @@ import DisplayLeadsTable from "./DisplayLeadsTable";
 import LeadDetailsModal from "./LeadDetailsModal";
 import LeadDiscussionModal from "../LeadManagement/LeadDiscussionModal";
 import LeadConversionModal from "../LeadManagement/LeadConversionModal";
+import TempClientModal from "../LeadManagement/TempClientModal"; // Add this import
 import Modal from "../../Shared/Modal";
 import { useCRM } from "../../../context/CRMContext";
 import { LEAD_TABLE_FIELDS } from "../../../constants/leadFields";
@@ -15,10 +16,12 @@ import {
   createDiscussion 
 } from "../../../services";
 import { useAuth } from "../../Login/AuthContext";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore"; // Add these imports
+import { db } from "../../../firebaseConfig"; // Add this import
 
 const LeadRegistrationPage = () => {
   const { currentUser, userRole } = useAuth();
-  const { leads, isLoadingLeads } = useCRM();
+  const { leads, isLoadingLeads, refreshLeads } = useCRM(); // Add refreshLeads
   
   // Modal states
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
@@ -26,6 +29,7 @@ const LeadRegistrationPage = () => {
   const [viewingLead, setViewingLead] = useState(null);
   const [discussionLead, setDiscussionLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
+  const [tempClientLead, setTempClientLead] = useState(null); // Add this state
   
   // Form submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -55,8 +59,13 @@ const LeadRegistrationPage = () => {
   // Check if user has permission to manage leads
   const hasPermission = userRole === "admin" || userRole === "staff";
   
-  // NEW: Handle lead updates from inline editing
+  // UPDATED: Handle lead updates from inline editing
   const handleLeadUpdate = () => {
+    // Refresh the leads list after inline updates
+    if (refreshLeads) {
+      refreshLeads();
+    }
+    
     // Show a subtle notification for inline updates
     showNotification("Lead updated successfully", "success");
     
@@ -68,6 +77,50 @@ const LeadRegistrationPage = () => {
         console.error("Error refreshing viewed lead:", error);
       });
     }
+  };
+
+  // UPDATED: Handle temp client creation - FIX for functionality
+  const handleMakeTempClient = (lead) => {
+    console.log("Making temp client for lead:", lead);
+    setTempClientLead(lead);
+  };
+
+  // UPDATED: Handle temp client submission - FIX for functionality
+  const handleTempClientSubmit = async (leadId, success, newTempClient = null) => {
+    if (success) {
+      try {
+        // Update lead to reference temp client
+        const leadRef = doc(db, "leads", leadId);
+        await updateDoc(leadRef, {
+          tempClientId: newTempClient.id,
+          tempClientCreatedAt: new Date(),
+          updatedAt: serverTimestamp()
+        });
+        
+        showNotification(`Temporary client "${newTempClient?.name}" created successfully`);
+        
+        // Refresh lead if viewing
+        if (viewingLead && viewingLead.id === leadId) {
+          const updatedLead = await getLeadById(leadId);
+          setViewingLead(updatedLead);
+        }
+        
+        // Refresh leads list
+        if (refreshLeads) {
+          refreshLeads();
+        }
+        
+        console.log("Lead updated with temp client reference");
+      } catch (error) {
+        console.error("Error updating lead with temp client reference:", error);
+        showNotification("Failed to update lead with temp client reference", "error");
+      }
+    } else {
+      showNotification("Failed to create temporary client", "error");
+    }
+    
+    // Close temp client modal
+    setTempClientLead(null);
   };
   
   // Handle opening the form modal for a new lead
@@ -122,6 +175,11 @@ const LeadRegistrationPage = () => {
         showNotification(`Lead "${formData.name}" created successfully`);
       }
       
+      // Refresh the lead list
+      if (refreshLeads) {
+        refreshLeads();
+      }
+      
       // Close form modal
       setIsFormModalOpen(false);
       setSelectedLead(null);
@@ -149,6 +207,14 @@ const LeadRegistrationPage = () => {
       if (convertingLead && convertingLead.id === leadId) {
         setConvertingLead(null);
       }
+      if (tempClientLead && tempClientLead.id === leadId) {
+        setTempClientLead(null);
+      }
+      
+      // Refresh leads list
+      if (refreshLeads) {
+        refreshLeads();
+      }
     } catch (error) {
       console.error("Error deleting lead:", error);
       showNotification(`Error: ${error.message}`, "error");
@@ -165,6 +231,11 @@ const LeadRegistrationPage = () => {
       if (viewingLead && viewingLead.id === leadId) {
         const updatedLead = await getLeadById(leadId);
         setViewingLead(updatedLead);
+      }
+      
+      // Refresh leads list
+      if (refreshLeads) {
+        refreshLeads();
       }
       
       // Close discussion modal
@@ -184,6 +255,11 @@ const LeadRegistrationPage = () => {
       if (viewingLead && viewingLead.id === leadId) {
         const updatedLead = await getLeadById(leadId);
         setViewingLead(updatedLead);
+      }
+      
+      // Refresh leads list
+      if (refreshLeads) {
+        refreshLeads();
       }
     }
     
@@ -322,9 +398,11 @@ const LeadRegistrationPage = () => {
           onEdit={handleEdit}
           onDelete={handleDelete}
           onAddDiscussion={handleAddDiscussion}
+          onConvert={handleConvert}
           loading={isLoadingLeads}
           fields={LEAD_TABLE_FIELDS}
-          onLeadUpdate={handleLeadUpdate} // NEW: Add this prop for inline editing
+          onLeadUpdate={handleLeadUpdate} // Add this prop for inline editing
+          onMakeTempClient={handleMakeTempClient} // Add this prop for temp client creation
         />
       </div>
       
@@ -336,6 +414,8 @@ const LeadRegistrationPage = () => {
           onEdit={handleEdit}
           onAddDiscussion={handleAddDiscussion}
           onConvert={handleConvert}
+          onLeadUpdate={handleLeadUpdate}
+          onMakeTempClient={handleMakeTempClient}
         />
       )}
       
@@ -377,6 +457,15 @@ const LeadRegistrationPage = () => {
           lead={convertingLead}
           onClose={() => setConvertingLead(null)}
           onSubmit={handleSubmitConversion}
+        />
+      )}
+      
+      {/* FIXED: Temp Client Modal */}
+      {tempClientLead && (
+        <TempClientModal
+          lead={tempClientLead}
+          onClose={() => setTempClientLead(null)}
+          onSubmit={handleTempClientSubmit}
         />
       )}
     </div>

@@ -9,7 +9,10 @@ const ClientInvoiceGroup = ({
   onSelectOrder, 
   onSelectAllOrders,
   onOrderClick,
-  formatDate
+  formatDate,
+  onGenerateInvoice,
+  onGenerateJobTicket,
+  onGenerateDeliverySlip
 }) => {
   // Calculate if all orders are selected
   const areAllOrdersSelected = client.orders.length > 0 && 
@@ -23,6 +26,25 @@ const ClientInvoiceGroup = ({
   const handleToggleSelectAll = (e) => {
     e.stopPropagation(); // Prevent expanding/collapsing when clicking checkbox
     onSelectAllOrders(client.id, !areAllOrdersSelected);
+  };
+
+  // Handle individual action buttons for single orders
+  const handleSingleOrderInvoice = (order) => {
+    if (onGenerateInvoice) {
+      onGenerateInvoice([order]); // Pass as array for consistency
+    }
+  };
+
+  const handleSingleOrderJobTicket = (order) => {
+    if (onGenerateJobTicket) {
+      onGenerateJobTicket([order]); // Pass as array for consistency
+    }
+  };
+
+  const handleSingleOrderDeliverySlip = (order) => {
+    if (onGenerateDeliverySlip) {
+      onGenerateDeliverySlip([order]); // Pass as array for consistency
+    }
   };
 
   return (
@@ -40,7 +62,9 @@ const ClientInvoiceGroup = ({
               onChange={handleToggleSelectAll}
               className="h-4 w-4 text-red-600 border-gray-300 rounded focus:ring-red-500"
               onClick={(e) => e.stopPropagation()}
-              indeterminate={areSomeOrdersSelected ? "true" : undefined}
+              ref={(input) => {
+                if (input) input.indeterminate = areSomeOrdersSelected;
+              }}
             />
           </div>
           <div>
@@ -95,6 +119,9 @@ const ClientInvoiceGroup = ({
                 onSelect={onSelectOrder}
                 onClick={() => onOrderClick(order)}
                 formatDate={formatDate}
+                onGenerateInvoice={handleSingleOrderInvoice}
+                onGenerateJobTicket={handleSingleOrderJobTicket}
+                onGenerateDeliverySlip={handleSingleOrderDeliverySlip}
               />
             ))}
           </div>

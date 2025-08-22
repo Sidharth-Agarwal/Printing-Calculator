@@ -28,7 +28,7 @@ const CRMActionButton = ({
   
   // Type classes
   const typeClasses = {
-    primary: "bg-cyan-500 hover:bg-cyan-600 text-white focus:ring-red-500",
+    primary: "bg-red-500 hover:bg-red-600 text-white focus:ring-red-500",
     secondary: "bg-gray-100 hover:bg-gray-200 text-gray-800 focus:ring-gray-400",
     success: "bg-green-600 hover:bg-green-700 text-white focus:ring-green-500",
     danger: "bg-red-600 hover:bg-red-700 text-white focus:ring-red-500",

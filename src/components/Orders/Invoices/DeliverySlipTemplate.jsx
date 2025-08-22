@@ -14,6 +14,10 @@ const DeliverySlipTemplate = ({ deliveryData, orders, clientInfo }) => {
 
   return (
     <div className="bg-white p-4 print:p-0" style={{ maxWidth: '750px', margin: '0 auto' }}>
+      {/* Debug: Log orders data */}
+      {console.log('Delivery Slip - Orders data:', orders)}
+      {orders.map(order => console.log('Delivery Slip - Order Serial:', order.orderSerial))}
+      
       {/* Company Header */}
       <div className="flex justify-between mb-3">
         <div>
@@ -48,20 +52,22 @@ const DeliverySlipTemplate = ({ deliveryData, orders, clientInfo }) => {
         </div>
       </div>
 
-      {/* Orders Table */}
+      {/* Orders Table - Updated with Order ID column */}
       <p className="text-sm font-medium mb-1">List of jobs done, deliverables according to quantity.</p>
       <table className="w-full border-collapse mb-4">
         <thead>
           <tr>
-            <th className="border border-gray-400 px-2 py-1 text-left w-12 text-xs">Sl. No.</th>
+            <th className="border border-gray-400 px-2 py-1 text-left w-10 text-xs">Sl. No.</th>
+            <th className="border border-gray-400 px-2 py-1 text-center w-20 text-xs">Order Serial</th>
             <th className="border border-gray-400 px-2 py-1 text-left text-xs">Description</th>
-            <th className="border border-gray-400 px-2 py-1 text-center w-20 text-xs">Qnty</th>
+            <th className="border border-gray-400 px-2 py-1 text-center w-16 text-xs">Qnty</th>
           </tr>
         </thead>
         <tbody>
           {orders.map((order, index) => (
             <tr key={order.id}>
               <td className="border border-gray-400 px-2 py-1 text-center text-xs">{index + 1}</td>
+              <td className="border border-gray-400 px-2 py-1 text-center text-xs font-mono whitespace-nowrap">{order.orderSerial || 'N/A'}</td>
               <td className="border border-gray-400 px-2 py-1">
                 <div className="text-xs">
                   <div className="font-medium">{order.projectName || "Untitled Project"}</div>
@@ -75,6 +81,7 @@ const DeliverySlipTemplate = ({ deliveryData, orders, clientInfo }) => {
           {/* Add blank rows if less than 10 */}
           {orders.length < 10 && Array(10 - orders.length).fill().map((_, index) => (
             <tr key={`empty-${index}`}>
+              <td className="border border-gray-400 px-2 py-2">&nbsp;</td>
               <td className="border border-gray-400 px-2 py-2">&nbsp;</td>
               <td className="border border-gray-400 px-2 py-2">&nbsp;</td>
               <td className="border border-gray-400 px-2 py-2">&nbsp;</td>

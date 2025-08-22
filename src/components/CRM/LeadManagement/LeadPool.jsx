@@ -5,9 +5,133 @@ import { LeadSourceDisplay } from "../../Shared/LeadSourceSelector";
 import CRMActionButton from "../../Shared/CRMActionButton";
 import { updateLeadStatus, updateLead } from "../../../services";
 import { useCRM } from "../../../context/CRMContext";
-import { doc, updateDoc, serverTimestamp, writeBatch } from "firebase/firestore";
+import { doc, updateDoc, serverTimestamp, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import TempClientModal from "./TempClientModal";
+
+/**
+ * Component to show temp client status in Kanban cards
+ */
+const KanbanTempClientIndicator = ({ leadId }) => {
+  const [tempClientInfo, setTempClientInfo] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchTempClientInfo = async () => {
+      if (!leadId) {
+        setIsLoading(false);
+        return;
+      }
+
+      try {
+        // Query clients collection for any client with sourceLeadId matching this lead
+        const clientsQuery = query(
+          collection(db, "clients"),
+          where("sourceLeadId", "==", leadId),
+          where("isTemporary", "==", true)
+        );
+
+        const querySnapshot = await getDocs(clientsQuery);
+        
+        if (!querySnapshot.empty) {
+          const tempClient = querySnapshot.docs[0].data();
+          const tempClientId = querySnapshot.docs[0].id;
+          
+          // Check if expired or expiring soon
+          let status = "active";
+          if (tempClient.expiryDate) {
+            const expiryDate = tempClient.expiryDate.toDate ? 
+              tempClient.expiryDate.toDate() : 
+              new Date(tempClient.expiryDate);
+            const today = new Date();
+            const diffTime = expiryDate - today;
+            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+            
+            if (diffDays < 0) {
+              status = "expired";
+            } else if (diffDays <= 7) {
+              status = "expiring";
+            }
+          }
+          
+          setTempClientInfo({
+            id: tempClientId,
+            name: tempClient.name,
+            clientCode: tempClient.clientCode,
+            expiryDate: tempClient.expiryDate,
+            status: status
+          });
+        } else {
+          setTempClientInfo(null);
+        }
+      } catch (error) {
+        console.error("Error fetching temp client info:", error);
+        setTempClientInfo(null);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchTempClientInfo();
+  }, [leadId]);
+
+  if (isLoading || !tempClientInfo) {
+    return null;
+  }
+
+  const getStatusStyle = () => {
+    switch (tempClientInfo.status) {
+      case "expired":
+        return "bg-red-100 text-red-700 border-red-200";
+      case "expiring":
+        return "bg-amber-100 text-amber-700 border-amber-200";
+      default:
+        return "bg-orange-100 text-orange-700 border-orange-200";
+    }
+  };
+
+  const getStatusIcon = () => {
+    switch (tempClientInfo.status) {
+      case "expired":
+        return (
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        );
+      case "expiring":
+        return (
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        );
+      default:
+        return (
+          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+        );
+    }
+  };
+
+  const getStatusText = () => {
+    switch (tempClientInfo.status) {
+      case "expired":
+        return "Temp Client Expired";
+      case "expiring":
+        return "Temp Client Expiring";
+      default:
+        return "Temp Client Active";
+    }
+  };
+
+  return (
+    <div className="mb-2">
+      <div className="text-xs text-gray-600 mt-1">
+        Client: {tempClientInfo.clientCode}
+      </div>
+    </div>
+  );
+};
 
 /**
  * Inline badge editor for Kanban cards
@@ -85,16 +209,6 @@ const InlineKanbanBadgeEditor = ({ leadId, currentBadgeId, onUpdate, disabled = 
 
 /**
  * Lead Pool component for kanban-style lead management with 4 columns
- * @param {Object} props - Component props
- * @param {Array} props.leads - Array of lead objects (pre-filtered)
- * @param {function} props.onView - View handler
- * @param {function} props.onEdit - Edit handler
- * @param {function} props.onAddDiscussion - Add discussion handler
- * @param {function} props.onConvert - Convert handler
- * @param {function} props.onDelete - Delete handler
- * @param {boolean} props.loading - Loading state
- * @param {function} props.onLeadUpdate - Lead update callback for inline editing
- * @param {function} props.onMakeTempClient - Make temp client handler
  */
 const LeadPool = ({ 
   leads = [], 
@@ -120,7 +234,6 @@ const LeadPool = ({
   const lastMousePosition = useRef({ x: 0, y: 0 });
   
   // Memoize grouped leads to prevent unnecessary recalculations
-  // Group leads by their Kanban status (mapping intermediate statuses)
   const groupedLeads = useMemo(() => {
     const groups = {};
     
@@ -280,7 +393,7 @@ const LeadPool = ({
     }
   }, [handleLeadUpdate]);
   
-  // Get the actual status to update when dropping (maps Kanban column back to lead status)
+  // Get the actual status to update when dropping
   const getTargetStatusForDrop = (kanbanStatusId, originalLeadStatus) => {
     // If dropping in the same Kanban column, keep original status
     if (getKanbanStatusForLead(originalLeadStatus) === kanbanStatusId) {
@@ -660,6 +773,9 @@ const LeadPool = ({
                             <div className="flex-shrink-0">{formatDate(lead.createdAt)}</div>
                           </div>
                           
+                          {/* Show temp client status if exists */}
+                          <KanbanTempClientIndicator leadId={lead.id} />
+                          
                           {/* Last discussion summary */}
                           {lead.lastDiscussionSummary && (
                             <div className="mb-2 p-2 bg-gray-50 rounded-md text-xs text-gray-600">
@@ -670,7 +786,7 @@ const LeadPool = ({
                             </div>
                           )}
                           
-                          {/* Action buttons - Updated logic with temp client support */}
+                          {/* Action buttons */}
                           <div className="mt-2 flex justify-center gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
                             {isLeadAddedToClients(lead) ? (
                               // Only show "Added to Clients" status for leads that have been moved
@@ -713,7 +829,7 @@ const LeadPool = ({
                                   aria-label="Add discussion"
                                   icon={
                                     <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z" />
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                     </svg>
                                   }
                                 >
@@ -744,7 +860,7 @@ const LeadPool = ({
                                       Qualify
                                     </CRMActionButton>
                                     
-                                    {/* NEW: Make Temp Client button for new leads */}
+                                    {/* Make Temp Client button for new leads */}
                                     <CRMActionButton
                                       type="warning"
                                       size="xs"
@@ -777,14 +893,14 @@ const LeadPool = ({
                                       aria-label="Convert lead"
                                       icon={
                                         <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m-6 4h.01M19 10a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
                                         </svg>
                                       }
                                     >
                                       Convert
                                     </CRMActionButton>
                                     
-                                    {/* NEW: Make Temp Client button for qualified leads */}
+                                    {/* Make Temp Client button for qualified leads */}
                                     <CRMActionButton
                                       type="warning"
                                       size="xs"

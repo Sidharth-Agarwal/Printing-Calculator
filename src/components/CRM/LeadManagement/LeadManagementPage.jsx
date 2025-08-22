@@ -4,6 +4,7 @@ import LeadDetailsModal from "../LeadRegistration/LeadDetailsModal";
 import LeadRegistrationForm from "../LeadRegistration/LeadRegistrationForm";
 import LeadDiscussionModal from "./LeadDiscussionModal";
 import LeadConversionModal from "./LeadConversionModal";
+import TempClientModal from "./TempClientModal";
 import Modal from "../../Shared/Modal";
 import { useCRM } from "../../../context/CRMContext";
 import DisplayLeadsTable from "../LeadRegistration/DisplayLeadsTable";
@@ -19,6 +20,7 @@ import {
 import { useAuth } from "../../Login/AuthContext";
 import DBExportImport from "../../Shared/DBExportImport";
 import { db } from "../../../firebaseConfig";
+import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 
 /**
  * Main page component for lead management (lead pool) - Updated with temp client support
@@ -33,6 +35,7 @@ const LeadManagementPage = () => {
   const [viewingLead, setViewingLead] = useState(null);
   const [discussionLead, setDiscussionLead] = useState(null);
   const [convertingLead, setConvertingLead] = useState(null);
+  const [tempClientLead, setTempClientLead] = useState(null);
   
   // Form submission state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -112,24 +115,48 @@ const LeadManagementPage = () => {
     showNotification("Lead updated successfully", "success");
   };
 
-  // NEW: Handle temp client creation
-  const handleMakeTempClient = async (leadId, success, newTempClient = null) => {
+  // Handle temp client creation
+  const handleMakeTempClient = (lead) => {
+    console.log("Making temp client for lead:", lead);
+    setTempClientLead(lead);
+  };
+
+  // Handle temp client submission
+  const handleTempClientSubmit = async (leadId, success, newTempClient = null) => {
     if (success) {
-      showNotification(`Temporary client "${newTempClient?.name}" created successfully`);
-      
-      // Refresh lead if viewing
-      if (viewingLead && viewingLead.id === leadId) {
-        const updatedLead = await getLeadById(leadId);
-        setViewingLead(updatedLead);
-      }
-      
-      // Refresh leads list
-      if (refreshLeads) {
-        refreshLeads();
+      try {
+        // Update lead to reference temp client
+        const leadRef = doc(db, "leads", leadId);
+        await updateDoc(leadRef, {
+          tempClientId: newTempClient.id,
+          tempClientCreatedAt: new Date(),
+          updatedAt: serverTimestamp()
+        });
+        
+        showNotification(`Temporary client "${newTempClient?.name}" created successfully`);
+        
+        // Refresh lead if viewing
+        if (viewingLead && viewingLead.id === leadId) {
+          const updatedLead = await getLeadById(leadId);
+          setViewingLead(updatedLead);
+        }
+        
+        // Refresh leads list
+        if (refreshLeads) {
+          refreshLeads();
+        }
+        
+        console.log("Lead updated with temp client reference");
+      } catch (error) {
+        console.error("Error updating lead with temp client reference:", error);
+        showNotification("Failed to update lead with temp client reference", "error");
       }
     } else {
       showNotification("Failed to create temporary client", "error");
     }
+    
+    // Close temp client modal
+    setTempClientLead(null);
   };
   
   // Handle viewing a lead
@@ -172,6 +199,9 @@ const LeadManagementPage = () => {
       }
       if (convertingLead && convertingLead.id === leadId) {
         setConvertingLead(null);
+      }
+      if (tempClientLead && tempClientLead.id === leadId) {
+        setTempClientLead(null);
       }
       
       // Refresh leads list
@@ -680,6 +710,15 @@ const LeadManagementPage = () => {
           lead={convertingLead}
           onClose={() => setConvertingLead(null)}
           onSubmit={handleSubmitConversion}
+        />
+      )}
+      
+      {/* Temp Client Modal */}
+      {tempClientLead && (
+        <TempClientModal
+          lead={tempClientLead}
+          onClose={() => setTempClientLead(null)}
+          onSubmit={handleTempClientSubmit}
         />
       )}
     </div>
