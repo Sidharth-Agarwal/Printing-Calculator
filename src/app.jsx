@@ -155,7 +155,7 @@ function AppContent() {
           />
           
           {/* CRM Routes */}
-          <Route 
+          {/* <Route 
             path="/crm/lead-registration" 
             element={
               <ProtectedRoute>
@@ -181,7 +181,7 @@ function AppContent() {
               </ProtectedRoute>
             } 
           />
-          
+           */}
           <Route 
             path="/material-stock/paper-db" 
             element={
@@ -238,24 +238,24 @@ function AppContent() {
           />
           
           {/* Route for loyalty tier management */}
-          <Route 
+          {/* <Route 
             path="/material-stock/loyalty-tiers" 
             element={
               <ProtectedRoute>
                 <LoyaltyTierManagement />
               </ProtectedRoute>
             } 
-          />
+          /> */}
           
           {/* Route for loyalty dashboard */}
-          <Route 
+          {/* <Route 
             path="/loyalty-dashboard" 
             element={
               <ProtectedRoute>
                 <LoyaltyDashboard />
               </ProtectedRoute>
             } 
-          />
+          /> */}
         </Routes>
       </main>
     </div>

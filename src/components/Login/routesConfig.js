@@ -207,49 +207,49 @@ export const MENU_STRUCTURE = {
         icon: '⚖️',
         accessKey: 'inventory_standardParameters'
       },
-      {
-        label: 'Loyalty Program',
-        path: '/material-stock/loyalty-tiers',
-        icon: '⭐',
-        accessKey: 'inventory_loyaltyProgram'
-      }
+      // {
+      //   label: 'Loyalty Program',
+      //   path: '/material-stock/loyalty-tiers',
+      //   icon: '⭐',
+      //   accessKey: 'inventory_loyaltyProgram'
+      // }
     ]
   },
-  crm: {
-    key: 'crm',
-    label: 'CRM',
-    icon: '👥',
-    path: '/crm',
-    accessKey: 'crm',
-    isDropdown: true,
-    priority: 5,
-    dropdownItems: [
-      {
-        label: 'Public Lead Form',
-        path: '/request-kit',
-        icon: '🌐',
-        accessKey: 'crm_publicLeadForm'
-      },
-      {
-        label: 'Lead Pool',
-        path: '/crm/lead-registration',
-        icon: '✏️',
-        accessKey: 'crm_leadPool'
-      },
-      {
-        label: 'Qualified Leads',
-        path: '/crm/lead-management',
-        icon: '🔄',
-        accessKey: 'crm_qualifiedLeads'
-      },
-      {
-        label: 'Qualification Badges',
-        path: '/crm/badges',
-        icon: '🏆',
-        accessKey: 'crm_qualificationBadges'
-      }
-    ]
-  },
+  // crm: {
+  //   key: 'crm',
+  //   label: 'CRM',
+  //   icon: '👥',
+  //   path: '/crm',
+  //   accessKey: 'crm',
+  //   isDropdown: true,
+  //   priority: 5,
+  //   dropdownItems: [
+  //     {
+  //       label: 'Public Lead Form',
+  //       path: '/request-kit',
+  //       icon: '🌐',
+  //       accessKey: 'crm_publicLeadForm'
+  //     },
+  //     {
+  //       label: 'Lead Pool',
+  //       path: '/crm/lead-registration',
+  //       icon: '✏️',
+  //       accessKey: 'crm_leadPool'
+  //     },
+  //     {
+  //       label: 'Qualified Leads',
+  //       path: '/crm/lead-management',
+  //       icon: '🔄',
+  //       accessKey: 'crm_qualifiedLeads'
+  //     },
+  //     {
+  //       label: 'Qualification Badges',
+  //       path: '/crm/badges',
+  //       icon: '🏆',
+  //       accessKey: 'crm_qualificationBadges'
+  //     }
+  //   ]
+  // },
   analytics: {
     key: 'analytics',
     label: 'Analytics',
@@ -259,12 +259,12 @@ export const MENU_STRUCTURE = {
     isDropdown: true,
     priority: 6,
     dropdownItems: [
-      {
-        label: 'Loyalty Dashboard',
-        path: '/loyalty-dashboard',
-        icon: '⭐',
-        accessKey: 'analytics_loyaltyDashboard'
-      },
+      // {
+      //   label: 'Loyalty Dashboard',
+      //   path: '/loyalty-dashboard',
+      //   icon: '⭐',
+      //   accessKey: 'analytics_loyaltyDashboard'
+      // },
       {
         label: 'Transactions',
         path: '/transactions',
