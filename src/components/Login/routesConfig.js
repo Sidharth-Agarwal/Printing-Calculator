@@ -164,7 +164,7 @@ export const MENU_STRUCTURE = {
   },
   inventory: {
     key: 'inventory',
-    label: 'Inventory',
+    label: 'Database',
     icon: '📦',
     path: '/material-stock',
     accessKey: 'inventory',

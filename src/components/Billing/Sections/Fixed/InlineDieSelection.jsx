@@ -226,7 +226,7 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
     }
   }, [selectedDie.dieCode]);
   
-  // Get job type from the parent form
+  // UPDATED: Get job type from the parent form WITH DIE RESET WHEN JOB TYPE CHANGES
   useEffect(() => {
     // Find the job type select in the parent form
     const jobTypeSelect = document.querySelector('select[name="jobType"]');
@@ -237,7 +237,18 @@ const InlineDieSelection = ({ selectedDie, onDieSelect, compact = false }) => {
       
       // Add event listener to update when job type changes
       const handleJobTypeChange = () => {
-        setSelectedJobType(jobTypeSelect.value);
+        const newJobType = jobTypeSelect.value;
+        console.log("InlineDieSelection detected job type change to:", newJobType);
+        
+        // Update the selected job type
+        setSelectedJobType(newJobType);
+        
+        // CRITICAL: Show selection UI when job type changes (force reselection)
+        setShowSelectionUI(true);
+        
+        // Clear search fields
+        setSearchTerm("");
+        setSearchDimensions({ length: "", breadth: "" });
       };
       
       jobTypeSelect.addEventListener('change', handleJobTypeChange);

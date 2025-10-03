@@ -1195,7 +1195,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
     return () => clearTimeout(debounceTimer);
   }, [state]);
 
-  // Enhanced job type change handler - direct activation approach
+  // UPDATED: Enhanced job type change handler - direct activation approach WITH DIE RESET
   const handleJobTypeChange = (e) => {
     const { value } = e.target;
     
@@ -1207,10 +1207,20 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
       jobType: value
     }));
     
-    // First update the job type in state
+    // CRITICAL: First update the job type AND CLEAR DIE SELECTION in state
     dispatch({
       type: "UPDATE_ORDER_AND_PAPER",
-      payload: { jobType: value }
+      payload: { 
+        jobType: value,
+        // Clear die selection when job type changes
+        dieSelection: "",
+        dieCode: "",
+        dieSize: { length: "", breadth: "" },
+        productSize: { length: "", breadth: "" },
+        image: "",
+        frags: "",
+        type: ""
+      }
     });
     
     // Only if not in edit mode, directly activate services
@@ -1571,7 +1581,7 @@ const BillingForm = ({ initialState = null, isEditMode = false, onSubmitSuccess 
           calculations,
           miscCharge,
           markupPercentage,
-          parseInt(state.orderAndPaper?.quantity, 10) || 0,
+          parseInt(state.orderAndPaper?.quantity,10) || 0,
           markupType,
           state.orderAndPaper?.jobType || "Card",
           null,
