@@ -90,6 +90,17 @@ const JobTicket = ({ order }) => {
     return [];
   };
 
+  // ⭐ NEW: Get total sheets required from calculations
+  const getTotalSheets = () => {
+    const totalSheets = order.calculations?.totalSheetsRequired;
+    
+    if (totalSheets !== undefined && totalSheets !== null) {
+      return totalSheets;
+    }
+    
+    return 'N/A';
+  };
+
   // Render LP Details compact table
   const renderLPDetails = () => {
     if (!order.lpDetails?.isLPUsed) return null;
@@ -269,7 +280,7 @@ const JobTicket = ({ order }) => {
       <div className="grid grid-cols-2 gap-2">
         {/* Left Column */}
         <div className="space-y-2">
-          {/* Paper Details */}
+          {/* Paper Details - ⭐ UPDATED: Added Total Sheets */}
           <div className="border rounded p-1.5">
             <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Paper Details</h2>
             <div className="grid grid-cols-2 gap-x-1 gap-y-0.5 text-[10px]">
@@ -281,6 +292,7 @@ const JobTicket = ({ order }) => {
               <div>Die Size: <span className="font-normal">
                 {order.dieDetails?.dieSize?.length || 'N/A'} × {order.dieDetails?.dieSize?.breadth || 'N/A'}
               </span></div>
+              <div>Total Sheets: <span className="font-normal">{getTotalSheets()}</span></div>
             </div>
             
             {/* Die Image */}

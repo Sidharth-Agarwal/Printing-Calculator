@@ -240,7 +240,7 @@ export const performCompleteCalculations = async (
   miscChargePerCard = null,
   markupPercentage = null,
   markupType = "MARKUP TIMELESS",
-  cachedGSTRate = null // ⭐ Add this parameter
+  cachedGSTRate = null
 ) => {
   try {
     console.log("Starting complete calculations with:", {
@@ -271,11 +271,11 @@ export const performCompleteCalculations = async (
       'embCostPerCard',
       'screenPrintCostPerCard',
       'digiCostPerCard',
-      'notebookCostPerCard', // New notebook cost field
+      'notebookCostPerCard',
     ];
     
     const postProductionFields = [
-      'preDieCuttingCostPerCard',  // New pre die cutting field
+      'preDieCuttingCostPerCard',
       'dieCuttingCostPerCard',
       'postDCCostPerCard',
       'foldAndPasteCostPerCard',
@@ -285,7 +285,6 @@ export const performCompleteCalculations = async (
       'fsCostPerCardSandwich',
       'embCostPerCardSandwich',
       'sandwichPaperCostPerCard',
-      // Note: QC is handled separately per requirements
     ];    
 
     // CRITICAL FIX: Calculate production costs using precision addition
@@ -535,10 +534,13 @@ export const performCompleteCalculations = async (
       gstAmount: parseFloat(gstResult.gstAmount).toFixed(2),
       
       // Final totals
-      subtotalPerCard: parseFloat(costWithMisc).toFixed(2), // Subtotal is now cost with misc (before markup)
-      totalCostPerCard: parseFloat(totalCostPerCard).toFixed(2), // Total after markup (before GST)
-      totalCost: parseFloat(totalCost).toFixed(2), // Total for all cards after markup (before GST)
-      totalWithGST: parseFloat(totalWithGST).toFixed(2) // Total for all cards including GST
+      subtotalPerCard: parseFloat(costWithMisc).toFixed(2),
+      totalCostPerCard: parseFloat(totalCostPerCard).toFixed(2),
+      totalCost: parseFloat(totalCost).toFixed(2),
+      totalWithGST: parseFloat(totalWithGST).toFixed(2),
+      
+      // ⭐ NEW: Include totalSheetsRequired from paper calculations
+      totalSheetsRequired: baseCalculations.totalSheetsRequired || 0
     };
     
     // Check for loyalty discount only if this is for an actual client (not just preview)
@@ -592,7 +594,7 @@ export const recalculateTotals = async (
   markupType = "MARKUP TIMELESS",
   jobType = "Card",
   clientLoyaltyTier = null,
-  cachedGSTRate = null // ⭐ Add this parameter
+  cachedGSTRate = null
 ) => {
   try {
     console.log("Recalculating totals with:", {
@@ -612,11 +614,11 @@ export const recalculateTotals = async (
       'embCostPerCard',
       'screenPrintCostPerCard',
       'digiCostPerCard',
-      'notebookCostPerCard', // New notebook cost field
+      'notebookCostPerCard',
     ];
     
     const postProductionFields = [
-      'preDieCuttingCostPerCard',  // New pre die cutting field
+      'preDieCuttingCostPerCard',
       'dieCuttingCostPerCard',
       'postDCCostPerCard',
       'foldAndPasteCostPerCard',
@@ -761,7 +763,10 @@ export const recalculateTotals = async (
       subtotalPerCard: parseFloat(costWithMisc).toFixed(2),
       totalCostPerCard: parseFloat(totalCostPerCard).toFixed(2),
       totalCost: parseFloat(totalCost).toFixed(2),
-      totalWithGST: parseFloat(totalWithGST).toFixed(2)
+      totalWithGST: parseFloat(totalWithGST).toFixed(2),
+      
+      // ⭐ NEW: Preserve totalSheetsRequired
+      totalSheetsRequired: baseCalculations.totalSheetsRequired || 0
     };
     
     // Apply loyalty discount if applicable
@@ -831,7 +836,10 @@ export const recalculateTotals = async (
       totalCost: parseFloat(totalCost).toFixed(2),
       gstRate: gstRate,
       gstAmount: parseFloat(gstAmount).toFixed(2),
-      totalWithGST: parseFloat(totalWithGST).toFixed(2)
+      totalWithGST: parseFloat(totalWithGST).toFixed(2),
+      
+      // ⭐ NEW: Preserve totalSheetsRequired even in fallback
+      totalSheetsRequired: baseCalculations.totalSheetsRequired || 0
     };
     
     // Apply loyalty discount if applicable using precision calculations
@@ -902,7 +910,10 @@ export const recalculateMarkupForEdit = (calculations, newMarkupPercentage, newM
       totalCostPerCard: parseFloat(newTotalCostPerCard).toFixed(2),
       totalCost: parseFloat(newTotalCost).toFixed(2),
       gstAmount: parseFloat(newGstAmount).toFixed(2),
-      totalWithGST: parseFloat(newTotalWithGST).toFixed(2)
+      totalWithGST: parseFloat(newTotalWithGST).toFixed(2),
+      
+      // ⭐ NEW: Preserve totalSheetsRequired
+      totalSheetsRequired: calculations.totalSheetsRequired || 0
     };
     
     console.log("Updated calculations for edit:", {
@@ -951,7 +962,10 @@ export const simpleMarkupRecalculation = (existingCalculations, markupPercentage
       totalCost: parseFloat(totalCost).toFixed(2),
       gstRate: gstRate,
       gstAmount: parseFloat(gstAmount).toFixed(2),
-      totalWithGST: parseFloat(totalWithGST).toFixed(2)
+      totalWithGST: parseFloat(totalWithGST).toFixed(2),
+      
+      // ⭐ NEW: Preserve totalSheetsRequired
+      totalSheetsRequired: existingCalculations.totalSheetsRequired || 0
     };
   } catch (error) {
     console.error("Error in simple markup recalculation:", error);

@@ -163,7 +163,14 @@ const SinglePageContent = ({
                 </td>
                 <td className="py-2 px-1 border border-gray-300 text-center">{item.jobType}</td>
                 <td className="py-2 px-1 border border-gray-300 text-center text-xs">{item.paperInfo}</td>
-                <td className="py-2 px-1 border border-gray-300 text-center whitespace-nowrap text-xs">{item.productDimensions}</td>
+                <td className="py-2 px-1 border border-gray-300 text-center whitespace-nowrap text-xs">
+                  <div>{item.productDimensions}</div>
+                  {item.dieCode && (
+                    <div className="text-[9px] text-gray-500 mt-0.5">
+                      Die: {item.dieCode}
+                    </div>
+                  )}
+                </td>
                 <td className="py-2 px-1 border border-gray-300 text-center">{item.quantity}</td>
                 <td className="py-2 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
                 <td className="py-2 px-1 border border-gray-300 text-right font-mono">{item.total.toFixed(2)}</td>
@@ -419,7 +426,14 @@ const PageContent = ({
                 </td>
                 <td className="py-1 px-2 border border-gray-300 text-center">{item.jobType}</td>
                 <td className="py-1 px-2 border border-gray-300 text-center">{item.paperInfo}</td>
-                <td className="py-1 px-2 border border-gray-300 text-center whitespace-nowrap">{item.productDimensions}</td>
+                <td className="py-1 px-2 border border-gray-300 text-center whitespace-nowrap">
+                  <div>{item.productDimensions}</div>
+                  {item.dieCode && (
+                    <div className="text-xs text-gray-500 mt-0.5">
+                      Die: {item.dieCode}
+                    </div>
+                  )}
+                </td>
                 <td className="py-1 px-2 border border-gray-300 text-center">{item.quantity}</td>
                 <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
                 <td className="py-1 px-2 border border-gray-300 text-right font-mono">{item.total.toFixed(2)}</td>
@@ -563,22 +577,18 @@ const EstimateTemplate = ({
   clientInfo, 
   version, 
   onRenderComplete,
-  currentPage = null,     // For PDF generation: which page is this?
-  totalPages = null,      // For PDF generation: total pages
-  allEstimates = null     // For PDF generation: all estimates for grand total
+  currentPage = null,
+  totalPages = null,
+  allEstimates = null
 }) => {
   const [isReady, setIsReady] = useState(false);
   const [logoLoaded, setLogoLoaded] = useState(false);
 
-  // Pagination constants
   const ESTIMATES_PER_PAGE = 6;
   
-  // If currentPage is provided, we're in PDF generation mode (single page)
-  // Otherwise, we're in normal preview mode (multi-page)
   const isPDFMode = currentPage !== null;
   const calculatedTotalPages = isPDFMode ? totalPages : Math.ceil((estimates?.length || 0) / ESTIMATES_PER_PAGE);
 
-  // Enhanced date formatting
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     try {
@@ -594,7 +604,6 @@ const EstimateTemplate = ({
     }
   };
 
-  // Get unique processes used across all estimates
   const getUsedProcesses = () => {
     if (!estimates || estimates.length === 0) return [];
     
@@ -624,11 +633,9 @@ const EstimateTemplate = ({
     }));
   };
 
-  // Get the current date for the document
   const currentDate = formatDate(new Date());
   const usedProcesses = getUsedProcesses();
 
-  // Validate calculations on component mount
   useEffect(() => {
     if (estimates && estimates.length > 0) {
       const validation = validateCalculationConsistency(estimates);
@@ -649,7 +656,6 @@ const EstimateTemplate = ({
     }
   }, [estimates]);
 
-  // CRITICAL FIX: Calculate totals using EXACT saved values with precision helpers
   const totals = React.useMemo(() => {
     const estimatesForTotal = isPDFMode && allEstimates ? allEstimates : estimates;
     
@@ -662,7 +668,6 @@ const EstimateTemplate = ({
 
     console.log('=== TOTALS CALCULATION DEBUG WITH PRECISION ===');
     
-    // Use precision helpers for accumulation
     let totalAmount = "0.00";
     let totalGST = "0.00";
     
@@ -670,7 +675,6 @@ const EstimateTemplate = ({
       const qty = parseInt(estimate?.jobDetails?.quantity) || 0;
       const calc = estimate?.calculations || {};
       
-      // CRITICAL FIX: Use the EXACT same values as line items to ensure consistency
       const lineItemFinalTotal = calc.totalWithGST || "0.00";
       const lineItemGSTAmount = calc.gstAmount || "0.00";
       const lineItemSubtotal = addCurrency(lineItemFinalTotal, `-${lineItemGSTAmount}`);
@@ -707,7 +711,6 @@ const EstimateTemplate = ({
     return calculatedTotal;
   }, [estimates, allEstimates, isPDFMode]);
 
-  // CRITICAL FIX: Prepare line items using ONLY saved values with precision validation
   const allLineItems = React.useMemo(() => {
     if (!estimates || estimates.length === 0) return [];
 
@@ -724,12 +727,10 @@ const EstimateTemplate = ({
       const paperInfo = paperName + (paperGsm ? ` ${paperGsm}gsm` : '') + (paperCompany ? ` (${paperCompany})` : '');
       const hsnCode = jobDetails.hsnCode || "N/A";
       
-      // Get process summary for this estimate
       const processSummary = getProcessSummary(estimate);
       
       const quantity = parseInt(jobDetails.quantity) || 0;
       
-      // CRITICAL FIX: Use EXACT saved values - no recalculation whatsoever
       const unitCost = parseFloat(calc.totalCostPerCard || 0);
       const totalCost = parseFloat(calc.totalCost || 0);
       const gstRate = parseFloat(calc.gstRate || 18);
@@ -746,7 +747,6 @@ const EstimateTemplate = ({
         rawCalculations: calc
       });
       
-      // VALIDATION: Check consistency using precision helpers and warn about discrepancies
       const calculatedTotal = multiplyCurrency(unitCost.toString(), quantity);
       const calculatedGST = addCurrency("0.00", multiplyCurrency(totalCost.toString(), gstRate / 100));
       const calculatedFinal = addCurrency(totalCost.toString(), gstAmount.toString());
@@ -789,11 +789,11 @@ const EstimateTemplate = ({
         dieCode: dieDetails.dieCode || "",
         productDimensions: productDimensions,
         quantity: quantity,
-        price: unitCost,           // From calc.totalCostPerCard (SAVED)
-        total: totalCost,          // From calc.totalCost (SAVED)
-        gstRate: gstRate,          // From calc.gstRate (SAVED)
-        gstAmount: gstAmount,      // From calc.gstAmount (SAVED)
-        finalTotal: finalTotal,    // From calc.totalWithGST (SAVED)
+        price: unitCost,
+        total: totalCost,
+        gstRate: gstRate,
+        gstAmount: gstAmount,
+        finalTotal: finalTotal,
         hsnCode: hsnCode,
         serialNumber: index + 1
       };
@@ -804,9 +804,7 @@ const EstimateTemplate = ({
     return lineItems;
   }, [estimates]);
 
-  // HSN Summary for all estimates
   const hsnSummary = React.useMemo(() => {
-    // In PDF mode, use allEstimates for complete HSN summary
     const estimatesForHSN = isPDFMode && allEstimates ? allEstimates : estimates;
     
     if (!estimatesForHSN || estimatesForHSN.length === 0) return {};
@@ -867,7 +865,6 @@ const EstimateTemplate = ({
 
       <div className={!isReady ? 'opacity-0' : 'opacity-100'}>
         {isPDFMode ? (
-          // PDF Mode: Render single page
           <SinglePageContent 
             pageNumber={currentPage}
             totalPages={calculatedTotalPages}
@@ -885,23 +882,20 @@ const EstimateTemplate = ({
             logo={logo}
           />
         ) : (
-          // Preview Mode: Render all pages
           Array.from({ length: calculatedTotalPages }, (_, pageIndex) => {
             const pageNumber = pageIndex + 1;
             const isFirstPage = pageNumber === 1;
             const isLastPage = pageNumber === calculatedTotalPages;
             
-            // Calculate which estimates belong to this page
             const startIndex = (pageNumber - 1) * ESTIMATES_PER_PAGE;
             const endIndex = Math.min(startIndex + ESTIMATES_PER_PAGE, allLineItems.length);
             const pageLineItems = allLineItems.slice(startIndex, endIndex);
             
-            // CRITICAL FIX: Calculate page totals using precision helpers
             const pageTotals = pageLineItems.reduce((acc, item) => {
               return {
-                amount: addCurrency(acc.amount, item.total.toString()),      // Use precision addition
-                gstAmount: addCurrency(acc.gstAmount, item.gstAmount.toString()), // Use precision addition
-                total: addCurrency(acc.total, item.finalTotal.toString())   // Use precision addition
+                amount: addCurrency(acc.amount, item.total.toString()),
+                gstAmount: addCurrency(acc.gstAmount, item.gstAmount.toString()),
+                total: addCurrency(acc.total, item.finalTotal.toString())
               };
             }, { 
               amount: "0.00", 
@@ -909,7 +903,6 @@ const EstimateTemplate = ({
               total: "0.00" 
             });
 
-            // Convert to numbers for display
             const displayPageTotals = {
               amount: parseFloat(pageTotals.amount),
               gstAmount: parseFloat(pageTotals.gstAmount),
