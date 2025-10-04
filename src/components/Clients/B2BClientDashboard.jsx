@@ -159,7 +159,7 @@ const B2BClientDashboard = () => {
         </div>
         
         {/* Quick Stats */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {/* <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h2 className="text-lg font-bold mb-4">Account Summary</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -183,10 +183,10 @@ const B2BClientDashboard = () => {
               <p className="mt-1 text-2xl font-semibold">{formatCurrency(clientData?.totalSpend || 0)}</p>
             </div>
           </div>
-        </div>
+        </div> */}
         
         {/* Recent Orders */}
-        <div className="bg-white rounded-lg shadow-md p-6 mb-6">
+        {/* <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold">Recent Orders</h2>
             <Link to="/orders" className="text-blue-600 hover:text-blue-800 text-sm">
@@ -231,7 +231,7 @@ const B2BClientDashboard = () => {
           ) : (
             <p className="text-gray-500 py-4">No orders found.</p>
           )}
-        </div>
+        </div> */}
         
         {/* Estimates */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
@@ -268,12 +268,12 @@ const B2BClientDashboard = () => {
               </table>
             </div>
           ) : (
-            <p className="text-gray-500 py-4">No active estimates found.</p>
+            <p className="text-gray-500 py-4">Click on view all to your estimates</p>
           )}
         </div>
         
         {/* Invoices */}
-        <div className="bg-white rounded-lg shadow-md p-6">
+        {/* <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-bold">Recent Invoices</h2>
             <Link to="/invoices" className="text-blue-600 hover:text-blue-800 text-sm">
@@ -317,7 +317,7 @@ const B2BClientDashboard = () => {
           ) : (
             <p className="text-gray-500 py-4">No invoices found.</p>
           )}
-        </div>
+        </div> */}
       </div>
     </div>
   );
