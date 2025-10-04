@@ -87,7 +87,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }));
   };
   
-  // FIXED: Calculate totals using DB values only
+  // FIXED: Calculate totals using totalCost instead of subtotalBeforeDiscounts
   const calculateTotals = () => {
     let subtotal = 0;
     let loyaltyDiscountTotal = 0;
@@ -97,8 +97,8 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     ordersToUse.forEach(order => {
       const calculations = order.calculations || {};
       
-      // Use DB calculated values - NO FRONTEND CALCULATIONS
-      const orderSubtotal = parseFloat(calculations.subtotalBeforeDiscounts || 0);
+      // FIXED: Use totalCost which exists in DB instead of subtotalBeforeDiscounts
+      const orderSubtotal = parseFloat(calculations.totalCost || 0);
       const orderLoyaltyDiscount = parseFloat(calculations.loyaltyDiscountAmount || 0);
       const orderGstAmount = parseFloat(calculations.gstAmount || 0);
       const quantity = parseInt(order.jobDetails?.quantity || 0);
@@ -396,7 +396,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                 </div>
               </div>
               
-              {/* Invoice Summary - Updated to show DB values */}
+              {/* Invoice Summary */}
               <div className="mt-2 bg-gray-50 p-2 rounded-lg text-xs">
                 <h4 className="font-medium text-gray-700 mb-1">Invoice Summary</h4>
                 <div className="space-y-0.5">

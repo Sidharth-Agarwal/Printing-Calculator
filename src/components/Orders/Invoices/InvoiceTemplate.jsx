@@ -25,7 +25,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
     }).format(amount);
   };
 
-  // Prepare line items from orders - USING DB VALUES ONLY
+  // FIXED: Prepare line items from orders - USING totalCost from DB
   const prepareLineItems = () => {
     return orders.map(order => {
       // Get all values from DB calculations object - NO FRONTEND CALCULATIONS
@@ -45,27 +45,27 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       // HSN code from DB
       const hsnCode = order.jobDetails?.hsnCode || 'N/A';
       
-      // ALL FINANCIAL VALUES FROM DB ONLY - NO CALCULATIONS HERE
+      // FIXED: ALL FINANCIAL VALUES FROM DB ONLY - Use totalCost instead of subtotalBeforeDiscounts
       const costPerCard = parseFloat(calculations.totalCostPerCard || 0);
-      const originalTotal = parseFloat(calculations.subtotalBeforeDiscounts || (costPerCard * quantity)) || 0;
+      const originalTotal = parseFloat(calculations.totalCost || (costPerCard * quantity)) || 0;
       
       // Loyalty discount from DB
       const loyaltyDiscountAmount = parseFloat(calculations.loyaltyDiscountAmount || 0);
       const loyaltyDiscount = parseFloat(calculations.loyaltyTierDiscount || 0);
       const loyaltyTierName = calculations.loyaltyTierName || '';
       
-      // GST values from DB (IMPORTANT: Use DB stored GST rate and amount)
-      const gstRate = parseFloat(calculations.gstRate || order.jobDetails?.gstRate || 18); // Use DB stored GST rate
-      const gstAmount = parseFloat(calculations.gstAmount || 0); // Use calculated GST from DB
+      // GST values from DB (Use DB stored GST rate and amount)
+      const gstRate = parseFloat(calculations.gstRate || order.jobDetails?.gstRate || 18);
+      const gstAmount = parseFloat(calculations.gstAmount || 0);
       
       // Final amounts from DB
-      const taxableAmount = parseFloat(calculations.taxableAmount || 0);
-      const finalTotal = parseFloat(calculations.finalTotalWithGst || 0);
+      const taxableAmount = parseFloat(calculations.totalCost || 0);
+      const finalTotal = parseFloat(calculations.totalWithGST || 0);
       
       // Invoice level discount (applied proportionally)
       const afterLoyaltyDiscount = originalTotal - loyaltyDiscountAmount;
       const itemDiscountAmount = (afterLoyaltyDiscount * (invoiceData.discount / 100)) || 0;
-      const discountedTotal = taxableAmount; // Use DB value instead of calculating
+      const discountedTotal = taxableAmount - itemDiscountAmount;
       
       return {
         id: order.id,
@@ -81,9 +81,9 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         loyaltyTierName: loyaltyTierName,
         invoiceDiscountAmount: itemDiscountAmount,
         discountedTotal: discountedTotal,
-        gstRate: gstRate, // From DB
-        gstAmount: gstAmount, // From DB
-        finalTotal: finalTotal, // From DB
+        gstRate: gstRate,
+        gstAmount: gstAmount,
+        finalTotal: finalTotal,
         hsnCode: hsnCode
       };
     });
