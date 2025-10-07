@@ -63,7 +63,7 @@ const getProcessSummary = (estimate) => {
 const SinglePageContent = ({ 
   pageNumber, totalPages, estimates, allLineItems, totals, hsnSummary, 
   clientInfo, version, currentDate, usedProcesses, formatCurrency,
-  logoLoaded, setLogoLoaded, logo 
+  logoLoaded, setLogoLoaded, logo, formatDate 
 }) => {
   const isFirstPage = pageNumber === 1;
   const isLastPage = pageNumber === totalPages;
@@ -95,10 +95,10 @@ const SinglePageContent = ({
               </div>
             </div>
             
-            {/* Date Information - Compact */}
+            {/* Date Information - Compact - UPDATED */}
             <div className="text-xs text-gray-600 mb-1">
               <div>Estimate: {currentDate}</div>
-              <div>Tentative Delivery Date: {new Date(Date.now() + 15 * 24 * 60 * 60 * 1000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</div>
+              <div>Tentative Delivery Date: {formatDate(estimates[0]?.deliveryDate || new Date(Date.now() + 15 * 24 * 60 * 60 * 1000))}</div>
             </div>
           </div>
           
@@ -310,22 +310,9 @@ const SinglePageContent = ({
 const PageContent = ({ 
   pageNumber, totalPages, isFirstPage, isLastPage, pageLineItems, 
   pageTotals, totals, hsnSummary, clientInfo, version, currentDate, 
-  usedProcesses, estimates, formatCurrency, logoLoaded, setLogoLoaded, logo 
+  usedProcesses, estimates, formatCurrency, logoLoaded, setLogoLoaded, logo,
+  formatDate 
 }) => {
-  const formatDate = (dateString) => {
-    if (!dateString) return "Not specified";
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-GB', {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      });
-    } catch (error) {
-      return String(dateString);
-    }
-  };
-
   return (
     <>
       {/* Header - Only on First Page */}
@@ -355,7 +342,7 @@ const PageContent = ({
               <div className="text-gray-600 text-sm">Client Code: {clientInfo?.clientCode || "N/A"}</div>
             </div>
             
-            {/* Date Information - Show on first page only */}
+            {/* Date Information - Show on first page only - UPDATED */}
             <div className="mt-2 mb-2">
               <div className="text-sm">
                 <div className="text-gray-600">Estimate Date: {currentDate}</div>
@@ -880,6 +867,7 @@ const EstimateTemplate = ({
             logoLoaded={logoLoaded}
             setLogoLoaded={setLogoLoaded}
             logo={logo}
+            formatDate={formatDate}
           />
         ) : (
           Array.from({ length: calculatedTotalPages }, (_, pageIndex) => {
@@ -938,6 +926,7 @@ const EstimateTemplate = ({
                   logoLoaded={logoLoaded}
                   setLogoLoaded={setLogoLoaded}
                   logo={logo}
+                  formatDate={formatDate}
                 />
               </div>
             );
