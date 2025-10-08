@@ -90,7 +90,7 @@ const JobTicket = ({ order }) => {
     return [];
   };
 
-  // ⭐ NEW: Get total sheets required from calculations
+  // Get total sheets required from calculations
   const getTotalSheets = () => {
     const totalSheets = order.calculations?.totalSheetsRequired;
     
@@ -224,7 +224,10 @@ const JobTicket = ({ order }) => {
 
   return (
     <div className="w-[430px] p-3 bg-white border border-gray-300 text-xs">
-      {/* Header */}
+      {/* Debug: Log order serial */}
+      {console.log('JobTicket - Order Serial:', order.orderSerial)}
+      
+      {/* Header - UPDATED: Use orderSerial */}
       <div className="mb-2 border-b border-gray-800 pb-1">
         <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold">JOB TICKET</h1>
@@ -242,7 +245,7 @@ const JobTicket = ({ order }) => {
           </div>
           <div className="text-right">
             <p className="font-bold">Order: <span className="font-normal">{formatDate(order.date)}</span></p>
-            <p className="font-bold">Delivery: <span className="font-normal">{formatDate(order.deliveryDate)}</span></p>
+            <p className="font-bold">Delivery: <span className="font-normal">{formatDate(order.deliveryDate || order.date)}</span></p>
           </div>
         </div>
       </div>
@@ -280,7 +283,7 @@ const JobTicket = ({ order }) => {
       <div className="grid grid-cols-2 gap-2">
         {/* Left Column */}
         <div className="space-y-2">
-          {/* Paper Details - ⭐ UPDATED: Added Total Sheets */}
+          {/* Paper Details - WITH Total Sheets */}
           <div className="border rounded p-1.5">
             <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Paper Details</h2>
             <div className="grid grid-cols-2 gap-x-1 gap-y-0.5 text-[10px]">
