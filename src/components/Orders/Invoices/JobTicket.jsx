@@ -2,6 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 
+// Helper function to check if image URL is valid
+const hasValidImage = (imageUrl) => {
+  if (!imageUrl) return false;
+  if (typeof imageUrl !== 'string') return false;
+  const trimmedUrl = imageUrl.trim();
+  if (trimmedUrl === '') return false;
+  if (trimmedUrl === 'null') return false;
+  if (trimmedUrl === 'undefined') return false;
+  return true;
+};
+
 const JobTicket = ({ order }) => {
   const [assignedStaffName, setAssignedStaffName] = useState('');
   const [loadingStaffName, setLoadingStaffName] = useState(false);
@@ -298,8 +309,8 @@ const JobTicket = ({ order }) => {
               <div>Total Sheets: <span className="font-normal">{getTotalSheets()}</span></div>
             </div>
             
-            {/* Die Image */}
-            {order.dieDetails?.image && (
+            {/* Die Image - Only show if there's a valid image URL */}
+            {hasValidImage(order.dieDetails?.image) && (
               <div className="mt-1 text-center">
                 <img 
                   src={order.dieDetails.image} 
