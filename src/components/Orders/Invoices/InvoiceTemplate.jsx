@@ -25,13 +25,12 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
     }).format(amount);
   };
 
-  // FIXED: Prepare line items from orders - USING totalCost from DB
+  // FIXED: Prepare line items with corrected GST calculation
   const prepareLineItems = () => {
     return orders.map(order => {
-      // Get all values from DB calculations object - NO FRONTEND CALCULATIONS
       const calculations = order.calculations || {};
       
-      // Basic item info from DB
+      // Basic item info
       const quantity = parseInt(order.jobDetails?.quantity) || 0;
       const name = `${order.projectName || 'Project'}`;
       const jobType = order.jobDetails?.jobType || 'Card';
@@ -42,10 +41,10 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       const paperCompany = order.jobDetails?.paperCompany || '';
       const paperInfo = paperName + (paperGsm ? ` ${paperGsm}gsm` : '') + (paperCompany ? ` (${paperCompany})` : '');
       
-      // HSN code from DB
+      // HSN code
       const hsnCode = order.jobDetails?.hsnCode || 'N/A';
       
-      // FIXED: ALL FINANCIAL VALUES FROM DB ONLY - Use totalCost instead of subtotalBeforeDiscounts
+      // Original amounts from DB
       const costPerCard = parseFloat(calculations.totalCostPerCard || 0);
       const originalTotal = parseFloat(calculations.totalCost || (costPerCard * quantity)) || 0;
       
@@ -54,18 +53,21 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       const loyaltyDiscount = parseFloat(calculations.loyaltyTierDiscount || 0);
       const loyaltyTierName = calculations.loyaltyTierName || '';
       
-      // GST values from DB (Use DB stored GST rate and amount)
+      // GST rate from DB
       const gstRate = parseFloat(calculations.gstRate || order.jobDetails?.gstRate || 18);
-      const gstAmount = parseFloat(calculations.gstAmount || 0);
-      
-      // Final amounts from DB
-      const taxableAmount = parseFloat(calculations.totalCost || 0);
-      const finalTotal = parseFloat(calculations.totalWithGST || 0);
       
       // Invoice level discount (applied proportionally)
       const afterLoyaltyDiscount = originalTotal - loyaltyDiscountAmount;
       const itemDiscountAmount = (afterLoyaltyDiscount * (invoiceData.discount / 100)) || 0;
-      const discountedTotal = taxableAmount - itemDiscountAmount;
+      
+      // FIXED: Calculate taxable amount AFTER all discounts
+      const taxableAmount = originalTotal - loyaltyDiscountAmount - itemDiscountAmount;
+      
+      // FIXED: Calculate GST on the discounted/taxable amount
+      const gstAmount = (taxableAmount * gstRate) / 100;
+      
+      // Final total with GST
+      const finalTotal = taxableAmount + gstAmount;
       
       return {
         id: order.id,
@@ -80,16 +82,36 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         loyaltyDiscountAmount: loyaltyDiscountAmount,
         loyaltyTierName: loyaltyTierName,
         invoiceDiscountAmount: itemDiscountAmount,
-        discountedTotal: discountedTotal,
+        taxableAmount: taxableAmount, // Amount after all discounts (before GST)
         gstRate: gstRate,
-        gstAmount: gstAmount,
-        finalTotal: finalTotal,
-        hsnCode: hsnCode
+        gstAmount: gstAmount, // GST calculated on discounted amount
+        finalTotal: finalTotal
       };
     });
   };
   
   const lineItems = prepareLineItems();
+
+  // FIXED: Recalculate totals with corrected GST
+  const recalculateTotals = () => {
+    const subtotal = lineItems.reduce((sum, item) => sum + item.originalTotal, 0);
+    const totalLoyaltyDiscount = lineItems.reduce((sum, item) => sum + item.loyaltyDiscountAmount, 0);
+    const totalInvoiceDiscount = lineItems.reduce((sum, item) => sum + item.invoiceDiscountAmount, 0);
+    const totalTaxable = lineItems.reduce((sum, item) => sum + item.taxableAmount, 0);
+    const totalGST = lineItems.reduce((sum, item) => sum + item.gstAmount, 0);
+    const grandTotal = lineItems.reduce((sum, item) => sum + item.finalTotal, 0);
+
+    return {
+      subtotal,
+      loyaltyDiscount: totalLoyaltyDiscount,
+      invoiceDiscount: totalInvoiceDiscount,
+      taxableAmount: totalTaxable,
+      gst: totalGST,
+      total: grandTotal
+    };
+  };
+
+  const calculatedTotals = recalculateTotals();
 
   // Collect HSN codes from orders
   const hsnSummary = lineItems.reduce((acc, item) => {
@@ -187,90 +209,94 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
               <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Total</th>
               <th className="py-0.5 px-1 border border-gray-300 text-center w-10">Disc%</th>
               <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Discount</th>
-              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Net</th>
+              <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Taxable</th>
               <th className="py-0.5 px-1 border border-gray-300 text-center w-10">GST%</th>
               <th className="py-0.5 px-1 border border-gray-300 text-right w-16">GST</th>
               <th className="py-0.5 px-1 border border-gray-300 text-right w-16">Final</th>
             </tr>
           </thead>
           <tbody>
-            {lineItems.map((item, index) => (
-              <tr key={item.id || index} className="text-gray-700">
-                <td className="py-0.5 px-1 border border-gray-300 text-center">{index + 1}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center font-mono text-[8px] whitespace-nowrap">{item.orderId}</td>
-                <td className="py-0.5 px-1 border border-gray-300 truncate">
-                  <div className="font-medium truncate">{item.name}</div>
-                </td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center truncate">{item.jobType}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center truncate">{item.paperInfo}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.quantity}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.originalTotal.toFixed(2)}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center">
-                  {(item.loyaltyDiscountAmount + item.invoiceDiscountAmount) > 0 && 
-                    <span>{((item.loyaltyDiscountAmount + item.invoiceDiscountAmount) / item.originalTotal * 100).toFixed(1)}%</span>
-                  }
-                </td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono text-red-600">
-                  {(item.loyaltyDiscountAmount + item.invoiceDiscountAmount) > 0 ? 
-                    `-${(item.loyaltyDiscountAmount + item.invoiceDiscountAmount).toFixed(2)}` : '-'}
-                </td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.discountedTotal.toFixed(2)}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-center">{item.gstRate}%</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
-                <td className="py-0.5 px-1 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
-              </tr>
-            ))}
+            {lineItems.map((item, index) => {
+              const totalDiscount = item.loyaltyDiscountAmount + item.invoiceDiscountAmount;
+              const discountPercent = item.originalTotal > 0 ? (totalDiscount / item.originalTotal * 100) : 0;
+              
+              return (
+                <tr key={item.id || index} className="text-gray-700">
+                  <td className="py-0.5 px-1 border border-gray-300 text-center">{index + 1}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-center font-mono text-[8px] whitespace-nowrap">{item.orderId}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 truncate">
+                    <div className="font-medium truncate">{item.name}</div>
+                  </td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-center truncate">{item.jobType}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-center truncate">{item.paperInfo}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-center">{item.quantity}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.price.toFixed(2)}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.originalTotal.toFixed(2)}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-center">
+                    {totalDiscount > 0 && <span>{discountPercent.toFixed(1)}%</span>}
+                  </td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-right font-mono text-red-600">
+                    {totalDiscount > 0 ? `-${totalDiscount.toFixed(2)}` : '-'}
+                  </td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-right font-mono font-semibold">{item.taxableAmount.toFixed(2)}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-center">{item.gstRate}%</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-right font-mono">{item.gstAmount.toFixed(2)}</td>
+                  <td className="py-0.5 px-1 border border-gray-300 text-right font-mono font-bold">{item.finalTotal.toFixed(2)}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
       
-      {/* Summary - Using passed totals from DB */}
+      {/* Summary - Using recalculated totals */}
       <div className="flex justify-end mb-1">
         <div className="w-48">
           <div className="flex justify-between py-0.5 text-xs border-t border-gray-200">
             <div className="text-gray-700">Subtotal:</div>
             <div className="text-gray-900 font-medium font-mono">
-              {formatCurrency(totals.subtotal)}
+              {formatCurrency(calculatedTotals.subtotal)}
             </div>
           </div>
           
-          {totals.loyaltyDiscount > 0 && (
+          {calculatedTotals.loyaltyDiscount > 0 && (
             <div className="flex justify-between py-0.5 text-xs text-red-600">
               <div>Loyalty Discount:</div>
               <div className="font-mono">
-                -{formatCurrency(totals.loyaltyDiscount)}
+                -{formatCurrency(calculatedTotals.loyaltyDiscount)}
               </div>
             </div>
           )}
           
-          {invoiceData.discount > 0 && (
+          {calculatedTotals.invoiceDiscount > 0 && (
             <div className="flex justify-between py-0.5 text-xs text-red-600">
               <div>Invoice Discount ({invoiceData.discount}%):</div>
               <div className="font-mono">
-                -{formatCurrency(totals.discount)}
+                -{formatCurrency(calculatedTotals.invoiceDiscount)}
               </div>
             </div>
           )}
           
           <div className="flex justify-between py-0.5 text-xs border-t border-gray-300">
-            <div className="text-gray-700">Taxable Amount:</div>
-            <div className="text-gray-900 font-mono">
-              {formatCurrency(totals.taxableAmount)}
+            <div className="text-gray-700 font-semibold">Taxable Amount:</div>
+            <div className="text-gray-900 font-semibold font-mono">
+              {formatCurrency(calculatedTotals.taxableAmount)}
             </div>
           </div>
           
-          <div className="flex justify-between py-0.5 text-xs">
-            <div className="text-gray-700">GST Amount:</div>
-            <div className="text-gray-900 font-mono">
-              {formatCurrency(totals.tax)}
+          {invoiceData.showTax && (
+            <div className="flex justify-between py-0.5 text-xs">
+              <div className="text-gray-700">GST Amount:</div>
+              <div className="text-gray-900 font-mono">
+                {formatCurrency(calculatedTotals.gst)}
+              </div>
             </div>
-          </div>
+          )}
           
-          <div className="flex justify-between py-0.5 font-bold border-t border-gray-300">
+          <div className="flex justify-between py-0.5 font-bold border-t border-gray-300 bg-gray-50 px-1">
             <div>Total:</div>
             <div className="font-mono">
-              {formatCurrency(totals.total)}
+              {formatCurrency(calculatedTotals.total)}
             </div>
           </div>
         </div>

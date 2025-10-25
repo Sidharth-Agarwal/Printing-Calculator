@@ -87,42 +87,55 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     }));
   };
   
-  // FIXED: Calculate totals using totalCost instead of subtotalBeforeDiscounts
+  // FIXED: Calculate totals with GST on discounted amount
   const calculateTotals = () => {
     let subtotal = 0;
     let loyaltyDiscountTotal = 0;
+    let invoiceDiscountTotal = 0;
     let totalGstAmount = 0;
     let totalQuantity = 0;
     
     ordersToUse.forEach(order => {
       const calculations = order.calculations || {};
       
-      // FIXED: Use totalCost which exists in DB instead of subtotalBeforeDiscounts
+      // Get original amounts from DB
       const orderSubtotal = parseFloat(calculations.totalCost || 0);
       const orderLoyaltyDiscount = parseFloat(calculations.loyaltyDiscountAmount || 0);
-      const orderGstAmount = parseFloat(calculations.gstAmount || 0);
       const quantity = parseInt(order.jobDetails?.quantity || 0);
       
+      // Calculate after loyalty discount
+      const afterLoyaltyDiscount = orderSubtotal - orderLoyaltyDiscount;
+      
+      // Apply invoice discount proportionally
+      const orderInvoiceDiscount = (afterLoyaltyDiscount * (invoiceData.discount / 100)) || 0;
+      
+      // FIXED: Calculate taxable amount (after ALL discounts)
+      const taxableAmount = orderSubtotal - orderLoyaltyDiscount - orderInvoiceDiscount;
+      
+      // FIXED: Get GST rate and calculate GST on taxable amount
+      const gstRate = parseFloat(calculations.gstRate || order.jobDetails?.gstRate || 18);
+      const gstAmount = invoiceData.showTax ? (taxableAmount * gstRate / 100) : 0;
+      
+      // Accumulate totals
       subtotal += orderSubtotal;
       loyaltyDiscountTotal += orderLoyaltyDiscount;
-      totalGstAmount += orderGstAmount;
+      invoiceDiscountTotal += orderInvoiceDiscount;
+      totalGstAmount += gstAmount;
       totalQuantity += quantity;
     });
     
-    // Apply additional invoice discount only (loyalty already applied in DB)
-    const invoiceDiscountAmount = (subtotal - loyaltyDiscountTotal) * (invoiceData.discount / 100) || 0;
+    // Calculate final taxable amount
+    const taxableAmount = subtotal - loyaltyDiscountTotal - invoiceDiscountTotal;
     
-    // Calculate final amounts
-    const taxableAmount = subtotal - loyaltyDiscountTotal - invoiceDiscountAmount;
-    const finalGstAmount = invoiceData.showTax ? totalGstAmount : 0;
-    const total = taxableAmount + finalGstAmount;
+    // Calculate final total
+    const total = taxableAmount + totalGstAmount;
     
     return {
       subtotal: parseFloat(subtotal.toFixed(2)),
       loyaltyDiscount: parseFloat(loyaltyDiscountTotal.toFixed(2)),
-      discount: parseFloat(invoiceDiscountAmount.toFixed(2)),
+      discount: parseFloat(invoiceDiscountTotal.toFixed(2)),
       taxableAmount: parseFloat(taxableAmount.toFixed(2)),
-      tax: parseFloat(finalGstAmount.toFixed(2)),
+      tax: parseFloat(totalGstAmount.toFixed(2)),
       total: parseFloat(total.toFixed(2)),
       totalQuantity
     };
@@ -160,7 +173,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
     return hsnSummary;
   };
   
-  // Generate PDF function (keeping existing logic)
+  // Generate PDF function
   const generatePDF = async () => {
     if (!contentRef.current) return;
     
@@ -284,7 +297,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
           <div className="flex items-center gap-3">
             <svg className="animate-spin h-6 w-6 text-blue-600" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 714 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
             <span className="text-gray-700">Loading complete order data...</span>
           </div>
@@ -396,7 +409,7 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                 </div>
               </div>
               
-              {/* Invoice Summary */}
+              {/* Invoice Summary - UPDATED */}
               <div className="mt-2 bg-gray-50 p-2 rounded-lg text-xs">
                 <h4 className="font-medium text-gray-700 mb-1">Invoice Summary</h4>
                 <div className="space-y-0.5">
@@ -419,22 +432,27 @@ const InvoiceModal = ({ orders, onClose, selectedOrderIds }) => {
                     </div>
                   )}
                   
-                  <div className="flex justify-between border-t border-gray-300 pt-0.5">
+                  <div className="flex justify-between border-t border-gray-300 pt-0.5 font-semibold">
                     <span>Taxable Amount:</span>
                     <span className="font-mono">{formatCurrency(totals.taxableAmount)}</span>
                   </div>
                   
                   {invoiceData.showTax && (
-                    <div className="flex justify-between">
+                    <div className="flex justify-between text-green-600">
                       <span>GST Amount:</span>
                       <span className="font-mono">{formatCurrency(totals.tax)}</span>
                     </div>
                   )}
                   
-                  <div className="flex justify-between font-bold border-t border-gray-300 pt-0.5 mt-0.5">
+                  <div className="flex justify-between font-bold border-t border-gray-300 pt-0.5 mt-0.5 bg-white px-1">
                     <span>Total:</span>
                     <span className="font-mono">{formatCurrency(totals.total)}</span>
                   </div>
+                </div>
+                
+                {/* Calculation explanation */}
+                <div className="mt-2 pt-2 border-t border-gray-200 text-[10px] text-gray-600">
+                  <p>💡 GST is calculated on taxable amount (after discounts)</p>
                 </div>
               </div>
               
