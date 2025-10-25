@@ -13,12 +13,13 @@ const TransactionsDashboard = () => {
   const [revenueData, setRevenueData] = useState([]);
   const [statusDistribution, setStatusDistribution] = useState([]);
   const [dateRange, setDateRange] = useState('lastMonth');
-  const [selectedView, setSelectedView] = useState('revenue'); // 'revenue' or 'orders'
+  const [selectedView, setSelectedView] = useState('revenue');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
   const [selectedJobTypes, setSelectedJobTypes] = useState([]);
   const [jobTypeStats, setJobTypeStats] = useState([]);
   const [topClients, setTopClients] = useState([]);
+  const [clientTypeStats, setClientTypeStats] = useState({ b2b: 0, direct: 0 });
 
   const COLORS = ['#6366F1', '#06B6D4', '#F97316', '#EC4899', '#10B981', '#94A3B8'];
 
@@ -42,6 +43,10 @@ const TransactionsDashboard = () => {
           case 'last3Months':
             start = new Date();
             start.setMonth(start.getMonth() - 3);
+            end = new Date();
+            break;
+          case 'thisYear':
+            start = new Date(new Date().getFullYear(), 0, 1);
             end = new Date();
             break;
           case 'custom':
@@ -70,6 +75,7 @@ const TransactionsDashboard = () => {
           processOrdersData(ordersData);
           calculateJobTypeStats(ordersData);
           calculateTopClients(ordersData);
+          calculateClientTypeStats(ordersData);
         });
 
         return () => unsubscribe();
@@ -83,6 +89,19 @@ const TransactionsDashboard = () => {
 
     fetchOrders();
   }, [dateRange, startDate, endDate]);
+
+  const calculateClientTypeStats = (ordersData) => {
+    const stats = ordersData.reduce((acc, order) => {
+      if (order.isLoyaltyEligible) {
+        acc.b2b++;
+      } else {
+        acc.direct++;
+      }
+      return acc;
+    }, { b2b: 0, direct: 0 });
+
+    setClientTypeStats(stats);
+  };
 
   const calculateJobTypeStats = (ordersData) => {
     const stats = ordersData.reduce((acc, order) => {
@@ -103,12 +122,14 @@ const TransactionsDashboard = () => {
     }, {});
 
     setJobTypeStats(Object.values(stats));
-    setSelectedJobTypes(Object.keys(stats));
+    if (selectedJobTypes.length === 0) {
+      setSelectedJobTypes(Object.keys(stats));
+    }
   };
 
   const calculateTopClients = (ordersData) => {
     const clientStats = ordersData.reduce((acc, order) => {
-      const clientName = order.clientName || 'Unknown';
+      const clientName = order.clientName || order.clientInfo?.name || 'Unknown';
       const revenue = calculateTotalCost(order);
       
       if (!acc[clientName]) {
@@ -132,7 +153,6 @@ const TransactionsDashboard = () => {
   };
 
   const processOrdersData = (ordersData) => {
-    // Filter by selected job types if any
     const filteredOrders = selectedJobTypes.length > 0
       ? ordersData.filter(order => selectedJobTypes.includes(order.jobDetails?.jobType))
       : ordersData;
@@ -149,19 +169,25 @@ const TransactionsDashboard = () => {
           date: dateStr,
           revenue: 0,
           orders: 0,
-          averageOrderValue: 0
+          averageOrderValue: 0,
+          gstCollected: 0,
+          discountsGiven: 0
         };
       }
       
       const revenue = calculateTotalCost(order);
+      const gst = parseFloat(order.calculations?.gstAmount || 0);
+      const discount = parseFloat(order.calculations?.loyaltyDiscountAmount || 0);
+      
       acc[dateStr].revenue += revenue;
       acc[dateStr].orders += 1;
+      acc[dateStr].gstCollected += gst;
+      acc[dateStr].discountsGiven += discount;
       acc[dateStr].averageOrderValue = acc[dateStr].revenue / acc[dateStr].orders;
       
       return acc;
     }, {});
 
-    // Convert to array and sort by date
     const chartData = Object.values(dataByDate)
       .sort((a, b) => new Date(a.date) - new Date(b.date));
 
@@ -179,27 +205,38 @@ const TransactionsDashboard = () => {
     );
   };
 
+  // UPDATED: Use new calculation structure from DB
   const calculateTotalCost = (order) => {
-    if (!order.calculations || !order.jobDetails?.quantity) return 0;
+    if (!order.calculations) return 0;
     
-    const costFields = [
-      'paperAndCuttingCostPerCard',
-      'lpCostPerCard',
-      'fsCostPerCard',
-      'embCostPerCard',
-      'lpCostPerCardSandwich',
-      'fsCostPerCardSandwich',
-      'embCostPerCardSandwich',
-      'digiCostPerCard'
-    ];
-
-    const totalPerCard = costFields.reduce((acc, field) => {
-      const value = order.calculations[field];
-      return acc + (value && !isNaN(parseFloat(value)) ? parseFloat(value) : 0);
-    }, 0);
-
-    return totalPerCard * order.jobDetails.quantity;
+    // Use totalWithGST for full revenue including tax
+    // Or use totalCost for revenue before GST
+    return parseFloat(order.calculations.totalWithGST || 
+                     order.calculations.totalCost || 0);
   };
+
+  // Calculate summary metrics
+  const calculateMetrics = () => {
+    const totalRevenue = revenueData.reduce((sum, data) => sum + data.revenue, 0);
+    const totalOrders = revenueData.reduce((sum, data) => sum + data.orders, 0);
+    const totalGST = revenueData.reduce((sum, data) => sum + data.gstCollected, 0);
+    const totalDiscounts = revenueData.reduce((sum, data) => sum + data.discountsGiven, 0);
+    const completedOrders = statusDistribution.find(s => s.name === 'Completed')?.value || 0;
+    const serializedOrders = orders.filter(o => o.orderSerial).length;
+
+    return {
+      totalRevenue,
+      totalOrders,
+      avgOrderValue: totalOrders > 0 ? totalRevenue / totalOrders : 0,
+      completedOrders,
+      totalGST,
+      totalDiscounts,
+      serializedOrders,
+      serializationRate: orders.length > 0 ? (serializedOrders / orders.length) * 100 : 0
+    };
+  };
+
+  const metrics = calculateMetrics();
 
   if (loading) {
     return (
@@ -225,10 +262,9 @@ const TransactionsDashboard = () => {
       {/* Header with Controls */}
       <div className="bg-white rounded-lg shadow-sm p-4">
         <div className="flex flex-wrap justify-between items-center gap-4">
-          <h1 className="text-2xl font-bold text-gray-800">TRANSACTIONS DASHBOARD</h1>
+          <h1 className="text-2xl font-bold text-gray-800">Analytics Dashboard</h1>
           
           <div className="flex flex-wrap items-center gap-4">
-            {/* Date Range Select */}
             <select 
               className="border rounded-md px-3 py-2 text-sm"
               value={dateRange}
@@ -237,10 +273,10 @@ const TransactionsDashboard = () => {
               <option value="lastWeek">Last 7 Days</option>
               <option value="lastMonth">Last 30 Days</option>
               <option value="last3Months">Last 3 Months</option>
+              <option value="thisYear">This Year</option>
               <option value="custom">Custom Range</option>
             </select>
 
-            {/* Custom Date Range Inputs */}
             {dateRange === 'custom' && (
               <div className="flex items-center gap-2">
                 <input
@@ -259,7 +295,6 @@ const TransactionsDashboard = () => {
               </div>
             )}
 
-            {/* View Toggle */}
             <div className="flex items-center bg-gray-100 rounded-md p-1">
               <button
                 className={`px-3 py-1 text-sm rounded-md ${
@@ -286,40 +321,77 @@ const TransactionsDashboard = () => {
         </div>
       </div>
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total Revenue */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
+      {/* Stats Grid - UPDATED with new metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="bg-white rounded-lg shadow-sm p-4">
           <h3 className="text-sm font-medium text-gray-500">Total Revenue</h3>
           <p className="text-2xl font-bold text-gray-900 mt-2">
-            ₹{revenueData.reduce((sum, data) => sum + data.revenue, 0).toLocaleString()}
+            ₹{metrics.totalRevenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
           </p>
+          <p className="text-xs text-gray-500 mt-1">Including GST</p>
         </div>
 
-        {/* Total Orders */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="bg-white rounded-lg shadow-sm p-4">
           <h3 className="text-sm font-medium text-gray-500">Total Orders</h3>
           <p className="text-2xl font-bold text-gray-900 mt-2">
-            {revenueData.reduce((sum, data) => sum + data.orders, 0)}
+            {metrics.totalOrders}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {metrics.completedOrders} completed
           </p>
         </div>
 
-        {/* Average Order Value */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-sm font-medium text-gray-500">Average Order Value</h3>
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-medium text-gray-500">Avg Order Value</h3>
           <p className="text-2xl font-bold text-gray-900 mt-2">
-            ₹{(revenueData.reduce((sum, data) => sum + data.revenue, 0) / 
-               revenueData.reduce((sum, data) => sum + data.orders, 0) || 0).toLocaleString(undefined, { 
-                 maximumFractionDigits: 0 
-               })}
+            ₹{metrics.avgOrderValue.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">Per order</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-medium text-gray-500">GST Collected</h3>
+          <p className="text-2xl font-bold text-green-600 mt-2">
+            ₹{metrics.totalGST.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">Tax revenue</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-medium text-gray-500">Discounts Given</h3>
+          <p className="text-2xl font-bold text-red-600 mt-2">
+            ₹{metrics.totalDiscounts.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">Loyalty discounts</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-medium text-gray-500">B2B Orders</h3>
+          <p className="text-2xl font-bold text-purple-600 mt-2">
+            {clientTypeStats.b2b}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {orders.length > 0 ? Math.round((clientTypeStats.b2b / orders.length) * 100) : 0}% of total
           </p>
         </div>
 
-        {/* Conversion Rate */}
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-sm font-medium text-gray-500">Completed Orders</h3>
-          <p className="text-2xl font-bold text-gray-900 mt-2">
-            {statusDistribution.find(s => s.name === 'Delivery')?.value || 0}
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-medium text-gray-500">Direct Orders</h3>
+          <p className="text-2xl font-bold text-blue-600 mt-2">
+            {clientTypeStats.direct}
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {orders.length > 0 ? Math.round((clientTypeStats.direct / orders.length) * 100) : 0}% of total
+          </p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-4">
+          <h3 className="text-sm font-medium text-gray-500">Serialization Rate</h3>
+          <p className="text-2xl font-bold text-indigo-600 mt-2">
+            {metrics.serializationRate.toFixed(1)}%
+          </p>
+          <p className="text-xs text-gray-500 mt-1">
+            {metrics.serializedOrders} serialized
           </p>
         </div>
       </div>
@@ -337,7 +409,10 @@ const TransactionsDashboard = () => {
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis 
                   dataKey="date" 
-                  tickFormatter={(date) => new Date(date).toLocaleDateString()}
+                  tickFormatter={(date) => new Date(date).toLocaleDateString('en-GB', {
+                    day: '2-digit',
+                    month: 'short'
+                  })}
                 />
                 <YAxis />
                 <Tooltip
@@ -345,7 +420,7 @@ const TransactionsDashboard = () => {
                     selectedView === 'revenue' ? `₹${value.toLocaleString()}` : value,
                     name
                   ]}
-                  labelFormatter={(date) => new Date(date).toLocaleDateString()}
+                  labelFormatter={(date) => new Date(date).toLocaleDateString('en-GB')}
                 />
                 <Legend />
                 <Line
@@ -403,15 +478,11 @@ const TransactionsDashboard = () => {
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>
-                <Tooltip 
-                  formatter={(value) => [`${value} orders`]}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0' }}
-                />
+                <Tooltip />
               </PieChart>
             </ResponsiveContainer>
           </div>
           
-          {/* Legend */}
           <div className="grid grid-cols-2 gap-2 mt-4">
             {statusDistribution.map((entry, index) => (
               <div key={entry.name} className="flex items-center space-x-2">
@@ -428,18 +499,9 @@ const TransactionsDashboard = () => {
 
       {/* Job Type Statistics & Top Clients */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Job Type Statistics */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex justify-between items-center mb-4">
             <h2 className="text-lg font-semibold">Job Type Statistics</h2>
-            <select 
-              className="border rounded-md px-3 py-2 text-sm"
-              value={selectedView}
-              onChange={(e) => setSelectedView(e.target.value)}
-            >
-              <option value="revenue">By Revenue</option>
-              <option value="orders">By Orders</option>
-            </select>
           </div>
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
@@ -456,13 +518,11 @@ const TransactionsDashboard = () => {
                   width={80}
                 />
                 <Tooltip
-                  formatter={(value, name) => [
+                  formatter={(value) => 
                     selectedView === 'revenue' 
                       ? `₹${parseFloat(value).toLocaleString()}`
-                      : value,
-                    name === 'revenue' ? 'Revenue' : 'Orders'
-                  ]}
-                  contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0' }}
+                      : value
+                  }
                 />
                 <Legend />
                 <Bar 
@@ -476,7 +536,6 @@ const TransactionsDashboard = () => {
           </div>
         </div>
 
-        {/* Top Clients */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h2 className="text-lg font-semibold mb-4">Top 5 Clients</h2>
           <div className="space-y-4">
@@ -495,9 +554,9 @@ const TransactionsDashboard = () => {
                   </div>
                 </div>
                 <div className="text-right">
-                  <p className="font-semibold">₹{client.revenue.toLocaleString()}</p>
+                  <p className="font-semibold">₹{client.revenue.toLocaleString(undefined, { maximumFractionDigits: 0 })}</p>
                   <p className="text-sm text-gray-500">
-                    {((client.revenue * 100) / revenueData.reduce((sum, data) => sum + data.revenue, 0)).toFixed(1)}% of total
+                    {metrics.totalRevenue > 0 ? ((client.revenue * 100) / metrics.totalRevenue).toFixed(1) : 0}% of total
                   </p>
                 </div>
               </div>
