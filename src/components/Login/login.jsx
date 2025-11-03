@@ -49,7 +49,7 @@ const Login = () => {
     }
   }, [checkingAdmin, adminExists, navigate]);
 
-  // Redirect if user is already logged in (UPDATED to use new structure)
+  // Redirect if user is already logged in (UPDATED)
   useEffect(() => {
     if (currentUser) {
       const fetchUserRoleAndRedirect = async () => {
@@ -69,7 +69,7 @@ const Login = () => {
             } else if (userData.role === "production") {
               navigate("/orders");
             } else if (userData.role === "accountant") {
-              navigate("/new-bill");
+              navigate("/transactions"); // UPDATED: Changed from "/new-bill" to "/transactions"
             } else {
               navigate("/new-bill");
             }
@@ -109,7 +109,7 @@ const Login = () => {
         } else if (userData.role === "staff") {
           navigate("/new-bill");
         } else if (userData.role === "accountant") {
-          navigate("/new-bill");
+          navigate("/transactions"); // UPDATED: Changed from "/new-bill" to "/transactions"
         } else if (userData.role === "production") {
           navigate("/orders");
         } else {

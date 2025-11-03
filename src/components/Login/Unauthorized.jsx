@@ -5,6 +5,24 @@ import { useAuth } from "./AuthContext";
 const Unauthorized = () => {
   const { userRole } = useAuth();
 
+  // Determine the best redirect path based on user role
+  const getRedirectPath = () => {
+    switch (userRole) {
+      case 'admin':
+        return '/transactions';
+      case 'accountant':
+        return '/transactions';
+      case 'b2b':
+        return '/b2b-dashboard';
+      case 'production':
+        return '/orders';
+      case 'staff':
+        return '/new-bill';
+      default:
+        return '/new-bill';
+    }
+  };
+
   return (
     <div className="bg-gray-100 min-h-screen flex items-center justify-center p-6">
       <div className="bg-white p-8 rounded shadow-md max-w-md w-full text-center">
@@ -27,7 +45,7 @@ const Unauthorized = () => {
           <span className="font-semibold">{userRole || "unknown"}</span>.
         </p>
         <Link
-          to="/transactions"
+          to={getRedirectPath()}
           className="inline-block bg-blue-600 text-white py-2 px-4 rounded hover:bg-blue-700"
         >
           Go to Dashboard

@@ -1,5 +1,5 @@
 export const ROUTE_ACCESS = {
-  '/transactions': ['admin', 'accountant'],
+  '/transactions': ['admin', 'accountant', 'staff'], // UPDATED: Added 'staff'
   '/user-management': ['admin'],
   '/new-bill': ['admin', 'staff', 'b2b', 'accountant'],
   '/orders': ['admin', 'staff', 'production', 'b2b', 'accountant'],
@@ -61,7 +61,7 @@ export const MENU_ACCESS = {
   // Analytics dropdown and its items
   analytics: ['admin', 'staff', 'accountant'], // Controls if the Analytics dropdown appears
   analytics_loyaltyDashboard: ['admin', 'staff'],
-  analytics_transactions: ['admin', 'accountant'],
+  analytics_transactions: ['admin', 'accountant', 'staff'], // UPDATED: Added 'staff'
   
   // Profile menu items
   profile_userManagement: ['admin'],
