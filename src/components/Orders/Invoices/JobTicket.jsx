@@ -241,12 +241,12 @@ const JobTicket = ({ order }) => {
   };
 
   return (
-    <div className="w-[430px] p-3 bg-white border border-gray-300 text-xs">
+    <div className="w-[430px] p-3 bg-white text-xs">
       {/* Debug: Log order serial */}
       {console.log('JobTicket - Order Serial:', order.orderSerial)}
       
-      {/* Header - UPDATED: Use orderSerial */}
-      <div className="mb-2 border-b border-gray-800 pb-1">
+      {/* Header - UPDATED: Removed border-b */}
+      <div className="mb-2 pb-1">
         <div className="flex justify-between items-center">
           <h1 className="text-lg font-bold">JOB TICKET</h1>
           <div className="text-right text-[10px]">
@@ -268,10 +268,10 @@ const JobTicket = ({ order }) => {
         </div>
       </div>
 
-      {/* Production Assignment Section */}
+      {/* Production Assignment Section - UPDATED: Removed border */}
       {order.productionAssignments && (order.productionAssignments.assigned || order.productionAssignments.deadlineDate) && (
-        <div className="mb-2 border rounded p-1.5">
-          <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Production Assignment</h2>
+        <div className="mb-2 rounded p-1.5 bg-gray-50">
+          <h2 className="font-bold text-xs mb-1">Production Assignment</h2>
           <div className="grid grid-cols-2 gap-x-1 gap-y-0.5 text-[10px]">
             <div>Assigned to: <span className="font-normal">
               {order.productionAssignments.assigned ? (
@@ -301,9 +301,9 @@ const JobTicket = ({ order }) => {
       <div className="grid grid-cols-2 gap-2">
         {/* Left Column */}
         <div className="space-y-2">
-          {/* Paper Details - WITH Total Sheets */}
-          <div className="border rounded p-1.5">
-            <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Paper Details</h2>
+          {/* Paper Details - UPDATED: Removed border */}
+          <div className="rounded p-1.5 bg-gray-50">
+            <h2 className="font-bold text-xs mb-1">Paper Details</h2>
             <div className="grid grid-cols-2 gap-x-1 gap-y-0.5 text-[10px]">
               <div>Paper: <span className="font-normal">{order.jobDetails?.paperName || 'N/A'}</span></div>
               <div>GSM: <span className="font-normal">{order.jobDetails?.paperGsm || 'N/A'}</span></div>
@@ -332,9 +332,9 @@ const JobTicket = ({ order }) => {
             )}
           </div>
           
-          {/* LP & FS Details */}
-          <div className="border rounded p-1.5">
-            <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Print Details</h2>
+          {/* LP & FS Details - UPDATED: Removed border */}
+          <div className="rounded p-1.5 bg-gray-50">
+            <h2 className="font-bold text-xs mb-1">Print Details</h2>
             <div className="space-y-2">
               {renderLPDetails()}
               {renderFSDetails()}
@@ -369,9 +369,9 @@ const JobTicket = ({ order }) => {
         
         {/* Right Column */}
         <div className="space-y-2">
-          {/* Post-Production Services */}
-          <div className="border rounded p-1.5">
-            <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Post-Production</h2>
+          {/* Post-Production Services - UPDATED: Removed border */}
+          <div className="rounded p-1.5 bg-gray-50">
+            <h2 className="font-bold text-xs mb-1">Post-Production</h2>
             <div className="grid grid-cols-1 gap-y-0.5 text-[10px]">
               {/* Pre Die Cutting */}
               {order.preDieCutting?.isPreDieCuttingUsed && (
@@ -439,10 +439,10 @@ const JobTicket = ({ order }) => {
             </div>
           </div>
           
-          {/* Sandwich/Duplex Details */}
+          {/* Sandwich/Duplex Details - UPDATED: Removed border */}
           {order.sandwich?.isSandwichComponentUsed && (
-            <div className="border rounded p-1.5">
-              <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Duplex/Sandwich</h2>
+            <div className="rounded p-1.5 bg-gray-50">
+              <h2 className="font-bold text-xs mb-1">Duplex/Sandwich</h2>
               <div className="space-y-1 text-[10px]">
                 <div>Paper: {order.sandwich.paperInfo?.paperName || 'N/A'}</div>
                 
@@ -487,9 +487,9 @@ const JobTicket = ({ order }) => {
             </div>
           )}
           
-          {/* Notes Section */}
-          <div className="border rounded p-1.5">
-            <h2 className="font-bold text-xs border-b pb-0.5 mb-1">Production Notes</h2>
+          {/* Notes Section - UPDATED: Removed border */}
+          <div className="rounded p-1.5 bg-gray-50">
+            <h2 className="font-bold text-xs mb-1">Production Notes</h2>
             <p className="text-[10px] whitespace-pre-line min-h-10">
               {order.notes || "No specific instructions provided."}
             </p>
