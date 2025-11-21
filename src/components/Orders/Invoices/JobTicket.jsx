@@ -103,8 +103,15 @@ const JobTicket = ({ order }) => {
 
   // Get total sheets required from calculations
   const getTotalSheets = () => {
-    const totalSheets = order.calculations?.totalSheetsRequired;
+    const totalSheetsRequired = order.calculations?.totalSheetsRequired;
+    const totalSheets = order.calculations?.totalSheets;
     
+    // If totalSheetsRequired exists and is not 0, return it
+    if (totalSheetsRequired !== undefined && totalSheetsRequired !== null && totalSheetsRequired !== 0) {
+      return totalSheetsRequired;
+    }
+    
+    // Otherwise, fall back to totalSheets
     if (totalSheets !== undefined && totalSheets !== null) {
       return totalSheets;
     }
