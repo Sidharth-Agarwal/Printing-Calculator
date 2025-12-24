@@ -41,7 +41,7 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
       const paperCompany = order.jobDetails?.paperCompany || '';
       const paperInfo = paperName + (paperGsm ? ` ${paperGsm}gsm` : '') + (paperCompany ? ` (${paperCompany})` : '');
       
-      // HSN code
+      // HSN code - IMPORTANT: Extract it here
       const hsnCode = order.jobDetails?.hsnCode || 'N/A';
       
       // Original amounts from DB
@@ -77,14 +77,15 @@ const InvoiceTemplate = ({ invoiceData, orders, clientInfo, totals }) => {
         paperInfo,
         quantity,
         price: costPerCard,
+        hsnCode,
         originalTotal: originalTotal,
         loyaltyDiscount: loyaltyDiscount,
         loyaltyDiscountAmount: loyaltyDiscountAmount,
         loyaltyTierName: loyaltyTierName,
         invoiceDiscountAmount: itemDiscountAmount,
-        taxableAmount: taxableAmount, // Amount after all discounts (before GST)
+        taxableAmount: taxableAmount,
         gstRate: gstRate,
-        gstAmount: gstAmount, // GST calculated on discounted amount
+        gstAmount: gstAmount,
         finalTotal: finalTotal
       };
     });
