@@ -72,13 +72,11 @@ const JobTicket = ({ order }) => {
     if (!dimensions) return 'N/A';
     if (typeof dimensions === 'string') return dimensions;
     
-    // Handle different dimension formats
     const length = dimensions.length || dimensions.lengthInInches || '';
     const breadth = dimensions.breadth || dimensions.breadthInInches || '';
     
     if (!length && !breadth) return 'N/A';
     
-    // Use inches format if available (indicated by presence of lengthInInches)
     const isInches = dimensions.lengthInInches !== undefined;
     return `${length}×${breadth}${isInches ? '"' : ''}`;
   };
@@ -88,7 +86,6 @@ const JobTicket = ({ order }) => {
     if (!obj) return [];
     if (Array.isArray(obj)) return obj;
     
-    // If it's an object with numeric keys, convert to array
     if (typeof obj === 'object') {
       const keys = Object.keys(obj);
       const isNumericKeys = keys.every(key => !isNaN(parseInt(key)));
@@ -106,12 +103,10 @@ const JobTicket = ({ order }) => {
     const totalSheetsRequired = order.calculations?.totalSheetsRequired;
     const totalSheets = order.calculations?.totalSheets;
     
-    // If totalSheetsRequired exists and is not 0, return it
     if (totalSheetsRequired !== undefined && totalSheetsRequired !== null && totalSheetsRequired !== 0) {
       return totalSheetsRequired;
     }
     
-    // Otherwise, fall back to totalSheets
     if (totalSheets !== undefined && totalSheets !== null) {
       return totalSheets;
     }
@@ -126,27 +121,27 @@ const JobTicket = ({ order }) => {
     const colorDetails = objectToArray(order.lpDetails.colorDetails);
     
     return (
-      <div className="w-full">
-        <div className="font-medium text-xs mb-1">LP: {order.lpDetails.noOfColors || 1} color(s)</div>
+      <div className="w-full mb-2">
+        <div className="font-semibold text-[10px] mb-1">LP: {order.lpDetails.noOfColors || 1} color(s)</div>
         {colorDetails.length > 0 && (
-          <table className="w-full text-[9px] border-collapse mb-2">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">#</th>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">Type</th>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">Pantone</th>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">MR</th>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">Size</th>
+          <table className="w-full text-[8px]" style={{ borderCollapse: 'collapse' }}>
+            <thead>
+              <tr className="bg-gray-100">
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">#</th>
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">Type</th>
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">Pantone</th>
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">MR</th>
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">Size</th>
               </tr>
             </thead>
             <tbody>
               {colorDetails.map((color, idx) => (
-                <tr key={idx} className="even:bg-gray-50">
-                  <td className="border border-gray-300 px-1 py-0.5">{idx+1}</td>
-                  <td className="border border-gray-300 px-1 py-0.5">{color.plateType || 'N/A'}</td>
-                  <td className="border border-gray-300 px-1 py-0.5">{color.pantoneType || 'N/A'}</td>
-                  <td className="border border-gray-300 px-1 py-0.5">{color.mrType || 'STD'}</td>
-                  <td className="border border-gray-300 px-1 py-0.5">{formatDimensions(color.plateDimensions)}</td>
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-center">{idx+1}</td>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }}>{color.plateType || 'N/A'}</td>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }}>{color.pantoneType || 'N/A'}</td>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }}>{color.mrType || 'STD'}</td>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px', fontSize: '7px' }}>{formatDimensions(color.plateDimensions)}</td>
                 </tr>
               ))}
             </tbody>
@@ -163,27 +158,27 @@ const JobTicket = ({ order }) => {
     const foilDetails = objectToArray(order.fsDetails.foilDetails);
     
     return (
-      <div className="w-full">
-        <div className="font-medium text-xs mb-1">FS: {order.fsDetails.fsType || 'STD'}</div>
+      <div className="w-full mb-2">
+        <div className="font-semibold text-[10px] mb-1">FS: {order.fsDetails.fsType || 'STD'}</div>
         {foilDetails.length > 0 && (
-          <table className="w-full text-[9px] border-collapse mb-2">
-            <thead className="bg-gray-100">
-              <tr>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">#</th>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">Foil</th>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">Block</th>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">MR</th>
-                <th className="border border-gray-300 px-1 py-0.5 text-left">Size</th>
+          <table className="w-full text-[8px]" style={{ borderCollapse: 'collapse' }}>
+            <thead>
+              <tr className="bg-gray-100">
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">#</th>
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">Foil</th>
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">Block</th>
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">MR</th>
+                <th style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-left font-semibold">Size</th>
               </tr>
             </thead>
             <tbody>
               {foilDetails.map((foil, idx) => (
-                <tr key={idx} className="even:bg-gray-50">
-                  <td className="border border-gray-300 px-1 py-0.5">{idx+1}</td>
-                  <td className="border border-gray-300 px-1 py-0.5">{foil.foilType || 'N/A'}</td>
-                  <td className="border border-gray-300 px-1 py-0.5">{foil.blockType || 'N/A'}</td>
-                  <td className="border border-gray-300 px-1 py-0.5">{foil.mrType || 'STD'}</td>
-                  <td className="border border-gray-300 px-1 py-0.5">{formatDimensions(foil.blockDimension)}</td>
+                <tr key={idx} className={idx % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }} className="text-center">{idx+1}</td>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }}>{foil.foilType || 'N/A'}</td>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }}>{foil.blockType || 'N/A'}</td>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px' }}>{foil.mrType || 'STD'}</td>
+                  <td style={{ border: '1px solid #9CA3AF', padding: '4px 6px', fontSize: '7px' }}>{formatDimensions(foil.blockDimension)}</td>
                 </tr>
               ))}
             </tbody>
@@ -198,80 +193,76 @@ const JobTicket = ({ order }) => {
     if (!order.embDetails?.isEMBUsed) return null;
     
     return (
-      <div className="text-xs mb-2">
-        <div className="font-medium mb-1">EMB</div>
-        <div className="grid grid-cols-2 gap-x-2 text-[9px]">
-          <div>Male: {order.embDetails.plateTypeMale || 'N/A'}</div>
-          <div>Female: {order.embDetails.plateTypeFemale || 'N/A'}</div>
-          <div>MR: {order.embDetails.embMR || 'STD'}</div>
-          <div>Size: {formatDimensions(order.embDetails.plateDimensions)}</div>
+      <div className="text-[10px] mb-2">
+        <div className="font-semibold mb-1">EMB</div>
+        <div className="space-y-0.5 text-[9px] pl-2">
+          <div><span className="font-medium">Male:</span> {order.embDetails.plateTypeMale || 'N/A'}</div>
+          <div><span className="font-medium">Female:</span> {order.embDetails.plateTypeFemale || 'N/A'}</div>
+          <div><span className="font-medium">MR:</span> {order.embDetails.embMR || 'STD'}</div>
+          <div><span className="font-medium">Size:</span> {formatDimensions(order.embDetails.plateDimensions)}</div>
         </div>
       </div>
     );
   };
 
-  // Get service details for other services
-  const getServiceDetails = (service, serviceType) => {
-    if (!service) return '';
+  // Get service details for other services (DIGI, Screen, etc.)
+  const renderDigiDetails = () => {
+    if (!order.digiDetails?.isDigiUsed) return null;
     
-    switch(serviceType) {
-      case 'DIGI':
-        return `${service.digiDie || 'Standard'} (${formatDimensions(service.digiDimensions)})`;
-      case 'SCREEN':
-        return `${service.noOfColors || 1} color(s), MR: ${service.screenMR || 'STD'}`;
-      case 'NOTEBOOK':
-        return `${service.orientation || 'STD'}, ${service.numberOfPages || '0'} pages, ${service.bindingType || 'N/A'}`;
-      case 'PRE_DC':
-        return `MR: ${service.predcMR || 'STD'}`;
-      case 'DC':
-        return `MR: ${service.dcMR || 'STD'}`;
-      case 'POST_DC':
-        return `MR: ${service.pdcMR || 'STD'}`;
-      case 'FOLD_PASTE':
-        return `${service.dstType || 'STD'}${service.dstMaterial ? ', Mat: ' + service.dstMaterial : ''}`;
-      case 'DST_PASTE':
-        return `Type: ${service.dstType || 'STD'}`;
-      case 'MAGNET':
-        return `Mat: ${service.magnetMaterial || 'STD'}`;
-      case 'SANDWICH':
-        return `Paper: ${service.paperInfo?.paperName || 'STD'}`;
-      default:
-        return '';
-    }
+    const digiDie = order.digiDetails.digiDie || 'N/A';
+    const dimensions = formatDimensions(order.digiDetails.digiDimensions);
+    
+    return (
+      <div className="text-[10px] mb-2">
+        <div className="font-semibold mb-1">DIGI: {dimensions}</div>
+        <div className="text-[9px] pl-2">
+          <div><span className="font-medium">Die:</span> {digiDie}</div>
+        </div>
+      </div>
+    );
+  };
+
+  const renderScreenDetails = () => {
+    if (!order.screenPrint?.isScreenPrintUsed) return null;
+    
+    return (
+      <div className="text-[10px] mb-2">
+        <div className="font-semibold mb-1">Screen: {order.screenPrint.noOfColors || 1} color(s)</div>
+        <div className="text-[9px] pl-2">
+          <div><span className="font-medium">MR:</span> {order.screenPrint.screenMR || 'STD'}</div>
+        </div>
+      </div>
+    );
   };
 
   return (
-    <div className="w-[430px] p-3 bg-white text-xs leading-relaxed">
-      {/* Debug: Log order serial */}
-      {console.log('JobTicket - Order Serial:', order.orderSerial)}
-      
+    <div className="w-[430px] p-2.5 bg-white leading-tight">
       {/* Header */}
-      <div className="mb-3 pb-2 border-b border-gray-300">
-        <div className="flex justify-between items-start mb-2">
-          <h1 className="text-lg font-bold leading-tight">JOB TICKET</h1>
-          <div className="text-right text-[10px] leading-tight">
-            <p className="mb-0.5"><span className="font-bold">Job #:</span> {order.id?.substring(0, 8) || 'N/A'}</p>
-            <p className="mb-0.5"><span className="font-bold">Type:</span> {order.jobDetails?.jobType || 'N/A'}</p>
-            <p className="mb-0.5"><span className="font-bold">Qty:</span> {order.jobDetails?.quantity || 'N/A'}</p>
+      <div className="mb-2 pb-1.5 border-b-2 border-gray-800">
+        <div className="flex justify-between items-start mb-1.5">
+          <h1 className="text-lg font-bold">JOB TICKET</h1>
+          <div className="text-right text-[9px] space-y-0.5">
+            <div><span className="font-bold">Type:</span> {order.jobDetails?.jobType || 'N/A'}</div>
+            <div><span className="font-bold">Qty:</span> {order.jobDetails?.quantity || 'N/A'}</div>
           </div>
         </div>
-        <div className="grid grid-cols-2 gap-x-4 text-[10px] leading-tight">
-          <div>
-            <p className="mb-0.5"><span className="font-bold">Project:</span> {order.projectName || 'N/A'}</p>
-            <p className="mb-0.5"><span className="font-bold">Client:</span> {order.clientName || 'N/A'}</p>
+        <div className="grid grid-cols-2 gap-x-4 text-[9px]">
+          <div className="space-y-0.5">
+            <div><span className="font-bold">Project:</span> {order.projectName || 'N/A'}</div>
+            <div><span className="font-bold">Client:</span> {order.clientName || 'N/A'}</div>
           </div>
-          <div className="text-right">
-            <p className="mb-0.5"><span className="font-bold">Order:</span> {formatDate(order.date)}</p>
-            <p className="mb-0.5"><span className="font-bold">Delivery:</span> {formatDate(order.deliveryDate || order.date)}</p>
+          <div className="text-right space-y-0.5">
+            <div><span className="font-bold">Order:</span> {formatDate(order.date)}</div>
+            <div><span className="font-bold">Delivery:</span> {formatDate(order.deliveryDate || order.date)}</div>
           </div>
         </div>
       </div>
 
       {/* Production Assignment Section */}
       {order.productionAssignments && (order.productionAssignments.assigned || order.productionAssignments.deadlineDate) && (
-        <div className="mb-3 rounded p-2 bg-gray-50 border border-gray-200">
-          <h2 className="font-bold text-xs mb-1.5">Production Assignment</h2>
-          <div className="grid grid-cols-2 gap-x-2 gap-y-1 text-[10px]">
+        <div className="mb-2 rounded p-1.5 bg-gray-100 border border-gray-300">
+          <h2 className="font-bold text-[10px] mb-1">Production Assignment</h2>
+          <div className="space-y-0.5 text-[9px]">
             <div><span className="font-medium">Assigned to:</span> {order.productionAssignments.assigned ? (
                 loadingStaffName ? 'Loading...' : assignedStaffName
               ) : (
@@ -281,14 +272,11 @@ const JobTicket = ({ order }) => {
             <div><span className="font-medium">Deadline:</span> <span className={`${
               order.productionAssignments.deadlineDate && 
               new Date(order.productionAssignments.deadlineDate) <= new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) 
-                ? 'text-red-600 font-medium' : ''
+                ? 'text-red-600 font-bold' : ''
             }`}>
               {order.productionAssignments.deadlineDate ? 
                 formatDate(order.productionAssignments.deadlineDate) : 'Not Set'}
             </span></div>
-            {order.productionAssignments.assignedAt && (
-              <div className="col-span-2"><span className="font-medium">Assigned on:</span> {formatDate(order.productionAssignments.assignedAt)}</div>
-            )}
           </div>
         </div>
       )}
@@ -296,48 +284,34 @@ const JobTicket = ({ order }) => {
       {/* Main Grid */}
       <div className="grid grid-cols-2 gap-3">
         {/* Left Column */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {/* Paper Details */}
-          <div className="rounded p-2 bg-gray-50 border border-gray-200">
-            <h2 className="font-bold text-xs mb-2">Paper Details</h2>
+          <div className="rounded p-2 bg-gray-50 border border-gray-300">
+            <h2 className="font-bold text-[10px] mb-1.5">Paper Details</h2>
             
-            {/* Paper info */}
-            <div className="space-y-1 text-[10px] mb-2">
-              <div className="flex justify-between">
-                <span className="font-medium">Paper:</span>
-                <span className="text-right flex-1 ml-2 truncate">{order.jobDetails?.paperName || 'N/A'}</span>
-              </div>
+            <div className="space-y-1 text-[9px]">
+              <div><span className="font-medium">Paper:</span> {order.jobDetails?.paperName || 'N/A'}</div>
               <div className="grid grid-cols-2 gap-x-2">
                 <div><span className="font-medium">GSM:</span> {order.jobDetails?.paperGsm || 'N/A'}</div>
                 <div><span className="font-medium">Provided:</span> {order.jobDetails?.paperProvided || 'N/A'}</div>
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Company:</span>
-                <span className="text-right flex-1 ml-2 truncate">{order.jobDetails?.paperCompany || 'N/A'}</span>
-              </div>
+              <div><span className="font-medium">Company:</span> {order.jobDetails?.paperCompany || 'N/A'}</div>
             </div>
             
-            {/* Die Details */}
-            <div className="border-t border-gray-300 pt-2 space-y-1 text-[10px]">
+            <div className="border-t border-gray-300 mt-1.5 pt-1.5 space-y-1 text-[9px]">
               <div className="grid grid-cols-2 gap-x-2">
                 <div><span className="font-medium">Die Code:</span> {order.dieDetails?.dieCode || 'N/A'}</div>
                 <div><span className="font-medium">Sheets:</span> {getTotalSheets()}</div>
               </div>
-              <div className="flex justify-between">
-                <span className="font-medium">Die Size:</span>
-                <span>
-                  {order.dieDetails?.dieSize?.length || 'N/A'} × {order.dieDetails?.dieSize?.breadth || 'N/A'}
-                </span>
-              </div>
+              <div><span className="font-medium">Die Size:</span> {order.dieDetails?.dieSize?.length || 'N/A'} × {order.dieDetails?.dieSize?.breadth || 'N/A'}</div>
             </div>
             
-            {/* Die Image - Properly separated */}
             {hasValidImage(order.dieDetails?.image) && (
-              <div className="mt-3 pt-2 border-t border-gray-300">
+              <div className="mt-2 pt-2 border-t border-gray-300">
                 <img 
                   src={order.dieDetails.image} 
                   alt="Die" 
-                  className="w-full h-auto max-h-24 object-contain"
+                  className="w-full h-auto max-h-24 object-contain rounded"
                   onError={(e) => {
                     e.target.onerror = null;
                     e.target.style.display = 'none';
@@ -348,161 +322,85 @@ const JobTicket = ({ order }) => {
           </div>
           
           {/* Post-Production Services */}
-          <div className="rounded p-2 bg-gray-50 border border-gray-200">
-            <h2 className="font-bold text-xs mb-2">Post-Production</h2>
-            <div className="space-y-1 text-[10px]">
-              {/* Pre Die Cutting */}
-              {order.preDieCutting?.isPreDieCuttingUsed && (
-                <div className="flex">
-                  <span className="font-medium w-24 flex-shrink-0">Pre DC:</span>
-                  <span className="truncate">{getServiceDetails(order.preDieCutting, 'PRE_DC')}</span>
-                </div>
-              )}
-              
-              {/* Die Cutting */}
+          <div className="rounded p-2 bg-gray-50 border border-gray-300">
+            <h2 className="font-bold text-[10px] mb-1.5">Post-Production</h2>
+            <div className="space-y-1 text-[9px]">
               {order.dieCutting?.isDieCuttingUsed && (
-                <div className="flex">
-                  <span className="font-medium w-24 flex-shrink-0">DC:</span>
-                  <span className="truncate">{getServiceDetails(order.dieCutting, 'DC')}</span>
-                </div>
+                <div><span className="font-medium">DC:</span> MR: {order.dieCutting.dcMR || 'SIMPLE'}</div>
               )}
-              
-              {/* Post Die Cutting */}
-              {order.postDC?.isPostDCUsed && (
-                <div className="flex">
-                  <span className="font-medium w-24 flex-shrink-0">Post DC:</span>
-                  <span className="truncate">{getServiceDetails(order.postDC, 'POST_DC')}</span>
-                </div>
-              )}
-              
-              {/* Fold & Paste */}
               {order.foldAndPaste?.isFoldAndPasteUsed && (
-                <div className="flex">
-                  <span className="font-medium w-24 flex-shrink-0">Fold & Paste:</span>
-                  <span className="truncate">{getServiceDetails(order.foldAndPaste, 'FOLD_PASTE')}</span>
-                </div>
+                <div><span className="font-medium">Fold & Paste:</span> {order.foldAndPaste.dstType || 'PASTE'}, Mat: {order.foldAndPaste.dstMaterial || 'none'}</div>
               )}
-              
-              {/* DST Paste */}
-              {order.dstPaste?.isDstPasteUsed && (
-                <div className="flex">
-                  <span className="font-medium w-24 flex-shrink-0">DST Paste:</span>
-                  <span className="truncate">{getServiceDetails(order.dstPaste, 'DST_PASTE')}</span>
-                </div>
-              )}
-              
-              {/* Magnet */}
-              {order.magnet?.isMagnetUsed && (
-                <div className="flex">
-                  <span className="font-medium w-24 flex-shrink-0">Magnet:</span>
-                  <span className="truncate">{getServiceDetails(order.magnet, 'MAGNET')}</span>
-                </div>
-              )}
-              
-              {/* QC */}
               {order.qc?.isQCUsed && (
-                <div className="flex">
-                  <span className="font-medium w-24 flex-shrink-0">QC:</span>
-                  <span>Required</span>
-                </div>
+                <div><span className="font-medium">QC:</span> Required</div>
               )}
-              
-              {/* Packing */}
               {order.packing?.isPackingUsed && (
-                <div className="flex">
-                  <span className="font-medium w-24 flex-shrink-0">Packing:</span>
-                  <span>Required</span>
-                </div>
+                <div><span className="font-medium">Packing:</span> Required</div>
               )}
             </div>
           </div>
           
           {/* Production Notes */}
-          <div className="rounded p-2 bg-gray-50 border border-gray-200">
-            <h2 className="font-bold text-xs mb-2">Production Notes</h2>
-            <p className="text-[10px] whitespace-pre-line break-words leading-relaxed">
+          <div className="rounded p-2 bg-gray-50 border border-gray-300">
+            <h2 className="font-bold text-[10px] mb-1.5">Production Notes</h2>
+            <p className="text-[9px] leading-snug">
               {order.notes || "No specific instructions provided."}
             </p>
           </div>
         </div>
         
         {/* Right Column */}
-        <div className="space-y-3">
+        <div className="space-y-2">
           {/* Print Details */}
-          <div className="rounded p-2 bg-gray-50 border border-gray-200">
-            <h2 className="font-bold text-xs mb-2">Print Details</h2>
-            <div className="space-y-2">
+          <div className="rounded p-2 bg-gray-50 border border-gray-300">
+            <h2 className="font-bold text-[10px] mb-1.5">Print Details</h2>
+            <div>
               {renderLPDetails()}
               {renderFSDetails()}
               {renderEMBDetails()}
+              {renderDigiDetails()}
+              {renderScreenDetails()}
               
-              {/* DIGI Details */}
-              {order.digiDetails?.isDigiUsed && (
-                <div className="text-xs mb-2">
-                  <span className="font-medium">DIGI: </span>
-                  <span className="text-[10px]">{getServiceDetails(order.digiDetails, 'DIGI')}</span>
-                </div>
-              )}
-              
-              {/* Screen Print Details */}
-              {order.screenPrint?.isScreenPrintUsed && (
-                <div className="text-xs mb-2">
-                  <span className="font-medium">Screen: </span>
-                  <span className="text-[10px]">{getServiceDetails(order.screenPrint, 'SCREEN')}</span>
-                </div>
-              )}
-              
-              {/* Notebook Details */}
-              {order.notebookDetails?.isNotebookUsed && (
-                <div className="text-xs mb-2">
-                  <span className="font-medium">Notebook: </span>
-                  <span className="text-[10px]">{getServiceDetails(order.notebookDetails, 'NOTEBOOK')}</span>
-                </div>
+              {/* If no print services, show message */}
+              {!order.lpDetails?.isLPUsed && 
+               !order.fsDetails?.isFSUsed && 
+               !order.embDetails?.isEMBUsed && 
+               !order.digiDetails?.isDigiUsed && 
+               !order.screenPrint?.isScreenPrintUsed && (
+                <div className="text-[9px] text-gray-500 italic">No print services</div>
               )}
             </div>
           </div>
           
           {/* Sandwich/Duplex Details */}
           {order.sandwich?.isSandwichComponentUsed && (
-            <div className="rounded p-2 bg-gray-50 border border-gray-200">
-              <h2 className="font-bold text-xs mb-2">Duplex/Sandwich</h2>
-              <div className="space-y-2 text-[10px]">
-                <div className="truncate"><span className="font-medium">Paper:</span> {order.sandwich.paperInfo?.paperName || 'N/A'}</div>
+            <div className="rounded p-2 bg-gray-50 border border-gray-300">
+              <h2 className="font-bold text-[10px] mb-1.5">Duplex/Sandwich</h2>
+              <div className="space-y-1 text-[9px]">
+                <div><span className="font-medium">Paper:</span> {order.sandwich.paperInfo?.paperName || 'N/A'}</div>
                 
-                {/* Sandwich LP */}
                 {order.sandwich.lpDetailsSandwich?.isLPUsed && (
-                  <div className="mt-2">
-                    <div className="font-medium mb-1">LP: {order.sandwich.lpDetailsSandwich.noOfColors || 1} color(s)</div>
-                    {objectToArray(order.sandwich.lpDetailsSandwich.colorDetails).map((color, idx) => (
-                      <div key={idx} className="text-[9px] pl-2 flex mb-0.5">
-                        <span className="w-10 flex-shrink-0">{idx+1}:</span>
-                        <span className="truncate">{color.plateType || 'N/A'}, {color.pantoneType || 'N/A'}</span>
-                      </div>
-                    ))}
+                  <div className="mt-1.5">
+                    <div className="font-medium text-[10px] mb-0.5">LP: {order.sandwich.lpDetailsSandwich.noOfColors || 1} color(s)</div>
+                    <div className="pl-2 space-y-0.5 text-[8px]">
+                      {objectToArray(order.sandwich.lpDetailsSandwich.colorDetails).map((color, idx) => (
+                        <div key={idx}>
+                          {idx+1}. {color.plateType || 'N/A'}, {color.pantoneType || 'N/A'}
+                        </div>
+                      ))}
+                    </div>
                   </div>
                 )}
                 
-                {/* Sandwich FS */}
                 {order.sandwich.fsDetailsSandwich?.isFSUsed && (
-                  <div className="mt-2">
-                    <div className="font-medium mb-1">FS: {order.sandwich.fsDetailsSandwich.fsType || 'STD'}</div>
-                    {objectToArray(order.sandwich.fsDetailsSandwich.foilDetails).map((foil, idx) => (
-                      <div key={idx} className="text-[9px] pl-2 flex mb-0.5">
-                        <span className="w-10 flex-shrink-0">{idx+1}:</span>
-                        <span className="truncate">{foil.foilType || 'N/A'}, {foil.blockType || 'N/A'}</span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-                
-                {/* Sandwich EMB */}
-                {order.sandwich.embDetailsSandwich?.isEMBUsed && (
-                  <div className="mt-2">
-                    <div className="font-medium mb-1">EMB:</div>
-                    <div className="pl-2 text-[9px] space-y-0.5">
-                      <div>Male: {order.sandwich.embDetailsSandwich.plateTypeMale || 'N/A'}</div>
-                      <div>Female: {order.sandwich.embDetailsSandwich.plateTypeFemale || 'N/A'}</div>
-                      <div>MR: {order.sandwich.embDetailsSandwich.embMR || 'STD'}</div>
+                  <div className="mt-1.5">
+                    <div className="font-medium text-[10px] mb-0.5">FS: {order.sandwich.fsDetailsSandwich.fsType || 'STD'}</div>
+                    <div className="pl-2 space-y-0.5 text-[8px]">
+                      {objectToArray(order.sandwich.fsDetailsSandwich.foilDetails).map((foil, idx) => (
+                        <div key={idx}>
+                          {idx+1}. {foil.foilType || 'N/A'}, {foil.blockType || 'N/A'}
+                        </div>
+                      ))}
                     </div>
                   </div>
                 )}

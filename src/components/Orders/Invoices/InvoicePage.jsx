@@ -14,32 +14,26 @@ const InvoicesPage = () => {
   const [linkedClientId, setLinkedClientId] = useState(null);
   const [linkedClientName, setLinkedClientName] = useState("");
   
-  // State for data loading
   const [allOrders, setAllOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  // State for filtering and search
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterStatus, setFilterStatus] = useState(''); // All orders by default
-  const [viewMode, setViewMode] = useState('active'); // 'active', 'completed', 'all'
-  const [sortBy, setSortBy] = useState('date-desc'); // Default sort
+  const [filterStatus, setFilterStatus] = useState('');
+  const [viewMode, setViewMode] = useState('active');
+  const [sortBy, setSortBy] = useState('date-desc');
   
-  // State for expanded clients and selection
   const [expandedClientId, setExpandedClientId] = useState(null);
   const [selectedOrders, setSelectedOrders] = useState([]);
   
-  // State for modals
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [isOrderDetailsModalOpen, setIsOrderDetailsModalOpen] = useState(false);
   const [isInvoiceModalOpen, setIsInvoiceModalOpen] = useState(false);
   const [isJobTicketModalOpen, setIsJobTicketModalOpen] = useState(false);
   const [isDeliverySlipModalOpen, setIsDeliverySlipModalOpen] = useState(false);
   
-  // Available stages for orders
   const stages = ['Not started yet', 'Design', 'Positives', 'Printing', 'Quality Check', 'Delivery', 'Completed'];
 
-  // Sort options for dropdown
   const sortOptions = {
     "quantity-asc": "Quantity - Low to High",
     "quantity-desc": "Quantity - High to Low",
@@ -48,14 +42,12 @@ const InvoicesPage = () => {
     "stage": "Stage"
   };
 
-  // Fetch B2B client data if applicable
   useEffect(() => {
     const fetchB2BClientData = async () => {
       if (userRole === "b2b" && currentUser) {
         setIsB2BClient(true);
         
         try {
-          // Get the user doc to find the linked client ID
           const userDoc = await getDoc(doc(db, "users", currentUser.uid));
           
           if (userDoc.exists()) {
@@ -64,13 +56,11 @@ const InvoicesPage = () => {
             if (userData.clientId) {
               setLinkedClientId(userData.clientId);
               
-              // Also get the client name for display
               const clientDoc = await getDoc(doc(db, "clients", userData.clientId));
               if (clientDoc.exists()) {
                 setLinkedClientName(clientDoc.data().name);
               }
               
-              // Auto-expand this client
               setExpandedClientId(userData.clientId);
             }
           }
@@ -83,11 +73,9 @@ const InvoicesPage = () => {
     fetchB2BClientData();
   }, [userRole, currentUser]);
 
-  // Fetch all orders on mount
   useEffect(() => {
     let ordersQuery = collection(db, "orders");
     
-    // If B2B client, filter orders by clientId
     if (isB2BClient && linkedClientId) {
       ordersQuery = query(
         collection(db, "orders"),
@@ -130,7 +118,8 @@ const InvoicesPage = () => {
               qc: data.qc || null,
               packing: data.packing || null,
               misc: data.misc || null,
-              completedAt: data.completedAt || null
+              completedAt: data.completedAt || null,
+              orderSerial: data.orderSerial || null
             };
           });
           
@@ -148,7 +137,6 @@ const InvoicesPage = () => {
     return () => unsubscribe();
   }, [isB2BClient, linkedClientId]);
 
-  // Sort function
   const sortOrders = (ordersToSort, sortOption) => {
     return [...ordersToSort].sort((a, b) => {
       switch (sortOption) {
@@ -161,10 +149,8 @@ const InvoicesPage = () => {
         case "date-asc":
           return new Date(a.deliveryDate || 0) - new Date(b.deliveryDate || 0);
         case "stage": {
-          // Get the index of each stage from the stages array
           const stageIndexA = stages.indexOf(a.stage);
           const stageIndexB = stages.indexOf(b.stage);
-          // Sort by stage index (this will follow the order in the stages array)
           return stageIndexA - stageIndexB;
         }
         default:
@@ -173,7 +159,6 @@ const InvoicesPage = () => {
     });
   };
 
-  // Calculate invoice metrics
   const invoiceMetrics = React.useMemo(() => {
     if (allOrders.length === 0) return {
       pendingCount: 0,
@@ -184,7 +169,6 @@ const InvoicesPage = () => {
     const pendingOrders = allOrders.filter(order => order.stage !== 'Completed');
     const completedOrders = allOrders.filter(order => order.stage === 'Completed');
     
-    // Calculate total quantities
     const totalQuantity = allOrders.reduce((sum, order) => 
       sum + (parseInt(order.jobDetails?.quantity) || 0), 0);
     
@@ -203,9 +187,7 @@ const InvoicesPage = () => {
     };
   }, [allOrders]);
 
-  // Filter and group orders by client
   const clientGroups = React.useMemo(() => {
-    // Apply search filter
     let filtered = [...allOrders];
     
     if (searchQuery) {
@@ -218,27 +200,21 @@ const InvoicesPage = () => {
       );
     }
     
-    // Apply status/stage filter
     if (filterStatus) {
       filtered = filtered.filter(order => order.stage === filterStatus);
     }
     
-    // Apply view mode filter (active/completed)
     if (viewMode === 'active') {
       filtered = filtered.filter(order => order.stage !== 'Completed');
     } else if (viewMode === 'completed') {
       filtered = filtered.filter(order => order.stage === 'Completed');
     }
     
-    // Sort filtered orders
     filtered = sortOrders(filtered, sortBy);
     
-    // Group by client
     return filtered.reduce((acc, order) => {
-      // Use clientId as the key for grouping
       const clientId = order.clientId || "unknown";
       
-      // Create client group if it doesn't exist
       if (!acc[clientId]) {
         acc[clientId] = {
           id: clientId,
@@ -251,26 +227,29 @@ const InvoicesPage = () => {
         };
       }
       
-      // Add order to client group
       acc[clientId].orders.push(order);
       acc[clientId].totalOrders++;
       
-      // Count completed orders
       if (order.stage === 'Completed') {
         acc[clientId].completedOrders++;
       }
       
-      // Sum up quantity
       const quantity = parseInt(order.jobDetails?.quantity) || 0;
       acc[clientId].totalQuantity += quantity;
       
       return acc;
     }, {});
-  }, [allOrders, searchQuery, filterStatus, sortBy, viewMode, stages]);
+  }, [allOrders, searchQuery, filterStatus, sortBy, viewMode]);
 
-  // Toggle client expansion
+  // ✅ KEY FUNCTION: Get orders in UI display order
+  const getOrdersInDisplayOrder = (orderIds) => {
+    const displayOrderedOrders = Object.values(clientGroups)
+      .flatMap(client => client.orders);
+    
+    return displayOrderedOrders.filter(order => orderIds.includes(order.id));
+  };
+
   const toggleClient = (clientId) => {
-    // For B2B clients, don't allow expanding other clients
     if (isB2BClient && clientId !== linkedClientId) {
       return;
     }
@@ -282,7 +261,6 @@ const InvoicesPage = () => {
     }
   };
 
-  // Handle order selection
   const handleOrderSelection = (orderId, isSelected) => {
     if (isSelected) {
       setSelectedOrders(prev => [...prev, orderId]);
@@ -291,113 +269,92 @@ const InvoicesPage = () => {
     }
   };
 
-  // Handle select all orders for a client
   const handleSelectAllClientOrders = (clientId, isSelected) => {
     const clientOrders = clientGroups[clientId]?.orders || [];
     const clientOrderIds = clientOrders.map(order => order.id);
     
     if (isSelected) {
-      // Add all client orders that aren't already selected
       setSelectedOrders(prev => {
         const currentSelectedSet = new Set(prev);
         clientOrderIds.forEach(id => currentSelectedSet.add(id));
         return Array.from(currentSelectedSet);
       });
     } else {
-      // Remove all client orders
       setSelectedOrders(prev => 
         prev.filter(id => !clientOrderIds.includes(id))
       );
     }
   };
 
-  // Handle invoice generation for selected orders
   const handleGenerateInvoice = () => {
     if (selectedOrders.length === 0) {
       alert("Please select at least one order to generate an invoice.");
       return;
     }
     
-    // Open invoice modal
     setIsInvoiceModalOpen(true);
   };
 
-  // Handle job ticket generation for selected orders
   const handleGenerateJobTicket = () => {
     if (selectedOrders.length === 0) {
       alert("Please select at least one order to generate a job ticket.");
       return;
     }
     
-    // Open job ticket modal
     setIsJobTicketModalOpen(true);
   };
 
-  // Handle delivery slip generation for selected orders
   const handleGenerateDeliverySlip = () => {
     if (selectedOrders.length === 0) {
       alert("Please select at least one order to generate a delivery slip.");
       return;
     }
     
-    // Open delivery slip modal
     setIsDeliverySlipModalOpen(true);
   };
 
-  // Handle single order invoice generation
   const handleSingleOrderInvoice = (orders) => {
     if (!Array.isArray(orders) || orders.length === 0) return;
     
-    // Clear any existing selections and select these orders
     const orderIds = orders.map(order => order.id);
     setSelectedOrders(orderIds);
     
-    // Open invoice modal
     setTimeout(() => {
       setIsInvoiceModalOpen(true);
     }, 100);
   };
 
-  // Handle single order job ticket generation
   const handleSingleOrderJobTicket = (orders) => {
     if (!Array.isArray(orders) || orders.length === 0) return;
     
-    // Clear any existing selections and select these orders
     const orderIds = orders.map(order => order.id);
     setSelectedOrders(orderIds);
     
-    // Open job ticket modal
     setTimeout(() => {
       setIsJobTicketModalOpen(true);
     }, 100);
   };
 
-  // Handle single order delivery slip generation
   const handleSingleOrderDeliverySlip = (orders) => {
     if (!Array.isArray(orders) || orders.length === 0) return;
     
-    // Clear any existing selections and select these orders
     const orderIds = orders.map(order => order.id);
     setSelectedOrders(orderIds);
     
-    // Open delivery slip modal
     setTimeout(() => {
       setIsDeliverySlipModalOpen(true);
     }, 100);
   };
 
-  // Handle view order details
   const handleViewOrderDetails = (order) => {
     setSelectedOrder(order);
     setIsOrderDetailsModalOpen(true);
   };
 
-  // Reset selection
   const clearSelection = () => {
     setSelectedOrders([]);
   };
 
-  // Format dates
   const formatDate = (dateString) => {
     if (!dateString) return "Not specified";
     try {
@@ -411,7 +368,6 @@ const InvoicesPage = () => {
     }
   };
 
-  // Loading state
   if (isLoading) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
@@ -433,7 +389,6 @@ const InvoicesPage = () => {
     );
   }
 
-  // Error state
   if (error) {
     return (
       <div className="p-4 max-w-screen-xl mx-auto">
@@ -453,7 +408,6 @@ const InvoicesPage = () => {
 
   return (
     <div className="p-4 max-w-screen-xl mx-auto">
-      {/* Page Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">
           {isB2BClient ? "Your Invoices" : "Invoices Management"}
@@ -465,7 +419,6 @@ const InvoicesPage = () => {
         </p>
       </div>
 
-      {/* KPI Cards - Only visible to admins and staff */}
       {(userRole === "admin" || userRole === "staff") && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
           <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
@@ -506,7 +459,6 @@ const InvoicesPage = () => {
         </div>
       )}
 
-      {/* Filters Section */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
         <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
           <div className="relative w-full md:w-64">
@@ -583,7 +535,6 @@ const InvoicesPage = () => {
         </div>
       </div>
       
-      {/* Selection Controls */}
       {selectedOrders.length > 0 && (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
           <div className="flex flex-col sm:flex-row justify-between items-center gap-3">
@@ -618,7 +569,7 @@ const InvoicesPage = () => {
               >
                 <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
                   <path d="M8 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0zM15 16.5a1.5 1.5 0 11-3 0 1.5 1.5 0 013 0z" />
-                  <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5h2.5a1 1 0 00.91-.6l1.59-3.36a1 1 0 00-.91-1.4H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.45A2.5 2.5 0 009 15h7.5a1 1 0 000-2H9c-.412 0-.787.164-1.06.43-.273.266-.44.638-.44 1.06s.167.794.44 1.06c.273.266.648.43 1.06.43h7.5a2.5 2.5 0 010 5h-15a1 1 0 100 2h15a4.5 4.5 0 10-3.07-7.8l.7-1.2H18.5a1 1 0 001-1v-1a1 1 0 00-1-1h-11l.89-1.87.23-.47L11.75 6H18a1 1 0 001-1V4a1 1 0 00-1-1h-5l-1.26-2.5a1 1 0 00-.9-.5H7.81l.35.7L9.5 4H18v1H9.5l-.58 1.16L8.5 7H18v1H8.13l.58-1.15L10.01 5l-.51-1H3.9L3 2.2A1 1 0 102.2 3l6 11.9A2.5 2.5 0 018 15h7.5a1 1 0 100-2H8a1 1 0 100 2h7.5a2.5 2.5 0 010 5h-15a1 1 0 100 2h15a4.5 4.5 0 100-9H9a2.5 2.5 0 00-2.45 2h1.05a1.5 1.5 0 013 0z" />
+                  <path d="M3 4a1 1 0 00-1 1v10a1 1 0 001 1h1.05a2.5 2.5 0 014.9 0H10a1 1 0 001-1V5h2.5a1 1 0 00.91-.6l1.59-3.36a1 1 0 00-.91-1.4H5.21l-.94-2H1v2h2l3.6 7.59-1.35 2.45A2.5 2.5 0 009 15h7.5a1 1 0 000-2H9c-.412 0-.787.164-1.06.43-.273.266-.44.638-.44 1.06s.167.794.44 1.06c.273.266.648.43 1.06.43h7.5a2.5 2.5 0 010 5h-15a1 1 0 100 2h15a4.5 4.5 0 100-9H9a2.5 2.5 0 00-2.45 2h1.05a1.5 1.5 0 013 0z" />
                 </svg>
                 Generate Delivery Slip
               </button>
@@ -636,7 +587,6 @@ const InvoicesPage = () => {
         </div>
       )}
 
-      {/* Main Content - Client Groups */}
       {Object.keys(clientGroups).length === 0 ? (
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-8 text-center">
           <svg className="mx-auto h-12 w-12 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -653,26 +603,20 @@ const InvoicesPage = () => {
                   : 'No orders match your search criteria.'}
           </p>
           {(searchQuery || filterStatus || viewMode !== 'all') && (
-            <div className="flex flex-wrap justify-center gap-3 mt-4">
-              <button
-                onClick={() => {
-                  setSearchQuery("");
-                  setFilterStatus("");
-                  setViewMode("all");
-                }}
-                className="px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md flex items-center"
-              >
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" viewBox="0 0 20 20" fill="currentColor">
-                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                </svg>
-                Clear Filters
-              </button>
-            </div>
+            <button
+              onClick={() => {
+                setSearchQuery("");
+                setFilterStatus("");
+                setViewMode("all");
+              }}
+              className="mt-4 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-md"
+            >
+              Clear Filters
+            </button>
           )}
         </div>
       ) : (
         <div className="space-y-4">
-          {/* List of client groups */}
           {Object.values(clientGroups).map((client) => (
             <ClientInvoiceGroup
               key={client.id}
@@ -692,7 +636,7 @@ const InvoicesPage = () => {
         </div>
       )}
 
-      {/* Using Unified Modal Component for Order Details */}
+      {/* Order Details Modal */}
       {isOrderDetailsModalOpen && selectedOrder && (
         <UnifiedDetailsModal
           data={selectedOrder}
@@ -704,29 +648,29 @@ const InvoicesPage = () => {
         />
       )}
 
-      {/* Invoice Modal */}
+      {/* ✅ UPDATED: Invoice Modal - Pass orders in display order */}
       {isInvoiceModalOpen && (
         <InvoiceModal
           selectedOrderIds={selectedOrders}
-          orders={allOrders.filter(order => selectedOrders.includes(order.id))}
+          orders={getOrdersInDisplayOrder(selectedOrders)}
           onClose={() => setIsInvoiceModalOpen(false)}
         />
       )}
 
-      {/* Job Ticket Modal */}
+      {/* ✅ UPDATED: Job Ticket Modal - Pass orders in display order */}
       {isJobTicketModalOpen && (
         <JobTicketModal
           selectedOrderIds={selectedOrders}
-          orders={allOrders.filter(order => selectedOrders.includes(order.id))}
+          orders={getOrdersInDisplayOrder(selectedOrders)}
           onClose={() => setIsJobTicketModalOpen(false)}
         />
       )}
 
-      {/* Delivery Slip Modal */}
+      {/* ✅ UPDATED: Delivery Slip Modal - Pass orders in display order */}
       {isDeliverySlipModalOpen && (
         <DeliverySlipModal
           selectedOrderIds={selectedOrders}
-          orders={allOrders.filter(order => selectedOrders.includes(order.id))}
+          orders={getOrdersInDisplayOrder(selectedOrders)}
           onClose={() => setIsDeliverySlipModalOpen(false)}
         />
       )}
