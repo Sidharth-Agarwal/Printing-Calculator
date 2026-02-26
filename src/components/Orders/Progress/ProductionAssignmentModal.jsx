@@ -8,53 +8,62 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
   const [loading, setLoading] = useState(true);
   const [productionStaff, setProductionStaff] = useState([]);
   const [assignedStaff, setAssignedStaff] = useState('');
-  const [deadlineDate, setDeadlineDate] = useState('');
+  // ✅ FIX: Store as Date object instead of string to avoid timezone shifting
+  const [deadlineDate, setDeadlineDate] = useState(null);
   const [updating, setUpdating] = useState(false);
 
-  // Calculate min date (today) for the deadline picker
-  const today = new Date().toISOString().split('T')[0];
-
   // Format date for display (dd/mm/yyyy)
+  // ✅ FIX: Parse yyyy-mm-dd safely without timezone conversion
   const formatDateForDisplay = (dateString) => {
     if (!dateString) return "";
     try {
-      const date = new Date(dateString);
-      return `${String(date.getDate()).padStart(2, '0')}/${String(date.getMonth() + 1).padStart(2, '0')}/${date.getFullYear()}`;
+      const [year, month, day] = dateString.split('-');
+      return `${day}/${month}/${year}`;
     } catch (error) {
       return dateString;
     }
   };
 
-  // Fetch production staff on component mount
+  // ✅ FIX: Convert a yyyy-mm-dd string to a local Date object at noon
+  // Using noon prevents any DST or UTC offset from rolling the date backward
+  const parseDateString = (dateString) => {
+    if (!dateString) return null;
+    const [year, month, day] = dateString.split('-').map(Number);
+    return new Date(year, month - 1, day, 12, 0, 0);
+  };
+
+  // ✅ FIX: Convert a local Date object back to yyyy-mm-dd without UTC shift
+  const formatDateToISO = (date) => {
+    if (!date) return '';
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   useEffect(() => {
     const fetchProductionStaff = async () => {
       try {
-        // Query users with production role
         const usersRef = collection(db, "users");
         const q = query(usersRef, where("role", "==", "production"));
         const querySnapshot = await getDocs(q);
         
         const staff = [];
         querySnapshot.forEach((doc) => {
-          staff.push({
-            id: doc.id,
-            ...doc.data()
-          });
+          staff.push({ id: doc.id, ...doc.data() });
         });
         
         setProductionStaff(staff);
         
-        // Initialize assignment from order data if available
         if (order.productionAssignments) {
           if (order.productionAssignments.assigned) {
             setAssignedStaff(order.productionAssignments.assigned);
           }
-          
           if (order.productionAssignments.deadlineDate) {
-            setDeadlineDate(order.productionAssignments.deadlineDate);
+            // ✅ FIX: Parse existing deadline safely into a local Date object
+            setDeadlineDate(parseDateString(order.productionAssignments.deadlineDate));
           }
         }
-        
       } catch (error) {
         console.error("Error fetching production staff:", error);
       } finally {
@@ -65,15 +74,15 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
     fetchProductionStaff();
   }, [order]);
 
-  // Save assignment
   const saveAssignments = async () => {
     try {
       setUpdating(true);
       const orderRef = doc(db, "orders", order.id);
       
+      // ✅ FIX: Convert Date object to yyyy-mm-dd string safely before saving
       const productionAssignments = {
         assigned: assignedStaff,
-        deadlineDate: deadlineDate,
+        deadlineDate: formatDateToISO(deadlineDate),
         assignedAt: new Date().toISOString()
       };
       
@@ -92,12 +101,11 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
     }
   };
 
-  // Validate if we can save (staff selected and deadline provided)
   const canSave = assignedStaff && deadlineDate;
 
   return (
     <div className="fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-[60] p-4 overflow-y-auto">
-      <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl"> {/* Wider modal */}
+      <div className="bg-white rounded-lg shadow-lg w-full max-w-3xl">
         {/* Modal Header */}
         <div className="flex justify-between items-center p-4 border-b">
           <h2 className="text-lg font-bold text-gray-700">Assign Production Staff</h2>
@@ -134,8 +142,7 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
                   Assign a production staff member to {order.projectName || "this order"} and set a production deadline.
                 </p>
               </div>
-              
-              {/* Side-by-side fields */}
+
               <div className="flex flex-wrap gap-4 mb-4">
                 <div className="flex-1 min-w-[240px]">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -161,12 +168,10 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
                   </label>
                   <div className="relative">
                     <DatePicker
-                      selected={deadlineDate ? new Date(deadlineDate) : null}
+                      selected={deadlineDate}
                       onChange={(date) => {
-                        if (date) {
-                          const isoDate = date.toISOString().split('T')[0]; // Format to yyyy-mm-dd
-                          setDeadlineDate(isoDate);
-                        }
+                        // ✅ FIX: date from DatePicker is already a local Date object — store directly
+                        setDeadlineDate(date);
                       }}
                       dateFormat="dd/MM/yyyy"
                       placeholderText="DD/MM/YYYY"
@@ -181,7 +186,7 @@ const ProductionAssignmentModal = ({ order, onClose, onAssignmentUpdate }) => {
                   )}
                 </div>
               </div>
-              
+
               {/* Order Details */}
               <div className="bg-gray-50 p-3 rounded-md border border-gray-200 mb-4">
                 <h4 className="text-sm font-medium text-gray-700 mb-2">Order Details</h4>

@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createRoot } from 'react-dom/client';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, getDocs, collection, query, where } from 'firebase/firestore';
 import { db } from '../../../firebaseConfig';
 import html2canvas from 'html2canvas';
 import jsPDF from 'jspdf';
@@ -12,14 +12,10 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
   const leftTicketRef = useRef(null);
   const rightTicketRef = useRef(null);
   
-  // Add state for notes
   const [ticketNotes, setTicketNotes] = useState({});
-  
-  // Add state for refreshed orders with production assignments
   const [refreshedOrders, setRefreshedOrders] = useState([]);
   const [loadingOrders, setLoadingOrders] = useState(true);
   
-  // Fetch complete order data including production assignments
   useEffect(() => {
     const fetchCompleteOrderData = async () => {
       if (!Array.isArray(orders) || orders.length === 0) {
@@ -39,6 +35,31 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
               if (orderDoc.exists()) {
                 const completeOrderData = orderDoc.data();
                 console.log(`Order ${order.id} production assignments:`, completeOrderData.productionAssignments);
+
+                // ✅ FIX: Fetch the live die image from the dies collection
+                const dieCode = completeOrderData.dieDetails?.dieCode;
+                if (dieCode) {
+                  try {
+                    const diesQuery = query(
+                      collection(db, "dies"),
+                      where("dieCode", "==", dieCode)
+                    );
+                    const dieSnap = await getDocs(diesQuery);
+                    if (!dieSnap.empty) {
+                      const liveImageUrl = dieSnap.docs[0].data().imageUrl;
+                      // Override the stale image URL stored on the order
+                      // Use empty string (not null) so hasValidImage correctly returns false
+                      completeOrderData.dieDetails = {
+                        ...completeOrderData.dieDetails,
+                        image: liveImageUrl || "",
+                      };
+                    }
+                  } catch (dieError) {
+                    console.error(`Error fetching die data for dieCode ${dieCode}:`, dieError);
+                    // Non-fatal: fall through and use whatever is stored on the order
+                  }
+                }
+
                 return {
                   id: order.id,
                   ...completeOrderData
@@ -48,7 +69,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
               console.error(`Error fetching order ${order.id}:`, error);
             }
             
-            return order; // Return original order if fetch fails
+            return order;
           })
         );
         
@@ -57,7 +78,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
         
       } catch (error) {
         console.error('Error fetching complete order data:', error);
-        setRefreshedOrders(orders); // Fall back to original orders
+        setRefreshedOrders(orders);
       } finally {
         setLoadingOrders(false);
       }
@@ -66,7 +87,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     fetchCompleteOrderData();
   }, [orders]);
   
-  // Initialize notes for each order
   useEffect(() => {
     if (!Array.isArray(refreshedOrders)) return;
     
@@ -79,7 +99,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     setTicketNotes(initialNotes);
   }, [refreshedOrders]);
   
-  // Handle notes change
   const handleNotesChange = (orderId, value) => {
     if (!orderId) return;
     
@@ -88,7 +107,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
       [orderId]: value
     }));
     
-    // If onUpdateOrders is provided, call it to persist notes to the database
     if (onUpdateOrders && Array.isArray(refreshedOrders)) {
       const updatedOrder = refreshedOrders.find(order => order.id === orderId);
       if (updatedOrder) {
@@ -100,21 +118,16 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }
   };
   
-  // Use refreshed orders instead of original orders
   const ordersToUse = refreshedOrders.length > 0 ? refreshedOrders : orders;
   
-  // Get the left order being displayed (first in the pair)
   const leftOrder = Array.isArray(ordersToUse) && ordersToUse.length > currentPairIndex * 2 ? 
     ordersToUse[currentPairIndex * 2] : null;
   
-  // Get the right order if available (second in the pair)
   const rightOrder = Array.isArray(ordersToUse) && ordersToUse.length > currentPairIndex * 2 + 1 ? 
     ordersToUse[currentPairIndex * 2 + 1] : null;
   
-  // Navigate between job ticket pairs
   const goToNextPair = () => {
     if (!Array.isArray(ordersToUse)) return;
-    
     const maxPairIndex = Math.ceil(ordersToUse.length / 2) - 1;
     if (currentPairIndex < maxPairIndex) {
       setCurrentPairIndex(currentPairIndex + 1);
@@ -127,29 +140,25 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }
   };
   
-  // Generate PDF for current job ticket pair
   const generateCurrentPDF = async () => {
     if (!leftTicketRef.current || !leftOrder) return;
     
     setIsGeneratingPDF(true);
     try {
-      // Create container for both tickets side by side
       const container = document.createElement('div');
       container.style.position = 'absolute';
       container.style.top = '-9999px';
       container.style.left = '-9999px';
-      container.style.width = '900px'; // Wider container for landscape
-      container.style.display = 'flex'; // Flexbox for side-by-side
-      container.style.flexDirection = 'row'; // Horizontal layout
-      container.style.justifyContent = 'space-between'; // Space between tickets
+      container.style.width = '900px';
+      container.style.display = 'flex';
+      container.style.flexDirection = 'row';
+      container.style.justifyContent = 'space-between';
       container.style.backgroundColor = 'white';
       container.style.padding = '20px';
       
-      // Clone the left ticket
       const leftClone = leftTicketRef.current.cloneNode(true);
       container.appendChild(leftClone);
       
-      // Add right ticket if it exists
       if (rightTicketRef.current && rightOrder) {
         const rightClone = rightTicketRef.current.cloneNode(true);
         container.appendChild(rightClone);
@@ -157,19 +166,17 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
       
       document.body.appendChild(container);
       
-      // Wait for images to load
       const allImages = Array.from(container.querySelectorAll('img'));
       const imagePromises = allImages.map(img => {
         if (img.complete) return Promise.resolve();
         return new Promise((resolve) => {
           img.onload = resolve;
-          img.onerror = resolve; // Use resolve for errors too
+          img.onerror = resolve;
         });
       });
       
       await Promise.all(imagePromises);
       
-      // Generate PDF
       const canvas = await html2canvas(container, {
         scale: 2,
         useCORS: true,
@@ -180,18 +187,14 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
       
       document.body.removeChild(container);
       
-      // Create PDF in landscape orientation
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
       
-      // A4 landscape dimensions
-      const pdfWidth = 297; // mm
-      const pdfHeight = 210; // mm
-      
-      // Add the image to the PDF
+      const pdfWidth = 297;
+      const pdfHeight = 210;
       const imgWidth = pdfWidth;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
@@ -204,7 +207,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
         imgHeight <= pdfHeight ? imgHeight : pdfHeight
       );
       
-      // Save the PDF
       const filename = rightOrder 
         ? `JobTickets_${leftOrder.projectName || leftOrder.id}_and_${rightOrder.projectName || rightOrder.id}.pdf`
         : `JobTicket_${leftOrder.projectName || leftOrder.id}.pdf`;
@@ -219,45 +221,38 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }
   };
   
-  // Generate PDF for all selected job tickets
   const generateAllPDFs = async () => {
     if (!Array.isArray(ordersToUse) || ordersToUse.length === 0) return;
     
     setIsGeneratingPDF(true);
     try {
-      // Create a PDF in landscape format
       const pdf = new jsPDF({
         orientation: 'landscape',
         unit: 'mm',
         format: 'a4'
       });
       
-      // A4 landscape dimensions
-      const pdfWidth = 297; // mm
-      const pdfHeight = 210; // mm
-      
+      const pdfWidth = 297;
+      const pdfHeight = 210;
       let isFirstPage = true;
       
-      // Process each pair of orders
       for (let i = 0; i < ordersToUse.length; i += 2) {
         const leftOrder = ordersToUse[i];
         const rightOrder = i + 1 < ordersToUse.length ? ordersToUse[i + 1] : null;
         
         if (!leftOrder) continue;
         
-        // Create container for both tickets side by side
         const container = document.createElement('div');
         container.style.position = 'absolute';
         container.style.top = '-9999px';
         container.style.left = '-9999px';
-        container.style.width = '900px'; // Wider container for landscape
-        container.style.display = 'flex'; // Flexbox for side-by-side
-        container.style.flexDirection = 'row'; // Horizontal layout
-        container.style.justifyContent = 'space-between'; // Space between tickets
+        container.style.width = '900px';
+        container.style.display = 'flex';
+        container.style.flexDirection = 'row';
+        container.style.justifyContent = 'space-between';
         container.style.backgroundColor = 'white';
         container.style.padding = '20px';
         
-        // Create and render left ticket
         const leftElement = document.createElement('div');
         const leftTicketRoot = createRoot(leftElement);
         leftTicketRoot.render(
@@ -269,7 +264,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
           />
         );
         
-        // Create and render right ticket if available
         let rightElement = null;
         if (rightOrder) {
           rightElement = document.createElement('div');
@@ -284,10 +278,8 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
           );
         }
         
-        // Wait for React to finish rendering
         await new Promise(resolve => setTimeout(resolve, 100));
         
-        // Add elements to container
         container.appendChild(leftElement);
         if (rightElement) {
           container.appendChild(rightElement);
@@ -295,22 +287,19 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
         
         document.body.appendChild(container);
         
-        // Wait for a moment to ensure rendering completes
         await new Promise(resolve => setTimeout(resolve, 500));
         
-        // Wait for images to load
         const allImages = Array.from(container.querySelectorAll('img'));
         const imagePromises = allImages.map(img => {
           if (img.complete) return Promise.resolve();
           return new Promise((resolve) => {
             img.onload = resolve;
-            img.onerror = resolve; // Use resolve for errors too
+            img.onerror = resolve;
           });
         });
         
         await Promise.all(imagePromises);
         
-        // Generate image of the job tickets
         const canvas = await html2canvas(container, {
           scale: 2,
           useCORS: true,
@@ -321,14 +310,12 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
         
         document.body.removeChild(container);
         
-        // Add a new page if not the first ticket
         if (!isFirstPage) {
           pdf.addPage();
         } else {
           isFirstPage = false;
         }
         
-        // Add the image to the PDF
         const imgWidth = pdfWidth;
         const imgHeight = (canvas.height * imgWidth) / canvas.width;
         
@@ -342,7 +329,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
         );
       }
       
-      // Save the combined PDF
       pdf.save(`JobTickets_Batch_${new Date().getTime()}.pdf`);
       onClose();
       
@@ -354,7 +340,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
     }
   };
   
-  // Show loading state while fetching complete order data
   if (loadingOrders) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -422,11 +407,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
                 disabled={isGeneratingPDF}
                 className="px-4 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 flex items-center gap-2 disabled:bg-blue-400"
               >
-                {isGeneratingPDF ? (
-                  <>Processing...</>
-                ) : (
-                  <>Download All Tickets</>
-                )}
+                {isGeneratingPDF ? <>Processing...</> : <>Download All Tickets</>}
               </button>
             )}
             
@@ -442,9 +423,8 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
           </div>
         </div>
         
-        {/* Modal Body - Side by side tickets in landscape */}
+        {/* Modal Body */}
         <div className="flex flex-col flex-1 overflow-hidden">
-          {/* Job Ticket Previews */}
           <div className="flex-1 overflow-y-auto bg-gray-50 p-4">
             <div className="flex gap-4 justify-center items-start">
               {/* Left Job Ticket */}
@@ -457,8 +437,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
                     }}
                   />
                 </div>
-                
-                {/* Notes for left ticket */}
                 <div className="p-4 border-t">
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Notes for Job #{leftOrder.id?.substring(0, 8) || 'N/A'}
@@ -472,7 +450,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
                 </div>
               </div>
               
-              {/* Right Job Ticket (if available) */}
+              {/* Right Job Ticket */}
               {rightOrder ? (
                 <div className="bg-white shadow-lg rounded-lg overflow-hidden">
                   <div ref={rightTicketRef}>
@@ -483,8 +461,6 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
                       }}
                     />
                   </div>
-                  
-                  {/* Notes for right ticket */}
                   <div className="p-4 border-t">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Notes for Job #{rightOrder.id?.substring(0, 8) || 'N/A'}
@@ -505,7 +481,7 @@ const JobTicketModal = ({ orders, onClose, selectedOrderIds, onUpdateOrders }) =
             </div>
           </div>
           
-          {/* Pagination Controls - Updated for pairs */}
+          {/* Pagination Controls */}
           {Array.isArray(ordersToUse) && ordersToUse.length > 2 && (
             <div className="flex justify-between p-4 border-t">
               <button
