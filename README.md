@@ -1,83 +1,313 @@
-# Print Calculator  
-
-## Overview  
-The **Print Calculator** is a comprehensive web application designed for managing printing orders. It provides features such as billing, material and stock management, and role-based authentication for administrators, staff, and general users. This project streamlines the workflow for printing businesses by offering a clean UI and integration with Firebase for real-time data updates.  
+# FNB CRM — Implementation Plan
 
 ---
 
-## Features  
+## Phase 1 — Complete Lead Management
+**Scope:** Additive changes to existing files only. No rewrites.
 
-### 1. **Authentication**  
-- Role-based access control:  
-  - **Admin**: Access to all sections and functionality.  
-  - **Staff**: Limited access to **New Bill**, **Paper DB**, **Material DB**, and **Die DB**.  
-  - **Registered Users**: View access to **Paper DB**, **Material DB**, and **Die DB**.  
-- Secure login and registration using Firebase Authentication.  
-- Protected routes to ensure access control based on roles.  
+### 1.1 Lead Form Fields
+- [ ] Add `weddingDate` (date picker) to `LeadRegistrationForm.jsx`
+- [ ] Add `birthdayDate` (date picker) to `LeadRegistrationForm.jsx`
+- [ ] Update `leadFields.js` constants
 
-### 2. **Billing Form**  
-- Multi-step form for creating and managing bills.  
-- Order and Paper section features:  
-  - Capture **Client Name**, **Project Name**, **Date**, and **Estimated Delivery Date**.  
-  - Select **Job Type** and enforce quantity in multiples of 100.  
-  - Integration with **Paper DB** and **Die DB** for easy selection.  
-- Validations and real-time updates.  
+### 1.2 Discussion Modal
+- [ ] Add `type` field (Call / Email / Message) to `LeadDiscussionModal.jsx`
+- [ ] Add `followUpDate` (date picker) to `LeadDiscussionModal.jsx`
+- [ ] On save: create a Task record in Firestore `tasks` collection with `linkedTo: leadId`
 
-### 3. **Material and Stock Management**  
-- Sections for managing:  
-  - **Paper DB**: Add, edit, delete, and view papers.  
-  - **Material DB**: Manage materials used in the printing process.  
-  - **Die DB**: Manage die details with support for image uploads and dynamic updates.  
+### 1.3 Dormant Flow
+- [ ] Add "Mark Dormant" action to `LeadPool.jsx` kanban cards
+- [ ] Dormant modal: reason dropdown (Ghosted / Dropped Us) + comment textarea
+- [ ] Save `dormantReason`, `dormantComment`, `dormantAt` to lead document
+- [ ] Add Dormant status to `leadStatuses.js` constants
 
-### 4. **Estimates and Orders**  
-- Create and manage estimates.  
-- Move estimates to orders with tracking progress through stages such as:  
-  - **Design**, **Positives**, **Printing**, **Quality Check**, and **Delivery**.  
+### 1.4 Filter Views
+- [ ] Add Dormant filter toggle to `LeadManagementPage.jsx`
+- [ ] Add Dead Pool segment view (leads with no activity > threshold)
+- [ ] Update filter UI to include dormant/dead pool
 
-### 5. **Role-Based Navigation**  
-- Admins see all sections, including **Estimates DB**.  
-- Staff and Registered Users see limited sections based on their roles.  
+### 1.5 Sales Role
+- [ ] Add `sales` role to `AuthContext`
+- [ ] Gate: Sales cannot delete leads, manage badges, export/import, or view analytics
+- [ ] Update permission checks across `LeadManagementPage`, `BadgeManagementPage`, `DBExportImport`
 
 ---
 
-## Tech Stack  
+## Phase 2 — Clients Module
+**Scope:** All new files. New Firestore `orders` sub-collection per client.
 
-### Frontend  
-- **React** with Tailwind CSS for a clean, responsive UI.  
-- **React Router** for managing routes and navigation.  
+### 2.1 Client List Page
+- [ ] `ClientsPage.jsx` — Active / Legacy tabs
+- [ ] Client card/row component with client code, type, repeat flag
+- [ ] Search + filter (type, source, repeat)
 
-### Backend  
-- **Firebase**:  
-  - Firestore for real-time database management.  
-  - Authentication for secure login and registration.  
-  - Storage for handling file uploads (e.g., die images).  
+### 2.2 Client Detail Page
+- [ ] `ClientDetailPage.jsx` — contact info, wedding/anniversary dates
+- [ ] Discussion history (reuse `DiscussionHistory.jsx`)
+- [ ] Outreach reminder display (upcoming birthdays/anniversaries)
 
-### Tools and Libraries  
-- **React-Datepicker**: For date selection.  
-- **React-Firebase-Hooks**: To simplify authentication and Firebase integration.  
-- **jsPDF** and **html2canvas**: For exporting details as PDFs.  
+### 2.3 Job Tickets
+- [ ] `JobTicketForm.jsx` — new/edit ticket
+- [ ] `JobTicketList.jsx` — list of tickets per client
+- [ ] Fields: Job Type, Deadline, Final Billed, Advance Paid, Pending Balance (auto), Payment Status, Courier Charges
+- [ ] Order status pipeline: Design → Production → Dispatched → Completed
+- [ ] File attachments (invoices, estimates, tracking slips) via Firebase Storage
+
+### 2.4 Legacy Client Logic
+- [ ] Auto-promote client to Legacy when: deadline passed AND order = Completed
+- [ ] Manual promote by admin
+- [ ] Legacy tab shows full history (tickets, discussions, orders)
+
+### 2.5 Repeat Client Logic
+- [ ] Flag client as Repeat when completed orders > 1
+- [ ] Show repeat badge on client card and detail page
 
 ---
 
-## Setup and Installation  
+## Phase 3 — Tasks & Calendar
+**Scope:** New Firestore `tasks` collection. Extends Phase 1 follow-up dates.
 
-### Prerequisites  
-- Node.js (v14 or higher) installed.  
-- Firebase project set up with Firestore, Authentication, and Storage configured.  
+### 3.1 Task Model (Firestore)
+```
+tasks/
+  title: string
+  linkedTo: leadId | clientId
+  linkedType: 'lead' | 'client'
+  dueDate: timestamp
+  type: 'followUp' | 'deadline' | 'birthday' | 'anniversary' | 'tempExpiry' | 'custom'
+  assignedTo: userId
+  status: 'pending' | 'done'
+  createdAt: timestamp
+```
 
-### Steps  
-1. Clone the repository:  
-   ```bash  
-   git clone https://github.com/Sidharth-Agarwal/Printing-Calculator.git
-   cd print-calculator  
+### 3.2 Task Creation Triggers
+- [ ] Follow-up date on discussion → creates followUp task (Phase 1)
+- [ ] Job ticket deadline → creates deadline task
+- [ ] Client birthday/anniversary → creates outreach task
+- [ ] Temp client expiry warning (7 days before) → creates tempExpiry task
 
-2. Install the dependencies:
-    ```bash
-    npm run install:legacy
+### 3.3 Task UI
+- [ ] `TasksPage.jsx` — list view with filters (Today / Upcoming / Overdue)
+- [ ] Mark task as done
+- [ ] Assign task to Employee / Sales user
 
-3. Configure firebase:
-    Replace the Firebase configuration in ```firebaseConfig.js``` with your firebase project details.
+### 3.4 Google Calendar Sync
+- [ ] Push new tasks to Google Calendar via API
+- [ ] Mark done in CRM → mark done in Calendar
+- [ ] OAuth setup for Calendar API
 
-4. Start the development server:
-    ```bash
-    npm start
+---
+
+## Phase 4 — Dashboard
+**Scope:** New components. All data available from previous phases.
+
+- [ ] Pipeline summary bar: Total / Qualified / Active / Dormant / Converted / Lost
+- [ ] Lead pool breakdown widget (dead 900 / qualified 100 / dormant 60 / active 40 / convert 20)
+- [ ] Recent activity feed (last 5 discussions, conversions, order updates)
+- [ ] Today's tasks widget (from Phase 3)
+- [ ] Quick stats cards: Conversion Rate / Avg Order Value / Revenue this month / Repeat Client Rate
+
+---
+
+## Phase 5 — Analytics & Reports
+**Scope:** New pages. Aggregation queries on existing data.
+
+| Report | Source |
+|---|---|
+| Total Revenue | `orders` — sum of finalBilledAmount |
+| Average Order Value | Revenue / order count |
+| Conversion Rate | Converted leads / total leads |
+| Repeat Client Rate | Repeat clients / total clients |
+| Seasonal Trends | Orders grouped by month |
+| Geographic Breakdown | Client address → domestic vs international |
+| Sample Kit Conversions | Leads from `website` source → converted |
+| Reasons Not Converting | `dormantReason` + lost leads breakdown |
+| Revenue Forecast | Trend from past 6/12 months |
+| High-Performing Categories | Orders grouped by job type |
+| Client Lifetime Value | Total spend per client across all orders |
+| Lead Source Performance | Conversion rate per source channel |
+
+- [ ] Chart components: bar, line, pie (recharts)
+- [ ] Date range filter per report
+- [ ] Export to CSV/Excel per report
+
+---
+
+## Phase 6 — AI Order Form
+**Scope:** AI-assisted form generation using Anthropic API (Claude in artifact pattern).
+
+- [ ] Pre-fill order form from lead data (name, job type, wedding date, etc.)
+- [ ] AI suggests missing fields based on job type
+- [ ] Admin review before sending to client
+- [ ] Integrates with job ticket creation (Phase 2)
+
+---
+
+## Current Status
+
+| Feature | Status |
+|---|---|
+| Lead registration form | ✅ Done |
+| Kanban board | ✅ Done |
+| List table view | ✅ Done |
+| Qualification badges | ✅ Done |
+| Discussion history | ✅ Done |
+| Lead → Permanent client conversion | ✅ Done |
+| Temp client | ✅ Done |
+| Export / Import | ✅ Done |
+| Wedding / Birthday date fields | 🔲 Phase 1 |
+| Discussion type + follow-up date | 🔲 Phase 1 |
+| Dormant reason + comment | 🔲 Phase 1 |
+| Dormant / dead pool filters | 🔲 Phase 1 |
+| Sales role | 🔲 Phase 1 |
+| Clients module | 🔲 Phase 2 |
+| Job tickets + order pipeline | 🔲 Phase 2 |
+| File attachments | 🔲 Phase 2 |
+| Legacy client auto-promotion | 🔲 Phase 2 |
+| Tasks (Firestore) | 🔲 Phase 3 |
+| Google Calendar sync | 🔲 Phase 3 |
+| Dashboard | 🔲 Phase 4 |
+| Analytics & Reports | 🔲 Phase 5 |
+| AI order form | 🔲 Phase 6 |
+
+# FNB CRM — File Structure
+
+```
+src/
+├── App.jsx                                         ✅ Updated (Phase 1–4 routes)
+├── firebaseConfig.js
+├── styles/
+│   └── tailwind.css
+│
+├── constants/
+│   ├── leadFields.js                               ✅ Updated (Phase 1 — dates, comm type, follow-up, dormant reasons)
+│   ├── leadStatuses.js                             ✅ Updated (Phase 1 — dormant status)
+│   ├── leadSources.js
+│   ├── dieContants.js
+│   ├── entityFields.js
+│   ├── materialConstants.js
+│   └── paperContants.js
+│
+├── context/
+│   └── CRMContext.jsx
+│
+├── services/
+│   ├── index.js                                    ✅ Updated (Phase 1–2 exports)
+│   ├── leadService.js
+│   ├── leadConversionService.js                    ✅ Updated (Phase 2 — carries weddingDate/birthdayDate)
+│   ├── discussionService.js
+│   ├── badgeService.js
+│   ├── clientService.js
+│   ├── clientCodeService.js
+│   ├── clientDatesService.js
+│   ├── clientValidationService.js
+│   ├── userService.js
+│   ├── userManagementService.js
+│   ├── vendorValidationService.js
+│   ├── taskService.js                              ✅ New (Phase 1 + expanded Phase 3)
+│   └── jobTicketService.js                         ✅ New (Phase 2)
+│
+└── components/
+    │
+    ├── Login/
+    │   ├── AuthContext.jsx                         ✅ Updated (Phase 1 — ROLES, CRM_PERMISSIONS, can())
+    │   ├── ProtectedRoute.jsx
+    │   ├── login.jsx
+    │   ├── AdminUser.jsx
+    │   ├── ChangePassword.jsx
+    │   ├── UserManagement.jsx
+    │   ├── UserCreatedSuccess.jsx
+    │   └── Unauthorized.jsx
+    │
+    ├── CRM/
+    │   │
+    │   ├── Dashboard/                              ✅ New (Phase 4)
+    │   │   ├── CRMDashboard.jsx
+    │   │   ├── PipelineSummaryBar.jsx
+    │   │   └── RecentActivityFeed.jsx
+    │   │
+    │   ├── LeadRegistration/
+    │   │   ├── LeadRegistrationPage.jsx
+    │   │   ├── LeadRegistrationForm.jsx            ✅ Updated (Phase 1 — wedding/birthday date pickers)
+    │   │   ├── LeadDetailsModal.jsx
+    │   │   ├── DisplayLeadsTable.jsx
+    │   │   └── PublicLeadForm.jsx
+    │   │
+    │   ├── LeadManagement/
+    │   │   ├── LeadManagementPage.jsx              ✅ Updated (Phase 1 — dormant/dead pool filters)
+    │   │   ├── LeadPool.jsx                        ✅ Updated (Phase 1 — DormantModal wiring)
+    │   │   ├── LeadDiscussionModal.jsx             ✅ Updated (Phase 1 — comm type, follow-up date, task creation)
+    │   │   ├── LeadConversionModal.jsx
+    │   │   ├── TempClientModal.jsx
+    │   │   └── DormantModal.jsx                    ✅ New (Phase 1)
+    │   │
+    │   ├── BadgeManagement/
+    │   │   ├── BadgeManagementPage.jsx             ✅ Updated (Phase 1 — can("manageBadges") gate)
+    │   │   ├── BadgeForm.jsx
+    │   │   └── BadgeList.jsx
+    │   │
+    │   ├── Clients/                                ✅ New (Phase 2)
+    │   │   ├── ClientsPage.jsx
+    │   │   ├── ClientCard.jsx
+    │   │   ├── ClientDetailPage.jsx
+    │   │   ├── JobTicketForm.jsx
+    │   │   ├── JobTicketList.jsx
+    │   │   ├── OrderStatusPipeline.jsx
+    │   │   └── PaymentTracker.jsx
+    │   │
+    │   └── Tasks/                                  ✅ New (Phase 3)
+    │       ├── TasksPage.jsx
+    │       ├── TaskCard.jsx
+    │       └── TaskForm.jsx
+    │
+    ├── Shared/
+    │   ├── CRMActionButton.jsx
+    │   ├── Modal.jsx
+    │   ├── DiscussionHistory.jsx
+    │   ├── LeadStatusBadge.jsx
+    │   ├── LeadSourceSelector.jsx
+    │   ├── QualificationBadge.jsx
+    │   ├── DBExportImport.jsx
+    │   ├── ConfirmationModal.jsx
+    │   ├── DeleteConfirmationModal.jsx
+    │   ├── SuccessNotification.jsx
+    │   ├── CostDisplaySection.jsx
+    │   ├── SectionDetailsPanel.jsx
+    │   └── UnifiedDetailsModal.jsx
+    │
+    ├── Billing/
+    ├── Clients/
+    ├── Escrow/
+    ├── Estimates/
+    ├── Header/
+    ├── Management/
+    ├── Orders/
+    ├── Transactions/
+    └── Vendors/
+```
+
+## Routes
+
+| Path | Component | Phase |
+|---|---|---|
+| `/request-kit` | `PublicLeadForm` | Pre-existing |
+| `/crm/lead-registration` | `LeadRegistrationPage` | Pre-existing |
+| `/crm/lead-management` | `LeadManagementPage` | Pre-existing |
+| `/crm/badges` | `BadgeManagementPage` | Pre-existing |
+| `/crm/clients` | `ClientsPage` | Phase 2 ✅ |
+| `/crm/tasks` | `TasksPage` | Phase 3 ✅ |
+| `/crm/dashboard` | `CRMDashboard` | Phase 4 ✅ |
+| `/crm/analytics` | `AnalyticsPage` | Phase 5 🔲 |
+
+## Firestore Collections
+
+| Collection | Used by | Status |
+|---|---|---|
+| `leads` | Lead Management | ✅ |
+| `clients` | Clients Module | ✅ |
+| `discussions` | Leads + Clients | ✅ |
+| `qualificationBadges` | Badge Management | ✅ |
+| `tasks` | Tasks Module | ✅ Phase 1/3 |
+| `orders` | Job Tickets | ✅ Phase 2 |
+| `users` | Auth | ✅ |
+```
