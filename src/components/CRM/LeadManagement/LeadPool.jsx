@@ -8,689 +8,341 @@ import { useCRM } from "../../../context/CRMContext";
 import { doc, updateDoc, serverTimestamp, writeBatch, collection, query, where, getDocs } from "firebase/firestore";
 import { db } from "../../../firebaseConfig";
 import TempClientModal from "./TempClientModal";
+import DormantModal from "./DormantModal";
 
 /**
- * Component to show temp client status in Kanban cards
+ * Temp client status indicator on kanban cards
  */
 const KanbanTempClientIndicator = ({ leadId }) => {
   const [tempClientInfo, setTempClientInfo] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const fetchTempClientInfo = async () => {
-      if (!leadId) {
-        setIsLoading(false);
-        return;
-      }
-
+    const fetch = async () => {
+      if (!leadId) { setIsLoading(false); return; }
       try {
-        // Query clients collection for any client with sourceLeadId matching this lead
-        const clientsQuery = query(
+        const q = query(
           collection(db, "clients"),
           where("sourceLeadId", "==", leadId),
           where("isTemporary", "==", true)
         );
-
-        const querySnapshot = await getDocs(clientsQuery);
-        
-        if (!querySnapshot.empty) {
-          const tempClient = querySnapshot.docs[0].data();
-          const tempClientId = querySnapshot.docs[0].id;
-          
-          // Check if expired or expiring soon
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          const data = snap.docs[0].data();
           let status = "active";
-          if (tempClient.expiryDate) {
-            const expiryDate = tempClient.expiryDate.toDate ? 
-              tempClient.expiryDate.toDate() : 
-              new Date(tempClient.expiryDate);
-            const today = new Date();
-            const diffTime = expiryDate - today;
-            const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-            
-            if (diffDays < 0) {
-              status = "expired";
-            } else if (diffDays <= 7) {
-              status = "expiring";
-            }
+          if (data.expiryDate) {
+            const exp = data.expiryDate.toDate ? data.expiryDate.toDate() : new Date(data.expiryDate);
+            const diff = Math.ceil((exp - new Date()) / (1000 * 60 * 60 * 24));
+            if (diff < 0) status = "expired";
+            else if (diff <= 7) status = "expiring";
           }
-          
-          setTempClientInfo({
-            id: tempClientId,
-            name: tempClient.name,
-            clientCode: tempClient.clientCode,
-            expiryDate: tempClient.expiryDate,
-            status: status
-          });
+          setTempClientInfo({ id: snap.docs[0].id, name: data.name, clientCode: data.clientCode, status });
         } else {
           setTempClientInfo(null);
         }
-      } catch (error) {
-        console.error("Error fetching temp client info:", error);
-        setTempClientInfo(null);
-      } finally {
-        setIsLoading(false);
-      }
+      } catch { setTempClientInfo(null); }
+      finally { setIsLoading(false); }
     };
-
-    fetchTempClientInfo();
+    fetch();
   }, [leadId]);
 
-  if (isLoading || !tempClientInfo) {
-    return null;
-  }
-
-  const getStatusStyle = () => {
-    switch (tempClientInfo.status) {
-      case "expired":
-        return "bg-red-100 text-red-700 border-red-200";
-      case "expiring":
-        return "bg-amber-100 text-amber-700 border-amber-200";
-      default:
-        return "bg-orange-100 text-orange-700 border-orange-200";
-    }
-  };
-
-  const getStatusIcon = () => {
-    switch (tempClientInfo.status) {
-      case "expired":
-        return (
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        );
-      case "expiring":
-        return (
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-        );
-      default:
-        return (
-          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-          </svg>
-        );
-    }
-  };
-
-  const getStatusText = () => {
-    switch (tempClientInfo.status) {
-      case "expired":
-        return "Temp Client Expired";
-      case "expiring":
-        return "Temp Client Expiring";
-      default:
-        return "Temp Client Active";
-    }
-  };
-
+  if (isLoading || !tempClientInfo) return null;
   return (
     <div className="mb-2">
-      <div className="text-xs text-gray-600 mt-1">
-        Client: {tempClientInfo.clientCode}
-      </div>
+      <div className="text-xs text-gray-600 mt-1">Client: {tempClientInfo.clientCode}</div>
     </div>
   );
 };
 
 /**
- * Inline badge editor for Kanban cards
+ * Inline badge editor on kanban cards
  */
 const InlineKanbanBadgeEditor = ({ leadId, currentBadgeId, onUpdate, disabled = false }) => {
   const { qualificationBadges } = useCRM();
   const [isEditing, setIsEditing] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
 
-  const handleBadgeChange = async (newBadgeId) => {
-    if (newBadgeId === currentBadgeId) {
-      setIsEditing(false);
-      return;
-    }
-
+  const handleChange = async (newBadgeId) => {
+    if (newBadgeId === currentBadgeId) { setIsEditing(false); return; }
     setIsUpdating(true);
     try {
       await updateLead(leadId, { badgeId: newBadgeId });
       onUpdate?.();
       setIsEditing(false);
-    } catch (error) {
-      console.error("Error updating badge:", error);
-    } finally {
-      setIsUpdating(false);
-    }
+    } catch (e) { console.error(e); }
+    finally { setIsUpdating(false); }
   };
 
-  if (disabled) {
-    return <QualificationBadge badgeId={currentBadgeId} size="sm" />;
-  }
+  if (disabled) return <QualificationBadge badgeId={currentBadgeId} size="sm" />;
 
-  if (isEditing) {
-    return (
-      <div className="relative" onClick={(e) => e.stopPropagation()}>
-        <select
-          value={currentBadgeId || ""}
-          onChange={(e) => handleBadgeChange(e.target.value)}
-          onBlur={() => setIsEditing(false)}
-          autoFocus
-          disabled={isUpdating}
-          className="text-xs px-1 py-0.5 border border-blue-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 bg-white max-w-[100px]"
-        >
-          <option value="">No Badge</option>
-          {qualificationBadges?.map((badge) => (
-            <option key={badge.id} value={badge.id}>
-              {badge.name}
-            </option>
-          ))}
-        </select>
-        {isUpdating && (
-          <div className="absolute -right-1 -top-1">
-            <div className="animate-spin h-2 w-2 border border-gray-300 border-t-blue-600 rounded-full"></div>
-          </div>
-        )}
-      </div>
-    );
-  }
+  if (isEditing) return (
+    <div className="relative" onClick={e => e.stopPropagation()}>
+      <select value={currentBadgeId || ""} onChange={e => handleChange(e.target.value)}
+        onBlur={() => setIsEditing(false)} autoFocus disabled={isUpdating}
+        className="text-xs px-1 py-0.5 border border-blue-300 rounded focus:outline-none bg-white max-w-[100px]">
+        <option value="">No Badge</option>
+        {qualificationBadges?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+      </select>
+      {isUpdating && <div className="absolute -right-1 -top-1"><div className="animate-spin h-2 w-2 border border-gray-300 border-t-blue-600 rounded-full" /></div>}
+    </div>
+  );
 
   return (
-    <div
-      onClick={(e) => {
-        e.stopPropagation();
-        setIsEditing(true);
-      }}
+    <div onClick={e => { e.stopPropagation(); setIsEditing(true); }}
       className="cursor-pointer hover:bg-white hover:bg-opacity-50 rounded px-1 py-0.5 transition-colors"
-      title="Click to edit qualification"
-    >
+      title="Click to edit qualification">
       <QualificationBadge badgeId={currentBadgeId} size="sm" />
-      {!currentBadgeId && (
-        <span className="text-gray-400 text-xs italic">+ Badge</span>
-      )}
+      {!currentBadgeId && <span className="text-gray-400 text-xs italic">+ Badge</span>}
     </div>
   );
 };
 
 /**
- * Lead Pool component for kanban-style lead management with 4 columns
+ * Lead Pool — Kanban board with drag-and-drop, dormant support
  */
-const LeadPool = ({ 
-  leads = [], 
-  onView,
-  onEdit,
-  onAddDiscussion,
-  onConvert,
-  onDelete,
-  loading = false,
-  onLeadUpdate,
-  onMakeTempClient
+const LeadPool = ({
+  leads = [],
+  onView, onEdit, onAddDiscussion, onConvert, onDelete,
+  loading = false, onLeadUpdate, onMakeTempClient
 }) => {
-  const [draggedLead, setDraggedLead] = useState(null);
+  const [draggedLead,    setDraggedLead]    = useState(null);
   const [updatingLeadId, setUpdatingLeadId] = useState(null);
   const [dragOverStatus, setDragOverStatus] = useState(null);
-  const [dragOverIndex, setDragOverIndex] = useState(null);
-  const [isDragging, setIsDragging] = useState(false);
+  const [dragOverIndex,  setDragOverIndex]  = useState(null);
+  const [isDragging,     setIsDragging]     = useState(false);
   const [tempClientLead, setTempClientLead] = useState(null);
-  
-  const dragNode = useRef(null);
-  const ghostRef = useRef(null);
-  const animationFrameRef = useRef(null);
-  const lastMousePosition = useRef({ x: 0, y: 0 });
-  
-  // Memoize grouped leads to prevent unnecessary recalculations
-  const groupedLeads = useMemo(() => {
-    const groups = {};
-    
-    // Initialize groups with empty arrays for the 4 Kanban columns
-    LEAD_STATUSES.forEach(status => {
-      groups[status.id] = [];
-    });
-    
-    // Group leads by their Kanban status
-    leads.forEach(lead => {
-      const kanbanStatus = getKanbanStatusForLead(lead.status);
-      if (groups[kanbanStatus]) {
-        groups[kanbanStatus].push(lead);
-      }
-    });
-    
-    // Sort leads in each status by order
-    Object.keys(groups).forEach(statusId => {
-      groups[statusId].sort((a, b) => {
-        const orderA = a.order !== undefined ? a.order : (a.createdAt ? a.createdAt.seconds : 0);
-        const orderB = b.order !== undefined ? b.order : (b.createdAt ? b.createdAt.seconds : 0); 
-        return orderA - orderB;
-      });
-    });
-    
-    return groups;
-  }, [leads]);
-  
-  // Helper function to check if lead is added to clients
-  const isLeadAddedToClients = useCallback((lead) => {
-    return lead.status === "converted" && lead.movedToClients;
-  }, []);
-  
-  // Handle lead update with callback
+  const [dormantLead,    setDormantLead]    = useState(null);  // NEW
+
+  const dragNode         = useRef(null);
+  const ghostRef         = useRef(null);
+  const animFrameRef     = useRef(null);
+  const lastMousePos     = useRef({ x: 0, y: 0 });
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+  const isLeadAddedToClients = useCallback((lead) =>
+    lead.status === "converted" && lead.movedToClients, []);
+
   const handleLeadUpdate = useCallback(() => {
-    if (onLeadUpdate) {
-      onLeadUpdate();
-    }
+    onLeadUpdate?.();
   }, [onLeadUpdate]);
 
-  // Handle temp client creation
-  const handleMakeTempClient = useCallback((lead) => {
-    setTempClientLead(lead);
+  const formatDate = useCallback((ts) => {
+    if (!ts) return "N/A";
+    const d = ts.toDate ? ts.toDate() : ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+    return d.toLocaleDateString("en-IN", { month: "short", day: "numeric" });
   }, []);
 
-  // Handle temp client submission
+  const truncate = useCallback((text, max = 60) => {
+    if (!text) return "";
+    return text.length <= max ? text : text.substring(0, max) + "...";
+  }, []);
+
+  const formatRelative = useCallback((ts) => {
+    if (!ts) return "Never";
+    const d = ts.toDate ? ts.toDate() : ts.seconds ? new Date(ts.seconds * 1000) : new Date(ts);
+    const diff = Math.floor((Date.now() - d) / (1000 * 60 * 60 * 24));
+    if (diff === 0) return "Today";
+    if (diff === 1) return "Yesterday";
+    return `${diff} days ago`;
+  }, []);
+
+  // ── Grouped leads ─────────────────────────────────────────────────────────
+  const groupedLeads = useMemo(() => {
+    const groups = {};
+    LEAD_STATUSES.forEach(s => { groups[s.id] = []; });
+    leads.forEach(lead => {
+      const col = getKanbanStatusForLead(lead.status);
+      if (groups[col]) groups[col].push(lead);
+    });
+    Object.keys(groups).forEach(id => {
+      groups[id].sort((a, b) => {
+        const oA = a.order ?? (a.createdAt?.seconds || 0);
+        const oB = b.order ?? (b.createdAt?.seconds || 0);
+        return oA - oB;
+      });
+    });
+    return groups;
+  }, [leads]);
+
+  // ── Dormant handlers ──────────────────────────────────────────────────────
+  const handleMarkDormant = useCallback((lead) => setDormantLead(lead), []);
+
+  const handleDormantConfirm = useCallback(async (leadId, { reason, comment }) => {
+    await updateLead(leadId, {
+      status:         "dormant",
+      dormantReason:  reason,
+      dormantComment: comment,
+      dormantAt:      new Date()
+    });
+    setDormantLead(null);
+    handleLeadUpdate();
+  }, [handleLeadUpdate]);
+
+  // ── Temp client handlers ──────────────────────────────────────────────────
+  const handleMakeTempClient = useCallback((lead) => setTempClientLead(lead), []);
+
   const handleTempClientSubmit = useCallback(async (leadId, success, newTempClient = null) => {
     if (success) {
-      // Update lead to reference temp client
       try {
-        const leadRef = doc(db, "leads", leadId);
-        await updateDoc(leadRef, {
-          tempClientId: newTempClient.id,
+        await updateDoc(doc(db, "leads", leadId), {
+          tempClientId:      newTempClient.id,
           tempClientCreatedAt: new Date(),
-          updatedAt: serverTimestamp()
+          updatedAt:         serverTimestamp()
         });
-        
         handleLeadUpdate();
-        console.log("Lead updated with temp client reference");
-      } catch (error) {
-        console.error("Error updating lead with temp client reference:", error);
-      }
+      } catch (e) { console.error(e); }
     }
-    
-    // Close temp client modal
     setTempClientLead(null);
-    
-    // Call parent handler if provided
-    if (onMakeTempClient) {
-      onMakeTempClient(leadId, success, newTempClient);
-    }
+    onMakeTempClient?.(leadId, success, newTempClient);
   }, [handleLeadUpdate, onMakeTempClient]);
-  
-  // Optimized mouse move handler with requestAnimationFrame
-  const handleMouseMove = useCallback((e) => {
-    if (!isDragging || !ghostRef.current) return;
-    
-    lastMousePosition.current = { x: e.clientX, y: e.clientY };
-    
-    // Cancel previous animation frame
-    if (animationFrameRef.current) {
-      cancelAnimationFrame(animationFrameRef.current);
-    }
-    
-    // Use requestAnimationFrame for smooth ghost movement
-    animationFrameRef.current = requestAnimationFrame(() => {
-      if (ghostRef.current) {
-        ghostRef.current.style.transform = `translate(${lastMousePosition.current.x + 15}px, ${lastMousePosition.current.y + 15}px)`;
-      }
-    });
-  }, [isDragging]);
-  
-  // Set up optimized mouse tracking
+
+  // ── Ghost element ─────────────────────────────────────────────────────────
   useEffect(() => {
-    if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove, { passive: true });
-    } else {
-      document.removeEventListener('mousemove', handleMouseMove);
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    }
-    
-    return () => {
-      document.removeEventListener('mousemove', handleMouseMove);
-      if (animationFrameRef.current) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-    };
-  }, [isDragging, handleMouseMove]);
-  
-  // Create optimized drag ghost
-  useEffect(() => {
-    const ghost = document.createElement('div');
-    ghost.className = 'fixed pointer-events-none z-50';
-    ghost.style.cssText = `
-      width: 280px;
-      background: white;
-      border-radius: 8px;
-      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
-      border: 1px solid #e5e7eb;
-      padding: 12px;
-      opacity: 0.95;
-      transform: translate(-1000px, -1000px) scale(1.02);
-      transition: opacity 150ms ease-out;
-      display: none;
-    `;
-    
+    const ghost = document.createElement("div");
+    ghost.className = "fixed pointer-events-none z-50";
+    ghost.style.cssText = `width:280px;background:white;border-radius:8px;box-shadow:0 20px 25px -5px rgba(0,0,0,.1);border:1px solid #e5e7eb;padding:12px;opacity:.95;transform:translate(-1000px,-1000px) scale(1.02);display:none;`;
     document.body.appendChild(ghost);
     ghostRef.current = ghost;
-    
-    return () => {
-      if (ghostRef.current) {
-        document.body.removeChild(ghostRef.current);
-      }
-    };
+    return () => { if (ghostRef.current) document.body.removeChild(ghostRef.current); };
   }, []);
-  
-  // Optimized reorder function
-  const handleReorderLeads = useCallback(async (statusId, reorderedLeadIds) => {
+
+  // ── Mouse move ────────────────────────────────────────────────────────────
+  const handleMouseMove = useCallback((e) => {
+    if (!isDragging || !ghostRef.current) return;
+    lastMousePos.current = { x: e.clientX, y: e.clientY };
+    if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current);
+    animFrameRef.current = requestAnimationFrame(() => {
+      if (ghostRef.current)
+        ghostRef.current.style.transform = `translate(${lastMousePos.current.x + 15}px,${lastMousePos.current.y + 15}px)`;
+    });
+  }, [isDragging]);
+
+  useEffect(() => {
+    if (isDragging) document.addEventListener("mousemove", handleMouseMove, { passive: true });
+    else { document.removeEventListener("mousemove", handleMouseMove); if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); }
+    return () => { document.removeEventListener("mousemove", handleMouseMove); if (animFrameRef.current) cancelAnimationFrame(animFrameRef.current); };
+  }, [isDragging, handleMouseMove]);
+
+  // ── Reorder ───────────────────────────────────────────────────────────────
+  const handleReorderLeads = useCallback(async (statusId, ids) => {
     try {
       const batch = writeBatch(db);
-      
-      reorderedLeadIds.forEach((leadId, index) => {
-        const leadRef = doc(db, "leads", leadId);
-        batch.update(leadRef, {
-          order: (index + 1) * 1000,
-          updatedAt: serverTimestamp()
-        });
-      });
-      
+      ids.forEach((id, i) => batch.update(doc(db, "leads", id), { order: (i + 1) * 1000, updatedAt: serverTimestamp() }));
       await batch.commit();
-      console.log(`Successfully reordered ${reorderedLeadIds.length} leads in status ${statusId}`);
       handleLeadUpdate();
-    } catch (error) {
-      console.error(`Error reordering leads in status ${statusId}:`, error);
-    }
+    } catch (e) { console.error(e); }
   }, [handleLeadUpdate]);
-  
-  // Get the actual status to update when dropping
-  const getTargetStatusForDrop = (kanbanStatusId, originalLeadStatus) => {
-    // If dropping in the same Kanban column, keep original status
-    if (getKanbanStatusForLead(originalLeadStatus) === kanbanStatusId) {
-      return originalLeadStatus;
-    }
-    
-    // Map Kanban columns to appropriate statuses
-    switch (kanbanStatusId) {
-      case "newLead":
-        return "newLead";
-      case "qualified":
-        return "qualified";
-      case "converted":
-        return "converted";
-      case "lost":
-        return "lost";
-      default:
-        return originalLeadStatus;
-    }
+
+  const getTargetStatus = (kanbanId, original) => {
+    if (getKanbanStatusForLead(original) === kanbanId) return original;
+    return { newLead: "newLead", qualified: "qualified", converted: "converted", lost: "lost" }[kanbanId] || original;
   };
-  
-  // Optimized drag start
+
+  // ── Drag handlers ─────────────────────────────────────────────────────────
   const handleDragStart = useCallback((e, lead, kanbanStatus, index) => {
-    // Don't allow dragging if lead is moved to clients or has temp client
-    if (isLeadAddedToClients(lead) || lead.tempClientId) {
-      e.preventDefault();
-      return;
-    }
-    
+    if (isLeadAddedToClients(lead) || lead.tempClientId || lead.status === "dormant") { e.preventDefault(); return; }
     setIsDragging(true);
     setDraggedLead({ ...lead, kanbanStatus, index });
     dragNode.current = e.target;
-    
-    // Create ghost content
     if (ghostRef.current) {
-      ghostRef.current.innerHTML = `
-        <div style="display: flex; flex-direction: column;">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-            <div>
-              <h4 style="font-weight: 500; color: #111827; font-size: 14px; margin: 0;">${lead.name}</h4>
-              ${lead.company ? `<div style="color: #6b7280; font-size: 12px; margin-top: 2px;">${lead.company}</div>` : ''}
-            </div>
-          </div>
-          <div style="display: flex; justify-content: space-between; align-items: center; font-size: 12px; color: #6b7280;">
-            <div>${lead.source || ''}</div>
-            <div>Status: ${lead.status}</div>
-          </div>
-        </div>
-      `;
-      
-      ghostRef.current.style.display = 'block';
-      ghostRef.current.style.transform = `translate(${e.clientX + 15}px, ${e.clientY + 15}px) scale(1.02)`;
+      ghostRef.current.innerHTML = `<div><h4 style="font-weight:500;color:#111827;font-size:14px">${lead.name}</h4>${lead.company ? `<div style="color:#6b7280;font-size:12px">${lead.company}</div>` : ""}</div>`;
+      ghostRef.current.style.display = "block";
+      ghostRef.current.style.transform = `translate(${e.clientX + 15}px,${e.clientY + 15}px) scale(1.02)`;
     }
-    
-    // Hide default drag image
-    const emptyImg = new Image();
-    emptyImg.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=';
-    e.dataTransfer.setDragImage(emptyImg, 0, 0);
-    
-    // Style original element
+    const img = new Image();
+    img.src = "data:image/gif;base64,R0lGODlhAQABAIAAAAUEBAAAACwAAAAAAQABAAACAkQBADs=";
+    e.dataTransfer.setDragImage(img, 0, 0);
     requestAnimationFrame(() => {
-      if (dragNode.current) {
-        dragNode.current.style.cssText += `
-          opacity: 0.3;
-          border: 2px dashed #3b82f6;
-          background-color: #eff6ff;
-          transform: scale(0.98);
-          transition: all 200ms ease-out;
-        `;
-      }
+      if (dragNode.current) dragNode.current.style.cssText += "opacity:.3;border:2px dashed #3b82f6;background-color:#eff6ff;transform:scale(.98);";
     });
-    
     e.dataTransfer.setData("text/plain", lead.id);
     e.dataTransfer.effectAllowed = "move";
   }, [isLeadAddedToClients]);
-  
-  // Optimized drag end
+
   const handleDragEnd = useCallback(() => {
     setIsDragging(false);
-    
-    // Hide ghost
-    if (ghostRef.current) {
-      ghostRef.current.style.opacity = '0';
-      setTimeout(() => {
-        if (ghostRef.current) {
-          ghostRef.current.style.display = 'none';
-          ghostRef.current.style.opacity = '0.95';
-        }
-      }, 150);
-    }
-    
-    // Reset original element
-    if (dragNode.current) {
-      dragNode.current.style.cssText = dragNode.current.style.cssText.replace(/opacity:[^;]*;?/g, '')
-        .replace(/border:[^;]*;?/g, '')
-        .replace(/background-color:[^;]*;?/g, '')
-        .replace(/transform:[^;]*;?/g, '');
-    }
-    
-    // Clean up column highlights
-    document.querySelectorAll('.status-column').forEach(col => {
-      col.classList.remove('bg-blue-50', 'border-blue-200');
-    });
-    
-    setDragOverStatus(null);
-    setDragOverIndex(null);
-    dragNode.current = null;
+    if (ghostRef.current) { ghostRef.current.style.opacity = "0"; setTimeout(() => { if (ghostRef.current) { ghostRef.current.style.display = "none"; ghostRef.current.style.opacity = ".95"; } }, 150); }
+    if (dragNode.current) dragNode.current.style.cssText = dragNode.current.style.cssText.replace(/opacity:[^;]*;?|border:[^;]*;?|background-color:[^;]*;?|transform:[^;]*;?/g, "");
+    document.querySelectorAll(".status-column").forEach(c => c.classList.remove("bg-blue-50", "border-blue-200"));
+    setDragOverStatus(null); setDragOverIndex(null); dragNode.current = null;
   }, []);
-  
-  // Optimized drag over handlers
+
   const handleDragOver = useCallback((e, status) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = "move";
-    
+    e.preventDefault(); e.dataTransfer.dropEffect = "move";
     if (dragOverStatus !== status) {
-      document.querySelectorAll('.status-column').forEach(col => {
-        col.classList.remove('bg-blue-50', 'border-blue-200');
-      });
-      
-      e.currentTarget.classList.add('bg-blue-50', 'border-blue-200');
+      document.querySelectorAll(".status-column").forEach(c => c.classList.remove("bg-blue-50", "border-blue-200"));
+      e.currentTarget.classList.add("bg-blue-50", "border-blue-200");
       setDragOverStatus(status);
     }
   }, [dragOverStatus]);
-  
+
   const handleDragOverCard = useCallback((e, status, index, leadId) => {
-    e.preventDefault();
-    e.stopPropagation();
-    
-    if (draggedLead && draggedLead.id === leadId) return;
-    
+    e.preventDefault(); e.stopPropagation();
+    if (draggedLead?.id === leadId) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const isTopHalf = e.clientY < rect.top + rect.height * 0.5;
-    const targetIndex = isTopHalf ? index : index + 1;
-    
-    if (dragOverIndex !== targetIndex || dragOverStatus !== status) {
-      setDragOverIndex(targetIndex);
-      setDragOverStatus(status);
-    }
+    const targetIndex = e.clientY < rect.top + rect.height * 0.5 ? index : index + 1;
+    if (dragOverIndex !== targetIndex || dragOverStatus !== status) { setDragOverIndex(targetIndex); setDragOverStatus(status); }
   }, [draggedLead, dragOverIndex, dragOverStatus]);
-  
-  // Optimized drop handler
+
   const handleDrop = useCallback(async (e, kanbanStatusId, dropIndex = -1) => {
     e.preventDefault();
-    
     if (!draggedLead) return;
-    
     setUpdatingLeadId(draggedLead.id);
-    
-    // Clean up visual effects
-    document.querySelectorAll('.status-column').forEach(col => {
-      col.classList.remove('bg-blue-50', 'border-blue-200');
-    });
-    
-    setDragOverStatus(null);
-    setDragOverIndex(null);
-    
+    document.querySelectorAll(".status-column").forEach(c => c.classList.remove("bg-blue-50", "border-blue-200"));
+    setDragOverStatus(null); setDragOverIndex(null);
     try {
-      const originalKanbanStatus = getKanbanStatusForLead(draggedLead.status);
-      
-      if (originalKanbanStatus !== kanbanStatusId) {
-        // Moving to different Kanban column - update status
-        const newStatus = getTargetStatusForDrop(kanbanStatusId, draggedLead.status);
-        
+      const origKanban = getKanbanStatusForLead(draggedLead.status);
+      if (origKanban !== kanbanStatusId) {
+        const newStatus = getTargetStatus(kanbanStatusId, draggedLead.status);
         let newOrder = 1000;
-        
         if (dropIndex > 0) {
-          const statusLeads = groupedLeads[kanbanStatusId] || [];
-          if (dropIndex >= statusLeads.length) {
-            const lastLead = statusLeads[statusLeads.length - 1];
-            newOrder = (lastLead?.order || 0) + 1000;
-          } else {
-            const afterLead = statusLeads[dropIndex];
-            const beforeLead = dropIndex > 0 ? statusLeads[dropIndex - 1] : null;
-            
-            if (beforeLead && afterLead) {
-              newOrder = Math.floor((beforeLead.order || 0) + ((afterLead.order || 0) - (beforeLead.order || 0)) / 2);
-            } else if (afterLead) {
-              newOrder = Math.floor((afterLead.order || 1000) / 2);
-            } else {
-              newOrder = (dropIndex + 1) * 1000;
-            }
+          const sl = groupedLeads[kanbanStatusId] || [];
+          if (dropIndex >= sl.length) newOrder = (sl[sl.length - 1]?.order || 0) + 1000;
+          else {
+            const after = sl[dropIndex]; const before = dropIndex > 0 ? sl[dropIndex - 1] : null;
+            newOrder = before && after ? Math.floor((before.order || 0) + ((after.order || 0) - (before.order || 0)) / 2) : Math.floor((after?.order || 1000) / 2);
           }
         }
-        
-        const leadRef = doc(db, "leads", draggedLead.id);
-        await updateDoc(leadRef, {
-          status: newStatus,
-          order: newOrder,
-          updatedAt: serverTimestamp()
-        });
-        
+        await updateDoc(doc(db, "leads", draggedLead.id), { status: newStatus, order: newOrder, updatedAt: serverTimestamp() });
         handleLeadUpdate();
       } else if (dropIndex !== -1 && draggedLead.index !== dropIndex) {
-        // Reordering within same Kanban column
-        const leadsInStatus = groupedLeads[kanbanStatusId] || [];
-        const reorderedLeads = [...leadsInStatus];
-        const draggedLeadObject = reorderedLeads.find(lead => lead.id === draggedLead.id);
-        const filteredLeads = reorderedLeads.filter(lead => lead.id !== draggedLead.id);
-        
-        filteredLeads.splice(dropIndex > draggedLead.index ? dropIndex - 1 : dropIndex, 0, draggedLeadObject);
-        
-        const reorderedLeadIds = filteredLeads.map(lead => lead.id);
-        await handleReorderLeads(kanbanStatusId, reorderedLeadIds);
+        const arr = [...(groupedLeads[kanbanStatusId] || [])];
+        const obj = arr.find(l => l.id === draggedLead.id);
+        const filtered = arr.filter(l => l.id !== draggedLead.id);
+        filtered.splice(dropIndex > draggedLead.index ? dropIndex - 1 : dropIndex, 0, obj);
+        await handleReorderLeads(kanbanStatusId, filtered.map(l => l.id));
       }
-    } catch (error) {
-      console.error("Error updating lead:", error);
-    } finally {
-      setUpdatingLeadId(null);
-    }
-    
+    } catch (e) { console.error(e); }
+    finally { setUpdatingLeadId(null); }
     setDraggedLead(null);
-  }, [draggedLead, groupedLeads, handleReorderLeads, handleLeadUpdate, getTargetStatusForDrop]);
-  
-  // Memoized utility functions
-  const formatDate = useCallback((timestamp) => {
-    if (!timestamp) return "N/A";
-    
-    const date = timestamp.toDate ? timestamp.toDate() : 
-               (timestamp.seconds ? new Date(timestamp.seconds * 1000) : 
-               new Date(timestamp));
-    
-    return date.toLocaleDateString("en-IN", {
-      month: "short",
-      day: "numeric"
-    });
-  }, []);
-  
-  const truncateText = useCallback((text, maxLength = 100) => {
-    if (!text) return "";
-    if (text.length <= maxLength) return text;
-    return text.substring(0, maxLength) + "...";
-  }, []);
-  
-  const formatRelativeTime = useCallback((timestamp) => {
-    if (!timestamp) return "Never";
-    
-    const date = timestamp.toDate ? timestamp.toDate() : 
-               (timestamp.seconds ? new Date(timestamp.seconds * 1000) : 
-               new Date(timestamp));
-               
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 0) return "Today";
-    if (diffDays === 1) return "Yesterday";
-    return `${diffDays} days ago`;
-  }, []);
-  
-  // Optimized drop placeholder
+  }, [draggedLead, groupedLeads, handleReorderLeads, handleLeadUpdate]);
+
+  // ── Drop placeholder ──────────────────────────────────────────────────────
   const DropPlaceholder = React.memo(({ statusId, index }) => {
     if (dragOverStatus !== statusId || dragOverIndex !== index) return null;
-    
-    return (
-      <div 
-        className="h-0.5 bg-blue-500 rounded-full mx-1 my-1"
-        style={{
-          boxShadow: '0 0 6px rgba(59, 130, 246, 0.6)',
-          animation: 'pulse 1.5s ease-in-out infinite'
-        }}
-      />
-    );
+    return <div className="h-0.5 bg-blue-500 rounded-full mx-1 my-1" style={{ boxShadow: "0 0 6px rgba(59,130,246,.6)" }} />;
   });
-  
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600"></div>
-      </div>
-    );
-  }
-  
+
+  if (loading) return (
+    <div className="flex justify-center items-center py-12">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-red-600" />
+    </div>
+  );
+
   return (
     <div className="pb-6">
-      {/* Lead Pool Grid - 4 columns */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-        {LEAD_STATUSES.map((status) => (
-          <div 
-            key={status.id}
+        {LEAD_STATUSES.map(status => (
+          <div key={status.id}
             className="status-column bg-white rounded-md border border-gray-200 flex flex-col transition-colors duration-150"
-            onDragOver={(e) => handleDragOver(e, status.id)}
-            onDrop={(e) => handleDrop(e, status.id)}
-          >
-            {/* Status Header */}
-            <div 
-              className="p-3 border-b rounded-t-md"
-              style={{ 
-                backgroundColor: status.bgColor,
-                color: status.textColor
-              }}
-            >
+            onDragOver={e => handleDragOver(e, status.id)}
+            onDrop={e => handleDrop(e, status.id)}>
+
+            {/* Column header */}
+            <div className="p-3 border-b rounded-t-md" style={{ backgroundColor: status.bgColor, color: status.textColor }}>
               <div className="flex justify-between items-center">
                 <div className="flex items-center">
-                  <span
-                    className="h-2.5 w-2.5 rounded-full mr-2"
-                    style={{ backgroundColor: status.color }}
-                  />
+                  <span className="h-2.5 w-2.5 rounded-full mr-2" style={{ backgroundColor: status.color }} />
                   <h3 className="font-medium">{status.label}</h3>
                 </div>
                 <span className="bg-white bg-opacity-30 text-xs font-medium py-1 px-2 rounded-full">
@@ -698,260 +350,189 @@ const LeadPool = ({
                 </span>
               </div>
             </div>
-            
-            {/* Lead Cards Container */}
-            <div 
-              className="p-2 flex-grow space-y-2"
-              onDragOver={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                if (dragOverIndex !== groupedLeads[status.id].length || dragOverStatus !== status.id) {
-                  setDragOverIndex(groupedLeads[status.id].length);
-                  setDragOverStatus(status.id);
-                }
-              }}
-              onDrop={(e) => handleDrop(e, status.id, groupedLeads[status.id].length)}
-            >
-              {/* Empty state placeholder */}
+
+            {/* Cards */}
+            <div className="p-2 flex-grow space-y-2"
+              onDragOver={e => { e.preventDefault(); e.stopPropagation(); if (dragOverIndex !== groupedLeads[status.id].length || dragOverStatus !== status.id) { setDragOverIndex(groupedLeads[status.id].length); setDragOverStatus(status.id); } }}
+              onDrop={e => handleDrop(e, status.id, groupedLeads[status.id].length)}>
+
               {dragOverStatus === status.id && dragOverIndex === 0 && groupedLeads[status.id].length === 0 && (
-                <div className="border-2 border-blue-300 border-dashed rounded-md h-24 flex items-center justify-center bg-blue-50 bg-opacity-50 transition-all duration-200">
+                <div className="border-2 border-blue-300 border-dashed rounded-md h-24 flex items-center justify-center bg-blue-50">
                   <p className="text-blue-500 text-sm font-medium">Drop here</p>
                 </div>
               )}
-              
+
               {groupedLeads[status.id].length > 0 ? (
                 <>
-                  {/* Drop indicator at top */}
                   <DropPlaceholder statusId={status.id} index={0} />
-                  
-                  {groupedLeads[status.id].map((lead, index) => (
-                    <React.Fragment key={lead.id}>
-                      <div
-                        className={`bg-white border rounded-md p-3 cursor-pointer transition-all duration-200 hover:shadow-sm ${
-                          draggedLead?.id === lead.id ? "opacity-0" : ""
-                        } ${
-                          updatingLeadId === lead.id ? "animate-pulse" : ""
-                        } ${
-                          isLeadAddedToClients(lead) || lead.tempClientId ? "cursor-default opacity-75" : ""
-                        }`}
-                        onClick={() => onView(lead)}
-                        draggable={!isLeadAddedToClients(lead) && !lead.tempClientId}
-                        onDragStart={(e) => handleDragStart(e, lead, status.id, index)}
-                        onDragEnd={handleDragEnd}
-                        onDragOver={(e) => handleDragOverCard(e, status.id, index, lead.id)}
-                        onDrop={(e) => handleDrop(e, status.id, index)}
-                      >
-                        <div className="flex flex-col">
-                          <div className="flex justify-between items-start mb-2">
-                            <div className="flex-1 min-w-0">
-                              <h4 className="font-medium text-gray-900 text-sm truncate">{lead.name}</h4>
-                              {lead.company && (
-                                <p className="text-gray-500 text-xs truncate">{lead.company}</p>
-                              )}
-                              {/* Show actual status if different from Kanban column */}
-                              {lead.status !== status.id && (
-                                <p className="text-xs text-blue-600 font-medium">
-                                  {lead.status === "contacted" ? "Contacted" : 
-                                   lead.status === "negotiation" ? "In Negotiation" : lead.status}
-                                </p>
-                              )}
-                            </div>
-                            <div className="flex-shrink-0 ml-2">
-                              <InlineKanbanBadgeEditor
-                                leadId={lead.id}
-                                currentBadgeId={lead.badgeId}
-                                onUpdate={handleLeadUpdate}
-                                disabled={isLeadAddedToClients(lead) || lead.tempClientId}
-                              />
-                            </div>
-                          </div>
-                          
-                          <div className="flex justify-between items-center text-xs text-gray-500 mb-2">
-                            <div className="flex-1 min-w-0">
-                              <LeadSourceDisplay sourceId={lead.source} />
-                            </div>
-                            <div className="flex-shrink-0">{formatDate(lead.createdAt)}</div>
-                          </div>
-                          
-                          {/* Show temp client status if exists */}
-                          <KanbanTempClientIndicator leadId={lead.id} />
-                          
-                          {/* Last discussion summary */}
-                          {lead.lastDiscussionSummary && (
-                            <div className="mb-2 p-2 bg-gray-50 rounded-md text-xs text-gray-600">
-                              <div className="text-xs text-gray-500 mb-1">
-                                <span>Last contact: {formatRelativeTime(lead.lastDiscussionDate)}</span>
-                              </div>
-                              <p className="break-words">{truncateText(lead.lastDiscussionSummary, 60)}</p>
-                            </div>
-                          )}
-                          
-                          {/* Action buttons */}
-                          <div className="mt-2 flex justify-center gap-1 flex-wrap" onClick={(e) => e.stopPropagation()}>
-                            {isLeadAddedToClients(lead) ? (
-                              // Only show "Added to Clients" status for leads that have been moved
-                              <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                                </svg>
-                                Added to Clients
-                              </div>
-                            ) : lead.tempClientId ? (
-                              // Show temp client status if lead has been converted to temp client
-                              <div className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-md font-medium flex items-center">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Temporary Client
-                              </div>
-                            ) : lead.status === "converted" ? (
-                              // For converted leads that haven't been moved to clients yet
-                              <CRMActionButton
-                                type="primary"
-                                size="xs"
-                                onClick={() => onConvert(lead)}
-                                aria-label="Move to Clients"
-                                icon={
-                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
-                                  </svg>
-                                }
-                              >
-                                Move to Clients
-                              </CRMActionButton>
-                            ) : (
-                              // For all non-converted leads
-                              <>
-                                <CRMActionButton
-                                  type="info"
-                                  size="xs"
-                                  onClick={() => onAddDiscussion(lead)}
-                                  aria-label="Add discussion"
-                                  icon={
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  {groupedLeads[status.id].map((lead, index) => {
+                    const addedToClients = isLeadAddedToClients(lead);
+                    const isDormant      = lead.status === "dormant";
+                    const hasTempClient  = !!lead.tempClientId;
+
+                    return (
+                      <React.Fragment key={lead.id}>
+                        <div
+                          className={`bg-white border rounded-md p-3 cursor-pointer transition-all duration-200 hover:shadow-sm
+                            ${draggedLead?.id === lead.id ? "opacity-0" : ""}
+                            ${updatingLeadId === lead.id ? "animate-pulse" : ""}
+                            ${addedToClients || hasTempClient ? "cursor-default opacity-75" : ""}
+                            ${isDormant ? "opacity-60 bg-gray-50 border-gray-300" : ""}
+                          `}
+                          onClick={() => onView(lead)}
+                          draggable={!addedToClients && !hasTempClient && !isDormant}
+                          onDragStart={e => handleDragStart(e, lead, status.id, index)}
+                          onDragEnd={handleDragEnd}
+                          onDragOver={e => handleDragOverCard(e, status.id, index, lead.id)}
+                          onDrop={e => handleDrop(e, status.id, index)}>
+
+                          <div className="flex flex-col">
+                            {/* Card header */}
+                            <div className="flex justify-between items-start mb-2">
+                              <div className="flex-1 min-w-0">
+                                <h4 className="font-medium text-gray-900 text-sm truncate">{lead.name}</h4>
+                                {lead.company && <p className="text-gray-500 text-xs truncate">{lead.company}</p>}
+                                {lead.status !== status.id && !isDormant && (
+                                  <p className="text-xs text-blue-600 font-medium">
+                                    {lead.status === "contacted" ? "Contacted" : lead.status === "negotiation" ? "In Negotiation" : lead.status}
+                                  </p>
+                                )}
+                                {/* Dormant badge */}
+                                {isDormant && (
+                                  <span className="inline-flex items-center text-xs bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded-full mt-0.5">
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" />
                                     </svg>
-                                  }
-                                >
-                                  Talk
-                                </CRMActionButton>
-                                
-                                {/* Quick action buttons based on current status */}
-                                {status.id === "newLead" && (
-                                  <>
-                                    <CRMActionButton
-                                      type="success"
-                                      size="xs"
-                                      onClick={async () => {
-                                        try {
-                                          await updateLeadStatus(lead.id, "qualified");
-                                          handleLeadUpdate();
-                                        } catch (error) {
-                                          console.error("Error qualifying lead:", error);
-                                        }
-                                      }}
-                                      aria-label="Qualify lead"
-                                      icon={
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                      }
-                                    >
-                                      Qualify
-                                    </CRMActionButton>
-                                    
-                                    {/* Make Temp Client button for new leads */}
-                                    <CRMActionButton
-                                      type="warning"
-                                      size="xs"
-                                      onClick={() => handleMakeTempClient(lead)}
-                                      aria-label="Make temporary client"
-                                      icon={
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                      }
-                                    >
-                                      Temp Client
-                                    </CRMActionButton>
-                                  </>
+                                    {lead.dormantReason === "ghosted" ? "Ghosted" : "Dropped Us"}
+                                  </span>
                                 )}
-                                
-                                {status.id === "qualified" && (
-                                  <>
-                                    <CRMActionButton
-                                      type="success"
-                                      size="xs"
-                                      onClick={async () => {
-                                        try {
-                                          await updateLeadStatus(lead.id, "converted");
-                                          handleLeadUpdate();
-                                        } catch (error) {
-                                          console.error("Error converting lead:", error);
-                                        }
-                                      }}
-                                      aria-label="Convert lead"
-                                      icon={
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" />
-                                        </svg>
-                                      }
-                                    >
-                                      Convert
-                                    </CRMActionButton>
-                                    
-                                    {/* Make Temp Client button for qualified leads */}
-                                    <CRMActionButton
-                                      type="warning"
-                                      size="xs"
-                                      onClick={() => handleMakeTempClient(lead)}
-                                      aria-label="Make temporary client"
-                                      icon={
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                      }
-                                    >
-                                      Temp Client
-                                    </CRMActionButton>
-                                  </>
-                                )}
-                                
-                                {/* Mark as Lost button (available for non-lost leads) */}
-                                {status.id !== "lost" && (
-                                  <CRMActionButton
-                                    type="danger"
-                                    size="xs"
-                                    onClick={async () => {
-                                      if (window.confirm(`Mark "${lead.name}" as lost?`)) {
-                                        try {
-                                          await updateLeadStatus(lead.id, "lost");
-                                          handleLeadUpdate();
-                                        } catch (error) {
-                                          console.error("Error marking lead as lost:", error);
-                                        }
-                                      }
-                                    }}
-                                    aria-label="Mark as lost"
-                                    icon={
-                                      <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                                      </svg>
-                                    }
-                                  >
-                                    Lost
-                                  </CRMActionButton>
-                                )}
-                              </>
+                              </div>
+                              <div className="flex-shrink-0 ml-2">
+                                <InlineKanbanBadgeEditor
+                                  leadId={lead.id}
+                                  currentBadgeId={lead.badgeId}
+                                  onUpdate={handleLeadUpdate}
+                                  disabled={addedToClients || hasTempClient || isDormant}
+                                />
+                              </div>
+                            </div>
+
+                            {/* Source / date */}
+                            <div className="flex justify-between items-center text-xs text-gray-500 mb-2">
+                              <div className="flex-1 min-w-0"><LeadSourceDisplay sourceId={lead.source} /></div>
+                              <div className="flex-shrink-0">{formatDate(lead.createdAt)}</div>
+                            </div>
+
+                            <KanbanTempClientIndicator leadId={lead.id} />
+
+                            {/* Last discussion */}
+                            {lead.lastDiscussionSummary && (
+                              <div className="mb-2 p-2 bg-gray-50 rounded-md text-xs text-gray-600">
+                                <div className="text-xs text-gray-500 mb-1">Last contact: {formatRelative(lead.lastDiscussionDate)}</div>
+                                <p className="break-words">{truncate(lead.lastDiscussionSummary, 60)}</p>
+                              </div>
                             )}
+
+                            {/* Action buttons */}
+                            <div className="mt-2 flex justify-center gap-1 flex-wrap" onClick={e => e.stopPropagation()}>
+
+                              {addedToClients ? (
+                                <div className="px-2 py-1 text-xs bg-blue-100 text-blue-800 rounded-md font-medium flex items-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                  Added to Clients
+                                </div>
+
+                              ) : hasTempClient ? (
+                                <div className="px-2 py-1 text-xs bg-orange-100 text-orange-800 rounded-md font-medium flex items-center">
+                                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                                  Temporary Client
+                                </div>
+
+                              ) : isDormant ? (
+                                /* Dormant lead — only allow reactivating */
+                                <CRMActionButton type="secondary" size="xs"
+                                  onClick={async () => {
+                                    try { await updateLeadStatus(lead.id, "newLead"); handleLeadUpdate(); }
+                                    catch (e) { console.error(e); }
+                                  }}
+                                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" /></svg>}>
+                                  Reactivate
+                                </CRMActionButton>
+
+                              ) : lead.status === "converted" ? (
+                                <CRMActionButton type="primary" size="xs" onClick={() => onConvert(lead)}
+                                  icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" /></svg>}>
+                                  Move to Clients
+                                </CRMActionButton>
+
+                              ) : (
+                                <>
+                                  {/* Talk */}
+                                  <CRMActionButton type="info" size="xs" onClick={() => onAddDiscussion(lead)}
+                                    icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>}>
+                                    Talk
+                                  </CRMActionButton>
+
+                                  {/* Qualify (newLead column) */}
+                                  {status.id === "newLead" && (
+                                    <>
+                                      <CRMActionButton type="success" size="xs"
+                                        onClick={async () => { try { await updateLeadStatus(lead.id, "qualified"); handleLeadUpdate(); } catch (e) { console.error(e); } }}
+                                        icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
+                                        Qualify
+                                      </CRMActionButton>
+                                      <CRMActionButton type="warning" size="xs" onClick={() => handleMakeTempClient(lead)}
+                                        icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
+                                        Temp Client
+                                      </CRMActionButton>
+                                    </>
+                                  )}
+
+                                  {/* Convert (qualified column) */}
+                                  {status.id === "qualified" && (
+                                    <>
+                                      <CRMActionButton type="success" size="xs"
+                                        onClick={async () => { try { await updateLeadStatus(lead.id, "converted"); handleLeadUpdate(); } catch (e) { console.error(e); } }}
+                                        icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z" /></svg>}>
+                                        Convert
+                                      </CRMActionButton>
+                                      <CRMActionButton type="warning" size="xs" onClick={() => handleMakeTempClient(lead)}
+                                        icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>}>
+                                        Temp Client
+                                      </CRMActionButton>
+                                    </>
+                                  )}
+
+                                  {/* Mark Dormant (not on lost/converted columns) */}
+                                  {status.id !== "lost" && status.id !== "converted" && (
+                                    <CRMActionButton type="secondary" size="xs" onClick={() => handleMarkDormant(lead)}
+                                      icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" /></svg>}>
+                                      Dormant
+                                    </CRMActionButton>
+                                  )}
+
+                                  {/* Mark Lost */}
+                                  {status.id !== "lost" && (
+                                    <CRMActionButton type="danger" size="xs"
+                                      onClick={async () => {
+                                        if (window.confirm(`Mark "${lead.name}" as lost?`)) {
+                                          try { await updateLeadStatus(lead.id, "lost"); handleLeadUpdate(); }
+                                          catch (e) { console.error(e); }
+                                        }
+                                      }}
+                                      icon={<svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>}>
+                                      Lost
+                                    </CRMActionButton>
+                                  )}
+                                </>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                      
-                      {/* Drop indicator after each card */}
-                      <DropPlaceholder statusId={status.id} index={index + 1} />
-                    </React.Fragment>
-                  ))}
+                        <DropPlaceholder statusId={status.id} index={index + 1} />
+                      </React.Fragment>
+                    );
+                  })}
                 </>
               ) : (
                 <div className="text-center p-4 text-gray-400 text-sm min-h-[100px] flex items-center justify-center">
@@ -967,14 +548,13 @@ const LeadPool = ({
           </div>
         ))}
       </div>
-      
-      {/* Temp Client Modal */}
+
+      {/* Modals */}
       {tempClientLead && (
-        <TempClientModal
-          lead={tempClientLead}
-          onClose={() => setTempClientLead(null)}
-          onSubmit={handleTempClientSubmit}
-        />
+        <TempClientModal lead={tempClientLead} onClose={() => setTempClientLead(null)} onSubmit={handleTempClientSubmit} />
+      )}
+      {dormantLead && (
+        <DormantModal lead={dormantLead} onConfirm={handleDormantConfirm} onCancel={() => setDormantLead(null)} />
       )}
     </div>
   );

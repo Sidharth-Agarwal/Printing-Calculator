@@ -1,361 +1,241 @@
 import React, { createContext, useState, useContext, useEffect } from "react";
-import { 
-  createUserWithEmailAndPassword, 
-  signInWithEmailAndPassword, 
-  signOut, 
+import {
+  createUserWithEmailAndPassword,
+  signInWithEmailAndPassword,
+  signOut,
   onAuthStateChanged,
   updatePassword,
   EmailAuthProvider,
   reauthenticateWithCredential,
-  sendPasswordResetEmail,
-  getAuth
+  sendPasswordResetEmail
 } from "firebase/auth";
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from "firebase/firestore";
 import { auth, db } from "../../firebaseConfig";
 
-// Create the context
 const AuthContext = createContext();
 
-// Custom hook to use the auth context
-export const useAuth = () => {
-  return useContext(AuthContext);
+export const useAuth = () => useContext(AuthContext);
+
+// ── Role definitions ──────────────────────────────────────────────────────────
+// admin  — full access
+// staff  — same as previous "staff/employee" role
+// sales  — limited: no delete, no badges, no export/import, no analytics
+// production / accountant — existing non-CRM roles
+
+export const ROLES = {
+  ADMIN:      "admin",
+  STAFF:      "staff",
+  SALES:      "sales",
+  PRODUCTION: "production",
+  ACCOUNTANT: "accountant"
 };
 
-// Provider component
-export const AuthProvider = ({ children }) => {
-  const [currentUser, setCurrentUser] = useState(null);
-  const [userRole, setUserRole] = useState(null);
-  const [userDisplayName, setUserDisplayName] = useState(null);
-  const [loading, setLoading] = useState(true);
+/**
+ * CRM permission map.
+ * Use canDo(userRole, "deleteLead") etc. throughout the app.
+ */
+export const CRM_PERMISSIONS = {
+  viewDashboard:    ["admin", "staff", "sales"],
+  addEditLeads:     ["admin", "staff", "sales"],
+  deleteLead:       ["admin"],
+  manageBadges:     ["admin"],
+  viewClients:      ["admin", "staff", "sales"],
+  manageJobTickets: ["admin", "staff"],
+  exportImport:     ["admin"],
+  viewAnalytics:    ["admin", "staff"],
+  manageTasks:      ["admin", "staff", "sales"]
+};
 
-  // Register a new user (keeping for compatibility, but not used in new flow)
+export const canDo = (role, permission) => {
+  const allowed = CRM_PERMISSIONS[permission];
+  if (!allowed) return false;
+  return allowed.includes(role);
+};
+
+// ── Provider ──────────────────────────────────────────────────────────────────
+export const AuthProvider = ({ children }) => {
+  const [currentUser,     setCurrentUser]     = useState(null);
+  const [userRole,        setUserRole]        = useState(null);
+  const [userDisplayName, setUserDisplayName] = useState(null);
+  const [loading,         setLoading]         = useState(true);
+
+  // Register
   const register = async (email, password, displayName, role = "staff") => {
     try {
-      const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-      // Create a user document in Firestore with the role and display name
-      await setDoc(doc(db, "users", userCredential.user.uid), {
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      await setDoc(doc(db, "users", cred.user.uid), {
         email,
-        displayName: displayName || email.split('@')[0], // Use part of email as display name if none provided
+        displayName: displayName || email.split("@")[0],
         role,
         createdAt: new Date().toISOString(),
         isActive: true,
         hasAccount: true
       });
-      return userCredential;
-    } catch (error) {
-      console.error("Registration error:", error);
-      throw error;
+      return cred;
+    } catch (err) {
+      console.error("Registration error:", err);
+      throw err;
     }
   };
 
-  // Send password reset email for users
   const sendUserPasswordReset = async (email) => {
-    try {
-      await sendPasswordResetEmail(auth, email);
-      return true;
-    } catch (error) {
-      console.error("Error sending password reset:", error);
-      throw error;
-    }
+    try { await sendPasswordResetEmail(auth, email); return true; }
+    catch (err) { console.error("Password reset error:", err); throw err; }
   };
 
-  // Update user status (activate/deactivate)
   const updateUserStatus = async (userId, isActive, reason = null) => {
     try {
-      const updateData = {
-        isActive,
-        updatedAt: new Date().toISOString(),
-        updatedBy: currentUser?.uid
-      };
-      
-      if (!isActive && reason) {
-        updateData.deactivatedAt = new Date().toISOString();
-        updateData.deactivationReason = reason;
-      }
-      
-      await updateDoc(doc(db, "users", userId), updateData);
+      const data = { isActive, updatedAt: new Date().toISOString(), updatedBy: currentUser?.uid };
+      if (!isActive && reason) { data.deactivatedAt = new Date().toISOString(); data.deactivationReason = reason; }
+      await updateDoc(doc(db, "users", userId), data);
       return true;
-    } catch (error) {
-      console.error("Error updating user status:", error);
-      throw error;
-    }
+    } catch (err) { console.error("Update status error:", err); throw err; }
   };
 
-  // Update user profile
   const updateUserProfile = async (userId, profileData) => {
     try {
-      await updateDoc(doc(db, "users", userId), {
-        ...profileData,
-        updatedAt: new Date().toISOString(),
-        updatedBy: currentUser?.uid
-      });
+      await updateDoc(doc(db, "users", userId), { ...profileData, updatedAt: new Date().toISOString(), updatedBy: currentUser?.uid });
       return true;
-    } catch (error) {
-      console.error("Error updating user profile:", error);
-      throw error;
-    }
+    } catch (err) { console.error("Update profile error:", err); throw err; }
   };
 
-  // Record user login (updated to work with Firestore document IDs)
   const recordUserLogin = async (firestoreDocId) => {
     try {
-      console.log("Recording login for Firestore document ID:", firestoreDocId);
-      
       const userDoc = await getDoc(doc(db, "users", firestoreDocId));
-      if (!userDoc.exists()) {
-        console.error("Cannot record login: User document not found:", firestoreDocId);
-        return;
-      }
-      
-      const currentLoginCount = userDoc.data()?.loginCount || 0;
-      
+      if (!userDoc.exists()) return;
       await updateDoc(doc(db, "users", firestoreDocId), {
         lastLoginAt: new Date().toISOString(),
-        loginCount: currentLoginCount + 1
+        loginCount: (userDoc.data()?.loginCount || 0) + 1
       });
-      
-      console.log("Login recorded successfully for document:", firestoreDocId);
-    } catch (error) {
-      console.error("Error recording user login:", error);
-      // Don't throw error as this is not critical
-    }
+    } catch (err) { console.error("Record login error:", err); }
   };
 
-  // Login a user (UPDATED to handle userId field structure)
+  // Login
   const login = async (email, password) => {
     try {
-      console.log("Attempting login with:", email);
       const result = await signInWithEmailAndPassword(auth, email, password);
-      
-      if (result.user) {
-        console.log("Firebase Auth successful, finding user document...");
-        
-        // Find user document by userId field (not document ID)
-        const usersRef = collection(db, "users");
-        const userQuery = query(usersRef, where("userId", "==", result.user.uid));
-        const querySnapshot = await getDocs(userQuery);
-        
-        if (!querySnapshot.empty) {
-          // Found user document
-          const userDocRef = querySnapshot.docs[0];
-          const userData = userDocRef.data();
-          const firestoreDocId = userDocRef.id;
-          
-          console.log("Found user document:", { 
-            firestoreId: firestoreDocId, 
-            firebaseUID: result.user.uid,
-            userData: userData 
-          });
-          
-          // Check if user account is active
-          if (userData.isActive === false) {
-            await signOut(auth);
-            throw new Error("Your account has been deactivated. Please contact an administrator.");
+      if (!result.user) return result;
+
+      // Find by userId field
+      const q = query(collection(db, "users"), where("userId", "==", result.user.uid));
+      const snap = await getDocs(q);
+
+      if (!snap.empty) {
+        const docRef = snap.docs[0];
+        const data   = docRef.data();
+        if (data.isActive === false) { await signOut(auth); throw new Error("Your account has been deactivated. Please contact an administrator."); }
+        await recordUserLogin(docRef.id);
+        if (data.temporaryPassword) {
+          await updateDoc(doc(db, "users", docRef.id), { temporaryPassword: null, passwordCreatedAt: null, updatedAt: new Date().toISOString() });
+        }
+      } else {
+        // Legacy fallback
+        const legacy = await getDoc(doc(db, "users", result.user.uid));
+        if (legacy.exists()) {
+          const data = legacy.data();
+          if (data.isActive === false) { await signOut(auth); throw new Error("Your account has been deactivated. Please contact an administrator."); }
+          await recordUserLogin(result.user.uid);
+          if (data.temporaryPassword) {
+            await updateDoc(doc(db, "users", result.user.uid), { temporaryPassword: null, passwordCreatedAt: null, updatedAt: new Date().toISOString() });
           }
-          
-          // Record the login using the Firestore document ID
-          await recordUserLogin(firestoreDocId);
-          
-          // Clear temp password if it exists
-          if (userData.temporaryPassword) {
-            await updateDoc(doc(db, "users", firestoreDocId), {
-              temporaryPassword: null,
-              passwordCreatedAt: null,
-              updatedAt: new Date().toISOString()
-            });
-            console.log("Cleared temporary password after login");
-          }
-          
         } else {
-          // No user document found with matching userId
-          console.error("No Firestore document found with userId:", result.user.uid);
-          
-          // Fallback: Check if document exists with document ID = Firebase UID (legacy)
-          const legacyUserDoc = await getDoc(doc(db, "users", result.user.uid));
-          
-          if (legacyUserDoc.exists()) {
-            console.log("Found legacy user document (document ID = Firebase UID)");
-            const userData = legacyUserDoc.data();
-            
-            if (userData.isActive === false) {
-              await signOut(auth);
-              throw new Error("Your account has been deactivated. Please contact an administrator.");
-            }
-            
-            await recordUserLogin(result.user.uid);
-            
-            if (userData.temporaryPassword) {
-              await updateDoc(doc(db, "users", result.user.uid), {
-                temporaryPassword: null,
-                passwordCreatedAt: null,
-                updatedAt: new Date().toISOString()
-              });
-            }
-          } else {
-            // No user document found at all
-            console.error("User authenticated in Firebase but no Firestore document found");
-            await signOut(auth);
-            throw new Error("User account not found. Please contact an administrator.");
-          }
+          await signOut(auth);
+          throw new Error("User account not found. Please contact an administrator.");
         }
       }
-      
+
       return result;
-    } catch (error) {
-      console.error("Login error:", error);
-      throw error;
-    }
+    } catch (err) { console.error("Login error:", err); throw err; }
   };
 
-  // Logout a user
   const logout = async () => {
-    try {
-      console.log("Logging out...");
-      return await signOut(auth);
-    } catch (error) {
-      console.error("Logout error:", error);
-      throw error;
-    }
+    try { return await signOut(auth); }
+    catch (err) { console.error("Logout error:", err); throw err; }
   };
 
-  // Change password
   const changePassword = async (currentPassword, newPassword) => {
-    if (!currentUser) {
-      throw new Error("No user is logged in");
-    }
-
+    if (!currentUser) throw new Error("No user is logged in");
     try {
-      // Re-authenticate the user
-      const credential = EmailAuthProvider.credential(
-        currentUser.email,
-        currentPassword
-      );
+      const credential = EmailAuthProvider.credential(currentUser.email, currentPassword);
       await reauthenticateWithCredential(currentUser, credential);
-      
-      // Change password
       await updatePassword(currentUser, newPassword);
-      
-      // Find and clear temporary password from Firestore document
-      const usersRef = collection(db, "users");
-      const userQuery = query(usersRef, where("userId", "==", currentUser.uid));
-      const querySnapshot = await getDocs(userQuery);
-      
-      if (!querySnapshot.empty) {
-        const userDocRef = querySnapshot.docs[0];
-        await updateDoc(doc(db, "users", userDocRef.id), {
-          temporaryPassword: null,
-          passwordCreatedAt: null,
-          updatedAt: new Date().toISOString()
-        });
-      } else {
-        // Fallback for legacy users
-        await updateDoc(doc(db, "users", currentUser.uid), {
-          temporaryPassword: null,
-          passwordCreatedAt: null,
-          updatedAt: new Date().toISOString()
-        });
-      }
-      
+
+      const q = query(collection(db, "users"), where("userId", "==", currentUser.uid));
+      const snap = await getDocs(q);
+      const docId = !snap.empty ? snap.docs[0].id : currentUser.uid;
+      await updateDoc(doc(db, "users", docId), { temporaryPassword: null, passwordCreatedAt: null, updatedAt: new Date().toISOString() });
       return true;
-    } catch (error) {
-      console.error("Change password error:", error);
-      throw error;
-    }
+    } catch (err) { console.error("Change password error:", err); throw err; }
   };
 
-  // Check if user has a specific role
-  const hasRole = (role) => {
-    return userRole === role || userRole === "admin"; // Admin has access to everything
-  };
+  // ── Role helpers ────────────────────────────────────────────────────────────
 
-  // Fetch user data from Firestore (UPDATED to handle userId field structure)
+  /** True if user has the given role OR is admin */
+  const hasRole = (role) => userRole === role || userRole === ROLES.ADMIN;
+
+  /** Check a named CRM permission */
+  const can = (permission) => canDo(userRole, permission);
+
+  /** Convenience booleans consumed by UI components */
+  const isAdmin = userRole === ROLES.ADMIN;
+  const isStaff = userRole === ROLES.STAFF;
+  const isSales = userRole === ROLES.SALES;
+
+  // ── Fetch user data ─────────────────────────────────────────────────────────
   const fetchUserData = async (uid) => {
     try {
-      console.log("Fetching user data for Firebase UID:", uid);
-      
-      // First try to find by userId field
-      const usersRef = collection(db, "users");
-      const userQuery = query(usersRef, where("userId", "==", uid));
-      const querySnapshot = await getDocs(userQuery);
-      
-      if (!querySnapshot.empty) {
-        const userDoc = querySnapshot.docs[0];
-        const userData = userDoc.data();
-        console.log("Found user data by userId field:", userData);
-        setUserRole(userData.role);
-        setUserDisplayName(userData.displayName || null);
-        return userData;
+      const q = query(collection(db, "users"), where("userId", "==", uid));
+      const snap = await getDocs(q);
+
+      if (!snap.empty) {
+        const data = snap.docs[0].data();
+        setUserRole(data.role || null);
+        setUserDisplayName(data.displayName || null);
+        return data;
       }
-      
-      // Fallback: Try to find by document ID (legacy)
-      const legacyUserDoc = await getDoc(doc(db, "users", uid));
-      if (legacyUserDoc.exists()) {
-        const userData = legacyUserDoc.data();
-        console.log("Found user data by document ID (legacy):", userData);
-        setUserRole(userData.role);
-        setUserDisplayName(userData.displayName || null);
-        return userData;
+
+      // Legacy fallback
+      const legacy = await getDoc(doc(db, "users", uid));
+      if (legacy.exists()) {
+        const data = legacy.data();
+        setUserRole(data.role || null);
+        setUserDisplayName(data.displayName || null);
+        return data;
       }
-      
-      // No user found
-      console.log("No user document found for UID:", uid);
+
       setUserRole(null);
       setUserDisplayName(null);
       return null;
-      
-    } catch (error) {
-      console.error("Error fetching user data:", error);
+    } catch (err) {
+      console.error("Fetch user data error:", err);
       setUserRole(null);
       setUserDisplayName(null);
       return null;
     }
   };
 
-  // Listen for auth state changes
   useEffect(() => {
-    console.log("Setting up auth state listener");
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log("Auth state changed:", user ? user.email : "No user");
+    const unsub = onAuthStateChanged(auth, async (user) => {
       setCurrentUser(user);
-      
-      if (user) {
-        await fetchUserData(user.uid);
-      } else {
-        setUserRole(null);
-        setUserDisplayName(null);
-      }
-      
+      if (user) await fetchUserData(user.uid);
+      else { setUserRole(null); setUserDisplayName(null); }
       setLoading(false);
     });
-
-    return unsubscribe;
+    return unsub;
   }, []);
 
-  // Update user display name
   const updateUserDisplayName = async (uid, newDisplayName) => {
     try {
-      // Find user document by userId field
-      const usersRef = collection(db, "users");
-      const userQuery = query(usersRef, where("userId", "==", uid));
-      const querySnapshot = await getDocs(userQuery);
-      
-      if (!querySnapshot.empty) {
-        const userDocRef = querySnapshot.docs[0];
-        await updateDoc(doc(db, "users", userDocRef.id), { 
-          displayName: newDisplayName,
-          updatedAt: new Date().toISOString()
-        });
+      const q = query(collection(db, "users"), where("userId", "==", uid));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        await updateDoc(doc(db, "users", snap.docs[0].id), { displayName: newDisplayName, updatedAt: new Date().toISOString() });
       } else {
-        // Fallback for legacy users
         await setDoc(doc(db, "users", uid), { displayName: newDisplayName }, { merge: true });
       }
-      
       setUserDisplayName(newDisplayName);
       return true;
-    } catch (error) {
-      console.error("Error updating display name:", error);
-      throw error;
-    }
+    } catch (err) { console.error("Update display name error:", err); throw err; }
   };
 
   const value = {
@@ -363,26 +243,18 @@ export const AuthProvider = ({ children }) => {
     userRole,
     userDisplayName,
     loading,
-    register,
-    login,
-    logout,
-    changePassword,
-    hasRole,
-    updateUserDisplayName,
-    
-    // User management methods
-    sendUserPasswordReset,
-    updateUserStatus,
-    updateUserProfile,
-    recordUserLogin
+    // Auth
+    register, login, logout, changePassword,
+    // Role helpers
+    hasRole, can, isAdmin, isStaff, isSales,
+    // Constants (available to any consumer)
+    ROLES, CRM_PERMISSIONS, canDo,
+    // User management
+    sendUserPasswordReset, updateUserStatus, updateUserProfile,
+    recordUserLogin, updateUserDisplayName
   };
 
-  // Return the provider with the value and children
-  return (
-    <AuthContext.Provider value={value}>
-      {children}
-    </AuthContext.Provider>
-  );
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export default AuthContext;

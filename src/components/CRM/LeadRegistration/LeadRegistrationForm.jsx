@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from "react";
+import DatePicker from "react-datepicker";
+import "react-datepicker/dist/react-datepicker.css";
 import { LEAD_FIELDS } from "../../../constants/leadFields";
 import LeadSourceSelector from "../../Shared/LeadSourceSelector";
 import { LeadStatusSelector } from "../../Shared/LeadStatusBadge";
@@ -6,501 +8,235 @@ import { QualificationBadgeSelector } from "../../Shared/QualificationBadge";
 import CRMActionButton from "../../Shared/CRMActionButton";
 import { useCRM } from "../../../context/CRMContext";
 
-/**
- * Form for creating and editing leads
- * @param {Object} props - Component props
- * @param {Object} props.lead - Lead to edit (null for new lead)
- * @param {function} props.onSubmit - Submit handler
- * @param {function} props.onCancel - Cancel handler
- * @param {boolean} props.isSubmitting - Form submission state
- */
-const LeadRegistrationForm = ({ 
-  lead = null, 
-  onSubmit, 
-  onCancel, 
-  isSubmitting = false 
-}) => {
+const LeadRegistrationForm = ({ lead = null, onSubmit, onCancel, isSubmitting = false }) => {
   const { qualificationBadges } = useCRM();
-  
-  // Default form data structure
-  const getDefaultFormData = () => ({
-    name: "",
-    company: "",
-    email: "",
-    phone: "",
-    source: "",
-    status: "newLead", // Default to 'New Lead' status
-    badgeId: "",
-    jobType: "",
-    budget: "",
-    urgency: "",
-    notes: "",
-    address: {
-      line1: "",
-      line2: "",
-      city: "",
-      state: "",
-      postalCode: "",
-      country: "India" // Default country
-    }
+
+  const getDefault = () => ({
+    name: "", company: "", email: "", phone: "",
+    source: "", status: "newLead", badgeId: "",
+    jobType: "", budget: "", urgency: "", notes: "",
+    weddingDate: null,
+    birthdayDate: null,
+    address: { line1: "", line2: "", city: "", state: "", postalCode: "", country: "India" }
   });
-  
-  // Form state
-  const [formData, setFormData] = useState(getDefaultFormData());
-  const [errors, setErrors] = useState({});
-  
-  // Set form data when lead changes
+
+  const [formData, setFormData] = useState(getDefault());
+  const [errors,   setErrors]   = useState({});
+
   useEffect(() => {
     if (lead) {
+      // Convert Firestore timestamps / strings to Date for datepicker
+      const toDate = (v) => {
+        if (!v) return null;
+        if (v instanceof Date) return v;
+        if (v?.toDate) return v.toDate();
+        if (v?.seconds) return new Date(v.seconds * 1000);
+        return new Date(v);
+      };
       setFormData({
-        name: lead.name || "",
-        company: lead.company || "",
-        email: lead.email || "",
-        phone: lead.phone || "",
-        source: lead.source || "",
-        status: lead.status || "newLead",
-        badgeId: lead.badgeId || "",
-        jobType: lead.jobType || "",
-        budget: lead.budget || "",
-        urgency: lead.urgency || "",
-        notes: lead.notes || "",
-        address: lead.address || {
-          line1: "",
-          line2: "",
-          city: "",
-          state: "",
-          postalCode: "",
-          country: "India"
-        }
+        name:        lead.name        || "",
+        company:     lead.company     || "",
+        email:       lead.email       || "",
+        phone:       lead.phone       || "",
+        source:      lead.source      || "",
+        status:      lead.status      || "newLead",
+        badgeId:     lead.badgeId     || "",
+        jobType:     lead.jobType     || "",
+        budget:      lead.budget      || "",
+        urgency:     lead.urgency     || "",
+        notes:       lead.notes       || "",
+        weddingDate: toDate(lead.weddingDate),
+        birthdayDate:toDate(lead.birthdayDate),
+        address:     lead.address || getDefault().address
       });
     } else {
-      setFormData(getDefaultFormData());
+      setFormData(getDefault());
     }
   }, [lead]);
-  
-  // Handle form input changes
+
   const handleChange = (e) => {
     const { name, value } = e.target;
-    
-    if (name.includes('.')) {
-      // Handle nested fields (e.g., address.city)
-      const [parent, child] = name.split('.');
-      setFormData(prev => ({
-        ...prev,
-        [parent]: {
-          ...prev[parent],
-          [child]: value
-        }
-      }));
+    if (name.includes(".")) {
+      const [parent, child] = name.split(".");
+      setFormData(prev => ({ ...prev, [parent]: { ...prev[parent], [child]: value } }));
     } else {
-      // Handle regular fields
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
+      setFormData(prev => ({ ...prev, [name]: value }));
     }
-    
-    // Clear error for this field if exists
-    if (errors[name]) {
-      setErrors(prev => ({
-        ...prev,
-        [name]: null
-      }));
-    }
+    if (errors[name]) setErrors(prev => ({ ...prev, [name]: null }));
   };
-  
-  // Validate form
-  const validateForm = () => {
-    const newErrors = {};
-    
-    // Required fields from LEAD_FIELDS
-    LEAD_FIELDS.BASIC_INFO.forEach(field => {
-      if (field.required && !formData[field.name]) {
-        newErrors[field.name] = `${field.label} is required`;
-      }
-    });
-    
-    // Validate email format if provided
-    if (formData.email && !isValidEmail(formData.email)) {
-      newErrors.email = "Please enter a valid email address";
-    }
-    
-    // Validate phone format
-    if (formData.phone && !isValidPhone(formData.phone)) {
-      newErrors.phone = "Please enter a valid phone number";
-    }
-    
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+
+  const validate = () => {
+    const errs = {};
+    if (!formData.name?.trim())   errs.name   = "Name is required";
+    if (!formData.phone?.trim())  errs.phone  = "Phone is required";
+    if (!formData.source)         errs.source = "Source is required";
+    if (formData.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email))
+      errs.email = "Invalid email";
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   };
-  
-  // Email validation helper
-  const isValidEmail = (email) => {
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    return emailRegex.test(email);
-  };
-  
-  // Phone validation helper
-  const isValidPhone = (phone) => {
-    // Simple validation for Indian phone numbers
-    const phoneRegex = /^(\+\d{1,3}[- ]?)?\d{10}$/;
-    return phoneRegex.test(phone);
-  };
-  
-  // Handle form submission
+
   const handleSubmit = (e) => {
     e.preventDefault();
-    
-    if (validateForm()) {
-      onSubmit(formData);
-    }
+    if (validate()) onSubmit(formData);
   };
-  
+
+  const Field = ({ label, required, error, children }) => (
+    <div className="mb-2">
+      <label className="block text-sm font-medium text-gray-700 mb-1">
+        {label} {required && <span className="text-red-500">*</span>}
+      </label>
+      {children}
+      {error && <p className="mt-1 text-xs text-red-500">{error}</p>}
+    </div>
+  );
+
+  const inputCls = (err) =>
+    `w-full px-3 py-2 border rounded-md focus:outline-none text-sm ${err ? "border-red-500" : "border-gray-300"} ${isSubmitting ? "bg-gray-100" : ""}`;
+
   return (
     <form onSubmit={handleSubmit} className="bg-white">
-      {/* Basic Information */}
+
+      {/* ── Basic Information ── */}
       <div className="mb-4">
-        <h3 className="text-lg font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">
-          Basic Information
-        </h3>
+        <h3 className="text-base font-medium mb-3 text-gray-700 border-b pb-2">Basic Information</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Name */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Lead Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="name"
-              value={formData.name || ""}
-              onChange={handleChange}
-              placeholder="Enter lead name"
-              required
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
-                errors.name ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            />
-            {errors.name && <p className="mt-1 text-xs text-red-500">{errors.name}</p>}
-          </div>
-          
-          {/* Company */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Company Name
-            </label>
-            <input
-              type="text"
-              name="company"
-              value={formData.company || ""}
-              onChange={handleChange}
-              placeholder="Enter company name (if applicable)"
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
-                errors.company ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            />
-            {errors.company && <p className="mt-1 text-xs text-red-500">{errors.company}</p>}
-          </div>
-          
-          {/* Email */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Email
-            </label>
-            <input
-              type="email"
-              name="email"
-              value={formData.email || ""}
-              onChange={handleChange}
-              placeholder="Enter email address"
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
-                errors.email ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            />
-            {errors.email && <p className="mt-1 text-xs text-red-500">{errors.email}</p>}
-          </div>
-          
-          {/* Phone */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Phone Number <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="tel"
-              name="phone"
-              value={formData.phone || ""}
-              onChange={handleChange}
-              placeholder="Enter phone number"
-              required
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
-                errors.phone ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            />
-            {errors.phone && <p className="mt-1 text-xs text-red-500">{errors.phone}</p>}
-          </div>
-          
-          {/* Source */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Lead Source <span className="text-red-500">*</span>
-            </label>
-            <LeadSourceSelector
-              value={formData.source || ""}
-              onChange={(value) => {
-                setFormData(prev => ({
-                  ...prev,
-                  source: value
-                }));
-              }}
-              required
-              disabled={isSubmitting}
-            />
-            {errors.source && <p className="mt-1 text-xs text-red-500">{errors.source}</p>}
-          </div>
-          
-          {/* Status */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Lead Status <span className="text-red-500">*</span>
-            </label>
-            <LeadStatusSelector
-              value={formData.status || ""}
-              onChange={(value) => {
-                setFormData(prev => ({
-                  ...prev,
-                  status: value
-                }));
-              }}
-              required
-              disabled={isSubmitting}
-            />
-            {errors.status && <p className="mt-1 text-xs text-red-500">{errors.status}</p>}
-          </div>
-          
-          {/* Qualification Badge */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Qualification Badge
-            </label>
-            <QualificationBadgeSelector
-              value={formData.badgeId}
-              onChange={(value) => setFormData(prev => ({ ...prev, badgeId: value }))}
-              disabled={isSubmitting}
-            />
-          </div>
-          
-          {/* Job Type */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Job Type
-            </label>
-            <select
-              name="jobType"
-              value={formData.jobType || ""}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
-                errors.jobType ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            >
+
+          <Field label="Lead Name" required error={errors.name}>
+            <input type="text" name="name" value={formData.name} onChange={handleChange}
+              placeholder="Enter lead name" disabled={isSubmitting} className={inputCls(errors.name)} />
+          </Field>
+
+          <Field label="Company Name" error={errors.company}>
+            <input type="text" name="company" value={formData.company} onChange={handleChange}
+              placeholder="Company (if applicable)" disabled={isSubmitting} className={inputCls()} />
+          </Field>
+
+          <Field label="Email" error={errors.email}>
+            <input type="email" name="email" value={formData.email} onChange={handleChange}
+              placeholder="Email address" disabled={isSubmitting} className={inputCls(errors.email)} />
+          </Field>
+
+          <Field label="Phone" required error={errors.phone}>
+            <input type="tel" name="phone" value={formData.phone} onChange={handleChange}
+              placeholder="Phone number" disabled={isSubmitting} className={inputCls(errors.phone)} />
+          </Field>
+
+          <Field label="Lead Source" required error={errors.source}>
+            <LeadSourceSelector value={formData.source}
+              onChange={v => setFormData(prev => ({ ...prev, source: v }))}
+              required disabled={isSubmitting} />
+          </Field>
+
+          <Field label="Lead Status" required error={errors.status}>
+            <LeadStatusSelector value={formData.status}
+              onChange={v => setFormData(prev => ({ ...prev, status: v }))}
+              required disabled={isSubmitting} />
+          </Field>
+
+          <Field label="Qualification Badge">
+            <QualificationBadgeSelector value={formData.badgeId}
+              onChange={v => setFormData(prev => ({ ...prev, badgeId: v }))}
+              disabled={isSubmitting} />
+          </Field>
+
+          <Field label="Job Type">
+            <select name="jobType" value={formData.jobType} onChange={handleChange}
+              disabled={isSubmitting} className={inputCls()}>
               <option value="">Select Job Type</option>
-              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "jobType")?.options?.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "jobType")?.options?.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
-          </div>
-          
-          {/* Budget */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Budget Range
-            </label>
-            <select
-              name="budget"
-              value={formData.budget || ""}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
-                errors.budget ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            >
-              <option value="">Select Budget Range</option>
-              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "budget")?.options?.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+          </Field>
+
+          <Field label="Budget Range">
+            <select name="budget" value={formData.budget} onChange={handleChange}
+              disabled={isSubmitting} className={inputCls()}>
+              <option value="">Select Budget</option>
+              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "budget")?.options?.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
-          </div>
-          
-          {/* Urgency */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Urgency
-            </label>
-            <select
-              name="urgency"
-              value={formData.urgency || ""}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className={`w-full px-3 py-2 border rounded-md focus:outline-none ${
-                errors.urgency ? "border-red-500" : "border-gray-300"
-              } ${isSubmitting ? "bg-gray-100" : ""}`}
-            >
+          </Field>
+
+          <Field label="Urgency">
+            <select name="urgency" value={formData.urgency} onChange={handleChange}
+              disabled={isSubmitting} className={inputCls()}>
               <option value="">Select Urgency</option>
-              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "urgency")?.options?.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
+              {LEAD_FIELDS.LEAD_DETAILS.find(f => f.name === "urgency")?.options?.map(o => (
+                <option key={o.value} value={o.value}>{o.label}</option>
               ))}
             </select>
-          </div>
+          </Field>
         </div>
       </div>
-      
-      {/* Contact Information */}
+
+      {/* ── Important Dates (NEW) ── */}
       <div className="mb-4">
-        <h3 className="text-lg font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">
-          Contact Information
-        </h3>
+        <h3 className="text-base font-medium mb-3 text-gray-700 border-b pb-2">Important Dates</h3>
         <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          {/* Address Line 1 */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Address Line 1
-            </label>
-            <input
-              type="text"
-              name="address.line1"
-              value={formData.address?.line1 || ""}
-              onChange={handleChange}
-              placeholder="Enter street address"
+
+          <Field label="Wedding Date">
+            <DatePicker
+              selected={formData.weddingDate}
+              onChange={d => setFormData(prev => ({ ...prev, weddingDate: d }))}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="Pick wedding date"
+              isClearable
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
+              className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm"
             />
-          </div>
-          
-          {/* Address Line 2 */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Address Line 2
-            </label>
-            <input
-              type="text"
-              name="address.line2"
-              value={formData.address?.line2 || ""}
-              onChange={handleChange}
-              placeholder="Enter apartment, suite, etc."
+          </Field>
+
+          <Field label="Birthday">
+            <DatePicker
+              selected={formData.birthdayDate}
+              onChange={d => setFormData(prev => ({ ...prev, birthdayDate: d }))}
+              dateFormat="dd/MM/yyyy"
+              placeholderText="Pick birthday"
+              isClearable
               disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
+              className="border border-gray-300 rounded-md px-3 py-2 w-full text-sm"
             />
-          </div>
-          
-          {/* City */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              City
-            </label>
-            <input
-              type="text"
-              name="address.city"
-              value={formData.address?.city || ""}
-              onChange={handleChange}
-              placeholder="Enter city"
-              disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
-            />
-          </div>
-          
-          {/* State */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              State
-            </label>
-            <input
-              type="text"
-              name="address.state"
-              value={formData.address?.state || ""}
-              onChange={handleChange}
-              placeholder="Enter state or province"
-              disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
-            />
-          </div>
-          
-          {/* Postal Code */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Postal Code
-            </label>
-            <input
-              type="text"
-              name="address.postalCode"
-              value={formData.address?.postalCode || ""}
-              onChange={handleChange}
-              placeholder="Enter postal code"
-              disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
-            />
-          </div>
-          
-          {/* Country */}
-          <div className="mb-2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Country
-            </label>
-            <input
-              type="text"
-              name="address.country"
-              value={formData.address?.country || "India"}
-              onChange={handleChange}
-              disabled={isSubmitting}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
-            />
-          </div>
+          </Field>
         </div>
       </div>
-      
-      {/* Notes */}
+
+      {/* ── Contact / Address ── */}
       <div className="mb-4">
-        <h3 className="text-lg font-medium mb-3 text-gray-700 border-b border-gray-200 pb-2">
-          Additional Notes
-        </h3>
-        <div>
-          <textarea
-            name="notes"
-            value={formData.notes || ""}
-            onChange={handleChange}
-            rows="3"
-            placeholder="Enter any additional notes about this lead"
-            disabled={isSubmitting}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none"
-          ></textarea>
+        <h3 className="text-base font-medium mb-3 text-gray-700 border-b pb-2">Contact Information</h3>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[
+            { name: "address.line1",      label: "Address Line 1", placeholder: "Street address" },
+            { name: "address.line2",      label: "Address Line 2", placeholder: "Apt, suite, etc." },
+            { name: "address.city",       label: "City",           placeholder: "City" },
+            { name: "address.state",      label: "State",          placeholder: "State" },
+            { name: "address.postalCode", label: "Postal Code",    placeholder: "Postal code" },
+            { name: "address.country",    label: "Country",        placeholder: "Country" }
+          ].map(f => (
+            <Field key={f.name} label={f.label}>
+              <input type="text" name={f.name}
+                value={f.name.includes(".") ? formData.address?.[f.name.split(".")[1]] : formData[f.name]}
+                onChange={handleChange} placeholder={f.placeholder}
+                disabled={isSubmitting} className={inputCls()} />
+            </Field>
+          ))}
         </div>
       </div>
-      
-      {/* Form Actions */}
-      <div className="flex justify-end pt-3 border-t border-gray-200">
-        <CRMActionButton
-          type="secondary"
-          onClick={onCancel}
-          disabled={isSubmitting}
-          className="mr-2"
-        >
-          Cancel
-        </CRMActionButton>
-        
-        <CRMActionButton
-          type="primary"
-          isLoading={isSubmitting}
-          disabled={isSubmitting}
-          submit={true}
-        >
+
+      {/* ── Notes ── */}
+      <div className="mb-4">
+        <h3 className="text-base font-medium mb-3 text-gray-700 border-b pb-2">Additional Notes</h3>
+        <textarea name="notes" value={formData.notes} onChange={handleChange} rows={3}
+          placeholder="Any additional notes" disabled={isSubmitting}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none text-sm" />
+      </div>
+
+      {/* ── Actions ── */}
+      <div className="flex justify-end gap-2 pt-3 border-t border-gray-200">
+        <CRMActionButton type="secondary" onClick={onCancel} disabled={isSubmitting}>Cancel</CRMActionButton>
+        <CRMActionButton type="primary" isLoading={isSubmitting} disabled={isSubmitting} submit>
           {lead ? "Update Lead" : "Create Lead"}
         </CRMActionButton>
       </div>

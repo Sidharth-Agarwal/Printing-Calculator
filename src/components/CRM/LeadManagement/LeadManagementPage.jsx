@@ -10,508 +10,276 @@ import { useCRM } from "../../../context/CRMContext";
 import DisplayLeadsTable from "../LeadRegistration/DisplayLeadsTable";
 import { LEAD_PIPELINE_FIELDS } from "../../../constants/leadFields";
 import { getKanbanStatusForLead } from "../../../constants/leadStatuses";
-import { 
-  createLead,  
-  updateLead, 
-  deleteLead, 
-  getLeadById, 
-  createDiscussion 
+import {
+  createLead, updateLead, deleteLead, getLeadById, createDiscussion
 } from "../../../services";
 import { useAuth } from "../../Login/AuthContext";
 import DBExportImport from "../../Shared/DBExportImport";
 import { db } from "../../../firebaseConfig";
 import { doc, updateDoc, serverTimestamp } from "firebase/firestore";
 
-/**
- * Main page component for lead management (lead pool) - Updated with temp client support
- */
 const LeadManagementPage = () => {
   const { currentUser, userRole } = useAuth();
   const { leads, isLoadingLeads, qualificationBadges, refreshLeads } = useCRM();
-  
-  // Modal states
+
+  // ── Modal state ───────────────────────────────────────────────────────────
   const [isFormModalOpen, setIsFormModalOpen] = useState(false);
-  const [selectedLead, setSelectedLead] = useState(null);
-  const [viewingLead, setViewingLead] = useState(null);
-  const [discussionLead, setDiscussionLead] = useState(null);
-  const [convertingLead, setConvertingLead] = useState(null);
-  const [tempClientLead, setTempClientLead] = useState(null);
-  
-  // Form submission state
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  
-  // View mode state
-  const [viewMode, setViewMode] = useState("kanban"); // "kanban" or "list"
-  
-  // Search and filter states
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterSource, setFilterSource] = useState("");
-  const [filterBadge, setFilterBadge] = useState("");
-  const [filterStatus, setFilterStatus] = useState("");
-  
-  // Toggle state for showing leads moved to clients
-  const [showMovedToClients, setShowMovedToClients] = useState(false);
-  
-  // Notification state
-  const [notification, setNotification] = useState({
-    show: false,
-    message: "",
-    type: "success"
-  });
-  
-  // Check if user is admin
+  const [selectedLead,    setSelectedLead]    = useState(null);
+  const [viewingLead,     setViewingLead]     = useState(null);
+  const [discussionLead,  setDiscussionLead]  = useState(null);
+  const [convertingLead,  setConvertingLead]  = useState(null);
+  const [tempClientLead,  setTempClientLead]  = useState(null);
+  const [isSubmitting,    setIsSubmitting]    = useState(false);
+
+  // ── View ──────────────────────────────────────────────────────────────────
+  const [viewMode, setViewMode] = useState("kanban");
+
+  // ── Filters ───────────────────────────────────────────────────────────────
+  const [searchTerm,        setSearchTerm]        = useState("");
+  const [filterSource,      setFilterSource]      = useState("");
+  const [filterBadge,       setFilterBadge]       = useState("");
+  const [filterStatus,      setFilterStatus]      = useState("");
+  const [showMovedToClients,setShowMovedToClients] = useState(false);
+  const [showDormant,       setShowDormant]       = useState(false);  // NEW
+  const [showDeadPool,      setShowDeadPool]      = useState(false);  // NEW
+
+  // ── Notification ──────────────────────────────────────────────────────────
+  const [notification, setNotification] = useState({ show: false, message: "", type: "success" });
+
   const isAdmin = userRole === "admin";
-  
-  // Show notification
+  const hasPermission = userRole === "admin" || userRole === "staff";
+
   const showNotification = (message, type = "success") => {
     setNotification({ show: true, message, type });
-    
-    // Auto hide after 3 seconds
-    setTimeout(() => {
-      setNotification(prev => ({ ...prev, show: false }));
-    }, 3000);
-  };
-  
-  // Handle notification from export/import operations
-  const handleExportImportSuccess = (message) => {
-    showNotification(message, "success");
-    // Trigger leads refresh if refreshLeads function is available
-    if (refreshLeads) {
-      refreshLeads();
-    }
+    setTimeout(() => setNotification(p => ({ ...p, show: false })), 3000);
   };
 
-  const handleExportImportError = (message) => {
-    showNotification(message, "error");
-  };
-  
-  // Check if user has permission to manage leads
-  const hasPermission = userRole === "admin" || userRole === "staff";
-  
-  // Helper function to check if lead is added to clients
-  const isLeadAddedToClients = (lead) => {
-    return lead.status === "converted" && lead.movedToClients;
-  };
-  
-  // ENHANCED: Handle lead updates from inline editing and discussion changes
-  const handleLeadUpdate = async () => {
-    // Refresh the leads list after inline updates
-    if (refreshLeads) {
-      refreshLeads();
-    }
-    
-    // If a lead is currently being viewed, refresh that lead's data
-    if (viewingLead) {
-      try {
-        const updatedLead = await getLeadById(viewingLead.id);
-        setViewingLead(updatedLead);
-        console.log("Viewing lead refreshed after update");
-      } catch (error) {
-        console.error("Error refreshing viewed lead:", error);
-      }
-    }
-    
-    // Show a subtle notification for inline updates
-    showNotification("Lead updated successfully", "success");
+  // ── Helpers ───────────────────────────────────────────────────────────────
+  const isLeadAddedToClients = (lead) => lead.status === "converted" && lead.movedToClients;
+
+  const isDeadPool = (lead) => {
+    if (lead.lastDiscussionDate) return false;
+    if (!lead.createdAt) return false;
+    const created = lead.createdAt?.toDate
+      ? lead.createdAt.toDate()
+      : lead.createdAt?.seconds
+      ? new Date(lead.createdAt.seconds * 1000)
+      : new Date(lead.createdAt);
+    return (Date.now() - created.getTime()) > 90 * 24 * 60 * 60 * 1000;
   };
 
-  // Handle temp client creation
-  const handleMakeTempClient = (lead) => {
-    console.log("Making temp client for lead:", lead);
-    setTempClientLead(lead);
-  };
+  // ── Counts for filter badges ──────────────────────────────────────────────
+  const dormantCount  = leads.filter(l => l.status === "dormant").length;
+  const deadPoolCount = leads.filter(isDeadPool).length;
+  const movedToClientsCount = leads.filter(isLeadAddedToClients).length;
 
-  // Handle temp client submission
-  const handleTempClientSubmit = async (leadId, success, newTempClient = null) => {
-    if (success) {
-      try {
-        // Update lead to reference temp client
-        const leadRef = doc(db, "leads", leadId);
-        await updateDoc(leadRef, {
-          tempClientId: newTempClient.id,
-          tempClientCreatedAt: new Date(),
-          updatedAt: serverTimestamp()
-        });
-        
-        showNotification(`Temporary client "${newTempClient?.name}" created successfully`);
-        
-        // Refresh lead if viewing
-        if (viewingLead && viewingLead.id === leadId) {
-          const updatedLead = await getLeadById(leadId);
-          setViewingLead(updatedLead);
-        }
-        
-        // Refresh leads list
-        if (refreshLeads) {
-          refreshLeads();
-        }
-        
-        console.log("Lead updated with temp client reference");
-      } catch (error) {
-        console.error("Error updating lead with temp client reference:", error);
-        showNotification("Failed to update lead with temp client reference", "error");
-      }
-    } else {
-      showNotification("Failed to create temporary client", "error");
-    }
-    
-    // Close temp client modal
-    setTempClientLead(null);
-  };
-  
-  // Handle viewing a lead
-  const handleView = (lead) => {
-    setViewingLead(lead);
-  };
-  
-  // Handle editing a lead
-  const handleEdit = (lead) => {
-    setSelectedLead(lead);
-    setIsFormModalOpen(true);
-    
-    if (viewingLead && viewingLead.id === lead.id) {
-      setViewingLead(null);
-    }
-  };
-  
-  // Handle adding a discussion to a lead
-  const handleAddDiscussion = (lead) => {
-    setDiscussionLead(lead);
-  };
-  
-  // Handle converting a lead to a client
-  const handleConvert = (lead) => {
-    setConvertingLead(lead);
-  };
-  
-  // Handle lead deletion
-  const handleDelete = async (leadId) => {
-    try {
-      await deleteLead(leadId);
-      showNotification("Lead deleted successfully");
-      
-      // Close modals if this lead was open
-      if (viewingLead && viewingLead.id === leadId) {
-        setViewingLead(null);
-      }
-      if (discussionLead && discussionLead.id === leadId) {
-        setDiscussionLead(null);
-      }
-      if (convertingLead && convertingLead.id === leadId) {
-        setConvertingLead(null);
-      }
-      if (tempClientLead && tempClientLead.id === leadId) {
-        setTempClientLead(null);
-      }
-      
-      // Refresh leads list
-      if (refreshLeads) {
-        refreshLeads();
-      }
-    } catch (error) {
-      console.error("Error deleting lead:", error);
-      showNotification(`Error: ${error.message}`, "error");
-    }
-  };
-  
-  // Handle form submission for editing or creating
-  const handleSubmitForm = async (formData) => {
-    setIsSubmitting(true);
-    
-    try {
-      if (selectedLead) {
-        // Update existing lead
-        await updateLead(selectedLead.id, formData);
-        showNotification(`Lead "${formData.name}" updated successfully`);
-        
-        // Refresh view if this lead is being viewed
-        if (viewingLead && viewingLead.id === selectedLead.id) {
-          const updatedLead = await getLeadById(selectedLead.id);
-          setViewingLead(updatedLead);
-        }
-      } else {
-        // Create new lead
-        const newLead = await createLead(formData);
-        showNotification(`Lead "${formData.name}" created successfully`);
-      }
-      
-      // Refresh the lead list
-      if (refreshLeads) {
-        refreshLeads();
-      }
-      
-      // Close form modal
-      setIsFormModalOpen(false);
-      setSelectedLead(null);
-    } catch (error) {
-      console.error("Error saving lead:", error);
-      showNotification(`Error: ${error.message}`, "error");
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-  
-  // Handle adding a discussion to a lead
-  const handleSubmitDiscussion = async (leadId, discussionData) => {
-    try {
-      await createDiscussion(leadId, discussionData, currentUser.uid);
-      showNotification("Discussion added successfully");
-      
-      // Refresh lead if viewing
-      if (viewingLead && viewingLead.id === leadId) {
-        const updatedLead = await getLeadById(leadId);
-        setViewingLead(updatedLead);
-      }
-      
-      // Refresh leads list to update last contact info
-      if (refreshLeads) {
-        refreshLeads();
-      }
-      
-      // Close discussion modal
-      setDiscussionLead(null);
-    } catch (error) {
-      console.error("Error adding discussion:", error);
-      showNotification(`Error: ${error.message}`, "error");
-    }
-  };
-  
-  // Handle lead conversion
-  const handleSubmitConversion = async (leadId, success, newClient = null) => {
-    if (success) {
-      showNotification("Lead converted to client successfully");
-      
-      // Refresh lead if viewing
-      if (viewingLead && viewingLead.id === leadId) {
-        const updatedLead = await getLeadById(leadId);
-        setViewingLead(updatedLead);
-      }
-      
-      // Refresh leads list
-      if (refreshLeads) {
-        refreshLeads();
-      }
-    }
-    
-    // Close conversion modal
-    setConvertingLead(null);
-  };
-  
-  // Handle Add New Lead click
-  const handleAddNew = () => {
-    setSelectedLead(null);
-    setIsFormModalOpen(true);
-  };
-  
-  // Filter leads based on search and filter criteria
+  // ── Filtered leads ────────────────────────────────────────────────────────
   const filteredLeads = leads.filter(lead => {
-    const matchesSearch = 
+    const matchesSearch =
       searchTerm === "" ||
       lead.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.company?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.phone?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       lead.lastDiscussionSummary?.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesSource = filterSource === "" || lead.source === filterSource;
-    const matchesBadge = filterBadge === "" || lead.badgeId === filterBadge;
-    const matchesStatus = filterStatus === "" || lead.status === filterStatus;
-    
-    // Filter based on showMovedToClients toggle
-    const matchesMovedToClients = showMovedToClients || !isLeadAddedToClients(lead);
-    
-    return matchesSearch && matchesSource && matchesBadge && matchesStatus && matchesMovedToClients;
+
+    const matchesSource  = filterSource === "" || lead.source   === filterSource;
+    const matchesBadge   = filterBadge  === "" || lead.badgeId  === filterBadge;
+    const matchesStatus  = filterStatus === "" || lead.status   === filterStatus;
+    const matchesMoved   = showMovedToClients || !isLeadAddedToClients(lead);
+
+    // Dormant: hide unless showDormant toggled or explicitly filtered
+    const matchesDormant = showDormant || filterStatus === "dormant" || lead.status !== "dormant";
+
+    // Dead pool: when toggled, show ONLY dead pool leads
+    const matchesDeadPool = showDeadPool ? isDeadPool(lead) : true;
+
+    return matchesSearch && matchesSource && matchesBadge && matchesStatus
+      && matchesMoved && matchesDormant && matchesDeadPool;
   });
-  
-  // Reset all filters
+
   const clearFilters = () => {
-    setSearchTerm('');
-    setFilterSource('');
-    setFilterBadge('');
-    setFilterStatus('');
-    setShowMovedToClients(false);
+    setSearchTerm(""); setFilterSource(""); setFilterBadge("");
+    setFilterStatus(""); setShowMovedToClients(false);
+    setShowDormant(false); setShowDeadPool(false);
   };
-  
-  // If user doesn't have permission, show unauthorized message
-  if (!hasPermission) {
-    return (
-      <div className="p-4 max-w-screen-xl mx-auto">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
-          <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-          </svg>
-          <h2 className="mt-4 text-xl font-bold text-red-800">Unauthorized Access</h2>
-          <p className="mt-2 text-red-600">You don't have permission to manage leads.</p>
-        </div>
-      </div>
-    );
-  }
-  
-  // Calculate lead statistics - Updated to include temp client info
-  const displayedLeads = showMovedToClients ? leads : leads.filter(lead => !isLeadAddedToClients(lead));
-  
-  // Group leads by Kanban status for statistics
+
+  const hasActiveFilters = searchTerm || filterSource || filterBadge || filterStatus
+    || showMovedToClients || showDormant || showDeadPool;
+
+  // ── Lead actions ──────────────────────────────────────────────────────────
+  const handleLeadUpdate = async () => {
+    refreshLeads?.();
+    if (viewingLead) {
+      try { setViewingLead(await getLeadById(viewingLead.id)); } catch {}
+    }
+    showNotification("Lead updated successfully");
+  };
+
+  const handleView     = (lead) => setViewingLead(lead);
+  const handleEdit     = (lead) => { setSelectedLead(lead); setIsFormModalOpen(true); if (viewingLead?.id === lead.id) setViewingLead(null); };
+  const handleAddDiscussion = (lead) => setDiscussionLead(lead);
+  const handleConvert  = (lead) => setConvertingLead(lead);
+  const handleMakeTempClient = (lead) => setTempClientLead(lead);
+
+  const handleDelete = async (leadId) => {
+    try {
+      await deleteLead(leadId);
+      showNotification("Lead deleted successfully");
+      if (viewingLead?.id   === leadId) setViewingLead(null);
+      if (discussionLead?.id=== leadId) setDiscussionLead(null);
+      if (convertingLead?.id=== leadId) setConvertingLead(null);
+      if (tempClientLead?.id=== leadId) setTempClientLead(null);
+      refreshLeads?.();
+    } catch (e) { showNotification(`Error: ${e.message}`, "error"); }
+  };
+
+  const handleSubmitForm = async (formData) => {
+    setIsSubmitting(true);
+    try {
+      if (selectedLead) {
+        await updateLead(selectedLead.id, formData);
+        showNotification(`Lead "${formData.name}" updated successfully`);
+        if (viewingLead?.id === selectedLead.id) setViewingLead(await getLeadById(selectedLead.id));
+      } else {
+        await createLead(formData);
+        showNotification(`Lead "${formData.name}" created successfully`);
+      }
+      refreshLeads?.();
+      setIsFormModalOpen(false);
+      setSelectedLead(null);
+    } catch (e) { showNotification(`Error: ${e.message}`, "error"); }
+    finally { setIsSubmitting(false); }
+  };
+
+  const handleSubmitDiscussion = async (leadId, discussionData) => {
+    try {
+      await createDiscussion(leadId, discussionData, currentUser.uid);
+      showNotification("Discussion added successfully");
+      if (viewingLead?.id === leadId) setViewingLead(await getLeadById(leadId));
+      refreshLeads?.();
+      setDiscussionLead(null);
+    } catch (e) { showNotification(`Error: ${e.message}`, "error"); }
+  };
+
+  const handleSubmitConversion = async (leadId, success, newClient = null) => {
+    if (success) {
+      showNotification("Lead converted to client successfully");
+      if (viewingLead?.id === leadId) setViewingLead(await getLeadById(leadId));
+      refreshLeads?.();
+    }
+    setConvertingLead(null);
+  };
+
+  const handleTempClientSubmit = async (leadId, success, newTempClient = null) => {
+    if (success) {
+      try {
+        await updateDoc(doc(db, "leads", leadId), {
+          tempClientId: newTempClient.id, tempClientCreatedAt: new Date(), updatedAt: serverTimestamp()
+        });
+        showNotification(`Temporary client "${newTempClient?.name}" created successfully`);
+        if (viewingLead?.id === leadId) setViewingLead(await getLeadById(leadId));
+        refreshLeads?.();
+      } catch (e) { showNotification("Failed to update lead with temp client reference", "error"); }
+    } else {
+      showNotification("Failed to create temporary client", "error");
+    }
+    setTempClientLead(null);
+  };
+
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  const displayedLeads = leads.filter(l => showMovedToClients || !isLeadAddedToClients(l));
+
   const kanbanStats = {
-    newLead: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "newLead").length,
-    qualified: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "qualified").length,
-    converted: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "converted").length,
-    lost: displayedLeads.filter(lead => getKanbanStatusForLead(lead.status) === "lost").length
+    newLead:   displayedLeads.filter(l => getKanbanStatusForLead(l.status) === "newLead"   && l.status !== "dormant").length,
+    qualified: displayedLeads.filter(l => getKanbanStatusForLead(l.status) === "qualified").length,
+    converted: displayedLeads.filter(l => getKanbanStatusForLead(l.status) === "converted").length,
+    lost:      displayedLeads.filter(l => getKanbanStatusForLead(l.status) === "lost").length,
   };
-  
-  // Additional detailed stats for intermediate statuses and temp clients
   const detailedStats = {
-    total: displayedLeads.length,
-    contacted: displayedLeads.filter(lead => lead.status === "contacted").length,
-    negotiation: displayedLeads.filter(lead => lead.status === "negotiation").length,
-    tempClients: displayedLeads.filter(lead => lead.tempClientId).length // NEW: Count temp clients
+    total:       displayedLeads.length,
+    contacted:   displayedLeads.filter(l => l.status === "contacted").length,
+    negotiation: displayedLeads.filter(l => l.status === "negotiation").length,
+    tempClients: displayedLeads.filter(l => l.tempClientId).length,
+    dormant:     dormantCount
   };
-  
-  // Calculate conversion rate
-  const conversionRate = displayedLeads.length > 0 
-    ? Math.round((kanbanStats.converted / displayedLeads.length) * 100)
-    : 0;
-  
-  // Count leads moved to clients
-  const movedToClientsCount = leads.filter(lead => isLeadAddedToClients(lead)).length;
-  
+  const conversionRate = displayedLeads.length > 0
+    ? Math.round((kanbanStats.converted / displayedLeads.length) * 100) : 0;
+
+  if (!hasPermission) return (
+    <div className="p-4 max-w-screen-xl mx-auto">
+      <div className="bg-red-50 border border-red-200 rounded-lg p-8 text-center">
+        <svg className="mx-auto h-12 w-12 text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <h2 className="mt-4 text-xl font-bold text-red-800">Unauthorized Access</h2>
+        <p className="mt-2 text-red-600">You don't have permission to manage leads.</p>
+      </div>
+    </div>
+  );
+
   return (
     <div className="p-4 max-w-screen-xl mx-auto">
-      {/* Page Header */}
+      {/* Header */}
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Qualified Leads</h1>
-        <p className="text-gray-600 mt-1">
-          Manage your leads through the sales pipeline and create temporary clients
-        </p>
+        <p className="text-gray-600 mt-1">Manage your leads through the sales pipeline</p>
       </div>
-      
+
       {/* Notification */}
       {notification.show && (
-        <div className={`mb-4 p-3 rounded ${
-          notification.type === "success" 
-            ? "bg-green-100 text-green-700 border border-green-200" 
-            : "bg-red-100 text-red-700 border border-red-200"
-        }`}>
+        <div className={`mb-4 p-3 rounded ${notification.type === "success" ? "bg-green-100 text-green-700 border border-green-200" : "bg-red-100 text-red-700 border border-red-200"}`}>
           {notification.message}
         </div>
       )}
-      
-      {/* Lead Statistics - Updated for temp clients */}
+
+      {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-9 gap-4 mb-6">
-        {/* Total Leads */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Total Leads</span>
-          <span className="text-2xl font-bold text-gray-800 mt-1">{detailedStats.total}</span>
-        </div>
-        
-        {/* New Leads (includes contacted) */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">New Leads</span>
-          <span className="text-2xl font-bold text-blue-600 mt-1">{kanbanStats.newLead}</span>
-          {detailedStats.contacted > 0 && (
-            <span className="text-xs text-gray-400 mt-1">{detailedStats.contacted} contacted</span>
-          )}
-        </div>
-        
-        {/* Qualified (includes negotiation) */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Qualified</span>
-          <span className="text-2xl font-bold text-green-600 mt-1">{kanbanStats.qualified}</span>
-          {detailedStats.negotiation > 0 && (
-            <span className="text-xs text-gray-400 mt-1">{detailedStats.negotiation} negotiating</span>
-          )}
-        </div>
-        
-        {/* Converted */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Converted</span>
-          <span className="text-2xl font-bold text-purple-600 mt-1">{kanbanStats.converted}</span>
-        </div>
-        
-        {/* Lost */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Lost</span>
-          <span className="text-2xl font-bold text-red-600 mt-1">{kanbanStats.lost}</span>
-        </div>
-        
-        {/* NEW: Temp Clients Created */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Temp Clients</span>
-          <span className="text-2xl font-bold text-orange-600 mt-1">{detailedStats.tempClients}</span>
-          <span className="text-xs text-gray-400 mt-1">from leads</span>
-        </div>
-        
-        {/* Conversion Rate */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Conversion Rate</span>
-          <span className="text-2xl font-bold text-purple-600 mt-1">{conversionRate}%</span>
-        </div>
-        
-        {/* Added to Clients Count */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Added to Clients</span>
-          <span className="text-2xl font-bold text-blue-600 mt-1">{movedToClientsCount}</span>
-        </div>
-        
-        {/* Win Rate (Converted vs Lost) */}
-        <div className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
-          <span className="text-xs font-medium text-gray-500">Win Rate</span>
-          <span className="text-2xl font-bold text-green-600 mt-1">
-            {(kanbanStats.converted + kanbanStats.lost) > 0 
-              ? Math.round((kanbanStats.converted / (kanbanStats.converted + kanbanStats.lost)) * 100)
-              : 0}%
-          </span>
-        </div>
+        {[
+          { label: "Total Leads",      value: detailedStats.total,       color: "text-gray-800" },
+          { label: "New Leads",        value: kanbanStats.newLead,       color: "text-blue-600",   sub: detailedStats.contacted > 0 ? `${detailedStats.contacted} contacted` : null },
+          { label: "Qualified",        value: kanbanStats.qualified,     color: "text-green-600",  sub: detailedStats.negotiation > 0 ? `${detailedStats.negotiation} negotiating` : null },
+          { label: "Converted",        value: kanbanStats.converted,     color: "text-purple-600" },
+          { label: "Lost",             value: kanbanStats.lost,          color: "text-red-600" },
+          { label: "Dormant",          value: detailedStats.dormant,     color: "text-gray-500" },
+          { label: "Temp Clients",     value: detailedStats.tempClients, color: "text-orange-600", sub: "from leads" },
+          { label: "Conversion Rate",  value: `${conversionRate}%`,      color: "text-purple-600" },
+          { label: "Added to Clients", value: movedToClientsCount,       color: "text-blue-600" },
+        ].map(s => (
+          <div key={s.label} className="bg-white p-4 rounded-lg border border-gray-200 flex flex-col">
+            <span className="text-xs font-medium text-gray-500">{s.label}</span>
+            <span className={`text-2xl font-bold mt-1 ${s.color}`}>{s.value}</span>
+            {s.sub && <span className="text-xs text-gray-400 mt-1">{s.sub}</span>}
+          </div>
+        ))}
       </div>
-      
-      {/* Action buttons with Export/Import options */}
+
+      {/* Toolbar */}
       <div className="flex flex-col md:flex-row justify-between mb-4">
         <div className="mb-2 md:mb-0">
-          {/* Only show import/export to admins */}
           {isAdmin && (
-            <DBExportImport 
-              db={db}
-              collectionName="leads"
-              onSuccess={handleExportImportSuccess}
-              onError={handleExportImportError}
-              dateFields={['createdAt', 'updatedAt', 'lastDiscussionDate', 'tempClientCreatedAt']}
-              qualificationBadges={qualificationBadges}
-            />
+            <DBExportImport db={db} collectionName="leads"
+              onSuccess={m => { showNotification(m); refreshLeads?.(); }}
+              onError={m => showNotification(m, "error")}
+              dateFields={["createdAt","updatedAt","lastDiscussionDate","tempClientCreatedAt"]}
+              qualificationBadges={qualificationBadges} />
           )}
         </div>
-        
         <div className="flex space-x-2">
-          <button
-            onClick={() => setViewMode("kanban")}
-            className={`px-3 py-2 text-sm font-medium rounded-md flex items-center ${
-              viewMode === "kanban"
-                ? "bg-cyan-500 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-            </svg>
-            Kanban View
-          </button>
-          
-          <button
-            onClick={() => setViewMode("list")}
-            className={`px-3 py-2 text-sm font-medium rounded-md flex items-center ${
-              viewMode === "list"
-                ? "bg-cyan-500 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"
-            }`}
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-            </svg>
-            List View
-          </button>
-          
-          <button
-            onClick={handleAddNew}
-            className="px-4 py-2 text-sm font-medium rounded-md bg-cyan-500 text-white hover:bg-cyan-600 flex items-center"
-          >
+          {[
+            { mode: "kanban", icon: "M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2", label: "Kanban View" },
+            { mode: "list",   icon: "M4 6h16M4 10h16M4 14h16M4 18h16",                                                                                                                                                                                    label: "List View" }
+          ].map(v => (
+            <button key={v.mode} onClick={() => setViewMode(v.mode)}
+              className={`px-3 py-2 text-sm font-medium rounded-md flex items-center ${viewMode === v.mode ? "bg-cyan-500 text-white" : "bg-white text-gray-700 hover:bg-gray-50 border border-gray-300"}`}>
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d={v.icon} />
+              </svg>
+              {v.label}
+            </button>
+          ))}
+          <button onClick={() => { setSelectedLead(null); setIsFormModalOpen(true); }}
+            className="px-4 py-2 text-sm font-medium rounded-md bg-cyan-500 text-white hover:bg-cyan-600 flex items-center">
             <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
             </svg>
@@ -519,10 +287,11 @@ const LeadManagementPage = () => {
           </button>
         </div>
       </div>
-      
-      {/* Search and Filters */}
+
+      {/* Filters */}
       <div className="mb-4">
-        <div className="flex flex-col md:flex-row items-center gap-3">
+        <div className="flex flex-col md:flex-row items-start md:items-center gap-3 flex-wrap">
+
           {/* Search */}
           <div className="relative w-full md:w-64">
             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -530,22 +299,15 @@ const LeadManagementPage = () => {
                 <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
               </svg>
             </div>
-            <input
-              type="text"
-              placeholder="Search leads..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm"
-            />
+            <input type="text" placeholder="Search leads..." value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="pl-10 pr-3 py-2 w-full border border-gray-300 rounded-md text-sm" />
           </div>
-          
-          <div className="flex items-center space-x-2 w-full md:w-auto">
-            {/* Status Filter */}
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-            >
+
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Status filter */}
+            <select value={filterStatus} onChange={e => setFilterStatus(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm">
               <option value="">All Statuses</option>
               <option value="newLead">New Leads</option>
               <option value="contacted">Contacted</option>
@@ -553,173 +315,108 @@ const LeadManagementPage = () => {
               <option value="negotiation">Negotiation</option>
               <option value="converted">Converted</option>
               <option value="lost">Lost</option>
+              <option value="dormant">Dormant</option>
             </select>
-            
-            {/* Source Filter */}
-            <select
-              value={filterSource}
-              onChange={(e) => setFilterSource(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-            >
+
+            {/* Source filter */}
+            <select value={filterSource} onChange={e => setFilterSource(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm">
               <option value="">All Sources</option>
-              <option value="facebook">Facebook</option>
-              <option value="instagram">Instagram</option>
-              <option value="whatsapp">WhatsApp</option>
-              <option value="website">Website</option>
-              <option value="email">Email</option>
-              <option value="phone">Phone</option>
-              <option value="walkIn">Walk-in</option>
-              <option value="referral">Referral</option>
-              <option value="exhibition">Exhibition</option>
-              <option value="other">Other</option>
-            </select>
-            
-            {/* Badge Filter */}
-            <select
-              value={filterBadge}
-              onChange={(e) => setFilterBadge(e.target.value)}
-              className="px-3 py-2 border border-gray-300 rounded-md text-sm"
-            >
-              <option value="">All Badges</option>
-              {qualificationBadges && qualificationBadges.map(badge => (
-                <option key={badge.id} value={badge.id}>
-                  {badge.name}
-                </option>
+              {["facebook","instagram","whatsapp","website","email","phone","walkIn","referral","exhibition","other"].map(s => (
+                <option key={s} value={s}>{s.charAt(0).toUpperCase() + s.slice(1)}</option>
               ))}
             </select>
-            
-            {/* Show Moved to Clients Toggle */}
+
+            {/* Badge filter */}
+            <select value={filterBadge} onChange={e => setFilterBadge(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-md text-sm">
+              <option value="">All Badges</option>
+              {qualificationBadges?.map(b => <option key={b.id} value={b.id}>{b.name}</option>)}
+            </select>
+
+            {/* Show Added to Clients */}
             <label className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white cursor-pointer hover:bg-gray-50">
-              <input
-                type="checkbox"
-                checked={showMovedToClients}
-                onChange={(e) => setShowMovedToClients(e.target.checked)}
-                className="rounded border-gray-300 text-red-600 focus:ring-red-500"
-              />
-              <span className="text-sm font-medium text-gray-700">Show Added to Clients</span>
-              {movedToClientsCount > 0 && (
-                <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-1 rounded-full">
-                  {movedToClientsCount}
-                </span>
-              )}
+              <input type="checkbox" checked={showMovedToClients} onChange={e => setShowMovedToClients(e.target.checked)} className="rounded border-gray-300" />
+              <span className="text-sm font-medium text-gray-700">Added to Clients</span>
+              {movedToClientsCount > 0 && <span className="bg-blue-100 text-blue-800 text-xs font-medium px-2 py-0.5 rounded-full">{movedToClientsCount}</span>}
             </label>
-            
-            {/* Clear Filters Button */}
-            {(searchTerm || filterSource || filterBadge || filterStatus || showMovedToClients) && (
-              <button
-                onClick={clearFilters}
-                className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md border border-gray-300"
-              >
+
+            {/* Show Dormant — NEW */}
+            <label className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={showDormant} onChange={e => setShowDormant(e.target.checked)} className="rounded border-gray-300" />
+              <span className="text-sm font-medium text-gray-700">Dormant</span>
+              {dormantCount > 0 && <span className="bg-gray-100 text-gray-700 text-xs font-medium px-2 py-0.5 rounded-full">{dormantCount}</span>}
+            </label>
+
+            {/* Dead Pool — NEW */}
+            <label className="flex items-center space-x-2 px-3 py-2 border border-gray-300 rounded-md text-sm bg-white cursor-pointer hover:bg-gray-50">
+              <input type="checkbox" checked={showDeadPool} onChange={e => setShowDeadPool(e.target.checked)} className="rounded border-gray-300" />
+              <span className="text-sm font-medium text-gray-700">Dead Pool</span>
+              {deadPoolCount > 0 && <span className="bg-red-100 text-red-700 text-xs font-medium px-2 py-0.5 rounded-full">{deadPoolCount}</span>}
+            </label>
+
+            {/* Clear */}
+            {hasActiveFilters && (
+              <button onClick={clearFilters}
+                className="px-3 py-2 text-sm font-medium text-gray-600 hover:text-gray-800 hover:bg-gray-100 rounded-md border border-gray-300">
                 Clear All
               </button>
             )}
           </div>
         </div>
       </div>
-      
-      {/* Lead Count - Updated with temp client info */}
+
+      {/* Lead count */}
       <div className="px-4 py-2 text-sm text-gray-600 mb-4 flex justify-between items-center">
         <span>Showing {filteredLeads.length} of {leads.length} leads</span>
-        <div className="flex space-x-4">
-          {showMovedToClients && movedToClientsCount > 0 && (
-            <span className="text-blue-600 font-medium">
-              Including {movedToClientsCount} leads moved to clients
-            </span>
-          )}
+        <div className="flex gap-4">
+          {showDormant  && dormantCount  > 0 && <span className="text-gray-500 font-medium">Includes {dormantCount} dormant</span>}
+          {showDeadPool && deadPoolCount > 0 && <span className="text-red-500 font-medium">Showing {deadPoolCount} dead pool leads</span>}
+          {showMovedToClients && movedToClientsCount > 0 && <span className="text-blue-600 font-medium">Including {movedToClientsCount} moved to clients</span>}
         </div>
       </div>
-      
-      {/* Main Content - Conditionally render based on viewMode */}
+
+      {/* Main content */}
       {viewMode === "kanban" ? (
-        <LeadPool
-          leads={filteredLeads}
-          onView={handleView}
-          onEdit={handleEdit}
-          onAddDiscussion={handleAddDiscussion}
-          onConvert={handleConvert}
-          onDelete={handleDelete}
-          loading={isLoadingLeads}
-          showMovedToClients={showMovedToClients}
-          onLeadUpdate={handleLeadUpdate}
-          onMakeTempClient={handleMakeTempClient}
-        />
+        <LeadPool leads={filteredLeads} onView={handleView} onEdit={handleEdit}
+          onAddDiscussion={handleAddDiscussion} onConvert={handleConvert} onDelete={handleDelete}
+          loading={isLoadingLeads} onLeadUpdate={handleLeadUpdate} onMakeTempClient={handleMakeTempClient} />
       ) : (
-        <DisplayLeadsTable
-          leads={filteredLeads}
-          onView={handleView}
-          onEdit={handleEdit}
-          onDelete={handleDelete}
-          onAddDiscussion={handleAddDiscussion}
-          onConvert={handleConvert}
-          loading={isLoadingLeads}
-          fields={LEAD_PIPELINE_FIELDS}
-          showMovedToClients={showMovedToClients}
-          onLeadUpdate={handleLeadUpdate}
-          onMakeTempClient={handleMakeTempClient}
-        />
+        <DisplayLeadsTable leads={filteredLeads} onView={handleView} onEdit={handleEdit}
+          onDelete={handleDelete} onAddDiscussion={handleAddDiscussion} onConvert={handleConvert}
+          loading={isLoadingLeads} fields={LEAD_PIPELINE_FIELDS} showMovedToClients={showMovedToClients}
+          onLeadUpdate={handleLeadUpdate} onMakeTempClient={handleMakeTempClient} />
       )}
-      
-      {/* Lead Details Modal - ENHANCED with lead update callback */}
+
+      {/* Modals */}
       {viewingLead && (
-        <LeadDetailsModal
-          lead={viewingLead}
-          onClose={() => setViewingLead(null)}
-          onEdit={handleEdit}
-          onAddDiscussion={handleAddDiscussion}
-          onConvert={handleConvert}
-          onLeadUpdate={handleLeadUpdate}
-          onMakeTempClient={handleMakeTempClient}
-        />
+        <LeadDetailsModal lead={viewingLead} onClose={() => setViewingLead(null)} onEdit={handleEdit}
+          onAddDiscussion={handleAddDiscussion} onConvert={handleConvert}
+          onLeadUpdate={handleLeadUpdate} onMakeTempClient={handleMakeTempClient} />
       )}
-      
-      {/* Add/Edit Lead Modal */}
+
       {isFormModalOpen && (
-        <Modal
-          isOpen={true}
-          onClose={() => {
-            setIsFormModalOpen(false);
-            setSelectedLead(null);
-          }}
-          title={selectedLead ? "Edit Lead" : "Add New Lead"}
-          size="xl"
-        >
-          <LeadRegistrationForm
-            lead={selectedLead}
-            onSubmit={handleSubmitForm}
-            onCancel={() => {
-              setIsFormModalOpen(false);
-              setSelectedLead(null);
-            }}
-            isSubmitting={isSubmitting}
-          />
+        <Modal isOpen onClose={() => { setIsFormModalOpen(false); setSelectedLead(null); }}
+          title={selectedLead ? "Edit Lead" : "Add New Lead"} size="xl">
+          <LeadRegistrationForm lead={selectedLead} onSubmit={handleSubmitForm}
+            onCancel={() => { setIsFormModalOpen(false); setSelectedLead(null); }}
+            isSubmitting={isSubmitting} />
         </Modal>
       )}
-      
-      {/* Lead Discussion Modal */}
+
       {discussionLead && (
-        <LeadDiscussionModal
-          lead={discussionLead}
-          onClose={() => setDiscussionLead(null)}
-          onSubmit={handleSubmitDiscussion}
-        />
+        <LeadDiscussionModal lead={discussionLead} onClose={() => setDiscussionLead(null)}
+          onSubmit={handleSubmitDiscussion} />
       )}
-      
-      {/* Lead Conversion Modal */}
+
       {convertingLead && (
-        <LeadConversionModal
-          lead={convertingLead}
-          onClose={() => setConvertingLead(null)}
-          onSubmit={handleSubmitConversion}
-        />
+        <LeadConversionModal lead={convertingLead} onClose={() => setConvertingLead(null)}
+          onSubmit={handleSubmitConversion} />
       )}
-      
-      {/* Temp Client Modal */}
+
       {tempClientLead && (
-        <TempClientModal
-          lead={tempClientLead}
-          onClose={() => setTempClientLead(null)}
-          onSubmit={handleTempClientSubmit}
-        />
+        <TempClientModal lead={tempClientLead} onClose={() => setTempClientLead(null)}
+          onSubmit={handleTempClientSubmit} />
       )}
     </div>
   );

@@ -33,17 +33,17 @@ export const LEAD_FIELDS = {
       label: "Lead Source",
       type: "select",
       required: true,
-      options: [] // Will be populated from leadSources
+      options: []
     },
     {
       name: "status",
       label: "Lead Status",
       type: "select",
       required: true,
-      options: [] // Will be populated from leadStatuses
+      options: []
     }
   ],
-  
+
   CONTACT_INFO: [
     {
       name: "address.line1",
@@ -89,7 +89,7 @@ export const LEAD_FIELDS = {
       defaultValue: "India"
     }
   ],
-  
+
   LEAD_DETAILS: [
     {
       name: "jobType",
@@ -133,7 +133,23 @@ export const LEAD_FIELDS = {
       ]
     }
   ],
-  
+
+  // --- NEW: Important dates ---
+  IMPORTANT_DATES: [
+    {
+      name: "weddingDate",
+      label: "Wedding Date",
+      type: "date",
+      required: false
+    },
+    {
+      name: "birthdayDate",
+      label: "Birthday",
+      type: "date",
+      required: false
+    }
+  ],
+
   NOTES: [
     {
       name: "notes",
@@ -143,17 +159,17 @@ export const LEAD_FIELDS = {
       placeholder: "Enter any additional notes about this lead"
     }
   ],
-  
+
   QUALIFICATION: [
     {
       name: "badgeId",
       label: "Qualification Badge",
       type: "select",
       required: false,
-      options: [] // Will be populated from qualificationBadges
+      options: []
     }
   ],
-  
+
   DISCUSSION: [
     {
       name: "discussionDate",
@@ -161,6 +177,18 @@ export const LEAD_FIELDS = {
       type: "date",
       required: true,
       defaultValue: new Date().toISOString().split('T')[0]
+    },
+    // --- NEW: Communication type ---
+    {
+      name: "communicationType",
+      label: "Type",
+      type: "select",
+      required: true,
+      options: [
+        { value: "call", label: "Call" },
+        { value: "email", label: "Email" },
+        { value: "message", label: "Message" }
+      ]
     },
     {
       name: "discussionSummary",
@@ -175,6 +203,13 @@ export const LEAD_FIELDS = {
       type: "textarea",
       required: false,
       placeholder: "What are the next steps or action items?"
+    },
+    // --- NEW: Follow-up date ---
+    {
+      name: "followUpDate",
+      label: "Follow-up Date",
+      type: "date",
+      required: false
     }
   ]
 };
@@ -208,4 +243,10 @@ export const LEAD_POOL_FIELDS = [
   { field: "lastDiscussionDate", label: "Last Contact", sortable: true, type: "date" },
   { field: "lastDiscussionSummary", label: "Last Discussion", sortable: false, truncate: true },
   { field: "status", label: "Status", sortable: true }
+];
+
+// Dormant reasons
+export const DORMANT_REASONS = [
+  { value: "ghosted", label: "Ghosted" },
+  { value: "droppedUs", label: "Dropped Us" }
 ];
