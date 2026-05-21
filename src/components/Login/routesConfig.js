@@ -130,19 +130,19 @@ export const MENU_STRUCTURE = {
       { label: 'Standard Parameters',  path: '/material-stock/overheads',          icon: '⚖️', accessKey: 'inventory_standardParameters' }
     ]
   },
-  crm: {
-    key: 'crm', label: 'CRM', icon: '👥',
-    path: '/crm', accessKey: 'crm', isDropdown: true, priority: 5,
-    dropdownItems: [
-      { label: 'Dashboard',             path: '/crm/dashboard',          icon: '📊', accessKey: 'crm_dashboard' },
-      { label: 'Lead Pool',             path: '/crm/lead-registration',  icon: '✏️', accessKey: 'crm_leadPool' },
-      { label: 'Qualified Leads',       path: '/crm/lead-management',    icon: '🔄', accessKey: 'crm_qualifiedLeads' },
-      { label: 'Clients',               path: '/crm/clients',            icon: '🤝', accessKey: 'crm_clients' },
-      { label: 'Tasks',                 path: '/crm/tasks',              icon: '✅', accessKey: 'crm_tasks' },
-      { label: 'Qualification Badges',  path: '/crm/badges',             icon: '🏆', accessKey: 'crm_qualificationBadges' },
-      { label: 'Public Lead Form',      path: '/request-kit',            icon: '🌐', accessKey: 'crm_publicLeadForm' }
-    ]
-  },
+  // crm: {
+  //   key: 'crm', label: 'CRM', icon: '👥',
+  //   path: '/crm', accessKey: 'crm', isDropdown: true, priority: 5,
+  //   dropdownItems: [
+  //     { label: 'Dashboard',             path: '/crm/dashboard',          icon: '📊', accessKey: 'crm_dashboard' },
+  //     { label: 'Lead Pool',             path: '/crm/lead-registration',  icon: '✏️', accessKey: 'crm_leadPool' },
+  //     { label: 'Qualified Leads',       path: '/crm/lead-management',    icon: '🔄', accessKey: 'crm_qualifiedLeads' },
+  //     { label: 'Clients',               path: '/crm/clients',            icon: '🤝', accessKey: 'crm_clients' },
+  //     { label: 'Tasks',                 path: '/crm/tasks',              icon: '✅', accessKey: 'crm_tasks' },
+  //     { label: 'Qualification Badges',  path: '/crm/badges',             icon: '🏆', accessKey: 'crm_qualificationBadges' },
+  //     { label: 'Public Lead Form',      path: '/request-kit',            icon: '🌐', accessKey: 'crm_publicLeadForm' }
+  //   ]
+  // },
   analytics: {
     key: 'analytics', label: 'Analytics', icon: '📈',
     path: '/analytics', accessKey: 'analytics', isDropdown: true, priority: 6,
